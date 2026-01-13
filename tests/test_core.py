@@ -96,7 +96,7 @@ class TestCognitiveLayer:
     def test_build_system_prompt_deep_mode(self):
         layer = CognitiveLayer()
         prompt = layer._build_system_prompt(None, ReasoningMode.DEEP)
-        assert "think through this carefully" in prompt
+        assert "Think through this carefully" in prompt
 
     @patch("animus.cognitive.OllamaModel")
     def test_think_calls_model(self, mock_model_class):

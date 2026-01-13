@@ -1,9 +1,10 @@
 """Animus - An exocortex architecture for personal cognitive sovereignty."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
-from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode
+from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode, detect_mode
 from animus.config import AnimusConfig
+from animus.decision import Decision, DecisionFramework
 from animus.memory import (
     Conversation,
     Memory,
@@ -13,11 +14,15 @@ from animus.memory import (
     Procedure,
     SemanticFact,
 )
+from animus.tasks import Task, TaskStatus, TaskTracker
+from animus.tools import Tool, ToolRegistry, ToolResult, create_default_registry
 
 __all__ = [
     "AnimusConfig",
     "CognitiveLayer",
     "Conversation",
+    "Decision",
+    "DecisionFramework",
     "Memory",
     "MemoryLayer",
     "MemorySource",
@@ -26,5 +31,13 @@ __all__ = [
     "Procedure",
     "ReasoningMode",
     "SemanticFact",
+    "Task",
+    "TaskStatus",
+    "TaskTracker",
+    "Tool",
+    "ToolRegistry",
+    "ToolResult",
     "__version__",
+    "create_default_registry",
+    "detect_mode",
 ]

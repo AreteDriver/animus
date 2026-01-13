@@ -2,15 +2,23 @@
 Animus Cognitive Layer
 
 Handles reasoning, analysis, and response generation.
+Phase 2: Tool use, analysis modes, briefings.
 """
 
+import json
 import os
+import re
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from animus.logging import get_logger
+
+if TYPE_CHECKING:
+    from animus.memory import MemoryLayer
+    from animus.tools import ToolRegistry
 
 logger = get_logger("cognitive")
 
@@ -28,7 +36,37 @@ class ReasoningMode(Enum):
 
     QUICK = "quick"  # Fast response, shorter context
     DEEP = "deep"  # Extended thinking, full context
+    RESEARCH = "research"  # Web search + synthesis
     BACKGROUND = "background"  # Async processing
+
+
+# Patterns for automatic mode detection
+MODE_PATTERNS = {
+    ReasoningMode.DEEP: [
+        r"^think\s+(about|through)",
+        r"^analyze",
+        r"^consider",
+        r"^explain\s+in\s+detail",
+        r"^what\s+are\s+the\s+(pros|cons|implications)",
+    ],
+    ReasoningMode.RESEARCH: [
+        r"^research",
+        r"^find\s+out",
+        r"^look\s+up",
+        r"^what\s+is\s+the\s+latest",
+        r"^search\s+for",
+    ],
+}
+
+
+def detect_mode(prompt: str) -> ReasoningMode:
+    """Detect reasoning mode from prompt patterns."""
+    prompt_lower = prompt.lower().strip()
+    for mode, patterns in MODE_PATTERNS.items():
+        for pattern in patterns:
+            if re.match(pattern, prompt_lower):
+                return mode
+    return ReasoningMode.QUICK
 
 
 @dataclass
@@ -220,8 +258,13 @@ class CognitiveLayer:
                 return self.fallback.generate(prompt, system)
             raise e
 
-    def _build_system_prompt(self, context: str | None, mode: ReasoningMode) -> str:
-        """Build the system prompt based on context and mode."""
+    def _build_system_prompt(
+        self,
+        context: str | None,
+        mode: ReasoningMode,
+        tools_schema: str | None = None,
+    ) -> str:
+        """Build the system prompt based on context, mode, and tools."""
         base = """You are Animus, a personal AI assistant focused on being genuinely helpful.
 You are direct, honest, and thoughtful. You remember context from past conversations
 and use it to provide more relevant assistance.
@@ -232,6 +275,195 @@ You serve one user and are aligned with their interests."""
             base += f"\n\nRelevant context from memory:\n{context}"
 
         if mode == ReasoningMode.DEEP:
-            base += "\n\nTake your time to think through this carefully."
+            base += (
+                "\n\nThink through this carefully, step by step. Consider multiple perspectives."
+            )
+        elif mode == ReasoningMode.RESEARCH:
+            base += "\n\nResearch this topic thoroughly. Use web search if available."
+
+        if tools_schema:
+            base += f"""
+
+{tools_schema}
+
+To use a tool, respond with a JSON block in this format:
+```tool
+{{"tool": "tool_name", "params": {{"param1": "value1"}}}}
+```
+
+You can use multiple tools. After tool results are returned, continue your response.
+When you have gathered enough information, provide your final answer."""
 
         return base
+
+    def think_with_tools(
+        self,
+        prompt: str,
+        context: str | None = None,
+        mode: ReasoningMode = ReasoningMode.QUICK,
+        tools: "ToolRegistry | None" = None,
+        max_iterations: int = 5,
+        approval_callback: "callable | None" = None,
+    ) -> str:
+        """
+        Generate a response with tool use capability.
+
+        This implements an agentic loop that:
+        1. Generates a response (possibly with tool calls)
+        2. Parses and executes tool calls
+        3. Feeds results back to the model
+        4. Repeats until no more tool calls or max iterations
+
+        Args:
+            prompt: User's input
+            context: Relevant context from memory
+            mode: Reasoning mode
+            tools: ToolRegistry with available tools
+            max_iterations: Maximum tool use iterations
+            approval_callback: Function to approve tools that require it
+                               (tool_name, params) -> bool
+
+        Returns:
+            Final response after tool execution
+        """
+        if not tools or not tools.list_tools():
+            # No tools available, fall back to regular think
+            return self.think(prompt, context, mode)
+
+        tools_schema = tools.get_schema_text()
+        system = self._build_system_prompt(context, mode, tools_schema)
+
+        messages = [{"role": "user", "content": prompt}]
+        final_response = ""
+
+        for iteration in range(max_iterations):
+            logger.debug(f"Tool iteration {iteration + 1}/{max_iterations}")
+
+            # Generate response
+            full_prompt = self._format_messages(messages)
+            response = self.primary.generate(full_prompt, system)
+
+            # Parse tool calls
+            tool_calls = self._parse_tool_calls(response)
+
+            if not tool_calls:
+                # No tool calls, we're done
+                final_response = response
+                break
+
+            # Execute tools
+            tool_results = []
+            response_text = self._remove_tool_blocks(response)
+
+            for tool_name, params in tool_calls:
+                tool = tools.get(tool_name)
+                if not tool:
+                    tool_results.append(f"[Error: Unknown tool '{tool_name}']")
+                    continue
+
+                # Check approval for sensitive tools
+                if tool.requires_approval and approval_callback:
+                    if not approval_callback(tool_name, params):
+                        tool_results.append(f"[Tool '{tool_name}' was not approved]")
+                        continue
+
+                # Execute tool
+                result = tools.execute(tool_name, params)
+                tool_results.append(result.to_context())
+                logger.debug(f"Tool {tool_name} result: success={result.success}")
+
+            # Add to conversation
+            if response_text.strip():
+                messages.append({"role": "assistant", "content": response_text})
+
+            # Add tool results
+            results_text = "\n\n".join(tool_results)
+            messages.append({"role": "user", "content": f"Tool results:\n{results_text}"})
+
+        else:
+            # Max iterations reached
+            logger.warning(f"Max tool iterations ({max_iterations}) reached")
+            final_response = response
+
+        return final_response
+
+    def _format_messages(self, messages: list[dict]) -> str:
+        """Format message history for the model."""
+        lines = []
+        for msg in messages:
+            role = msg["role"].capitalize()
+            lines.append(f"{role}: {msg['content']}")
+        return "\n\n".join(lines)
+
+    def _parse_tool_calls(self, response: str) -> list[tuple[str, dict]]:
+        """Parse tool calls from model response."""
+        tool_calls = []
+
+        # Look for ```tool blocks
+        pattern = r"```tool\s*\n?(.*?)\n?```"
+        matches = re.findall(pattern, response, re.DOTALL)
+
+        for match in matches:
+            try:
+                data = json.loads(match.strip())
+                tool_name = data.get("tool")
+                params = data.get("params", {})
+                if tool_name:
+                    tool_calls.append((tool_name, params))
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse tool call: {match[:50]}...")
+                continue
+
+        return tool_calls
+
+    def _remove_tool_blocks(self, response: str) -> str:
+        """Remove tool call blocks from response."""
+        pattern = r"```tool\s*\n?.*?\n?```"
+        return re.sub(pattern, "", response, flags=re.DOTALL).strip()
+
+    def brief(
+        self,
+        memory: "MemoryLayer",
+        topic: str | None = None,
+        limit: int = 10,
+    ) -> str:
+        """
+        Generate a situation briefing from memory.
+
+        Args:
+            memory: MemoryLayer to query for context
+            topic: Optional topic to focus on (searches all if None)
+            limit: Maximum memories to include
+
+        Returns:
+            Briefing text
+        """
+        # Gather relevant memories
+        if topic:
+            memories = memory.recall(topic, limit=limit)
+        else:
+            memories = memory.store.list_all()[:limit]
+
+        if not memories:
+            return "No memories available for briefing."
+
+        # Format memories for context
+        memory_texts = []
+        for mem in memories:
+            date_str = mem.created_at.strftime("%Y-%m-%d")
+            tags_str = f" [{', '.join(mem.tags)}]" if mem.tags else ""
+            memory_texts.append(f"- [{date_str}] {mem.content[:200]}{tags_str}")
+
+        context = "\n".join(memory_texts)
+
+        # Generate briefing
+        prompt = f"""Generate a concise situation briefing based on the following memories.
+Focus on key facts, recent developments, and actionable items.
+{"Topic: " + topic if topic else "General briefing"}
+
+Memories:
+{context}
+
+Provide a clear, structured briefing."""
+
+        return self.think(prompt, mode=ReasoningMode.QUICK)

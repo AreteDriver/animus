@@ -144,15 +144,15 @@ Beyond chat - actual analysis and assistance.
 
 ### Tasks
 
-- [ ] Implement tool use framework
-  - [ ] File system access (read, search)
-  - [ ] Web search integration
+- [x] Implement tool use framework
+  - [x] File system access (read, search)
+  - [x] Web search integration
   - [ ] API call framework
-- [ ] Add analysis modes (quick vs. deep reasoning)
+- [x] Add analysis modes (quick vs. deep reasoning)
 - [ ] Build register translation (formal ↔ casual ↔ technical)
-- [ ] Create situation briefing capability
-- [ ] Develop decision support framework
-- [ ] Implement basic task tracking
+- [x] Create situation briefing capability
+- [x] Develop decision support framework
+- [x] Implement basic task tracking
 
 ### Tool Framework
 

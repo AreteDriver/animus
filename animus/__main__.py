@@ -9,10 +9,13 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode
+from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode, detect_mode
 from animus.config import AnimusConfig
+from animus.decision import DecisionFramework
 from animus.logging import get_logger, setup_logging
 from animus.memory import Conversation, MemoryLayer, MemoryType
+from animus.tasks import TaskTracker
+from animus.tools import create_default_registry, create_memory_tools
 
 console = Console()
 logger = get_logger("cli")
@@ -51,8 +54,26 @@ def show_help():
   /import <path>   - Import memories from file
   /backup [path]   - Create full backup
 
+[bold]Tools (Phase 2):[/bold]
+  /tools             - List available tools
+  /tool <name> [args] - Execute a tool directly
+                       Examples: /tool get_datetime
+                                 /tool read_file path=/etc/hostname
+
 [bold]Reasoning:[/bold]
-  /deep <query>    - Use deep reasoning mode
+  /deep <query>      - Use deep reasoning mode
+  /research <query>  - Research mode with web search
+  /brief [topic]     - Generate situation briefing from memory
+
+[bold]Decision Support:[/bold]
+  /decide <question> - Start structured decision analysis
+
+[bold]Tasks:[/bold]
+  /task add <desc>   - Add a new task
+  /task list         - List pending tasks
+  /task done <id>    - Mark task complete
+  /task start <id>   - Mark task in progress
+  /task delete <id>  - Delete a task
 
 [bold]Otherwise:[/bold]
   Just type naturally. Animus will respond.
@@ -254,6 +275,14 @@ def main():
 
     cognitive = CognitiveLayer(primary_config=model_config)
 
+    # Initialize Phase 2 components
+    tools = create_default_registry()
+    for tool in create_memory_tools(memory):
+        tools.register(tool)
+
+    tasks = TaskTracker(config.data_dir)
+    decisions = DecisionFramework(cognitive)
+
     history = FileHistory(str(config.history_file))
 
     # Start a new conversation
@@ -449,8 +478,181 @@ def main():
                 console.print(f"[green]Backup created:[/green] {backup_path}")
                 continue
 
-            # Reasoning mode
-            mode = ReasoningMode.QUICK
+            # =========================================================
+            # Phase 2: Tools, Tasks, Decisions, Research, Briefing
+            # =========================================================
+
+            # Tools commands
+            if user_input.lower() == "/tools":
+                console.print("\n[bold]Available Tools:[/bold]\n")
+                for tool in tools.list_tools():
+                    approval_marker = " [requires approval]" if tool.requires_approval else ""
+                    console.print(f"  [cyan]{tool.name}[/cyan]{approval_marker}")
+                    console.print(f"    {tool.description}")
+                    if tool.parameters.get("properties"):
+                        for param, spec in tool.parameters["properties"].items():
+                            req = (
+                                " (required)"
+                                if param in tool.parameters.get("required", [])
+                                else ""
+                            )
+                            console.print(f"      - {param}: {spec.get('description', '')}{req}")
+                console.print()
+                continue
+
+            if user_input.startswith("/tool "):
+                # Parse: /tool name param1=value1 param2=value2
+                parts = user_input[6:].split()
+                if not parts:
+                    console.print("[red]Usage: /tool <name> [param=value ...][/red]")
+                    continue
+
+                tool_name = parts[0]
+                params = {}
+                for part in parts[1:]:
+                    if "=" in part:
+                        key, val = part.split("=", 1)
+                        params[key] = val
+                    else:
+                        # Positional argument for simple tools
+                        params["query"] = part
+
+                tool = tools.get(tool_name)
+                if not tool:
+                    console.print(f"[red]Unknown tool: {tool_name}[/red]")
+                    continue
+
+                # Approval for sensitive tools
+                if tool.requires_approval:
+                    confirm = prompt(f"Execute '{tool_name}'? (y/n): ").strip().lower()
+                    if confirm != "y":
+                        console.print("[yellow]Tool execution cancelled.[/yellow]")
+                        continue
+
+                result = tools.execute(tool_name, params)
+                if result.success:
+                    console.print(f"[green]Tool output:[/green]\n{result.output}")
+                else:
+                    console.print(f"[red]Tool error:[/red] {result.error}")
+                continue
+
+            # Task commands
+            if user_input.startswith("/task "):
+                task_cmd = user_input[6:].strip()
+
+                if task_cmd.startswith("add "):
+                    desc = task_cmd[4:].strip()
+                    if not desc:
+                        console.print("[red]Usage: /task add <description>[/red]")
+                        continue
+                    task = tasks.add(desc)
+                    console.print(f"[green]Task added:[/green] {task.id[:8]} - {desc}")
+                    continue
+
+                if task_cmd == "list" or task_cmd.startswith("list"):
+                    parts = task_cmd.split()
+                    include_completed = "--all" in parts
+                    task_list = tasks.list(include_completed=include_completed)
+
+                    if not task_list:
+                        console.print("[dim]No tasks found.[/dim]")
+                        continue
+
+                    console.print("\n[bold]Tasks:[/bold]\n")
+                    for t in task_list:
+                        status_color = {
+                            "pending": "yellow",
+                            "in_progress": "cyan",
+                            "completed": "green",
+                            "blocked": "red",
+                        }.get(t.status.value, "white")
+                        console.print(
+                            f"  [{status_color}]{t.status.value:12}[/{status_color}] "
+                            f"[dim]{t.id[:8]}[/dim] {t.description}"
+                        )
+                    continue
+
+                if task_cmd.startswith("done "):
+                    task_id = task_cmd[5:].strip()
+                    if tasks.complete(task_id):
+                        console.print(f"[green]Task completed:[/green] {task_id[:8]}")
+                    else:
+                        console.print("[red]Task not found[/red]")
+                    continue
+
+                if task_cmd.startswith("start "):
+                    task_id = task_cmd[6:].strip()
+                    if tasks.start(task_id):
+                        console.print(f"[cyan]Task started:[/cyan] {task_id[:8]}")
+                    else:
+                        console.print("[red]Task not found[/red]")
+                    continue
+
+                if task_cmd.startswith("delete "):
+                    task_id = task_cmd[7:].strip()
+                    if tasks.delete(task_id):
+                        console.print(f"[yellow]Task deleted:[/yellow] {task_id[:8]}")
+                    else:
+                        console.print("[red]Task not found[/red]")
+                    continue
+
+                console.print(
+                    "[red]Unknown task command. Use: add, list, done, start, delete[/red]"
+                )
+                continue
+
+            # Decision support
+            if user_input.startswith("/decide "):
+                question = user_input[8:].strip()
+                if not question:
+                    console.print("[red]Usage: /decide <question>[/red]")
+                    continue
+
+                console.print("\n[dim]Analyzing decision...[/dim]\n")
+                decision = decisions.analyze(question)
+                console.print(decision.format_analysis())
+                continue
+
+            # Research mode
+            if user_input.startswith("/research "):
+                query = user_input[10:].strip()
+                if not query:
+                    console.print("[red]Usage: /research <query>[/red]")
+                    continue
+
+                console.print("\n[dim]Researching...[/dim]\n")
+
+                # Use web search tool
+                search_result = tools.execute("web_search", {"query": query})
+                context = search_result.output if search_result.success else None
+
+                # Generate response with research context
+                response = cognitive.think(
+                    f"Based on this research, answer: {query}",
+                    context=context,
+                    mode=ReasoningMode.RESEARCH,
+                )
+                console.print(response)
+                console.print()
+                continue
+
+            # Briefing
+            if user_input.startswith("/brief"):
+                parts = user_input.split(maxsplit=1)
+                topic = parts[1] if len(parts) > 1 else None
+
+                console.print("\n[dim]Generating briefing...[/dim]\n")
+                briefing = cognitive.brief(memory, topic=topic)
+                console.print(briefing)
+                console.print()
+                continue
+
+            # =========================================================
+            # End Phase 2 commands
+            # =========================================================
+
+            # Reasoning mode with auto-detection
+            mode = detect_mode(user_input)
             if user_input.startswith("/deep "):
                 mode = ReasoningMode.DEEP
                 user_input = user_input[6:]
