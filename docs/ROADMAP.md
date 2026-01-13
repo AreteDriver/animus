@@ -40,12 +40,12 @@ A local AI that remembers conversations and can retrieve context.
 
 ### Tasks
 
-- [ ] Set up local LLM (Ollama with Llama 3 or Mistral)
-- [ ] Implement basic conversation interface (CLI)
-- [ ] Add vector database for memory (ChromaDB)
-- [ ] Build simple retrieval: "What did we discuss about X?"
-- [ ] Establish project structure and config management
-- [ ] Create basic logging and error handling
+- [x] Set up local LLM (Ollama with Llama 3 or Mistral)
+- [x] Implement basic conversation interface (CLI)
+- [x] Add vector database for memory (ChromaDB)
+- [x] Build simple retrieval: "What did we discuss about X?"
+- [x] Establish project structure and config management
+- [x] Create basic logging and error handling
 
 ### Technical Stack
 - Python 3.11+
