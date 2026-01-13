@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from animus.api import APIServer
 from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode, detect_mode
 from animus.config import AnimusConfig
 from animus.decision import DecisionFramework
@@ -16,6 +17,7 @@ from animus.logging import get_logger, setup_logging
 from animus.memory import Conversation, MemoryLayer, MemoryType
 from animus.tasks import TaskTracker
 from animus.tools import create_default_registry, create_memory_tools
+from animus.voice import VoiceInterface
 
 console = Console()
 logger = get_logger("cli")
@@ -74,6 +76,17 @@ def show_help():
   /task done <id>    - Mark task complete
   /task start <id>   - Mark task in progress
   /task delete <id>  - Delete a task
+
+[bold]API Server (Phase 3):[/bold]
+  /server start [port]  - Start API server (default: 8420)
+  /server stop          - Stop API server
+  /server status        - Show server status
+
+[bold]Voice (Phase 3):[/bold]
+  /voice on             - Enable voice input mode
+  /voice off            - Disable voice input
+  /speak <text>         - Speak text aloud
+  /speak-toggle         - Toggle TTS for responses
 
 [bold]Otherwise:[/bold]
   Just type naturally. Animus will respond.
@@ -283,21 +296,64 @@ def main():
     tasks = TaskTracker(config.data_dir)
     decisions = DecisionFramework(cognitive)
 
+    # Phase 3: API Server and Voice Interface
+    api_server: APIServer | None = None
+    voice: VoiceInterface | None = None
+
+    # Initialize voice if configured
+    if config.voice.input_enabled or config.voice.output_enabled:
+        try:
+            voice = VoiceInterface(
+                whisper_model=config.voice.whisper_model,
+                tts_engine=config.voice.tts_engine,
+                tts_rate=config.voice.tts_rate,
+            )
+            voice.response_tts_enabled = config.voice.output_enabled
+            logger.info("Voice interface initialized")
+        except ImportError as e:
+            logger.warning(f"Voice dependencies not available: {e}")
+            voice = None
+
+    # Auto-start API server if configured
+    if config.api.enabled:
+        try:
+            api_server = APIServer(
+                memory=memory,
+                cognitive=cognitive,
+                tools=tools,
+                tasks=tasks,
+                decisions=decisions,
+                host=config.api.host,
+                port=config.api.port,
+                api_key=config.api.api_key,
+            )
+            api_server.start()
+            console.print(f"[dim]API server started on {config.api.host}:{config.api.port}[/dim]")
+        except ImportError as e:
+            logger.warning(f"API dependencies not available: {e}")
+            api_server = None
+
     history = FileHistory(str(config.history_file))
 
     # Start a new conversation
     conversation = Conversation.new()
     logger.info(f"Started conversation {conversation.id[:8]}")
 
-    # Save conversation on exit
-    def save_on_exit():
+    # Cleanup on exit
+    def cleanup_on_exit():
         if conversation.messages:
             memory.save_conversation(conversation)
             logger.info(
                 f"Saved conversation {conversation.id[:8]} with {len(conversation.messages)} messages"
             )
+        if api_server and api_server.is_running:
+            api_server.stop()
+            logger.info("API server stopped")
+        if voice and voice.input.is_listening:
+            voice.stop_listening()
+            logger.info("Voice listening stopped")
 
-    atexit.register(save_on_exit)
+    atexit.register(cleanup_on_exit)
 
     console.print("\n[dim]Type 'help' for commands, 'exit' to quit[/dim]\n")
 
@@ -651,6 +707,148 @@ def main():
             # End Phase 2 commands
             # =========================================================
 
+            # =========================================================
+            # Phase 3: API Server and Voice commands
+            # =========================================================
+
+            # Server commands
+            if user_input.startswith("/server "):
+                server_cmd = user_input[8:].strip()
+
+                if server_cmd.startswith("start"):
+                    parts = server_cmd.split()
+                    port = int(parts[1]) if len(parts) > 1 else config.api.port
+
+                    if api_server and api_server.is_running:
+                        console.print(
+                            f"[yellow]Server already running on {api_server.host}:{api_server.port}[/yellow]"
+                        )
+                        continue
+
+                    try:
+                        api_server = APIServer(
+                            memory=memory,
+                            cognitive=cognitive,
+                            tools=tools,
+                            tasks=tasks,
+                            decisions=decisions,
+                            host=config.api.host,
+                            port=port,
+                            api_key=config.api.api_key,
+                        )
+                        api_server.start()
+                        console.print(
+                            f"[green]API server started on {config.api.host}:{port}[/green]"
+                        )
+                    except ImportError:
+                        console.print(
+                            "[red]FastAPI not installed. Install with: pip install 'animus[api]'[/red]"
+                        )
+                    except Exception as e:
+                        console.print(f"[red]Failed to start server: {e}[/red]")
+                    continue
+
+                if server_cmd == "stop":
+                    if api_server and api_server.is_running:
+                        api_server.stop()
+                        console.print("[yellow]API server stopped[/yellow]")
+                    else:
+                        console.print("[dim]Server not running[/dim]")
+                    continue
+
+                if server_cmd == "status":
+                    if api_server and api_server.is_running:
+                        console.print(
+                            f"[green]Server running on {api_server.host}:{api_server.port}[/green]"
+                        )
+                    else:
+                        console.print("[dim]Server not running[/dim]")
+                    continue
+
+                console.print("[red]Unknown server command. Use: start, stop, status[/red]")
+                continue
+
+            # Voice commands
+            if user_input.startswith("/voice "):
+                voice_cmd = user_input[7:].strip()
+
+                if voice_cmd == "on":
+                    if not voice:
+                        try:
+                            voice = VoiceInterface(
+                                whisper_model=config.voice.whisper_model,
+                                tts_engine=config.voice.tts_engine,
+                                tts_rate=config.voice.tts_rate,
+                            )
+                        except ImportError:
+                            console.print(
+                                "[red]Voice dependencies not installed. Install with: pip install 'animus[voice]'[/red]"
+                            )
+                            continue
+
+                    def on_speech(text: str):
+                        console.print(f"\n[cyan]You said:[/cyan] {text}")
+
+                    voice.start_listening(on_speech)
+                    console.print("[green]Voice input enabled. Listening...[/green]")
+                    continue
+
+                if voice_cmd == "off":
+                    if voice and voice.input.is_listening:
+                        voice.stop_listening()
+                        console.print("[yellow]Voice input disabled[/yellow]")
+                    else:
+                        console.print("[dim]Voice input not active[/dim]")
+                    continue
+
+                console.print("[red]Unknown voice command. Use: on, off[/red]")
+                continue
+
+            if user_input.startswith("/speak "):
+                text = user_input[7:].strip()
+                if not text:
+                    console.print("[red]Usage: /speak <text>[/red]")
+                    continue
+
+                if not voice:
+                    try:
+                        voice = VoiceInterface(
+                            whisper_model=config.voice.whisper_model,
+                            tts_engine=config.voice.tts_engine,
+                            tts_rate=config.voice.tts_rate,
+                        )
+                    except ImportError:
+                        console.print(
+                            "[red]Voice dependencies not installed. Install with: pip install 'animus[voice]'[/red]"
+                        )
+                        continue
+
+                voice.speak(text)
+                continue
+
+            if user_input == "/speak-toggle":
+                if not voice:
+                    try:
+                        voice = VoiceInterface(
+                            whisper_model=config.voice.whisper_model,
+                            tts_engine=config.voice.tts_engine,
+                            tts_rate=config.voice.tts_rate,
+                        )
+                    except ImportError:
+                        console.print(
+                            "[red]Voice dependencies not installed. Install with: pip install 'animus[voice]'[/red]"
+                        )
+                        continue
+
+                voice.response_tts_enabled = not voice.response_tts_enabled
+                status = "enabled" if voice.response_tts_enabled else "disabled"
+                console.print(f"[green]Response TTS {status}[/green]")
+                continue
+
+            # =========================================================
+            # End Phase 3 commands
+            # =========================================================
+
             # Reasoning mode with auto-detection
             mode = detect_mode(user_input)
             if user_input.startswith("/deep "):
@@ -674,6 +872,10 @@ def main():
 
             console.print(response)
             console.print()
+
+            # Speak response if TTS enabled
+            if voice and voice.response_tts_enabled:
+                voice.speak(response, async_=True)
 
             # Auto-save every 10 messages
             if len(conversation.messages) % 10 == 0:

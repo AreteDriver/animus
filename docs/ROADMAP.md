@@ -201,8 +201,23 @@ Access from anywhere, context follows you.
 
 ### Tasks
 
+**Voice + API (v0.3.0)**
+- [x] Add HTTP API server (FastAPI)
+  - [x] /chat, /status endpoints
+  - [x] Memory CRUD endpoints
+  - [x] Tool execution endpoints
+  - [x] Task management endpoints
+  - [x] Decision analysis endpoint
+  - [x] WebSocket for streaming
+- [x] Add voice input/output (Whisper + TTS)
+  - [x] VoiceInput with Whisper STT
+  - [x] VoiceOutput with pyttsx3/edge-tts
+  - [x] /voice and /speak CLI commands
+  - [x] /server start/stop/status commands
+- [x] Add API and voice configuration
+
+**Remaining Multi-Interface Work**
 - [ ] Build mobile interface (PWA or React Native)
-- [ ] Add voice input/output (Whisper + TTS)
 - [ ] Implement sync layer for cross-device memory
 - [ ] Create notification/ambient mode
 - [ ] Design minimal interaction patterns

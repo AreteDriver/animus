@@ -47,6 +47,45 @@ class MemoryConfig:
 
 
 @dataclass
+class APIConfig:
+    """Configuration for the HTTP API server."""
+
+    enabled: bool = False
+    host: str = "127.0.0.1"
+    port: int = 8420
+    api_key: str | None = None
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("ANIMUS_API_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+        self.host = os.environ.get("ANIMUS_API_HOST", self.host)
+        if env_port := os.environ.get("ANIMUS_API_PORT"):
+            self.port = int(env_port)
+        self.api_key = os.environ.get("ANIMUS_API_KEY", self.api_key)
+
+
+@dataclass
+class VoiceConfig:
+    """Configuration for voice input/output."""
+
+    input_enabled: bool = False
+    output_enabled: bool = False
+    whisper_model: str = "base"  # tiny, base, small, medium, large
+    tts_engine: str = "pyttsx3"  # pyttsx3 or edge-tts
+    tts_rate: int = 150
+
+    def __post_init__(self):
+        if env_input := os.environ.get("ANIMUS_VOICE_INPUT"):
+            self.input_enabled = env_input.lower() in ("true", "1", "yes")
+        if env_output := os.environ.get("ANIMUS_VOICE_OUTPUT"):
+            self.output_enabled = env_output.lower() in ("true", "1", "yes")
+        self.whisper_model = os.environ.get("ANIMUS_WHISPER_MODEL", self.whisper_model)
+        self.tts_engine = os.environ.get("ANIMUS_TTS_ENGINE", self.tts_engine)
+        if env_rate := os.environ.get("ANIMUS_TTS_RATE"):
+            self.tts_rate = int(env_rate)
+
+
+@dataclass
 class AnimusConfig:
     """Main configuration for Animus."""
 
@@ -55,6 +94,8 @@ class AnimusConfig:
     log_to_file: bool = True
     model: ModelConfig = field(default_factory=ModelConfig)
     memory: MemoryConfig = field(default_factory=MemoryConfig)
+    api: APIConfig = field(default_factory=APIConfig)
+    voice: VoiceConfig = field(default_factory=VoiceConfig)
 
     def __post_init__(self):
         # Convert string to Path if needed
@@ -104,6 +145,18 @@ class AnimusConfig:
             "memory": {
                 "backend": self.memory.backend,
                 "collection_name": self.memory.collection_name,
+            },
+            "api": {
+                "enabled": self.api.enabled,
+                "host": self.api.host,
+                "port": self.api.port,
+            },
+            "voice": {
+                "input_enabled": self.voice.input_enabled,
+                "output_enabled": self.voice.output_enabled,
+                "whisper_model": self.voice.whisper_model,
+                "tts_engine": self.voice.tts_engine,
+                "tts_rate": self.voice.tts_rate,
             },
         }
 
@@ -156,10 +209,34 @@ class AnimusConfig:
                 if "collection_name" in memory_data:
                     config.memory.collection_name = memory_data["collection_name"]
 
+            if api_data := data.get("api"):
+                if "enabled" in api_data:
+                    config.api.enabled = api_data["enabled"]
+                if "host" in api_data:
+                    config.api.host = api_data["host"]
+                if "port" in api_data:
+                    config.api.port = api_data["port"]
+                if "api_key" in api_data:
+                    config.api.api_key = api_data["api_key"]
+
+            if voice_data := data.get("voice"):
+                if "input_enabled" in voice_data:
+                    config.voice.input_enabled = voice_data["input_enabled"]
+                if "output_enabled" in voice_data:
+                    config.voice.output_enabled = voice_data["output_enabled"]
+                if "whisper_model" in voice_data:
+                    config.voice.whisper_model = voice_data["whisper_model"]
+                if "tts_engine" in voice_data:
+                    config.voice.tts_engine = voice_data["tts_engine"]
+                if "tts_rate" in voice_data:
+                    config.voice.tts_rate = voice_data["tts_rate"]
+
             # Re-apply environment overrides
             config.__post_init__()
             config.model.__post_init__()
             config.memory.__post_init__()
+            config.api.__post_init__()
+            config.voice.__post_init__()
 
         return config
 

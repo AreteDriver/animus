@@ -1,6 +1,6 @@
 """Animus - An exocortex architecture for personal cognitive sovereignty."""
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode, detect_mode
 from animus.config import AnimusConfig
@@ -17,7 +17,21 @@ from animus.memory import (
 from animus.tasks import Task, TaskStatus, TaskTracker
 from animus.tools import Tool, ToolRegistry, ToolResult, create_default_registry
 
+# Optional imports - available when dependencies are installed
+try:
+    from animus.api import APIServer
+except ImportError:
+    APIServer = None  # type: ignore[misc, assignment]
+
+try:
+    from animus.voice import VoiceInput, VoiceInterface, VoiceOutput
+except ImportError:
+    VoiceInput = None  # type: ignore[misc, assignment]
+    VoiceInterface = None  # type: ignore[misc, assignment]
+    VoiceOutput = None  # type: ignore[misc, assignment]
+
 __all__ = [
+    "APIServer",
     "AnimusConfig",
     "CognitiveLayer",
     "Conversation",
@@ -37,6 +51,9 @@ __all__ = [
     "Tool",
     "ToolRegistry",
     "ToolResult",
+    "VoiceInput",
+    "VoiceInterface",
+    "VoiceOutput",
     "__version__",
     "create_default_registry",
     "detect_mode",
