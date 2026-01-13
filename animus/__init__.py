@@ -4,7 +4,15 @@ __version__ = "0.1.0"
 
 from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode
 from animus.config import AnimusConfig
-from animus.memory import Conversation, Memory, MemoryLayer, MemoryType
+from animus.memory import (
+    Conversation,
+    Memory,
+    MemoryLayer,
+    MemorySource,
+    MemoryType,
+    Procedure,
+    SemanticFact,
+)
 
 __all__ = [
     "AnimusConfig",
@@ -12,8 +20,11 @@ __all__ = [
     "Conversation",
     "Memory",
     "MemoryLayer",
+    "MemorySource",
     "MemoryType",
     "ModelConfig",
+    "Procedure",
     "ReasoningMode",
+    "SemanticFact",
     "__version__",
 ]

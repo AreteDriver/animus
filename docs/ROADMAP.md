@@ -77,13 +77,13 @@ Structured memory that accumulates meaningful context over time.
 
 ### Tasks
 
-- [ ] Implement episodic memory (conversation logs with timestamps)
-- [ ] Add semantic memory (facts, preferences, learnings)
-- [ ] Build procedural memory (workflows, patterns)
-- [ ] Create memory management tools (review, edit, delete)
-- [ ] Design tagging/categorization system
-- [ ] Implement memory search and retrieval optimization
-- [ ] Add memory export/import functionality
+- [x] Implement episodic memory (conversation logs with timestamps)
+- [x] Add semantic memory (facts, preferences, learnings)
+- [x] Build procedural memory (workflows, patterns)
+- [x] Create memory management tools (review, edit, delete)
+- [x] Design tagging/categorization system
+- [x] Implement memory search and retrieval optimization
+- [x] Add memory export/import functionality
 
 ### Memory Schema
 
