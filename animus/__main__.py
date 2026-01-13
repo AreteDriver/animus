@@ -1,5 +1,6 @@
 """Entry point for running animus as a module."""
 
+import asyncio
 import atexit
 from pathlib import Path
 
@@ -13,11 +14,28 @@ from animus.api import APIServer
 from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode, detect_mode
 from animus.config import AnimusConfig
 from animus.decision import DecisionFramework
+from animus.integrations import (
+    FilesystemIntegration,
+    IntegrationManager,
+    TodoistIntegration,
+    WebhookIntegration,
+)
 from animus.logging import get_logger, setup_logging
 from animus.memory import Conversation, MemoryLayer, MemoryType
 from animus.tasks import TaskTracker
 from animus.tools import create_default_registry, create_memory_tools
 from animus.voice import VoiceInterface
+
+# Optional Google integrations
+try:
+    from animus.integrations.google import GoogleCalendarIntegration
+    from animus.integrations.google.gmail import GmailIntegration
+
+    GOOGLE_INTEGRATIONS_AVAILABLE = True
+except ImportError:
+    GOOGLE_INTEGRATIONS_AVAILABLE = False
+    GoogleCalendarIntegration = None
+    GmailIntegration = None
 
 console = Console()
 logger = get_logger("cli")
@@ -87,6 +105,12 @@ def show_help():
   /voice off            - Disable voice input
   /speak <text>         - Speak text aloud
   /speak-toggle         - Toggle TTS for responses
+
+[bold]Integrations (Phase 4):[/bold]
+  /integrations           - List all integrations with status
+  /integrate <service>    - Connect an integration
+  /disconnect <service>   - Disconnect an integration
+  Services: filesystem, todoist, google_calendar, gmail, webhooks
 
 [bold]Otherwise:[/bold]
   Just type naturally. Animus will respond.
@@ -300,6 +324,27 @@ def main():
     api_server: APIServer | None = None
     voice: VoiceInterface | None = None
 
+    # Phase 4: Integration Manager
+    integrations = IntegrationManager(config.data_dir / "integrations")
+
+    # Register available integrations
+    integrations.register(FilesystemIntegration(config.data_dir / "integrations"))
+    integrations.register(TodoistIntegration())
+    integrations.register(WebhookIntegration())
+
+    if GOOGLE_INTEGRATIONS_AVAILABLE:
+        integrations.register(GoogleCalendarIntegration(config.data_dir / "integrations"))
+        integrations.register(GmailIntegration(config.data_dir / "integrations"))
+
+    # Reconnect integrations from stored credentials
+    asyncio.get_event_loop().run_until_complete(integrations.reconnect_from_stored())
+
+    # Register integration tools with main registry
+    for tool in integrations.get_all_tools():
+        tools.register(tool)
+
+    logger.info(f"Integration manager initialized, {len(integrations.list_connected())} connected")
+
     # Initialize voice if configured
     if config.voice.input_enabled or config.voice.output_enabled:
         try:
@@ -326,6 +371,7 @@ def main():
                 host=config.api.host,
                 port=config.api.port,
                 api_key=config.api.api_key,
+                integrations=integrations,
             )
             api_server.start()
             console.print(f"[dim]API server started on {config.api.host}:{config.api.port}[/dim]")
@@ -735,6 +781,7 @@ def main():
                             host=config.api.host,
                             port=port,
                             api_key=config.api.api_key,
+                            integrations=integrations,
                         )
                         api_server.start()
                         console.print(
@@ -847,6 +894,141 @@ def main():
 
             # =========================================================
             # End Phase 3 commands
+            # =========================================================
+
+            # =========================================================
+            # Phase 4: Integration commands
+            # =========================================================
+
+            if user_input == "/integrations":
+                all_integrations = integrations.list_all()
+                if not all_integrations:
+                    console.print("[dim]No integrations registered.[/dim]")
+                    continue
+
+                console.print("\n[bold]Integrations:[/bold]\n")
+                for info in all_integrations:
+                    status_color = {
+                        "connected": "green",
+                        "disconnected": "dim",
+                        "error": "red",
+                        "expired": "yellow",
+                    }.get(info.status.value, "white")
+
+                    console.print(
+                        f"  [{status_color}]{info.status.value:12}[/{status_color}] "
+                        f"[cyan]{info.name:16}[/cyan] {info.display_name}"
+                    )
+                    if info.error_message:
+                        console.print(f"    [red]Error: {info.error_message}[/red]")
+                    if info.capabilities:
+                        console.print(f"    [dim]Tools: {', '.join(info.capabilities[:5])}[/dim]")
+                console.print()
+                continue
+
+            if user_input.startswith("/integrate "):
+                service = user_input[11:].strip()
+
+                integration = integrations.get(service)
+                if not integration:
+                    available = [i.name for i in integrations.list_all()]
+                    console.print(f"[red]Unknown service: {service}[/red]")
+                    console.print(f"[dim]Available: {', '.join(available)}[/dim]")
+                    continue
+
+                if integration.is_connected:
+                    console.print(f"[yellow]{service} is already connected[/yellow]")
+                    continue
+
+                # Build credentials based on service type
+                credentials: dict = {}
+
+                if service == "filesystem":
+                    path = prompt("Path to index (or leave empty for current): ").strip()
+                    if path:
+                        credentials["paths"] = [path]
+                    else:
+                        credentials["paths"] = [str(Path.cwd())]
+
+                elif service == "todoist":
+                    api_key = config.integrations.todoist.api_key
+                    if not api_key:
+                        api_key = prompt("Todoist API key: ").strip()
+                    if not api_key:
+                        console.print("[red]API key required[/red]")
+                        continue
+                    credentials["api_key"] = api_key
+
+                elif service == "webhooks":
+                    port = config.integrations.webhooks.port
+                    secret = config.integrations.webhooks.secret
+                    credentials = {"port": port}
+                    if secret:
+                        credentials["secret"] = secret
+
+                elif service in ["google_calendar", "gmail"]:
+                    if not GOOGLE_INTEGRATIONS_AVAILABLE:
+                        console.print("[red]Google integration libraries not installed.[/red]")
+                        console.print("[dim]Install with: pip install 'animus[integrations]'[/dim]")
+                        continue
+
+                    client_id = config.integrations.google.client_id
+                    client_secret = config.integrations.google.client_secret
+
+                    if not client_id:
+                        client_id = prompt("Google Client ID: ").strip()
+                    if not client_secret:
+                        client_secret = prompt("Google Client Secret: ").strip()
+
+                    if not client_id or not client_secret:
+                        console.print("[red]Client ID and Secret required[/red]")
+                        continue
+
+                    credentials = {
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                    }
+
+                # Attempt connection
+                console.print(f"[dim]Connecting to {service}...[/dim]")
+                success = asyncio.get_event_loop().run_until_complete(
+                    integrations.connect(service, credentials)
+                )
+
+                if success:
+                    console.print(f"[green]Connected to {service}[/green]")
+                    # Re-register tools
+                    for tool in integration.get_tools():
+                        tools.register(tool)
+                else:
+                    info = integration.get_info()
+                    console.print(f"[red]Failed to connect: {info.error_message}[/red]")
+                continue
+
+            if user_input.startswith("/disconnect "):
+                service = user_input[12:].strip()
+
+                integration = integrations.get(service)
+                if not integration:
+                    console.print(f"[red]Unknown service: {service}[/red]")
+                    continue
+
+                if not integration.is_connected:
+                    console.print(f"[dim]{service} is not connected[/dim]")
+                    continue
+
+                success = asyncio.get_event_loop().run_until_complete(
+                    integrations.disconnect(service)
+                )
+
+                if success:
+                    console.print(f"[yellow]Disconnected from {service}[/yellow]")
+                else:
+                    console.print(f"[red]Failed to disconnect from {service}[/red]")
+                continue
+
+            # =========================================================
+            # End Phase 4 commands
             # =========================================================
 
             # Reasoning mode with auto-detection

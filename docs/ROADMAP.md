@@ -268,14 +268,27 @@ Animus works with your other tools.
 
 ### Tasks
 
-- [ ] Calendar integration (Google, Apple, CalDAV)
-- [ ] File system deep access (search, index, retrieve)
-- [ ] Communication integration
-  - [ ] Email (read, draft - IMAP/API)
-  - [ ] Messages (read - where permitted)
-- [ ] Task management sync (Todoist, Things, etc.)
-- [ ] API layer for custom integrations
-- [ ] Webhook support for external triggers
+**Core Integration Framework (v0.4.0)**
+- [x] Integration base framework (BaseIntegration, IntegrationManager)
+- [x] OAuth2 authentication flow helper
+- [x] Integration configuration system
+- [x] CLI commands (/integrate, /integrations, /disconnect)
+- [x] API endpoints (/integrations/*)
+
+**File System Integration**
+- [x] File system indexing and search
+- [x] Content search with regex
+- [x] File reading tool
+
+**External Service Integrations**
+- [x] Calendar integration (Google Calendar via OAuth2)
+- [x] Email integration (Gmail - read, draft, send via OAuth2)
+- [x] Task management sync (Todoist via API key)
+- [x] Webhook support for external triggers
+
+**Remaining Work**
+- [ ] Calendar integration (Apple, CalDAV)
+- [ ] Messages integration (where permitted)
 
 ### Integration Framework
 

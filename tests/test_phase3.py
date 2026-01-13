@@ -300,12 +300,14 @@ class TestVoiceModuleStructure:
 
 
 class TestVersion:
-    """Test version is updated for Phase 3."""
+    """Test version is at least Phase 3."""
 
-    def test_version_is_0_3_0(self):
+    def test_version_is_at_least_0_3_0(self):
         from animus import __version__
 
-        assert __version__ == "0.3.0"
+        # Version should be at least 0.3.0 (Phase 3 introduced voice and API)
+        major, minor, patch = map(int, __version__.split("."))
+        assert (major, minor) >= (0, 3)
 
 
 if __name__ == "__main__":

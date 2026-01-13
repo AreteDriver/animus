@@ -156,6 +156,31 @@ class BriefResponse(BaseModel):
     topic: str | None
 
 
+class IntegrationResponse(BaseModel):
+    """Integration status response."""
+
+    name: str
+    display_name: str
+    status: str
+    auth_type: str
+    connected_at: str | None
+    error_message: str | None
+    capabilities: list[str]
+
+
+class IntegrationListResponse(BaseModel):
+    """List of integrations."""
+
+    integrations: list[IntegrationResponse]
+    connected_count: int
+
+
+class IntegrationConnectRequest(BaseModel):
+    """Connect to integration request."""
+
+    credentials: dict = {}
+
+
 # =============================================================================
 # Application State
 # =============================================================================
@@ -172,6 +197,7 @@ class AppState:
     tasks: TaskTracker
     decisions: DecisionFramework
     conversations: dict[str, Conversation]
+    integrations: object | None = None  # IntegrationManager (optional)
 
 
 _state: AppState | None = None
@@ -200,6 +226,7 @@ class APIServer:
         host: str = "127.0.0.1",
         port: int = 8420,
         api_key: str | None = None,
+        integrations: object | None = None,
     ):
         """
         Initialize API server.
@@ -213,6 +240,7 @@ class APIServer:
             host: Host to bind to
             port: Port to bind to
             api_key: Optional API key for authentication
+            integrations: Optional IntegrationManager instance
         """
         if not FASTAPI_AVAILABLE:
             raise ImportError("FastAPI not installed. Install with: pip install 'animus[api]'")
@@ -225,6 +253,7 @@ class APIServer:
         self.host = host
         self.port = port
         self.api_key = api_key
+        self.integrations = integrations
 
         self._server_thread: threading.Thread | None = None
         self._server: uvicorn.Server | None = None
@@ -247,6 +276,7 @@ class APIServer:
             tasks=self.tasks,
             decisions=self.decisions,
             conversations={},
+            integrations=self.integrations,
         )
 
         # Update config with API key if provided
@@ -327,7 +357,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Animus API",
         description="Personal AI exocortex API",
-        version="0.3.0",
+        version="0.4.0",
         lifespan=lifespan,
     )
 
@@ -365,7 +395,7 @@ def create_app() -> FastAPI:
 
         return StatusResponse(
             status="running",
-            version="0.3.0",
+            version="0.4.0",
             memory_count=len(memories),
             task_count=len(tasks),
             model_provider=state.config.model.provider,
@@ -714,5 +744,109 @@ def create_app() -> FastAPI:
         except Exception as e:
             logger.error(f"WebSocket error: {e}")
             await websocket.close(code=1011)
+
+    # Integration endpoints (Phase 4)
+    # Note: These endpoints require IntegrationManager to be set on state
+
+    @app.get("/integrations", response_model=IntegrationListResponse)
+    async def list_integrations(_auth: bool = Depends(verify_api_key)):
+        """List all integrations with their status."""
+        state = get_state()
+
+        if not hasattr(state, "integrations") or state.integrations is None:
+            return IntegrationListResponse(integrations=[], connected_count=0)
+
+        all_integrations = state.integrations.list_all()
+        connected_count = len([i for i in all_integrations if i.status.value == "connected"])
+
+        return IntegrationListResponse(
+            integrations=[
+                IntegrationResponse(
+                    name=i.name,
+                    display_name=i.display_name,
+                    status=i.status.value,
+                    auth_type=i.auth_type.value,
+                    connected_at=i.connected_at.isoformat() if i.connected_at else None,
+                    error_message=i.error_message,
+                    capabilities=i.capabilities,
+                )
+                for i in all_integrations
+            ],
+            connected_count=connected_count,
+        )
+
+    @app.post("/integrations/{service}/connect", response_model=IntegrationResponse)
+    async def connect_integration(
+        service: str,
+        request: IntegrationConnectRequest,
+        _auth: bool = Depends(verify_api_key),
+    ):
+        """Connect to an integration."""
+        state = get_state()
+
+        if not hasattr(state, "integrations") or state.integrations is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Integration manager not available",
+            )
+
+        integration = state.integrations.get(service)
+        if not integration:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Integration not found: {service}",
+            )
+
+        success = await state.integrations.connect(service, request.credentials)
+
+        if not success:
+            info = integration.get_info()
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to connect: {info.error_message}",
+            )
+
+        # Register tools after connection
+        for tool in integration.get_tools():
+            state.tools.register(tool)
+
+        info = integration.get_info()
+        return IntegrationResponse(
+            name=info.name,
+            display_name=info.display_name,
+            status=info.status.value,
+            auth_type=info.auth_type.value,
+            connected_at=info.connected_at.isoformat() if info.connected_at else None,
+            error_message=info.error_message,
+            capabilities=info.capabilities,
+        )
+
+    @app.delete("/integrations/{service}")
+    async def disconnect_integration(service: str, _auth: bool = Depends(verify_api_key)):
+        """Disconnect from an integration."""
+        state = get_state()
+
+        if not hasattr(state, "integrations") or state.integrations is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Integration manager not available",
+            )
+
+        integration = state.integrations.get(service)
+        if not integration:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Integration not found: {service}",
+            )
+
+        success = await state.integrations.disconnect(service)
+
+        if success:
+            return {"status": "disconnected", "service": service}
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to disconnect",
+            )
 
     return app

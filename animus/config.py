@@ -86,6 +86,75 @@ class VoiceConfig:
 
 
 @dataclass
+class GoogleIntegrationConfig:
+    """Configuration for Google integrations (Calendar, Gmail)."""
+
+    enabled: bool = False
+    client_id: str | None = None
+    client_secret: str | None = None
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("GOOGLE_INTEGRATION_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+        self.client_id = os.environ.get("GOOGLE_CLIENT_ID", self.client_id)
+        self.client_secret = os.environ.get("GOOGLE_CLIENT_SECRET", self.client_secret)
+
+
+@dataclass
+class TodoistConfig:
+    """Configuration for Todoist integration."""
+
+    enabled: bool = False
+    api_key: str | None = None
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("TODOIST_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+        self.api_key = os.environ.get("TODOIST_API_KEY", self.api_key)
+
+
+@dataclass
+class FilesystemConfig:
+    """Configuration for filesystem integration."""
+
+    enabled: bool = False
+    indexed_paths: list[str] = field(default_factory=list)
+    exclude_patterns: list[str] = field(
+        default_factory=lambda: ["*.pyc", "__pycache__", ".git", "node_modules", ".venv"]
+    )
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("FILESYSTEM_INTEGRATION_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+
+
+@dataclass
+class WebhookConfig:
+    """Configuration for webhook receiver."""
+
+    enabled: bool = False
+    port: int = 8421
+    secret: str | None = None
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("WEBHOOK_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+        if env_port := os.environ.get("WEBHOOK_PORT"):
+            self.port = int(env_port)
+        self.secret = os.environ.get("WEBHOOK_SECRET", self.secret)
+
+
+@dataclass
+class IntegrationConfig:
+    """Configuration for all external integrations."""
+
+    google: GoogleIntegrationConfig = field(default_factory=GoogleIntegrationConfig)
+    todoist: TodoistConfig = field(default_factory=TodoistConfig)
+    filesystem: FilesystemConfig = field(default_factory=FilesystemConfig)
+    webhooks: WebhookConfig = field(default_factory=WebhookConfig)
+
+
+@dataclass
 class AnimusConfig:
     """Main configuration for Animus."""
 
@@ -96,6 +165,7 @@ class AnimusConfig:
     memory: MemoryConfig = field(default_factory=MemoryConfig)
     api: APIConfig = field(default_factory=APIConfig)
     voice: VoiceConfig = field(default_factory=VoiceConfig)
+    integrations: IntegrationConfig = field(default_factory=IntegrationConfig)
 
     def __post_init__(self):
         # Convert string to Path if needed
@@ -157,6 +227,23 @@ class AnimusConfig:
                 "whisper_model": self.voice.whisper_model,
                 "tts_engine": self.voice.tts_engine,
                 "tts_rate": self.voice.tts_rate,
+            },
+            "integrations": {
+                "google": {
+                    "enabled": self.integrations.google.enabled,
+                },
+                "todoist": {
+                    "enabled": self.integrations.todoist.enabled,
+                },
+                "filesystem": {
+                    "enabled": self.integrations.filesystem.enabled,
+                    "indexed_paths": self.integrations.filesystem.indexed_paths,
+                    "exclude_patterns": self.integrations.filesystem.exclude_patterns,
+                },
+                "webhooks": {
+                    "enabled": self.integrations.webhooks.enabled,
+                    "port": self.integrations.webhooks.port,
+                },
             },
         }
 
@@ -231,12 +318,46 @@ class AnimusConfig:
                 if "tts_rate" in voice_data:
                     config.voice.tts_rate = voice_data["tts_rate"]
 
+            if integrations_data := data.get("integrations"):
+                if google_data := integrations_data.get("google"):
+                    if "enabled" in google_data:
+                        config.integrations.google.enabled = google_data["enabled"]
+                    if "client_id" in google_data:
+                        config.integrations.google.client_id = google_data["client_id"]
+                    if "client_secret" in google_data:
+                        config.integrations.google.client_secret = google_data["client_secret"]
+                if todoist_data := integrations_data.get("todoist"):
+                    if "enabled" in todoist_data:
+                        config.integrations.todoist.enabled = todoist_data["enabled"]
+                    if "api_key" in todoist_data:
+                        config.integrations.todoist.api_key = todoist_data["api_key"]
+                if fs_data := integrations_data.get("filesystem"):
+                    if "enabled" in fs_data:
+                        config.integrations.filesystem.enabled = fs_data["enabled"]
+                    if "indexed_paths" in fs_data:
+                        config.integrations.filesystem.indexed_paths = fs_data["indexed_paths"]
+                    if "exclude_patterns" in fs_data:
+                        config.integrations.filesystem.exclude_patterns = fs_data[
+                            "exclude_patterns"
+                        ]
+                if webhook_data := integrations_data.get("webhooks"):
+                    if "enabled" in webhook_data:
+                        config.integrations.webhooks.enabled = webhook_data["enabled"]
+                    if "port" in webhook_data:
+                        config.integrations.webhooks.port = webhook_data["port"]
+                    if "secret" in webhook_data:
+                        config.integrations.webhooks.secret = webhook_data["secret"]
+
             # Re-apply environment overrides
             config.__post_init__()
             config.model.__post_init__()
             config.memory.__post_init__()
             config.api.__post_init__()
             config.voice.__post_init__()
+            config.integrations.google.__post_init__()
+            config.integrations.todoist.__post_init__()
+            config.integrations.filesystem.__post_init__()
+            config.integrations.webhooks.__post_init__()
 
         return config
 
