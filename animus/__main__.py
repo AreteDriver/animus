@@ -27,6 +27,18 @@ from animus.tasks import TaskTracker
 from animus.tools import create_default_registry, create_memory_tools
 from animus.voice import VoiceInterface
 
+# Optional sync module
+try:
+    from animus.sync import DeviceDiscovery, SyncClient, SyncServer, SyncableState
+
+    SYNC_AVAILABLE = True
+except ImportError:
+    SYNC_AVAILABLE = False
+    DeviceDiscovery = None
+    SyncClient = None
+    SyncServer = None
+    SyncableState = None
+
 # Optional Google integrations
 try:
     from animus.integrations.google import GoogleCalendarIntegration
@@ -124,6 +136,16 @@ def show_help():
   /guardrail add <rule>   - Add a user-defined guardrail
   /learning rollback      - List rollback checkpoints
   /learning rollback <id> - Rollback to checkpoint
+
+[bold]Cross-Device Sync (Phase 6):[/bold]
+  /sync start             - Start sync server (enables discovery)
+  /sync stop              - Stop sync server
+  /sync status            - Show sync status and connected peers
+  /sync discover          - List discovered devices on network
+  /sync connect <addr>    - Connect to device (ws://host:port or device_id)
+  /sync disconnect        - Disconnect from current peer
+  /sync now               - Trigger manual sync with peer
+  /sync pair              - Show pairing code (shared secret)
 
 [bold]Otherwise:[/bold]
   Just type naturally. Animus will respond.
@@ -349,6 +371,12 @@ def main():
     api_server: APIServer | None = None
     voice: VoiceInterface | None = None
 
+    # Phase 6: Cross-device Sync
+    sync_state: SyncableState | None = None
+    sync_server: SyncServer | None = None
+    sync_client: SyncClient | None = None
+    discovery: DeviceDiscovery | None = None
+
     # Phase 4: Integration Manager
     integrations = IntegrationManager(config.data_dir / "integrations")
 
@@ -423,6 +451,16 @@ def main():
         if voice and voice.input.is_listening:
             voice.stop_listening()
             logger.info("Voice listening stopped")
+        # Cleanup sync components
+        if sync_client and sync_client.is_connected:
+            asyncio.get_event_loop().run_until_complete(sync_client.disconnect())
+            logger.info("Sync client disconnected")
+        if discovery and discovery.is_running:
+            discovery.stop()
+            logger.info("Discovery stopped")
+        if sync_server and sync_server.is_running:
+            asyncio.get_event_loop().run_until_complete(sync_server.stop())
+            logger.info("Sync server stopped")
 
     atexit.register(cleanup_on_exit)
 
@@ -1257,6 +1295,250 @@ def main():
 
             # =========================================================
             # End Phase 5 commands
+            # =========================================================
+
+            # =========================================================
+            # Phase 6: Cross-device Sync commands
+            # =========================================================
+
+            if user_input.startswith("/sync ") or user_input == "/sync":
+                if not SYNC_AVAILABLE:
+                    console.print(
+                        "[red]Sync dependencies not installed. Install with: pip install websockets zeroconf[/red]"
+                    )
+                    continue
+
+                sync_cmd = user_input[5:].strip() if len(user_input) > 5 else ""
+
+                if sync_cmd == "start":
+                    # Initialize sync components if not already done
+                    if not sync_state:
+                        sync_state = SyncableState(config.data_dir)
+
+                    if sync_server and sync_server.is_running:
+                        console.print(
+                            f"[yellow]Sync server already running on port {sync_server.port}[/yellow]"
+                        )
+                        continue
+
+                    # Start sync server
+                    sync_server = SyncServer(
+                        state=sync_state,
+                        port=8422,
+                    )
+
+                    success = asyncio.get_event_loop().run_until_complete(sync_server.start())
+                    if not success:
+                        console.print("[red]Failed to start sync server[/red]")
+                        continue
+
+                    # Start device discovery
+                    if not discovery:
+                        discovery = DeviceDiscovery(
+                            device_id=sync_state.device_id,
+                            device_name=f"animus-{sync_state.device_id[:8]}",
+                            port=8422,
+                        )
+
+                    if discovery.start():
+                        console.print(
+                            f"[green]Sync server started on port 8422[/green]\n"
+                            f"  Device ID: {sync_state.device_id[:8]}...\n"
+                            f"  Shared secret: {sync_server.shared_secret[:8]}..."
+                        )
+                    else:
+                        console.print(
+                            f"[yellow]Sync server started but discovery failed[/yellow]\n"
+                            f"  Other devices can connect via: ws://<your-ip>:8422"
+                        )
+                    continue
+
+                if sync_cmd == "stop":
+                    stopped_something = False
+
+                    if sync_client and sync_client.is_connected:
+                        asyncio.get_event_loop().run_until_complete(sync_client.disconnect())
+                        sync_client = None
+                        stopped_something = True
+
+                    if discovery and discovery.is_running:
+                        discovery.stop()
+                        stopped_something = True
+
+                    if sync_server and sync_server.is_running:
+                        asyncio.get_event_loop().run_until_complete(sync_server.stop())
+                        stopped_something = True
+
+                    if stopped_something:
+                        console.print("[yellow]Sync services stopped[/yellow]")
+                    else:
+                        console.print("[dim]Sync services not running[/dim]")
+                    continue
+
+                if sync_cmd == "status":
+                    console.print("\n[bold]Sync Status[/bold]\n")
+
+                    # Server status
+                    if sync_server and sync_server.is_running:
+                        console.print(
+                            f"  [green]Server:[/green] Running on port {sync_server.port}"
+                        )
+                        peers = sync_server.get_peers()
+                        if peers:
+                            console.print(f"  [green]Connected peers:[/green] {len(peers)}")
+                            for peer in peers:
+                                console.print(
+                                    f"    - {peer.device_name} ({peer.device_id[:8]}...)"
+                                )
+                        else:
+                            console.print("  [dim]No peers connected[/dim]")
+                    else:
+                        console.print("  [dim]Server: Not running[/dim]")
+
+                    # Client status
+                    if sync_client and sync_client.is_connected:
+                        console.print(
+                            f"  [green]Client:[/green] Connected to {sync_client.peer_device_name}"
+                        )
+                    else:
+                        console.print("  [dim]Client: Not connected[/dim]")
+
+                    # Discovery status
+                    if discovery and discovery.is_running:
+                        devices = discovery.get_devices()
+                        console.print(f"  [green]Discovery:[/green] Active ({len(devices)} devices)")
+                    else:
+                        console.print("  [dim]Discovery: Not running[/dim]")
+
+                    # State info
+                    if sync_state:
+                        console.print(f"\n  State version: {sync_state.version}")
+                        console.print(f"  Device ID: {sync_state.device_id[:8]}...")
+                    console.print()
+                    continue
+
+                if sync_cmd == "discover":
+                    if not discovery or not discovery.is_running:
+                        console.print(
+                            "[dim]Discovery not running. Start with /sync start[/dim]"
+                        )
+                        continue
+
+                    devices = discovery.get_devices()
+                    if not devices:
+                        console.print("[dim]No devices discovered yet[/dim]")
+                        continue
+
+                    console.print("\n[bold]Discovered Devices[/bold]\n")
+                    for device in devices:
+                        console.print(
+                            f"  [{device.device_id[:8]}] {device.name}\n"
+                            f"    Address: {device.address}\n"
+                            f"    Version: {device.version}"
+                        )
+                    console.print()
+                    continue
+
+                if sync_cmd.startswith("connect "):
+                    target = sync_cmd[8:].strip()
+                    if not target:
+                        console.print("[red]Usage: /sync connect <ws://host:port or device_id>[/red]")
+                        continue
+
+                    if not sync_state:
+                        sync_state = SyncableState(config.data_dir)
+
+                    # Determine if target is device_id or address
+                    address = target
+                    if not target.startswith("ws://"):
+                        # Look up device by ID
+                        if discovery and discovery.is_running:
+                            for device in discovery.get_devices():
+                                if device.device_id.startswith(target) or device.device_id == target:
+                                    address = device.address
+                                    break
+                            else:
+                                console.print(f"[red]Device not found: {target}[/red]")
+                                continue
+                        else:
+                            console.print(
+                                "[red]Provide full address (ws://host:port) or start discovery first[/red]"
+                            )
+                            continue
+
+                    # Prompt for shared secret
+                    secret = prompt("Shared secret from target device: ").strip()
+                    if not secret:
+                        console.print("[red]Shared secret required for authentication[/red]")
+                        continue
+
+                    sync_client = SyncClient(state=sync_state, shared_secret=secret)
+
+                    console.print(f"[dim]Connecting to {address}...[/dim]")
+                    success = asyncio.get_event_loop().run_until_complete(
+                        sync_client.connect(address)
+                    )
+
+                    if success:
+                        console.print(
+                            f"[green]Connected to {sync_client.peer_device_name}[/green]"
+                        )
+                    else:
+                        console.print("[red]Connection failed[/red]")
+                        sync_client = None
+                    continue
+
+                if sync_cmd == "disconnect":
+                    if not sync_client or not sync_client.is_connected:
+                        console.print("[dim]Not connected to any peer[/dim]")
+                        continue
+
+                    peer_name = sync_client.peer_device_name
+                    asyncio.get_event_loop().run_until_complete(sync_client.disconnect())
+                    sync_client = None
+                    console.print(f"[yellow]Disconnected from {peer_name}[/yellow]")
+                    continue
+
+                if sync_cmd == "now":
+                    if not sync_client or not sync_client.is_connected:
+                        console.print("[dim]Not connected to any peer. Use /sync connect first[/dim]")
+                        continue
+
+                    console.print("[dim]Syncing...[/dim]")
+                    result = asyncio.get_event_loop().run_until_complete(sync_client.sync())
+
+                    if result.success:
+                        console.print(
+                            f"[green]Sync complete[/green]\n"
+                            f"  Sent: {result.changes_sent} changes\n"
+                            f"  Received: {result.changes_received} changes\n"
+                            f"  Duration: {result.duration_ms}ms"
+                        )
+                    else:
+                        console.print(f"[red]Sync failed: {result.error}[/red]")
+                    continue
+
+                if sync_cmd == "pair":
+                    if sync_server and sync_server.is_running:
+                        console.print(
+                            f"\n[bold]Pairing Information[/bold]\n\n"
+                            f"  Share this secret with the device you want to sync:\n"
+                            f"  [cyan]{sync_server.shared_secret}[/cyan]\n"
+                        )
+                    else:
+                        console.print(
+                            "[dim]Start sync server first with /sync start[/dim]"
+                        )
+                    continue
+
+                # Unknown sync command
+                console.print(
+                    "[red]Unknown sync command. Use: start, stop, status, discover, connect, disconnect, now, pair[/red]"
+                )
+                continue
+
+            # =========================================================
+            # End Phase 6 commands
             # =========================================================
 
             # Reasoning mode with auto-detection
