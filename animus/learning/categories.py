@@ -151,9 +151,7 @@ class LearnedItem:
             updated_at=datetime.fromisoformat(data["updated_at"]),
             applied=data.get("applied", False),
             approved_at=(
-                datetime.fromisoformat(data["approved_at"])
-                if data.get("approved_at")
-                else None
+                datetime.fromisoformat(data["approved_at"]) if data.get("approved_at") else None
             ),
             approved_by=data.get("approved_by"),
             source_pattern_id=data.get("source_pattern_id"),

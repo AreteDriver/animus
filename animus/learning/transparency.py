@@ -283,9 +283,7 @@ class LearningTransparency:
             Human-readable explanation
         """
         # Get related events
-        related_events = [
-            e for e in self._events if e.learned_item_id == learned_item.id
-        ]
+        related_events = [e for e in self._events if e.learned_item_id == learned_item.id]
         related_events.sort(key=lambda x: x.timestamp)
 
         explanation_parts = [
@@ -317,9 +315,7 @@ class LearningTransparency:
         for i in range(7):
             day = (datetime.now() - timedelta(days=i)).date()
             day_str = day.isoformat()
-            daily_counts[day_str] = sum(
-                1 for e in self._events if e.timestamp.date() == day
-            )
+            daily_counts[day_str] = sum(1 for e in self._events if e.timestamp.date() == day)
 
         return {
             "total_events": len(self._events),

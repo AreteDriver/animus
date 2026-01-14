@@ -109,9 +109,7 @@ class DeviceDiscovery:
         try:
             from zeroconf import ServiceBrowser, ServiceInfo, Zeroconf
         except ImportError:
-            logger.warning(
-                "Zeroconf not installed. Install with: pip install zeroconf"
-            )
+            logger.warning("Zeroconf not installed. Install with: pip install zeroconf")
             return False
 
         if self._running:

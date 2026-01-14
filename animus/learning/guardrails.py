@@ -227,9 +227,7 @@ class GuardrailManager:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         guardrails_file = self.data_dir / "user_guardrails.json"
         user_guardrails = [
-            g.to_dict()
-            for g in self._guardrails.values()
-            if g.source == "user_defined"
+            g.to_dict() for g in self._guardrails.values() if g.source == "user_defined"
         ]
         with open(guardrails_file, "w") as f:
             json.dump(user_guardrails, f, indent=2)
@@ -317,9 +315,7 @@ class GuardrailManager:
 
         return True, None
 
-    def _log_violation(
-        self, guardrail_id: str, action: dict[str, Any], explanation: str
-    ) -> None:
+    def _log_violation(self, guardrail_id: str, action: dict[str, Any], explanation: str) -> None:
         """Log a guardrail violation."""
         violation = GuardrailViolation(
             id=str(uuid.uuid4()),

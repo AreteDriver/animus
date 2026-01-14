@@ -71,9 +71,7 @@ class Preference:
             "confidence": self.confidence,
             "source_patterns": self.source_patterns,
             "created_at": self.created_at.isoformat(),
-            "last_applied": (
-                self.last_applied.isoformat() if self.last_applied else None
-            ),
+            "last_applied": (self.last_applied.isoformat() if self.last_applied else None),
             "application_count": self.application_count,
             "metadata": self.metadata,
         }
@@ -90,9 +88,7 @@ class Preference:
             source_patterns=data["source_patterns"],
             created_at=datetime.fromisoformat(data["created_at"]),
             last_applied=(
-                datetime.fromisoformat(data["last_applied"])
-                if data.get("last_applied")
-                else None
+                datetime.fromisoformat(data["last_applied"]) if data.get("last_applied") else None
             ),
             application_count=data.get("application_count", 0),
             metadata=data.get("metadata", {}),
@@ -137,9 +133,7 @@ class PreferenceEngine:
         with open(prefs_file, "w") as f:
             json.dump(data, f, indent=2)
 
-    def infer_from_pattern(
-        self, pattern: "DetectedPattern"
-    ) -> Preference | None:
+    def infer_from_pattern(self, pattern: "DetectedPattern") -> Preference | None:
         """
         Infer a preference from a detected pattern.
 

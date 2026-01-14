@@ -190,9 +190,9 @@ class SyncClient:
             if not incoming_delta.is_empty():
                 self.state.apply_delta(incoming_delta)
                 changes_received = (
-                    len(incoming_delta.changes.get("added", {})) +
-                    len(incoming_delta.changes.get("modified", {})) +
-                    len(incoming_delta.changes.get("deleted", []))
+                    len(incoming_delta.changes.get("added", {}))
+                    + len(incoming_delta.changes.get("modified", {}))
+                    + len(incoming_delta.changes.get("deleted", []))
                 )
 
                 # Notify callbacks
@@ -227,9 +227,9 @@ class SyncClient:
                 if ack_message.type == MessageType.DELTA_ACK:
                     if ack_message.payload.get("success"):
                         changes_sent = (
-                            len(outgoing_delta.changes.get("added", {})) +
-                            len(outgoing_delta.changes.get("modified", {})) +
-                            len(outgoing_delta.changes.get("deleted", []))
+                            len(outgoing_delta.changes.get("added", {}))
+                            + len(outgoing_delta.changes.get("modified", {}))
+                            + len(outgoing_delta.changes.get("deleted", []))
                         )
                         self.state.increment_version()
 

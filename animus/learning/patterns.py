@@ -233,9 +233,7 @@ class PatternDetector:
 
         return filtered
 
-    def _detect_frequency_patterns(
-        self, memories: list["Memory"]
-    ) -> list[PatternSignal]:
+    def _detect_frequency_patterns(self, memories: list["Memory"]) -> list[PatternSignal]:
         """Detect frequently repeated actions or requests."""
         signals: list[PatternSignal] = []
 
@@ -274,9 +272,7 @@ class PatternDetector:
 
         return signals
 
-    def _detect_preference_signals(
-        self, memories: list["Memory"]
-    ) -> list[PatternSignal]:
+    def _detect_preference_signals(self, memories: list["Memory"]) -> list[PatternSignal]:
         """Detect explicit preference expressions."""
         signals: list[PatternSignal] = []
 
@@ -340,9 +336,7 @@ class PatternDetector:
 
         return signals
 
-    def _detect_temporal_patterns(
-        self, memories: list["Memory"]
-    ) -> list[PatternSignal]:
+    def _detect_temporal_patterns(self, memories: list["Memory"]) -> list[PatternSignal]:
         """Detect time-of-day or day-of-week patterns."""
         signals: list[PatternSignal] = []
 
@@ -378,9 +372,7 @@ class PatternDetector:
 
         return signals
 
-    def _consolidate_signals(
-        self, signals: list[PatternSignal]
-    ) -> list[DetectedPattern]:
+    def _consolidate_signals(self, signals: list[PatternSignal]) -> list[DetectedPattern]:
         """Consolidate signals into patterns meeting threshold."""
         patterns: list[DetectedPattern] = []
 

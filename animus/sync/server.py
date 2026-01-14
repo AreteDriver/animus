@@ -71,6 +71,7 @@ class SyncServer:
     def _generate_secret(self) -> str:
         """Generate a random shared secret."""
         import secrets
+
         return secrets.token_hex(16)
 
     def add_peer_connected_callback(self, callback: Callable[[ConnectedPeer], None]) -> None:

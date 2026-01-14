@@ -427,9 +427,7 @@ class AnimusConfig:
                         "min_pattern_occurrences"
                     ]
                 if "min_pattern_confidence" in learning_data:
-                    config.learning.min_pattern_confidence = learning_data[
-                        "min_pattern_confidence"
-                    ]
+                    config.learning.min_pattern_confidence = learning_data["min_pattern_confidence"]
                 if "lookback_days" in learning_data:
                     config.learning.lookback_days = learning_data["lookback_days"]
 

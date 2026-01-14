@@ -100,9 +100,7 @@ class ApprovalRequest:
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
             "status": self.status.value,
             "user_response": self.user_response,
-            "responded_at": (
-                self.responded_at.isoformat() if self.responded_at else None
-            ),
+            "responded_at": (self.responded_at.isoformat() if self.responded_at else None),
             "metadata": self.metadata,
         }
 
@@ -117,16 +115,12 @@ class ApprovalRequest:
             evidence_summary=data["evidence_summary"],
             created_at=datetime.fromisoformat(data["created_at"]),
             expires_at=(
-                datetime.fromisoformat(data["expires_at"])
-                if data.get("expires_at")
-                else None
+                datetime.fromisoformat(data["expires_at"]) if data.get("expires_at") else None
             ),
             status=ApprovalStatus(data.get("status", "pending")),
             user_response=data.get("user_response"),
             responded_at=(
-                datetime.fromisoformat(data["responded_at"])
-                if data.get("responded_at")
-                else None
+                datetime.fromisoformat(data["responded_at"]) if data.get("responded_at") else None
             ),
             metadata=data.get("metadata", {}),
         )
@@ -185,9 +179,7 @@ class ApprovalManager:
         with open(requests_file, "w") as f:
             json.dump(data, f, indent=2)
 
-    def get_approval_requirement(
-        self, category: LearningCategory
-    ) -> ApprovalRequirement:
+    def get_approval_requirement(self, category: LearningCategory) -> ApprovalRequirement:
         """Get the approval requirement for a category."""
         return CATEGORY_APPROVAL.get(category, ApprovalRequirement.APPROVE)
 
@@ -218,7 +210,8 @@ class ApprovalManager:
         """
         request = ApprovalRequest.create(
             learned_item=learned_item,
-            evidence_summary=evidence_summary or f"Based on {len(learned_item.evidence)} observations",
+            evidence_summary=evidence_summary
+            or f"Based on {len(learned_item.evidence)} observations",
         )
 
         self._pending_requests[request.id] = request

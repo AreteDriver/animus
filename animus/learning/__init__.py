@@ -351,9 +351,7 @@ class LearningLayer:
         """Get active preferences."""
         return self.preference_engine.get_preferences(domain)
 
-    def apply_preferences_to_context(
-        self, context: dict[str, Any], domain: str
-    ) -> dict[str, Any]:
+    def apply_preferences_to_context(self, context: dict[str, Any], domain: str) -> dict[str, Any]:
         """Apply learned preferences to a context."""
         return self.preference_engine.apply_to_context(context, domain)
 

@@ -245,9 +245,7 @@ class RollbackManager:
         current_applied = [item.id for item in current_items if item.applied]
 
         # Items that are currently applied but weren't at the rollback point
-        to_unlearn = [
-            item_id for item_id in current_applied if item_id not in target_set
-        ]
+        to_unlearn = [item_id for item_id in current_applied if item_id not in target_set]
 
         return to_unlearn
 
@@ -287,13 +285,9 @@ class RollbackManager:
             "checkpoint_count": len(self._rollback_points),
             "unlearn_count": len(self._unlearn_history),
             "oldest_checkpoint": (
-                self._rollback_points[0].timestamp.isoformat()
-                if self._rollback_points
-                else None
+                self._rollback_points[0].timestamp.isoformat() if self._rollback_points else None
             ),
             "newest_checkpoint": (
-                self._rollback_points[-1].timestamp.isoformat()
-                if self._rollback_points
-                else None
+                self._rollback_points[-1].timestamp.isoformat() if self._rollback_points else None
             ),
         }

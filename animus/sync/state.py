@@ -126,9 +126,7 @@ class StateDelta:
         """Check if delta has no changes."""
         changes = self.changes
         return (
-            not changes.get("added")
-            and not changes.get("modified")
-            and not changes.get("deleted")
+            not changes.get("added") and not changes.get("modified") and not changes.get("deleted")
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -275,6 +273,7 @@ class SyncableState:
         config_file = self.data_dir / "config.yaml"
         if config_file.exists():
             import yaml
+
             with open(config_file) as f:
                 config = yaml.safe_load(f) or {}
             # Remove sensitive fields
@@ -337,7 +336,9 @@ class SyncableState:
             self._version = max(self._version, delta.new_version)
             self._save_version()
             self.set_peer_version(delta.source_device, delta.new_version)
-            logger.info(f"Applied delta from {delta.source_device[:8]}, now at version {self._version}")
+            logger.info(
+                f"Applied delta from {delta.source_device[:8]}, now at version {self._version}"
+            )
 
         return applied
 

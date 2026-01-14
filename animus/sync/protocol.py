@@ -54,17 +54,20 @@ class SyncMessage:
     def __post_init__(self):
         if not self.message_id:
             import uuid
+
             self.message_id = str(uuid.uuid4())[:8]
 
     def to_json(self) -> str:
         """Serialize to JSON string."""
-        return json.dumps({
-            "type": self.type.value,
-            "device_id": self.device_id,
-            "timestamp": self.timestamp.isoformat(),
-            "payload": self.payload,
-            "message_id": self.message_id,
-        })
+        return json.dumps(
+            {
+                "type": self.type.value,
+                "device_id": self.device_id,
+                "timestamp": self.timestamp.isoformat(),
+                "payload": self.payload,
+                "message_id": self.message_id,
+            }
+        )
 
     @classmethod
     def from_json(cls, data: str) -> "SyncMessage":
@@ -91,9 +94,11 @@ class SyncMessage:
 
 # Message factory functions for common operations
 
+
 def create_auth_message(device_id: str, shared_secret: str) -> SyncMessage:
     """Create an authentication message."""
     import hashlib
+
     # Hash the secret for transmission
     auth_hash = hashlib.sha256(shared_secret.encode()).hexdigest()
     return SyncMessage(

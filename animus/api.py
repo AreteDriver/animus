@@ -1030,9 +1030,7 @@ def create_app() -> FastAPI:
                 detail="Learning system not available",
             )
 
-        events = state.learning.transparency.get_history(
-            limit=limit, event_type=event_type
-        )
+        events = state.learning.transparency.get_history(limit=limit, event_type=event_type)
         return {"events": [e.to_dict() for e in events]}
 
     @app.get("/guardrails")
@@ -1074,9 +1072,7 @@ def create_app() -> FastAPI:
                 detail="Learning system not available",
             )
 
-        guardrail = state.learning.add_user_guardrail(
-            rule, description or f"User-defined: {rule}"
-        )
+        guardrail = state.learning.add_user_guardrail(rule, description or f"User-defined: {rule}")
         return {"status": "created", "id": guardrail.id}
 
     @app.get("/learning/rollback-points")
