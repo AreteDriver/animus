@@ -61,7 +61,7 @@ def _validate_path(path: str) -> tuple[bool, str | None]:
             break
 
     if not in_allowed:
-        return False, f"Access denied: path not in allowed directories"
+        return False, "Access denied: path not in allowed directories"
 
     return True, None
 
@@ -82,7 +82,7 @@ def _validate_command(command: str) -> tuple[bool, str | None]:
     # Check command blocklist
     for pattern in _security_config.command_blocklist:
         if re.search(pattern, command, re.IGNORECASE):
-            return False, f"Command blocked by security policy"
+            return False, "Command blocked by security policy"
 
     return True, None
 
