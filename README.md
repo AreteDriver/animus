@@ -2,6 +2,10 @@
 
 *An exocortex architecture for personal cognitive sovereignty*
 
+[![CI](https://github.com/AreteDriver/animus/actions/workflows/ci.yml/badge.svg)](https://github.com/AreteDriver/animus/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ---
 
 ## What is this?
@@ -12,55 +16,256 @@ Current AI assistants are rented. Your context exists at the discretion of platf
 
 Animus explores an alternative: an AI that is **yours**.
 
----
-
-## The concept
-
-The idea of a personal guiding intelligence is ancient - daemons, familiars, bound spirits, advisory entities that serve one person's interests across time.
-
-This project translates that concept into modern architecture: a persistent, private, portable AI co-pilot that extends your cognitive capacity without compromising your sovereignty.
+```
+17,000+ lines of Python | 266 tests | Local-first by default
+```
 
 ---
 
-## Core principles
+## Quick Start
+
+```bash
+# Install
+pip install -e .
+
+# Run the interactive CLI
+animus
+
+# Or with API server
+pip install -e ".[api]"
+animus --api
+```
+
+### Minimal Example
+
+```python
+from animus import AnimusConfig, MemoryLayer, CognitiveLayer, ModelConfig
+
+# Initialize
+config = AnimusConfig()
+memory = MemoryLayer(config.data_dir)
+cognitive = CognitiveLayer(ModelConfig(provider="ollama", model="llama3.2"))
+
+# Remember something
+memory.remember(
+    content="User prefers concise responses",
+    memory_type="semantic",
+    tags=["preference", "communication"],
+    confidence=0.9,
+)
+
+# Retrieve relevant context
+context = memory.recall("How should I communicate?", limit=5)
+
+# Generate response with context
+response = cognitive.think(
+    prompt="Summarize my communication preferences",
+    context=context,
+)
+```
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Interface Layer                         │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────────┐  │
+│  │   CLI    │ │   API    │ │  Voice   │ │     Sync      │  │
+│  │ (Rich)   │ │(FastAPI) │ │(Whisper) │ │  (WebSocket)  │  │
+│  └──────────┘ └──────────┘ └──────────┘ └───────────────┘  │
+├─────────────────────────────────────────────────────────────┤
+│                    Cognitive Layer                          │
+│         CognitiveLayer, ReasoningMode, ToolRegistry         │
+├─────────────────────────────────────────────────────────────┤
+│                     Memory Layer                            │
+│     MemoryLayer (ChromaDB), SemanticFact, Conversation      │
+├─────────────────────────────────────────────────────────────┤
+│                    Learning Layer                           │
+│       LearningLayer, Guardrails, Patterns, Rollback         │
+├─────────────────────────────────────────────────────────────┤
+│                      Core Layer                             │
+│       AnimusConfig, DecisionFramework, TaskTracker          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Components
+
+| Module | Purpose |
+|--------|---------|
+| `memory.py` | Vector storage with ChromaDB, episodic/semantic/procedural memory types |
+| `cognitive.py` | Model-agnostic reasoning (Ollama, Anthropic, OpenAI) |
+| `learning/` | Pattern detection, preference inference, guardrails |
+| `tools.py` | Extensible tool registry for file system, web, integrations |
+| `sync/` | Cross-device state synchronization via WebSocket |
+| `api.py` | FastAPI server for external integrations |
+| `voice.py` | Whisper STT + TTS for voice interaction |
+
+---
+
+## Core Principles
 
 - **Persistence** - Context accumulates across sessions, devices, and years
 - **Sovereignty** - Your data stays yours. Local-first by default.
 - **Loyalty** - Aligned to you, not to a platform's incentives
-- **Portability** - Moves with you: desktop, mobile, wearable, vehicle
+- **Portability** - Moves with you: CLI, API, voice, sync across devices
 - **Growth** - Learns your patterns, priorities, and goals over time
-- **Safety** - Cannot harm its user. Guardrails are user-defined but inviolable.
+- **Safety** - Guardrails are user-defined but inviolable
 
 ---
 
-## Core capabilities
+## Learning System
 
-- Real-time analysis and situation awareness
-- Personal knowledge retrieval and file management
-- Communication assistance and register translation
-- Long-term pattern recognition
-- Task coordination and planning
-- Cross-device synchronization and handoff
-- Teachable/self-learning within user-defined boundaries
+Animus learns from interactions while respecting strict boundaries:
+
+```python
+from animus import LearningLayer, MemoryLayer, AnimusConfig
+
+config = AnimusConfig()
+memory = MemoryLayer(config.data_dir)
+learning = LearningLayer(memory, config.data_dir)
+
+# Scan memories for patterns
+patterns = learning.scan_and_learn()
+
+# Review what was learned (transparency)
+active = learning.get_active_learnings()
+
+# Approve or reject pending learnings
+pending = learning.get_pending_learnings()
+learning.approve(pending[0].id)
+
+# Rollback if needed
+checkpoints = learning.rollback.list_checkpoints()
+learning.rollback.restore(checkpoints[0].id)
+```
+
+### Safety Guardrails
+
+```python
+from animus.learning import GuardrailManager, Guardrail
+
+guardrails = GuardrailManager(config.data_dir)
+
+# View default safety rules
+for g in guardrails.get_all_guardrails():
+    print(f"{g.rule} (immutable: {g.immutable})")
+
+# Core guardrails cannot be overridden by learned behavior
+```
+
+---
+
+## Installation Options
+
+```bash
+# Core only (Ollama + ChromaDB)
+pip install -e .
+
+# With Anthropic Claude support
+pip install -e ".[anthropic]"
+
+# With API server
+pip install -e ".[api]"
+
+# With voice (Whisper + TTS)
+pip install -e ".[voice]"
+
+# With integrations (Todoist, Google)
+pip install -e ".[integrations]"
+
+# With cross-device sync
+pip install -e ".[sync]"
+
+# Everything
+pip install -e ".[all]"
+```
+
+---
+
+## CLI Usage
+
+```bash
+# Interactive mode
+animus
+
+# Single query
+animus "What's on my schedule today?"
+
+# With specific model
+animus --model claude-3-5-sonnet-20241022
+
+# Start API server
+animus --api --port 8000
+
+# Voice mode
+animus --voice
+```
+
+---
+
+## API Server
+
+```bash
+animus --api
+```
+
+```python
+import httpx
+
+# Chat endpoint
+response = httpx.post("http://localhost:8000/chat", json={
+    "message": "What are my priorities today?",
+    "context_limit": 10,
+})
+print(response.json()["response"])
+
+# Memory endpoints
+httpx.post("http://localhost:8000/memory", json={
+    "content": "Meeting with team at 3pm",
+    "type": "episodic",
+    "tags": ["calendar", "work"],
+})
+
+memories = httpx.get("http://localhost:8000/memory/search", params={
+    "query": "meetings",
+    "limit": 5,
+})
+```
 
 ---
 
 ## Documentation
 
-- [Architecture Overview](docs/ARCHITECTURE.md)
-- [Implementation Roadmap](docs/ROADMAP.md)
-- [Use Cases](docs/USE_CASES.md)
-- [Connectivity & Interfaces](docs/CONNECTIVITY.md)
-- [Safety & Ethics](docs/SAFETY.md)
-- [Contributing](CONTRIBUTING.md)
+- [Architecture Overview](docs/ARCHITECTURE.md) - System design and data flow
+- [Implementation Roadmap](docs/ROADMAP.md) - Development phases
+- [Use Cases](docs/USE_CASES.md) - Practical applications
+- [Connectivity & Interfaces](docs/CONNECTIVITY.md) - Device integration
+- [Safety & Ethics](docs/SAFETY.md) - Guardrails and privacy
+- [Contributing](CONTRIBUTING.md) - How to contribute
 
 ---
 
-## Project Status
+## Development
 
-🚧 **Conceptual / Early Development**
+```bash
+# Install dev dependencies
+pip install -e ".[dev]"
 
-This project is currently in the design and documentation phase. See the [Roadmap](docs/ROADMAP.md) for planned development phases.
+# Run tests
+pytest
+
+# Run tests with coverage
+pytest --cov=animus --cov-report=term-missing
+
+# Lint
+ruff check .
+ruff format .
+
+# Type check
+mypy animus/
+```
 
 ---
 
@@ -79,13 +284,3 @@ The goal isn't to replace cloud AI services entirely - they have capabilities th
 ## License
 
 MIT License - See [LICENSE](LICENSE) for details.
-
----
-
-## Acknowledgments
-
-This project draws inspiration from:
-- Ancient concepts of personal guiding intelligences
-- The exocortex concept from transhumanist thought
-- Open source AI projects pushing local-first development
-- Everyone building toward a future where AI serves individuals, not just platforms
