@@ -1,6 +1,6 @@
 """Animus - An exocortex architecture for personal cognitive sovereignty."""
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode, detect_mode
 from animus.config import AnimusConfig
@@ -30,6 +30,21 @@ except ImportError:
     VoiceInterface = None  # type: ignore[misc, assignment]
     VoiceOutput = None  # type: ignore[misc, assignment]
 
+try:
+    from animus.learning import (
+        LearningLayer,
+        LearningCategory,
+        LearnedItem,
+        GuardrailManager,
+        Guardrail,
+    )
+except ImportError:
+    LearningLayer = None  # type: ignore[misc, assignment]
+    LearningCategory = None  # type: ignore[misc, assignment]
+    LearnedItem = None  # type: ignore[misc, assignment]
+    GuardrailManager = None  # type: ignore[misc, assignment]
+    Guardrail = None  # type: ignore[misc, assignment]
+
 __all__ = [
     "APIServer",
     "AnimusConfig",
@@ -37,6 +52,11 @@ __all__ = [
     "Conversation",
     "Decision",
     "DecisionFramework",
+    "Guardrail",
+    "GuardrailManager",
+    "LearnedItem",
+    "LearningCategory",
+    "LearningLayer",
     "Memory",
     "MemoryLayer",
     "MemorySource",

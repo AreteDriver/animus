@@ -155,6 +155,25 @@ class IntegrationConfig:
 
 
 @dataclass
+class LearningConfig:
+    """Configuration for the self-learning system."""
+
+    enabled: bool = True
+    auto_scan_enabled: bool = True
+    auto_scan_interval_hours: int = 24
+    min_pattern_occurrences: int = 3
+    min_pattern_confidence: float = 0.6
+    lookback_days: int = 30
+    max_pending_approvals: int = 50
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("ANIMUS_LEARNING_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+        if env_auto_scan := os.environ.get("ANIMUS_LEARNING_AUTO_SCAN"):
+            self.auto_scan_enabled = env_auto_scan.lower() in ("true", "1", "yes")
+
+
+@dataclass
 class AnimusConfig:
     """Main configuration for Animus."""
 
@@ -166,6 +185,7 @@ class AnimusConfig:
     api: APIConfig = field(default_factory=APIConfig)
     voice: VoiceConfig = field(default_factory=VoiceConfig)
     integrations: IntegrationConfig = field(default_factory=IntegrationConfig)
+    learning: LearningConfig = field(default_factory=LearningConfig)
 
     def __post_init__(self):
         # Convert string to Path if needed
@@ -244,6 +264,14 @@ class AnimusConfig:
                     "enabled": self.integrations.webhooks.enabled,
                     "port": self.integrations.webhooks.port,
                 },
+            },
+            "learning": {
+                "enabled": self.learning.enabled,
+                "auto_scan_enabled": self.learning.auto_scan_enabled,
+                "auto_scan_interval_hours": self.learning.auto_scan_interval_hours,
+                "min_pattern_occurrences": self.learning.min_pattern_occurrences,
+                "min_pattern_confidence": self.learning.min_pattern_confidence,
+                "lookback_days": self.learning.lookback_days,
             },
         }
 
@@ -348,6 +376,26 @@ class AnimusConfig:
                     if "secret" in webhook_data:
                         config.integrations.webhooks.secret = webhook_data["secret"]
 
+            if learning_data := data.get("learning"):
+                if "enabled" in learning_data:
+                    config.learning.enabled = learning_data["enabled"]
+                if "auto_scan_enabled" in learning_data:
+                    config.learning.auto_scan_enabled = learning_data["auto_scan_enabled"]
+                if "auto_scan_interval_hours" in learning_data:
+                    config.learning.auto_scan_interval_hours = learning_data[
+                        "auto_scan_interval_hours"
+                    ]
+                if "min_pattern_occurrences" in learning_data:
+                    config.learning.min_pattern_occurrences = learning_data[
+                        "min_pattern_occurrences"
+                    ]
+                if "min_pattern_confidence" in learning_data:
+                    config.learning.min_pattern_confidence = learning_data[
+                        "min_pattern_confidence"
+                    ]
+                if "lookback_days" in learning_data:
+                    config.learning.lookback_days = learning_data["lookback_days"]
+
             # Re-apply environment overrides
             config.__post_init__()
             config.model.__post_init__()
@@ -358,6 +406,7 @@ class AnimusConfig:
             config.integrations.todoist.__post_init__()
             config.integrations.filesystem.__post_init__()
             config.integrations.webhooks.__post_init__()
+            config.learning.__post_init__()
 
         return config
 

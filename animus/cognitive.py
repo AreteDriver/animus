@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 from animus.logging import get_logger
 
 if TYPE_CHECKING:
+    from animus.learning import LearningLayer
     from animus.memory import MemoryLayer
     from animus.tools import ToolRegistry
 
@@ -212,9 +213,11 @@ class CognitiveLayer:
         self,
         primary_config: ModelConfig | None = None,
         fallback_config: ModelConfig | None = None,
+        learning: "LearningLayer | None" = None,
     ):
         self.primary_config = primary_config or ModelConfig.ollama()
         self.fallback_config = fallback_config
+        self.learning = learning
 
         self.primary = create_model(self.primary_config)
         self.fallback = create_model(self.fallback_config) if self.fallback_config else None
@@ -270,6 +273,17 @@ You are direct, honest, and thoughtful. You remember context from past conversat
 and use it to provide more relevant assistance.
 
 You serve one user and are aligned with their interests."""
+
+        # Apply learned preferences for communication style
+        if self.learning:
+            preferences = self.learning.get_preferences("communication")
+            if preferences:
+                pref_hints = []
+                for pref in preferences:
+                    if pref.confidence >= 0.6:
+                        pref_hints.append(f"- {pref.value}")
+                if pref_hints:
+                    base += "\n\nLearned user preferences:\n" + "\n".join(pref_hints)
 
         if context:
             base += f"\n\nRelevant context from memory:\n{context}"

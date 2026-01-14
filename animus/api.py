@@ -181,6 +181,49 @@ class IntegrationConnectRequest(BaseModel):
     credentials: dict = {}
 
 
+class LearnedItemResponse(BaseModel):
+    """Learned item response."""
+
+    id: str
+    category: str
+    content: str
+    confidence: float
+    applied: bool
+    created_at: str
+    updated_at: str
+
+
+class LearningDashboardResponse(BaseModel):
+    """Learning dashboard response."""
+
+    total_learned: int
+    pending_approval: int
+    events_today: int
+    guardrail_violations: int
+    by_category: dict[str, int]
+    confidence_distribution: dict[str, int]
+
+
+class GuardrailResponse(BaseModel):
+    """Guardrail response."""
+
+    id: str
+    rule: str
+    description: str
+    guardrail_type: str
+    immutable: bool
+    source: str
+
+
+class RollbackPointResponse(BaseModel):
+    """Rollback point response."""
+
+    id: str
+    timestamp: str
+    description: str
+    item_count: int
+
+
 # =============================================================================
 # Application State
 # =============================================================================
@@ -198,6 +241,7 @@ class AppState:
     decisions: DecisionFramework
     conversations: dict[str, Conversation]
     integrations: object | None = None  # IntegrationManager (optional)
+    learning: object | None = None  # LearningLayer (optional)
 
 
 _state: AppState | None = None
@@ -227,6 +271,7 @@ class APIServer:
         port: int = 8420,
         api_key: str | None = None,
         integrations: object | None = None,
+        learning: object | None = None,
     ):
         """
         Initialize API server.
@@ -241,6 +286,7 @@ class APIServer:
             port: Port to bind to
             api_key: Optional API key for authentication
             integrations: Optional IntegrationManager instance
+            learning: Optional LearningLayer instance
         """
         if not FASTAPI_AVAILABLE:
             raise ImportError("FastAPI not installed. Install with: pip install 'animus[api]'")
@@ -254,6 +300,7 @@ class APIServer:
         self.port = port
         self.api_key = api_key
         self.integrations = integrations
+        self.learning = learning
 
         self._server_thread: threading.Thread | None = None
         self._server: uvicorn.Server | None = None
@@ -277,6 +324,7 @@ class APIServer:
             decisions=self.decisions,
             conversations={},
             integrations=self.integrations,
+            learning=self.learning,
         )
 
         # Update config with API key if provided
@@ -848,5 +896,225 @@ def create_app() -> FastAPI:
                 status_code=500,
                 detail="Failed to disconnect",
             )
+
+    # =========================================================================
+    # Learning Endpoints (Phase 5)
+    # =========================================================================
+
+    @app.get("/learning/status", response_model=LearningDashboardResponse)
+    async def learning_status(_auth: bool = Depends(verify_api_key)):
+        """Get learning system dashboard."""
+        state = get_state()
+        if not hasattr(state, "learning") or state.learning is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Learning system not available",
+            )
+
+        dashboard = state.learning.get_dashboard_data()
+        return LearningDashboardResponse(
+            total_learned=dashboard.total_learned,
+            pending_approval=dashboard.pending_approval,
+            events_today=dashboard.events_today,
+            guardrail_violations=dashboard.guardrail_violations,
+            by_category=dashboard.by_category,
+            confidence_distribution=dashboard.confidence_distribution,
+        )
+
+    @app.get("/learning/items")
+    async def list_learned_items(
+        status: str = Query(default="all"),  # active, pending, all
+        _auth: bool = Depends(verify_api_key),
+    ):
+        """List learned items."""
+        state = get_state()
+        if not hasattr(state, "learning") or state.learning is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Learning system not available",
+            )
+
+        if status == "active":
+            items = state.learning.get_active_learnings()
+        elif status == "pending":
+            items = state.learning.get_pending_learnings()
+        else:
+            items = state.learning.get_all_learnings()
+
+        return {
+            "items": [
+                LearnedItemResponse(
+                    id=item.id,
+                    category=item.category.value,
+                    content=item.content,
+                    confidence=item.confidence,
+                    applied=item.applied,
+                    created_at=item.created_at.isoformat(),
+                    updated_at=item.updated_at.isoformat(),
+                )
+                for item in items
+            ],
+            "count": len(items),
+        }
+
+    @app.post("/learning/scan")
+    async def trigger_learning_scan(_auth: bool = Depends(verify_api_key)):
+        """Trigger pattern detection scan."""
+        state = get_state()
+        if not hasattr(state, "learning") or state.learning is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Learning system not available",
+            )
+
+        patterns = state.learning.scan_and_learn()
+        return {"patterns_detected": len(patterns)}
+
+    @app.post("/learning/{item_id}/approve")
+    async def approve_learning(item_id: str, _auth: bool = Depends(verify_api_key)):
+        """Approve a pending learning."""
+        state = get_state()
+        if not hasattr(state, "learning") or state.learning is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Learning system not available",
+            )
+
+        if state.learning.approve_learning(item_id):
+            return {"status": "approved", "id": item_id}
+        raise HTTPException(status_code=404, detail="Learning not found or already applied")
+
+    @app.post("/learning/{item_id}/reject")
+    async def reject_learning(
+        item_id: str,
+        reason: str = Query(default=""),
+        _auth: bool = Depends(verify_api_key),
+    ):
+        """Reject a pending learning."""
+        state = get_state()
+        if not hasattr(state, "learning") or state.learning is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Learning system not available",
+            )
+
+        if state.learning.reject_learning(item_id, reason):
+            return {"status": "rejected", "id": item_id}
+        raise HTTPException(status_code=404, detail="Learning not found")
+
+    @app.delete("/learning/{item_id}")
+    async def unlearn(item_id: str, _auth: bool = Depends(verify_api_key)):
+        """Unlearn a specific item."""
+        state = get_state()
+        if not hasattr(state, "learning") or state.learning is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Learning system not available",
+            )
+
+        if state.learning.unlearn(item_id):
+            return {"status": "unlearned", "id": item_id}
+        raise HTTPException(status_code=404, detail="Learning not found")
+
+    @app.get("/learning/history")
+    async def learning_history(
+        limit: int = Query(default=50, le=500),
+        event_type: str | None = Query(default=None),
+        _auth: bool = Depends(verify_api_key),
+    ):
+        """Get learning event history."""
+        state = get_state()
+        if not hasattr(state, "learning") or state.learning is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Learning system not available",
+            )
+
+        events = state.learning.transparency.get_history(
+            limit=limit, event_type=event_type
+        )
+        return {"events": [e.to_dict() for e in events]}
+
+    @app.get("/guardrails")
+    async def list_guardrails(_auth: bool = Depends(verify_api_key)):
+        """List all guardrails."""
+        state = get_state()
+        if not hasattr(state, "learning") or state.learning is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Learning system not available",
+            )
+
+        guardrails = state.learning.guardrails.get_all_guardrails()
+        return {
+            "guardrails": [
+                GuardrailResponse(
+                    id=g.id,
+                    rule=g.rule,
+                    description=g.description,
+                    guardrail_type=g.guardrail_type.value,
+                    immutable=g.immutable,
+                    source=g.source,
+                )
+                for g in guardrails
+            ]
+        }
+
+    @app.post("/guardrails")
+    async def add_guardrail(
+        rule: str = Query(...),
+        description: str = Query(default=""),
+        _auth: bool = Depends(verify_api_key),
+    ):
+        """Add a user-defined guardrail."""
+        state = get_state()
+        if not hasattr(state, "learning") or state.learning is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Learning system not available",
+            )
+
+        guardrail = state.learning.add_user_guardrail(
+            rule, description or f"User-defined: {rule}"
+        )
+        return {"status": "created", "id": guardrail.id}
+
+    @app.get("/learning/rollback-points")
+    async def list_rollback_points(_auth: bool = Depends(verify_api_key)):
+        """List available rollback points."""
+        state = get_state()
+        if not hasattr(state, "learning") or state.learning is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Learning system not available",
+            )
+
+        points = state.learning.rollback.get_rollback_points()
+        return {
+            "rollback_points": [
+                RollbackPointResponse(
+                    id=p.id,
+                    timestamp=p.timestamp.isoformat(),
+                    description=p.description,
+                    item_count=len(p.learned_item_ids),
+                )
+                for p in points
+            ]
+        }
+
+    @app.post("/learning/rollback/{point_id}")
+    async def rollback_to_point(point_id: str, _auth: bool = Depends(verify_api_key)):
+        """Rollback to a specific point."""
+        state = get_state()
+        if not hasattr(state, "learning") or state.learning is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Learning system not available",
+            )
+
+        success, unlearned = state.learning.rollback_to(point_id)
+        if success:
+            return {"status": "rolled_back", "unlearned_count": len(unlearned)}
+        raise HTTPException(status_code=404, detail="Rollback point not found")
 
     return app

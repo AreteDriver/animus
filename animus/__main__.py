@@ -20,6 +20,7 @@ from animus.integrations import (
     TodoistIntegration,
     WebhookIntegration,
 )
+from animus.learning import LearningLayer
 from animus.logging import get_logger, setup_logging
 from animus.memory import Conversation, MemoryLayer, MemoryType
 from animus.tasks import TaskTracker
@@ -111,6 +112,18 @@ def show_help():
   /integrate <service>    - Connect an integration
   /disconnect <service>   - Disconnect an integration
   Services: filesystem, todoist, google_calendar, gmail, webhooks
+
+[bold]Self-Learning (Phase 5):[/bold]
+  /learning               - Show learning dashboard
+  /learning scan          - Trigger pattern detection
+  /learning approve <id>  - Approve pending learning
+  /learning reject <id>   - Reject pending learning
+  /learning history       - Show learning event log
+  /unlearn <id>           - Remove a learned item
+  /guardrails             - List all guardrails
+  /guardrail add <rule>   - Add a user-defined guardrail
+  /learning rollback      - List rollback checkpoints
+  /learning rollback <id> - Rollback to checkpoint
 
 [bold]Otherwise:[/bold]
   Just type naturally. Animus will respond.
@@ -310,7 +323,19 @@ def main():
     else:
         model_config = ModelConfig.ollama(config.model.name)
 
-    cognitive = CognitiveLayer(primary_config=model_config)
+    # Phase 5: Learning Layer (initialized before cognitive to pass reference)
+    learning: LearningLayer | None = None
+    if config.learning.enabled:
+        learning = LearningLayer(
+            memory=memory,
+            data_dir=config.data_dir,
+            min_pattern_occurrences=config.learning.min_pattern_occurrences,
+            min_pattern_confidence=config.learning.min_pattern_confidence,
+            lookback_days=config.learning.lookback_days,
+        )
+        logger.info("Learning layer initialized")
+
+    cognitive = CognitiveLayer(primary_config=model_config, learning=learning)
 
     # Initialize Phase 2 components
     tools = create_default_registry()
@@ -1029,6 +1054,209 @@ def main():
 
             # =========================================================
             # End Phase 4 commands
+            # =========================================================
+
+            # =========================================================
+            # Phase 5: Learning commands
+            # =========================================================
+
+            if user_input == "/learning":
+                if not learning:
+                    console.print("[dim]Learning is disabled in configuration[/dim]")
+                    continue
+
+                dashboard = learning.get_dashboard_data()
+                console.print("\n[bold]Learning Dashboard[/bold]\n")
+                console.print(f"  Total learned:     {dashboard.total_learned}")
+                console.print(f"  Pending approval:  {dashboard.pending_approval}")
+                console.print(f"  Events today:      {dashboard.events_today}")
+                console.print(f"  Guardrail blocks:  {dashboard.guardrail_violations}")
+
+                if dashboard.by_category:
+                    console.print("\n  [dim]By category:[/dim]")
+                    for cat, count in dashboard.by_category.items():
+                        console.print(f"    {cat}: {count}")
+
+                if dashboard.recently_applied:
+                    console.print("\n  [dim]Recently applied:[/dim]")
+                    for item in dashboard.recently_applied[:5]:
+                        console.print(f"    [{item.id[:8]}] {item.content[:50]}...")
+
+                pending = learning.get_pending_learnings()
+                if pending:
+                    console.print(f"\n  [yellow]Pending approval ({len(pending)}):[/yellow]")
+                    for item in pending[:5]:
+                        console.print(
+                            f"    [{item.id[:8]}] {item.category.value}: {item.content[:40]}..."
+                        )
+                console.print()
+                continue
+
+            if user_input == "/learning scan":
+                if not learning:
+                    console.print("[dim]Learning is disabled in configuration[/dim]")
+                    continue
+
+                console.print("[dim]Scanning for patterns...[/dim]")
+                patterns = learning.scan_and_learn()
+                console.print(f"[green]Detected {len(patterns)} patterns[/green]")
+                for p in patterns[:5]:
+                    console.print(
+                        f"  [{p.pattern_type.value}] {p.description[:50]}... "
+                        f"(confidence: {p.confidence:.0%})"
+                    )
+                continue
+
+            if user_input.startswith("/learning approve "):
+                if not learning:
+                    console.print("[dim]Learning is disabled in configuration[/dim]")
+                    continue
+
+                item_id = user_input[18:].strip()
+                # Find item by full or partial ID
+                found = None
+                for item in learning.get_pending_learnings():
+                    if item.id == item_id or item.id.startswith(item_id):
+                        found = item
+                        break
+
+                if not found:
+                    console.print(f"[red]Pending learning not found: {item_id}[/red]")
+                    continue
+
+                if learning.approve_learning(found.id):
+                    console.print(f"[green]Approved: {found.content[:50]}...[/green]")
+                else:
+                    console.print("[red]Failed to approve learning[/red]")
+                continue
+
+            if user_input.startswith("/learning reject "):
+                if not learning:
+                    console.print("[dim]Learning is disabled in configuration[/dim]")
+                    continue
+
+                item_id = user_input[17:].strip()
+                found = None
+                for item in learning.get_pending_learnings():
+                    if item.id == item_id or item.id.startswith(item_id):
+                        found = item
+                        break
+
+                if not found:
+                    console.print(f"[red]Pending learning not found: {item_id}[/red]")
+                    continue
+
+                if learning.reject_learning(found.id):
+                    console.print(f"[yellow]Rejected: {found.content[:50]}...[/yellow]")
+                else:
+                    console.print("[red]Failed to reject learning[/red]")
+                continue
+
+            if user_input == "/learning history":
+                if not learning:
+                    console.print("[dim]Learning is disabled in configuration[/dim]")
+                    continue
+
+                events = learning.transparency.get_history(limit=20)
+                if not events:
+                    console.print("[dim]No learning events yet[/dim]")
+                    continue
+
+                console.print("\n[bold]Learning History[/bold]\n")
+                for event in events:
+                    time_str = event.timestamp.strftime("%Y-%m-%d %H:%M")
+                    console.print(
+                        f"  {time_str} [{event.event_type:12}] {event.learned_item_id[:8]}"
+                    )
+                console.print()
+                continue
+
+            if user_input.startswith("/learning rollback "):
+                if not learning:
+                    console.print("[dim]Learning is disabled in configuration[/dim]")
+                    continue
+
+                point_id = user_input[19:].strip()
+                success, unlearned = learning.rollback_to(point_id)
+                if success:
+                    console.print(
+                        f"[yellow]Rolled back, unlearned {len(unlearned)} items[/yellow]"
+                    )
+                else:
+                    console.print(f"[red]Rollback point not found: {point_id}[/red]")
+                continue
+
+            if user_input == "/learning rollback":
+                if not learning:
+                    console.print("[dim]Learning is disabled in configuration[/dim]")
+                    continue
+
+                points = learning.rollback.get_rollback_points()
+                if not points:
+                    console.print("[dim]No rollback points available[/dim]")
+                    continue
+
+                console.print("\n[bold]Rollback Points[/bold]\n")
+                for point in points:
+                    time_str = point.timestamp.strftime("%Y-%m-%d %H:%M")
+                    console.print(
+                        f"  [{point.id[:8]}] {time_str} - {point.description} "
+                        f"({len(point.learned_item_ids)} items)"
+                    )
+                console.print()
+                continue
+
+            if user_input.startswith("/unlearn "):
+                if not learning:
+                    console.print("[dim]Learning is disabled in configuration[/dim]")
+                    continue
+
+                item_id = user_input[9:].strip()
+                found = None
+                for item in learning.get_all_learnings():
+                    if item.id == item_id or item.id.startswith(item_id):
+                        found = item
+                        break
+
+                if not found:
+                    console.print(f"[red]Learning not found: {item_id}[/red]")
+                    continue
+
+                if learning.unlearn(found.id):
+                    console.print(f"[yellow]Unlearned: {found.content[:50]}...[/yellow]")
+                else:
+                    console.print("[red]Failed to unlearn[/red]")
+                continue
+
+            if user_input == "/guardrails":
+                if not learning:
+                    console.print("[dim]Learning is disabled in configuration[/dim]")
+                    continue
+
+                guardrails = learning.guardrails.get_all_guardrails()
+                console.print("\n[bold]Guardrails[/bold]\n")
+                for g in guardrails:
+                    lock = "[red]IMMUTABLE[/red]" if g.immutable else "[dim]user[/dim]"
+                    console.print(f"  [{g.id[:12]:12}] {lock} {g.rule}")
+                console.print()
+                continue
+
+            if user_input.startswith("/guardrail add "):
+                if not learning:
+                    console.print("[dim]Learning is disabled in configuration[/dim]")
+                    continue
+
+                rule = user_input[15:].strip()
+                if not rule:
+                    console.print("[red]Please provide a rule[/red]")
+                    continue
+
+                guardrail = learning.add_user_guardrail(rule, f"User-defined: {rule}")
+                console.print(f"[green]Added guardrail: {guardrail.id}[/green]")
+                continue
+
+            # =========================================================
+            # End Phase 5 commands
             # =========================================================
 
             # Reasoning mode with auto-detection
