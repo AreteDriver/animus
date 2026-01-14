@@ -29,7 +29,7 @@ from animus.voice import VoiceInterface
 
 # Optional sync module
 try:
-    from animus.sync import DeviceDiscovery, SyncClient, SyncServer, SyncableState
+    from animus.sync import DeviceDiscovery, SyncableState, SyncClient, SyncServer
 
     SYNC_AVAILABLE = True
 except ImportError:
@@ -1217,9 +1217,7 @@ def main():
                 point_id = user_input[19:].strip()
                 success, unlearned = learning.rollback_to(point_id)
                 if success:
-                    console.print(
-                        f"[yellow]Rolled back, unlearned {len(unlearned)} items[/yellow]"
-                    )
+                    console.print(f"[yellow]Rolled back, unlearned {len(unlearned)} items[/yellow]")
                 else:
                     console.print(f"[red]Rollback point not found: {point_id}[/red]")
                 continue
@@ -1348,8 +1346,8 @@ def main():
                         )
                     else:
                         console.print(
-                            f"[yellow]Sync server started but discovery failed[/yellow]\n"
-                            f"  Other devices can connect via: ws://<your-ip>:8422"
+                            "[yellow]Sync server started but discovery failed[/yellow]\n"
+                            "  Other devices can connect via: ws://<your-ip>:8422"
                         )
                     continue
 
@@ -1387,9 +1385,7 @@ def main():
                         if peers:
                             console.print(f"  [green]Connected peers:[/green] {len(peers)}")
                             for peer in peers:
-                                console.print(
-                                    f"    - {peer.device_name} ({peer.device_id[:8]}...)"
-                                )
+                                console.print(f"    - {peer.device_name} ({peer.device_id[:8]}...)")
                         else:
                             console.print("  [dim]No peers connected[/dim]")
                     else:
@@ -1406,7 +1402,9 @@ def main():
                     # Discovery status
                     if discovery and discovery.is_running:
                         devices = discovery.get_devices()
-                        console.print(f"  [green]Discovery:[/green] Active ({len(devices)} devices)")
+                        console.print(
+                            f"  [green]Discovery:[/green] Active ({len(devices)} devices)"
+                        )
                     else:
                         console.print("  [dim]Discovery: Not running[/dim]")
 
@@ -1419,9 +1417,7 @@ def main():
 
                 if sync_cmd == "discover":
                     if not discovery or not discovery.is_running:
-                        console.print(
-                            "[dim]Discovery not running. Start with /sync start[/dim]"
-                        )
+                        console.print("[dim]Discovery not running. Start with /sync start[/dim]")
                         continue
 
                     devices = discovery.get_devices()
@@ -1442,7 +1438,9 @@ def main():
                 if sync_cmd.startswith("connect "):
                     target = sync_cmd[8:].strip()
                     if not target:
-                        console.print("[red]Usage: /sync connect <ws://host:port or device_id>[/red]")
+                        console.print(
+                            "[red]Usage: /sync connect <ws://host:port or device_id>[/red]"
+                        )
                         continue
 
                     if not sync_state:
@@ -1454,7 +1452,10 @@ def main():
                         # Look up device by ID
                         if discovery and discovery.is_running:
                             for device in discovery.get_devices():
-                                if device.device_id.startswith(target) or device.device_id == target:
+                                if (
+                                    device.device_id.startswith(target)
+                                    or device.device_id == target
+                                ):
                                     address = device.address
                                     break
                             else:
@@ -1480,9 +1481,7 @@ def main():
                     )
 
                     if success:
-                        console.print(
-                            f"[green]Connected to {sync_client.peer_device_name}[/green]"
-                        )
+                        console.print(f"[green]Connected to {sync_client.peer_device_name}[/green]")
                     else:
                         console.print("[red]Connection failed[/red]")
                         sync_client = None
@@ -1501,7 +1500,9 @@ def main():
 
                 if sync_cmd == "now":
                     if not sync_client or not sync_client.is_connected:
-                        console.print("[dim]Not connected to any peer. Use /sync connect first[/dim]")
+                        console.print(
+                            "[dim]Not connected to any peer. Use /sync connect first[/dim]"
+                        )
                         continue
 
                     console.print("[dim]Syncing...[/dim]")
@@ -1526,9 +1527,7 @@ def main():
                             f"  [cyan]{sync_server.shared_secret}[/cyan]\n"
                         )
                     else:
-                        console.print(
-                            "[dim]Start sync server first with /sync start[/dim]"
-                        )
+                        console.print("[dim]Start sync server first with /sync start[/dim]")
                     continue
 
                 # Unknown sync command

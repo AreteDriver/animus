@@ -50,7 +50,7 @@ def _validate_path(path: str) -> tuple[bool, str | None]:
             if fnmatch.fnmatch(str(resolved), str(blocked_resolved)):
                 return False, f"Access denied: path matches blocked pattern '{blocked}'"
         elif resolved == blocked_resolved or blocked_resolved in resolved.parents:
-            return False, f"Access denied: path is blocked"
+            return False, "Access denied: path is blocked"
 
     # Check if within allowed paths
     in_allowed = False

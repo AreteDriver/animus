@@ -32,11 +32,11 @@ except ImportError:
 
 try:
     from animus.learning import (
-        LearningLayer,
-        LearningCategory,
-        LearnedItem,
-        GuardrailManager,
         Guardrail,
+        GuardrailManager,
+        LearnedItem,
+        LearningCategory,
+        LearningLayer,
     )
 except ImportError:
     LearningLayer = None  # type: ignore[misc, assignment]
