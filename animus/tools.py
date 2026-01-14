@@ -5,8 +5,10 @@ Provides tool definitions, registry, and built-in tools for agentic capabilities
 """
 
 import asyncio
+import fnmatch
 import glob as glob_module
 import json
+import re
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -17,6 +19,72 @@ from typing import Any
 from animus.logging import get_logger
 
 logger = get_logger("tools")
+
+# Security config - initialized by create_tool_registry()
+_security_config = None
+
+
+def _set_security_config(config) -> None:
+    """Set the security configuration for tools."""
+    global _security_config
+    _security_config = config
+
+
+def _validate_path(path: str) -> tuple[bool, str | None]:
+    """
+    Validate a file path against security rules.
+
+    Returns:
+        (is_valid, error_message)
+    """
+    if _security_config is None:
+        return True, None  # No config = no restrictions (dev mode)
+
+    resolved = Path(path).expanduser().resolve()
+
+    # Check blocked paths
+    for blocked in _security_config.blocked_paths:
+        blocked_resolved = Path(blocked).expanduser()
+        # Handle glob patterns in blocked paths
+        if "*" in blocked:
+            if fnmatch.fnmatch(str(resolved), str(blocked_resolved)):
+                return False, f"Access denied: path matches blocked pattern '{blocked}'"
+        elif resolved == blocked_resolved or blocked_resolved in resolved.parents:
+            return False, f"Access denied: path is blocked"
+
+    # Check if within allowed paths
+    in_allowed = False
+    for allowed in _security_config.allowed_paths:
+        allowed_resolved = Path(allowed).expanduser().resolve()
+        if resolved == allowed_resolved or allowed_resolved in resolved.parents:
+            in_allowed = True
+            break
+
+    if not in_allowed:
+        return False, f"Access denied: path not in allowed directories"
+
+    return True, None
+
+
+def _validate_command(command: str) -> tuple[bool, str | None]:
+    """
+    Validate a shell command against security rules.
+
+    Returns:
+        (is_valid, error_message)
+    """
+    if _security_config is None:
+        return True, None
+
+    if not _security_config.command_enabled:
+        return False, "Command execution is disabled"
+
+    # Check command blocklist
+    for pattern in _security_config.command_blocklist:
+        if re.search(pattern, command, re.IGNORECASE):
+            return False, f"Command blocked by security policy"
+
+    return True, None
 
 
 @dataclass
@@ -192,6 +260,17 @@ def _tool_read_file(params: dict) -> ToolResult:
             error="Missing required parameter: path",
         )
 
+    # Security validation
+    is_valid, error = _validate_path(path)
+    if not is_valid:
+        logger.warning(f"Path validation failed for '{path}': {error}")
+        return ToolResult(
+            tool_name="read_file",
+            success=False,
+            output=None,
+            error=error,
+        )
+
     try:
         file_path = Path(path).expanduser()
         if not file_path.exists():
@@ -239,6 +318,17 @@ def _tool_list_files(params: dict) -> ToolResult:
     """List files matching a pattern."""
     pattern = params.get("pattern", "*")
     directory = params.get("directory", ".")
+
+    # Security validation
+    is_valid, error = _validate_path(directory)
+    if not is_valid:
+        logger.warning(f"Path validation failed for '{directory}': {error}")
+        return ToolResult(
+            tool_name="list_files",
+            success=False,
+            output=None,
+            error=error,
+        )
 
     try:
         base_path = Path(directory).expanduser()
@@ -289,8 +379,22 @@ def _tool_run_command(params: dict) -> ToolResult:
             error="Missing required parameter: command",
         )
 
+    # Security validation
+    is_valid, error = _validate_command(command)
+    if not is_valid:
+        logger.warning(f"Command validation failed for '{command}': {error}")
+        return ToolResult(
+            tool_name="run_command",
+            success=False,
+            output=None,
+            error=error,
+        )
+
     try:
         timeout = params.get("timeout", 30)
+        if _security_config:
+            timeout = min(timeout, _security_config.command_timeout_seconds)
+
         result = subprocess.run(
             command,
             shell=True,
@@ -485,8 +589,16 @@ BUILTIN_TOOLS = [
 ]
 
 
-def create_default_registry() -> ToolRegistry:
-    """Create a ToolRegistry with all built-in tools registered."""
+def create_default_registry(security_config=None) -> ToolRegistry:
+    """Create a ToolRegistry with all built-in tools registered.
+
+    Args:
+        security_config: Optional ToolsSecurityConfig for tool validation.
+    """
+    if security_config:
+        _set_security_config(security_config)
+        logger.info("Tools security config loaded")
+
     registry = ToolRegistry()
     for tool in BUILTIN_TOOLS:
         registry.register(tool)

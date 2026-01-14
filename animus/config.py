@@ -155,6 +155,42 @@ class IntegrationConfig:
 
 
 @dataclass
+class ToolsSecurityConfig:
+    """Security configuration for tool execution."""
+
+    # File system access restrictions
+    allowed_paths: list[str] = field(default_factory=lambda: [str(Path.home())])
+    blocked_paths: list[str] = field(
+        default_factory=lambda: [
+            "/etc/shadow",
+            "/etc/passwd",
+            "/etc/sudoers",
+            "~/.ssh/id_*",
+            "~/.gnupg",
+            "~/.aws/credentials",
+            "~/.config/gcloud",
+        ]
+    )
+    max_file_size_kb: int = 1000  # 1MB default
+
+    # Command execution restrictions
+    command_enabled: bool = True
+    command_blocklist: list[str] = field(
+        default_factory=lambda: [
+            "rm -rf /",
+            "rm -rf ~",
+            "dd if=",
+            "mkfs",
+            ":(){:|:&};:",  # Fork bomb
+            "chmod -R 777 /",
+            "curl.*|.*sh",
+            "wget.*|.*sh",
+        ]
+    )
+    command_timeout_seconds: int = 30
+
+
+@dataclass
 class LearningConfig:
     """Configuration for the self-learning system."""
 
@@ -186,6 +222,7 @@ class AnimusConfig:
     voice: VoiceConfig = field(default_factory=VoiceConfig)
     integrations: IntegrationConfig = field(default_factory=IntegrationConfig)
     learning: LearningConfig = field(default_factory=LearningConfig)
+    tools_security: ToolsSecurityConfig = field(default_factory=ToolsSecurityConfig)
 
     def __post_init__(self):
         # Convert string to Path if needed

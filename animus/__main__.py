@@ -338,7 +338,7 @@ def main():
     cognitive = CognitiveLayer(primary_config=model_config, learning=learning)
 
     # Initialize Phase 2 components
-    tools = create_default_registry()
+    tools = create_default_registry(security_config=config.tools_security)
     for tool in create_memory_tools(memory):
         tools.register(tool)
 

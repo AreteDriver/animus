@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from animus.learning.categories import LearningCategory
 from animus.logging import get_logger
+from animus.memory import MemoryType
 
 if TYPE_CHECKING:
     from animus.memory import Memory, MemoryLayer
@@ -206,7 +207,7 @@ class PatternDetector:
         # Get episodic memories
         episodic = self.memory.recall(
             query="",
-            memory_type=self.memory.MemoryType.EPISODIC,
+            memory_type=MemoryType.EPISODIC,
             limit=1000,
         )
         all_memories.extend(episodic)
@@ -214,7 +215,7 @@ class PatternDetector:
         # Get semantic memories (facts, preferences)
         semantic = self.memory.recall(
             query="",
-            memory_type=self.memory.MemoryType.SEMANTIC,
+            memory_type=MemoryType.SEMANTIC,
             limit=500,
         )
         all_memories.extend(semantic)
