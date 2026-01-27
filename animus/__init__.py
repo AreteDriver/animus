@@ -1,6 +1,6 @@
 """Animus - An exocortex architecture for personal cognitive sovereignty."""
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode, detect_mode
 from animus.config import AnimusConfig

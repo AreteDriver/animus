@@ -363,7 +363,7 @@ class TestVersion:
     def test_version_is_0_5_0(self):
         from animus import __version__
 
-        assert __version__ == "0.5.0"
+        assert __version__ == "0.6.0"
 
 
 if __name__ == "__main__":
