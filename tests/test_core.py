@@ -862,5 +862,48 @@ class TestMemorySourceEnum:
         assert MemorySource.LEARNED.value == "learned"
 
 
+class TestMemoryCreate:
+    """Tests for Memory.create() factory method."""
+
+    def test_create_defaults(self):
+        mem = Memory.create(content="Test fact")
+        assert mem.content == "Test fact"
+        assert mem.memory_type == MemoryType.SEMANTIC
+        assert mem.source == "stated"
+        assert mem.confidence == 1.0
+        assert mem.tags == []
+        assert mem.metadata == {}
+        assert mem.id  # non-empty UUID
+        assert mem.created_at == mem.updated_at
+
+    def test_create_custom_fields(self):
+        mem = Memory.create(
+            content="User prefers dark mode",
+            memory_type=MemoryType.SEMANTIC,
+            tags=["preference"],
+            source="inferred",
+            confidence=0.8,
+            subtype="preference",
+            metadata={"domain": "ui"},
+        )
+        assert mem.tags == ["preference"]
+        assert mem.source == "inferred"
+        assert mem.confidence == 0.8
+        assert mem.subtype == "preference"
+        assert mem.metadata == {"domain": "ui"}
+
+    def test_create_unique_ids(self):
+        m1 = Memory.create(content="a")
+        m2 = Memory.create(content="b")
+        assert m1.id != m2.id
+
+    def test_create_roundtrip(self):
+        mem = Memory.create(content="roundtrip", tags=["test"])
+        d = mem.to_dict()
+        restored = Memory.from_dict(d)
+        assert restored.content == "roundtrip"
+        assert restored.tags == ["test"]
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -30,6 +30,7 @@ from animus.learning import (
     PreferenceEngine,
     RollbackManager,
 )
+from animus.memory import MemoryLayer
 
 # =============================================================================
 # Learning Category Tests
@@ -822,6 +823,44 @@ class TestVersion:
         from animus import __version__
 
         assert __version__ == "0.5.0"
+
+
+class TestAutoScanScheduler:
+    """Tests for LearningLayer auto-scan scheduler."""
+
+    def test_start_and_stop_auto_scan(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            memory = MemoryLayer(Path(tmpdir), backend="json")
+            learning = LearningLayer(
+                memory=memory,
+                data_dir=Path(tmpdir),
+            )
+
+            learning.start_auto_scan(interval_hours=1)
+            assert learning.auto_scan_running is True
+
+            learning.stop_auto_scan()
+            assert learning.auto_scan_running is False
+
+    def test_stop_without_start(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            memory = MemoryLayer(Path(tmpdir), backend="json")
+            learning = LearningLayer(memory=memory, data_dir=Path(tmpdir))
+
+            # Should not raise
+            learning.stop_auto_scan()
+            assert learning.auto_scan_running is False
+
+    def test_double_start_replaces_timer(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            memory = MemoryLayer(Path(tmpdir), backend="json")
+            learning = LearningLayer(memory=memory, data_dir=Path(tmpdir))
+
+            learning.start_auto_scan(interval_hours=1)
+            learning.start_auto_scan(interval_hours=2)
+            assert learning.auto_scan_running is True
+
+            learning.stop_auto_scan()
 
 
 if __name__ == "__main__":

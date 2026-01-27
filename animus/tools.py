@@ -79,9 +79,23 @@ def _validate_command(command: str) -> tuple[bool, str | None]:
     if not _security_config.command_enabled:
         return False, "Command execution is disabled"
 
-    # Check command blocklist
-    for pattern in _security_config.command_blocklist:
+    # Normalize whitespace to prevent bypass via extra spaces
+    normalized = re.sub(r"\s+", " ", command.strip())
+
+    # Block shell metacharacters that enable injection via subshells
+    dangerous_patterns = [
+        r"\$\(",  # $(command) subshell
+        r"`[^`]+`",  # `command` backtick subshell
+        r"\|\s*sh\b",  # pipe to sh
+        r"\|\s*bash\b",  # pipe to bash
+    ]
+    for pattern in dangerous_patterns:
         if re.search(pattern, command, re.IGNORECASE):
+            return False, "Command contains disallowed shell constructs"
+
+    # Check command blocklist against normalized form
+    for pattern in _security_config.command_blocklist:
+        if re.search(pattern, normalized, re.IGNORECASE):
             return False, "Command blocked by security policy"
 
     return True, None
@@ -272,7 +286,7 @@ def _tool_read_file(params: dict) -> ToolResult:
         )
 
     try:
-        file_path = Path(path).expanduser()
+        file_path = Path(path).expanduser().resolve()
         if not file_path.exists():
             return ToolResult(
                 tool_name="read_file",
@@ -331,7 +345,7 @@ def _tool_list_files(params: dict) -> ToolResult:
         )
 
     try:
-        base_path = Path(directory).expanduser()
+        base_path = Path(directory).expanduser().resolve()
         if not base_path.exists():
             return ToolResult(
                 tool_name="list_files",
@@ -438,6 +452,16 @@ def _tool_web_search(params: dict) -> ToolResult:
             success=False,
             output=None,
             error="Missing required parameter: query",
+        )
+
+    # Sanitize query: strip control characters
+    query = re.sub(r"[\x00-\x1f\x7f]", "", query)
+    if len(query) > 500:
+        return ToolResult(
+            tool_name="web_search",
+            success=False,
+            output=None,
+            error="Query too long (max 500 characters)",
         )
 
     try:

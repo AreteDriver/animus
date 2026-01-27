@@ -158,15 +158,15 @@ class TestFilesystemIntegration:
     def test_connect(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             fs = FilesystemIntegration(Path(tmpdir))
-            result = asyncio.get_event_loop().run_until_complete(fs.connect({"paths": [tmpdir]}))
+            result = asyncio.run(fs.connect({"paths": [tmpdir]}))
             assert result is True
             assert fs.is_connected is True
 
     def test_disconnect(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             fs = FilesystemIntegration(Path(tmpdir))
-            asyncio.get_event_loop().run_until_complete(fs.connect({"paths": [tmpdir]}))
-            result = asyncio.get_event_loop().run_until_complete(fs.disconnect())
+            asyncio.run(fs.connect({"paths": [tmpdir]}))
+            result = asyncio.run(fs.disconnect())
             assert result is True
             assert fs.is_connected is False
 
@@ -187,9 +187,9 @@ class TestFilesystemIntegration:
             (Path(tmpdir) / "test.py").write_text("print('hi')")
 
             fs = FilesystemIntegration(Path(tmpdir))
-            asyncio.get_event_loop().run_until_complete(fs.connect({"paths": []}))
+            asyncio.run(fs.connect({"paths": []}))
 
-            result = asyncio.get_event_loop().run_until_complete(fs._tool_index(tmpdir))
+            result = asyncio.run(fs._tool_index(tmpdir))
             assert result.success is True
             assert result.output["files_indexed"] >= 2
 
@@ -200,11 +200,11 @@ class TestFilesystemIntegration:
             (Path(tmpdir) / "config.py").write_text("config = {}")
 
             fs = FilesystemIntegration(Path(tmpdir))
-            asyncio.get_event_loop().run_until_complete(fs.connect({"paths": []}))
-            asyncio.get_event_loop().run_until_complete(fs._tool_index(tmpdir))
+            asyncio.run(fs.connect({"paths": []}))
+            asyncio.run(fs._tool_index(tmpdir))
 
             # Search by pattern
-            result = asyncio.get_event_loop().run_until_complete(fs._tool_search("*.py"))
+            result = asyncio.run(fs._tool_search("*.py"))
             assert result.success is True
             assert result.output["count"] >= 1
 
@@ -214,9 +214,9 @@ class TestFilesystemIntegration:
             test_file.write_text("line 1\nline 2\nline 3")
 
             fs = FilesystemIntegration(Path(tmpdir))
-            asyncio.get_event_loop().run_until_complete(fs.connect({"paths": []}))
+            asyncio.run(fs.connect({"paths": []}))
 
-            result = asyncio.get_event_loop().run_until_complete(fs._tool_read(str(test_file)))
+            result = asyncio.run(fs._tool_read(str(test_file)))
             assert result.success is True
             assert "line 1" in result.output["content"]
 
@@ -242,7 +242,7 @@ class TestTodoistIntegration:
 
     def test_connect_without_api_key(self):
         todoist = TodoistIntegration()
-        result = asyncio.get_event_loop().run_until_complete(todoist.connect({}))
+        result = asyncio.run(todoist.connect({}))
         # Should fail without API key
         assert result is False
         assert todoist.status == IntegrationStatus.ERROR

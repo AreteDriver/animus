@@ -83,6 +83,32 @@ class Memory:
             subtype=data.get("subtype"),
         )
 
+    @classmethod
+    def create(
+        cls,
+        content: str,
+        memory_type: MemoryType = MemoryType.SEMANTIC,
+        metadata: dict | None = None,
+        tags: list[str] | None = None,
+        source: str = "stated",
+        confidence: float = 1.0,
+        subtype: str | None = None,
+    ) -> "Memory":
+        """Factory method to create a Memory with auto-generated id and timestamps."""
+        now = datetime.now()
+        return cls(
+            id=str(uuid.uuid4()),
+            content=content,
+            memory_type=memory_type,
+            created_at=now,
+            updated_at=now,
+            metadata=metadata or {},
+            tags=tags or [],
+            source=source,
+            confidence=confidence,
+            subtype=subtype,
+        )
+
     def add_tag(self, tag: str) -> None:
         """Add a tag (normalized to lowercase)."""
         normalized = tag.lower().strip()

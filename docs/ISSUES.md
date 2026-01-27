@@ -1,62 +1,41 @@
 # Animus Known Issues & Gaps
 
-Last updated: 2026-01-13 (v0.5.0)
+Last updated: 2026-01-27 (v0.6.0)
 
 ## Testing Gaps
 
-### HIGH: No Offline/Mock LLM Testing
+### ~~HIGH: No Offline/Mock LLM Testing~~ RESOLVED
 
-**Problem:** Core cognitive features require an LLM backend (Ollama or API key) to test.
+**Status:** Resolved (v0.6.0) — `MockModel` added to `animus/cognitive.py`
 
-**Affected Components:**
-- `CognitiveLayer.think()` - Cannot unit test reasoning
-- `CognitiveLayer.think_with_tools()` - Cannot test agentic loop
-- `DecisionFramework.analyze()` - Requires model for analysis
-- Full CLI conversation loop
-
-**Proposed Solution:**
-- Add `MockModel` implementation in `cognitive.py`
-- Enable via `ANIMUS_MOCK_MODEL=true` or config flag
-- Return deterministic responses for testing
-
-**Priority:** High - Blocks CI/CD testing
+**Solution implemented:**
+- `MockModel(ModelInterface)` with configurable default response and response map
+- `ModelConfig.mock()` classmethod for easy construction
+- `MOCK` provider in `ModelProvider` enum + `create_model()` factory
+- Call history recording (`calls: list[dict]`) for test assertions
+- Tests in `tests/test_cognitive_mock.py` covering MockModel, CognitiveLayer, and DecisionFramework
 
 ---
 
-### MEDIUM: API Server Test Coverage
+### ~~MEDIUM: API Server Test Coverage~~ RESOLVED
 
-**Problem:** API server (`api.py`) not covered by automated tests.
+**Status:** Resolved (v0.6.0) — `tests/test_api.py` added
 
-**Current State:**
-- Manual testing only
-- No integration tests for endpoints
-
-**Proposed Solution:**
-- Add `tests/test_api.py` using `httpx` + `TestClient`
-- Test all endpoints with mocked backends
-- Add to CI pipeline
-
-**Priority:** Medium
+**Solution implemented:**
+- 30 tests covering all endpoints (status, chat, memory CRUD, tools, tasks CRUD, decisions, brief, integrations, learning, auth)
+- Uses MockModel backend for deterministic responses
+- Skips gracefully when FastAPI not installed
 
 ---
 
-### MEDIUM: Asyncio Deprecation Warnings
+### ~~MEDIUM: Asyncio Deprecation Warnings~~ RESOLVED
 
-**Problem:** `asyncio.get_event_loop()` deprecation warnings in:
-- `__main__.py:365` - Integration reconnect
-- `test_phase4.py` - Filesystem integration tests
+**Status:** Resolved (v0.6.0) — All `asyncio.get_event_loop().run_until_complete()` replaced with `asyncio.run()`
 
-**Fix:**
-```python
-# Replace:
-asyncio.get_event_loop().run_until_complete(coro)
-
-# With:
-asyncio.run(coro)
-# Or use asyncio.new_event_loop() explicitly
-```
-
-**Priority:** Medium - Will break in Python 3.12+
+**Files fixed:**
+- `animus/__main__.py` — 11 call sites
+- `tests/test_phase4.py` — 7 call sites
+- All 6 previously failing tests now pass
 
 ---
 
@@ -80,26 +59,11 @@ asyncio.run(coro)
 
 ## API Inconsistencies
 
-### Memory.create() Missing
+### ~~Memory.create() Missing~~ RESOLVED
 
-**Problem:** `Memory` dataclass has no `create()` factory method unlike other dataclasses.
+**Status:** Resolved (v0.6.0) — `Memory.create()` classmethod added to `animus/memory.py`
 
-**Current:** Must specify all fields manually including `id`, `created_at`, `updated_at`
-
-**Fix:** Add factory method:
-```python
-@classmethod
-def create(cls, content: str, memory_type: MemoryType, ...) -> "Memory":
-    now = datetime.now()
-    return cls(
-        id=str(uuid.uuid4()),
-        created_at=now,
-        updated_at=now,
-        ...
-    )
-```
-
-**Priority:** Low - Convenience improvement
+**Solution:** Factory method auto-generates `id` (UUID), `created_at`, `updated_at`. All other fields have sensible defaults. Tests in `tests/test_core.py::TestMemoryCreate`.
 
 ---
 
@@ -136,17 +100,11 @@ def create(cls, content: str, memory_type: MemoryType, ...) -> "Memory":
 
 ---
 
-### No Scheduled Tasks
+### ~~No Scheduled Tasks~~ RESOLVED
 
-**Problem:** Auto-scan for learning patterns requires manual trigger.
+**Status:** Resolved (v0.6.0) — Background scheduler added to `LearningLayer`
 
-**Config exists:** `auto_scan_interval_hours: 24`
-
-**Missing:** Background scheduler to trigger `learning.scan_and_learn()`
-
-**Proposed:** Add `apscheduler` or simple threading timer
-
-**Priority:** Medium - Core feature incomplete
+**Solution:** `threading.Timer`-based scheduler with `start_auto_scan(interval_hours)`, `stop_auto_scan()`, and `auto_scan_running` property. Daemon thread, no external dependencies. Tests in `tests/test_phase5.py::TestAutoScanScheduler`.
 
 ---
 
@@ -180,26 +138,24 @@ def create(cls, content: str, memory_type: MemoryType, ...) -> "Memory":
 
 ## Security
 
-### No Input Sanitization Audit
+### ~~No Input Sanitization Audit~~ RESOLVED
 
-**Problem:** Tool inputs (file paths, commands) not audited for injection.
+**Status:** Resolved (v0.6.0) — Security hardening applied to `animus/tools.py`
 
-**At Risk:**
-- `run_command` tool - Shell injection
-- `read_file` tool - Path traversal
-- `web_search` tool - URL injection
-
-**Proposed:** Security audit of all tool implementations
-
-**Priority:** High - Security
+**Changes:**
+- `_validate_command()`: Whitespace normalization to prevent bypass; blocks `$()`, backtick subshells, `| sh`, `| bash`
+- `_tool_read_file()`: Path resolution via `.resolve()` before I/O (prevents symlink traversal)
+- `_tool_list_files()`: Same `.resolve()` fix
+- `_tool_web_search()`: Control character stripping, 500-char query limit
+- Tests in `tests/test_security.py::TestShellInjection` and `TestWebSearchSanitization`
 
 ---
 
 ## Next Actions
 
-1. [ ] Add MockModel for testing without LLM
-2. [ ] Add API integration tests
-3. [ ] Fix asyncio deprecation warnings
-4. [ ] Add Memory.create() factory method
-5. [ ] Implement background scheduler for auto-scan
-6. [ ] Security audit of tool inputs
+1. [x] Add MockModel for testing without LLM
+2. [x] Add API integration tests
+3. [x] Fix asyncio deprecation warnings
+4. [x] Add Memory.create() factory method
+5. [x] Implement background scheduler for auto-scan
+6. [x] Security audit of tool inputs

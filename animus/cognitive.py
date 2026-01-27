@@ -30,6 +30,7 @@ class ModelProvider(Enum):
     OLLAMA = "ollama"
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
+    MOCK = "mock"
 
 
 class ReasoningMode(Enum):
@@ -101,6 +102,17 @@ class ModelConfig:
             api_key=os.environ.get("OPENAI_API_KEY"),
         )
 
+    @classmethod
+    def mock(
+        cls,
+        default_response: str = "This is a mock response.",
+        response_map: dict[str, str] | None = None,
+    ) -> "ModelConfig":
+        config = cls(provider=ModelProvider.MOCK, model_name="mock")
+        config._mock_default_response = default_response
+        config._mock_response_map = response_map or {}
+        return config
+
 
 class ModelInterface(ABC):
     """Abstract interface for language models."""
@@ -114,6 +126,38 @@ class ModelInterface(ABC):
     async def generate_stream(self, prompt: str, system: str | None = None) -> AsyncIterator[str]:
         """Generate a streaming response."""
         pass
+
+
+class MockModel(ModelInterface):
+    """Deterministic mock model for testing without a live LLM backend."""
+
+    def __init__(self, config: ModelConfig):
+        self.config = config
+        self.default_response: str = getattr(
+            config, "_mock_default_response", "This is a mock response."
+        )
+        self.response_map: dict[str, str] = getattr(config, "_mock_response_map", {})
+        self.calls: list[dict] = []
+        logger.debug("MockModel initialized")
+
+    def generate(self, prompt: str, system: str | None = None) -> str:
+        """Return a deterministic response, checking response_map first."""
+        self.calls.append({"prompt": prompt, "system": system})
+        for substring, response in self.response_map.items():
+            if substring in prompt:
+                return response
+        return self.default_response
+
+    async def generate_stream(self, prompt: str, system: str | None = None) -> AsyncIterator[str]:
+        """Yield the response in chunks."""
+        response = self.generate(prompt, system)
+        chunk_size = max(1, len(response) // 3)
+        for i in range(0, len(response), chunk_size):
+            yield response[i : i + chunk_size]
+
+    def reset(self) -> None:
+        """Clear call history."""
+        self.calls.clear()
 
 
 class OllamaModel(ModelInterface):
@@ -194,7 +238,9 @@ class AnthropicModel(ModelInterface):
 
 def create_model(config: ModelConfig) -> ModelInterface:
     """Factory function to create the appropriate model interface."""
-    if config.provider == ModelProvider.OLLAMA:
+    if config.provider == ModelProvider.MOCK:
+        return MockModel(config)
+    elif config.provider == ModelProvider.OLLAMA:
         return OllamaModel(config)
     elif config.provider == ModelProvider.ANTHROPIC:
         return AnthropicModel(config)

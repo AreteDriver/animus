@@ -390,7 +390,7 @@ def main():
         integrations.register(GmailIntegration(config.data_dir / "integrations"))
 
     # Reconnect integrations from stored credentials
-    asyncio.get_event_loop().run_until_complete(integrations.reconnect_from_stored())
+    asyncio.run(integrations.reconnect_from_stored())
 
     # Register integration tools with main registry
     for tool in integrations.get_all_tools():
@@ -453,13 +453,13 @@ def main():
             logger.info("Voice listening stopped")
         # Cleanup sync components
         if sync_client and sync_client.is_connected:
-            asyncio.get_event_loop().run_until_complete(sync_client.disconnect())
+            asyncio.run(sync_client.disconnect())
             logger.info("Sync client disconnected")
         if discovery and discovery.is_running:
             discovery.stop()
             logger.info("Discovery stopped")
         if sync_server and sync_server.is_running:
-            asyncio.get_event_loop().run_until_complete(sync_server.stop())
+            asyncio.run(sync_server.stop())
             logger.info("Sync server stopped")
 
     atexit.register(cleanup_on_exit)
@@ -1054,9 +1054,7 @@ def main():
 
                 # Attempt connection
                 console.print(f"[dim]Connecting to {service}...[/dim]")
-                success = asyncio.get_event_loop().run_until_complete(
-                    integrations.connect(service, credentials)
-                )
+                success = asyncio.run(integrations.connect(service, credentials))
 
                 if success:
                     console.print(f"[green]Connected to {service}[/green]")
@@ -1080,9 +1078,7 @@ def main():
                     console.print(f"[dim]{service} is not connected[/dim]")
                     continue
 
-                success = asyncio.get_event_loop().run_until_complete(
-                    integrations.disconnect(service)
-                )
+                success = asyncio.run(integrations.disconnect(service))
 
                 if success:
                     console.print(f"[yellow]Disconnected from {service}[/yellow]")
@@ -1325,7 +1321,7 @@ def main():
                         port=8422,
                     )
 
-                    success = asyncio.get_event_loop().run_until_complete(sync_server.start())
+                    success = asyncio.run(sync_server.start())
                     if not success:
                         console.print("[red]Failed to start sync server[/red]")
                         continue
@@ -1355,7 +1351,7 @@ def main():
                     stopped_something = False
 
                     if sync_client and sync_client.is_connected:
-                        asyncio.get_event_loop().run_until_complete(sync_client.disconnect())
+                        asyncio.run(sync_client.disconnect())
                         sync_client = None
                         stopped_something = True
 
@@ -1364,7 +1360,7 @@ def main():
                         stopped_something = True
 
                     if sync_server and sync_server.is_running:
-                        asyncio.get_event_loop().run_until_complete(sync_server.stop())
+                        asyncio.run(sync_server.stop())
                         stopped_something = True
 
                     if stopped_something:
@@ -1476,9 +1472,7 @@ def main():
                     sync_client = SyncClient(state=sync_state, shared_secret=secret)
 
                     console.print(f"[dim]Connecting to {address}...[/dim]")
-                    success = asyncio.get_event_loop().run_until_complete(
-                        sync_client.connect(address)
-                    )
+                    success = asyncio.run(sync_client.connect(address))
 
                     if success:
                         console.print(f"[green]Connected to {sync_client.peer_device_name}[/green]")
@@ -1493,7 +1487,7 @@ def main():
                         continue
 
                     peer_name = sync_client.peer_device_name
-                    asyncio.get_event_loop().run_until_complete(sync_client.disconnect())
+                    asyncio.run(sync_client.disconnect())
                     sync_client = None
                     console.print(f"[yellow]Disconnected from {peer_name}[/yellow]")
                     continue
@@ -1506,7 +1500,7 @@ def main():
                         continue
 
                     console.print("[dim]Syncing...[/dim]")
-                    result = asyncio.get_event_loop().run_until_complete(sync_client.sync())
+                    result = asyncio.run(sync_client.sync())
 
                     if result.success:
                         console.print(

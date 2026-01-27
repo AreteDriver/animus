@@ -6,6 +6,7 @@ with guardrail enforcement. All learning is transparent, observable, and reversi
 """
 
 import json
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -81,7 +82,48 @@ class LearningLayer:
         self._learned_items: dict[str, LearnedItem] = {}
         self._load_learned_items()
 
+        # Background scheduler
+        self._scan_timer: threading.Timer | None = None
+        self._scan_interval_seconds: float = 0  # 0 = disabled
+
         logger.info("LearningLayer initialized")
+
+    def start_auto_scan(self, interval_hours: float = 24) -> None:
+        """Start background auto-scanning at the given interval."""
+        self.stop_auto_scan()
+        self._scan_interval_seconds = interval_hours * 3600
+        logger.info(f"Auto-scan started: interval={interval_hours}h")
+        self._schedule_next_scan()
+
+    def stop_auto_scan(self) -> None:
+        """Stop background auto-scanning."""
+        if self._scan_timer is not None:
+            self._scan_timer.cancel()
+            self._scan_timer = None
+            logger.info("Auto-scan stopped")
+
+    def _schedule_next_scan(self) -> None:
+        """Schedule the next auto-scan."""
+        if self._scan_interval_seconds <= 0:
+            return
+        self._scan_timer = threading.Timer(self._scan_interval_seconds, self._run_scheduled_scan)
+        self._scan_timer.daemon = True
+        self._scan_timer.start()
+
+    def _run_scheduled_scan(self) -> None:
+        """Execute a scheduled scan and reschedule."""
+        try:
+            logger.info("Running scheduled auto-scan")
+            self.scan_and_learn()
+        except Exception as e:
+            logger.error(f"Scheduled scan failed: {e}")
+        finally:
+            self._schedule_next_scan()
+
+    @property
+    def auto_scan_running(self) -> bool:
+        """Check if auto-scan is active."""
+        return self._scan_timer is not None and self._scan_timer.is_alive()
 
     def _load_learned_items(self) -> None:
         """Load learned items from disk."""
