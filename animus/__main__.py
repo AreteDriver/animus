@@ -30,6 +30,7 @@ from animus.voice import VoiceInterface
 # Optional sync module
 try:
     from animus.sync import DeviceDiscovery, SyncableState, SyncClient, SyncServer
+    from animus.protocols.sync import SyncProvider
 
     SYNC_AVAILABLE = True
 except ImportError:
@@ -374,7 +375,7 @@ def main():
     # Phase 6: Cross-device Sync
     sync_state: SyncableState | None = None
     sync_server: SyncServer | None = None
-    sync_client: SyncClient | None = None
+    sync_client: "SyncProvider | None" = None
     discovery: DeviceDiscovery | None = None
 
     # Phase 4: Integration Manager

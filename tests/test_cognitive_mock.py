@@ -16,6 +16,7 @@ from animus.cognitive import (
     create_model,
 )
 from animus.decision import DecisionFramework
+from animus.protocols.intelligence import IntelligenceProvider
 
 # ---------------------------------------------------------------------------
 # MockModel unit tests
@@ -86,7 +87,7 @@ class TestMockModel:
         assert ModelProvider.MOCK.value == "mock"
 
 
-async def _collect_stream(model: MockModel, prompt: str) -> list[str]:
+async def _collect_stream(model: IntelligenceProvider, prompt: str) -> list[str]:
     chunks = []
     async for chunk in model.generate_stream(prompt):
         chunks.append(chunk)

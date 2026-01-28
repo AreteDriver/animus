@@ -16,7 +16,12 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
+from typing import TYPE_CHECKING
+
 from animus.logging import get_logger
+
+if TYPE_CHECKING:
+    from animus.protocols.memory import MemoryProvider
 
 logger = get_logger("memory")
 
@@ -639,6 +644,7 @@ class MemoryLayer:
         self.data_dir = data_dir
         self.backend_type = backend
 
+        self.store: "MemoryProvider"
         if backend == "chroma":
             try:
                 self.store = ChromaMemoryStore(data_dir)

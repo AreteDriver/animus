@@ -33,6 +33,7 @@ from animus.learning.transparency import (
     LearningTransparency,
 )
 from animus.logging import get_logger
+from animus.protocols.safety import SafetyGuard
 
 if TYPE_CHECKING:
     from animus.memory import MemoryLayer
@@ -73,7 +74,7 @@ class LearningLayer:
             lookback_days=lookback_days,
         )
         self.preference_engine = PreferenceEngine(self.data_dir)
-        self.guardrails = GuardrailManager(self.data_dir)
+        self.guardrails: SafetyGuard = GuardrailManager(self.data_dir)
         self.transparency = LearningTransparency(self.data_dir)
         self.rollback = RollbackManager(self.data_dir)
         self.approvals = ApprovalManager(self.data_dir)

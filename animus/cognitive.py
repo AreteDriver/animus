@@ -15,6 +15,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from animus.logging import get_logger
+from animus.protocols.intelligence import IntelligenceProvider
 
 if TYPE_CHECKING:
     from animus.learning import LearningLayer
@@ -265,8 +266,10 @@ class CognitiveLayer:
         self.fallback_config = fallback_config
         self.learning = learning
 
-        self.primary = create_model(self.primary_config)
-        self.fallback = create_model(self.fallback_config) if self.fallback_config else None
+        self.primary: IntelligenceProvider = create_model(self.primary_config)
+        self.fallback: IntelligenceProvider | None = (
+            create_model(self.fallback_config) if self.fallback_config else None
+        )
 
         logger.info(
             f"CognitiveLayer initialized: primary={self.primary_config.provider.value}, "
