@@ -1,5 +1,9 @@
 """Verify concrete classes conform to Protocol interfaces."""
 
+import sys
+
+import pytest
+
 from animus.cognitive import AnthropicModel, MockModel, OllamaModel
 from animus.learning.guardrails import GuardrailManager
 from animus.memory import ChromaMemoryStore, LocalMemoryStore
@@ -32,6 +36,10 @@ class TestIntelligenceProviderConformance:
 
 
 class TestSyncProviderConformance:
+    @pytest.mark.skipif(
+        sys.version_info < (3, 12),
+        reason="Python < 3.12 @runtime_checkable Protocol cannot match @property to attribute annotation",
+    )
     def test_sync_client(self):
         client = SyncClient.__new__(SyncClient)
         assert isinstance(client, SyncProvider)
