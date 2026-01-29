@@ -1,135 +1,275 @@
 # Case Study: Animus
 
-## Executive Summary
-
-Animus is a framework for building a personal AI that persists, learns, and serves a single user by design. It implements a local-first exocortex — an external cognitive layer that accumulates memory across sessions and devices while keeping data under the user's control.
-
-**By the numbers:**
-- 18,000+ lines of Python
-- 400+ tests across 10 test files
-- 4 memory types (episodic, semantic, procedural, active context)
-- 5 of 6 development phases complete
-- 7 integrations (Ollama, Calendar, Gmail, Todoist, Whisper, ChromaDB, WebSocket sync)
-- Version 0.6.0 — active development
+*Personal AI Framework for Cognitive Sovereignty*
 
 ---
 
-## Problem
+## Executive Summary
 
-Current AI assistants are stateless, cloud-dependent, and generic. Every conversation starts from zero. There's no persistent memory of your preferences, decisions, or context. Your data trains someone else's models. Switching devices means losing context.
+Animus is an open-source framework for building a **personal AI** — one that persists, learns, and serves a single user by design. Unlike cloud AI assistants that forget everything between sessions, Animus implements a local-first exocortex with persistent memory, cross-device sync, and guardrailed self-learning.
 
-The gap:
-- **No memory** — assistants forget everything between sessions
-- **No personalization** — responses are generic, not adapted to you
-- **No sovereignty** — your data lives on corporate servers, used for training
-- **No continuity** — context doesn't follow you across devices
-- **No learning** — the AI never gets better at helping *you* specifically
+**By the numbers:**
 
-## Solution
+| Metric | Value |
+|--------|-------|
+| Lines of code | 18,000+ |
+| Tests | 333 across 10 files |
+| Memory types | 4 (episodic, semantic, procedural, active) |
+| Interfaces | 4 (CLI, API, voice, WebSocket sync) |
+| Integrations | 7 (Ollama, Calendar, Gmail, Todoist, Whisper, ChromaDB, sync) |
+| Development phases | 5 of 6 complete |
 
-Animus runs locally by default using Ollama for inference and ChromaDB for vector memory. It accumulates four types of memory across every interaction, syncs across devices via WebSocket, and learns your patterns within explicit guardrails.
+---
 
-Key capabilities:
-- **Persistent memory** — Episodic (conversations), semantic (facts/knowledge), procedural (how-to), and active context (current session)
-- **Local-first** — Ollama for inference, ChromaDB for storage, no cloud required
-- **Cross-device sync** — WebSocket-based memory synchronization with Zeroconf discovery
-- **Voice interface** — Whisper STT + TTS for hands-free interaction
-- **Guardrailed learning** — Pattern detection bounded by safety rules, transparent and reversible
+## The Problem
+
+Current AI assistants are **rented, not owned**. They're stateless, cloud-dependent, and generic:
+
+| Gap | Impact |
+|-----|--------|
+| **No memory** | Every conversation starts from zero |
+| **No personalization** | Responses are generic, not adapted to you |
+| **No sovereignty** | Your data lives on corporate servers, used for training |
+| **No continuity** | Context doesn't follow you across devices |
+| **No learning** | The AI never gets better at helping *you* specifically |
+| **Vendor risk** | Terms of service can change; features can be revoked |
+
+> "You don't own it. You rent access."
+
+---
+
+## The Solution
+
+Animus inverts the model: **an AI that is yours**.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Interface Layer                         │
+│     CLI (Rich)  ·  API (FastAPI)  ·  Voice (Whisper)       │
+│                    ·  Sync (WebSocket)                      │
+├─────────────────────────────────────────────────────────────┤
+│                    Cognitive Layer                          │
+│         Model-agnostic reasoning (Ollama/Claude/OpenAI)     │
+│              Tool use  ·  Analysis modes                    │
+├─────────────────────────────────────────────────────────────┤
+│                     Memory Layer                            │
+│     Episodic  ·  Semantic  ·  Procedural  ·  Active        │
+│                  ChromaDB vector storage                    │
+├─────────────────────────────────────────────────────────────┤
+│                    Learning Layer                           │
+│       Pattern detection  ·  Guardrails  ·  Rollback        │
+├─────────────────────────────────────────────────────────────┤
+│                      Core Layer                             │
+│        Identity  ·  Security  ·  Preferences                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key capabilities:**
+
+- **Persistent memory** — Four types matching human cognition: episodic (what happened), semantic (what you know), procedural (how you work), active (current context)
+- **Local-first** — Ollama for inference, ChromaDB for storage, works offline
+- **Cross-device sync** — WebSocket + Zeroconf for seamless context handoff
+- **Voice interface** — Whisper STT + TTS for hands-free operation
+- **Guardrailed learning** — Pattern detection bounded by immutable safety rules
 - **Integrations** — Google Calendar, Gmail, Todoist via OAuth2
 
 ---
 
 ## Architecture Decisions
 
-### Local-First by Design
+### 1. Local-First by Design
 
-**Decision:** All core functionality runs locally. Cloud AI (Claude, OpenAI) is optional and opt-in.
+**Decision:** All core functionality runs locally. Cloud AI is optional.
 
-**Why:** Personal AI handles sensitive data — decisions, health, finances, relationships. Cloud dependency creates a single point of failure and a privacy risk. Local-first means the system works offline, data stays on-device, and no third party can access or train on your information.
+**Rationale:** Personal AI handles sensitive data — decisions, health, finances, relationships. Cloud dependency creates privacy risk and single point of failure. Local-first means:
+- Works offline
+- Data stays on-device
+- No third party trains on your information
+- No vendor can revoke access
 
-### Four-Layer Architecture
+### 2. Four Memory Types
 
-**Decision:** Separate the system into Interface, Cognitive, Memory, and Core layers.
+**Decision:** Implement episodic, semantic, procedural, and active context as distinct systems.
 
-**Why:** Each layer has different change rates and concerns. The interface layer (CLI, voice, API) changes frequently as new surfaces are added. The cognitive layer (reasoning, tools) evolves with AI capabilities. The memory layer (ChromaDB, sync) is stable infrastructure. The core layer (identity, security) rarely changes. Layering allows independent evolution.
+**Rationale:** Human cognition uses different memory types for different purposes:
 
-### Four Memory Types
+| Type | Purpose | Example |
+|------|---------|---------|
+| Episodic | What happened | "Last Tuesday you decided to use PostgreSQL" |
+| Semantic | What you know | "User prefers concise responses" |
+| Procedural | How you work | "Deploy process: test → stage → prod" |
+| Active | Current session | "We're discussing the auth refactor" |
 
-**Decision:** Implement episodic, semantic, procedural, and active context as distinct memory systems.
+Conflating these into a single vector store loses the structure that makes retrieval useful.
 
-**Why:** Human cognition uses different memory types for different purposes. Episodic memory (past conversations) enables recall of specific interactions. Semantic memory (facts, preferences) enables personalization. Procedural memory (how-to) enables repeated task optimization. Active context (current session) enables coherent multi-turn interaction. Conflating these into a single vector store loses the structure that makes retrieval useful.
+### 3. Guardrailed Learning
 
-### Guardrailed Learning
+**Decision:** Bound all learning with immutable safety rules.
 
-**Decision:** Bound all learning with immutable safety rules — cannot harm user, cannot exfiltrate data, must be transparent, must be reversible.
+**Rationale:** A personal AI that learns your patterns is powerful but dangerous without constraints:
 
-**Why:** A personal AI that learns your patterns is powerful but dangerous without constraints. The guardrail system ensures the AI can't learn harmful behaviors, all inferences are visible to the user, and any learned pattern can be rolled back. This makes the learning system trustworthy enough to actually use.
+```python
+# Core guardrails (immutable)
+- Cannot take actions that harm user
+- Cannot exfiltrate data without consent
+- Cannot modify its own guardrails
+- All learning must be transparent
+- All learning must be reversible
+```
 
-### Phased Development
+The three-tier system (immutable core → system defaults → user preferences) ensures learned behavior can never erode safety.
 
-**Decision:** Build in six phases, each delivering a working system with incrementally more capability.
+### 4. Phased Development
+
+**Decision:** Build in six phases, each delivering a working system.
 
 | Phase | Focus | Status |
 |-------|-------|--------|
-| 0 | Foundation — basic conversation + memory | Complete |
-| 1 | Memory architecture — 3 memory types | Complete |
-| 2 | Cognitive capabilities — tools, analysis | Complete |
-| 3 | Multi-interface — voice + API + sync | Complete |
-| 4 | Integration — calendar, email, tasks | Complete |
-| 5 | Self-learning — pattern detection, guardrails | In progress |
-| 6 | Ambient — wearable, vehicle integration | Future |
+| 0 | Foundation — basic conversation + memory | ✅ Complete |
+| 1 | Memory architecture — 4 memory types | ✅ Complete |
+| 2 | Cognitive capabilities — tools, analysis | ✅ Complete |
+| 3 | Multi-interface — voice + API + sync | ✅ Complete |
+| 4 | Integration — calendar, email, tasks | ✅ Complete |
+| 5 | Self-learning — pattern detection, guardrails | ✅ Complete |
+| 6 | Ambient — wearable, vehicle integration | 🔜 Future |
 
-**Why:** Building the full vision at once would be a multi-year monolith. Phased delivery means each milestone is a working, testable system. Feedback from earlier phases informs later design.
+**Rationale:** Building the full vision at once would be a multi-year monolith. Each phase ships a complete, testable system. Feedback informs later design.
 
 ---
 
-## Technical Highlights
+## Technical Implementation
 
 ### Memory System
 
-ChromaDB stores vector embeddings for semantic search across all memory types. Each memory entry is typed, timestamped, and tagged with source context. Retrieval uses cosine similarity with type-weighted scoring — episodic memories decay over time while semantic memories remain stable.
+ChromaDB stores vector embeddings for semantic search. Each memory entry is typed, timestamped, and tagged:
+
+```python
+memory.remember(
+    content="User prefers concise responses",
+    memory_type="semantic",
+    tags=["preference", "communication"],
+    confidence=0.9,
+)
+
+# Retrieval with type-weighted scoring
+context = memory.recall("How should I communicate?", limit=5)
+```
+
+Episodic memories decay over time; semantic memories remain stable.
 
 ### Cross-Device Sync
 
-WebSocket-based synchronization with Zeroconf for automatic device discovery on local networks. Memory changes propagate with eventual consistency. Conflict resolution uses last-write-wins with device priority ordering. All sync traffic is encrypted end-to-end.
+WebSocket-based synchronization with Zeroconf for automatic discovery:
 
-### Voice Interface
+```
+Device A ──────────────────────────────────────► Device B
+          [memory delta, encrypted, signed]
+```
 
-OpenAI Whisper for speech-to-text, pyttsx3 or edge-tts for text-to-speech. Designed for hands-free operation — morning briefings, driving mode, meeting prep. Wake word detection triggers active listening.
+- Eventual consistency with last-write-wins
+- Device priority ordering for conflicts
+- End-to-end encryption on all sync traffic
 
-### Security Model
+### Learning System
 
-- AES-256 encryption at rest
-- Device pairing and trust verification
-- Audit logging for all data access
-- No telemetry without explicit consent
-- Export and backup from day one
+Pattern detection with explicit approval workflow:
 
-### Engineering Practices
+```python
+# Scan memories for patterns
+patterns = learning.scan_and_learn()
 
-- Type hints throughout (mypy checked)
-- 400+ tests with pytest
-- Ruff for linting and formatting
-- Phased roadmap with clear milestones
-- Comprehensive documentation (architecture, roadmap, use cases, safety)
+# Review what was learned (transparency)
+pending = learning.get_pending_learnings()
+
+# Approve or reject
+learning.approve(pending[0].id)
+
+# Rollback if needed
+learning.rollback.restore(checkpoint_id)
+```
 
 ---
 
-## Results
+## Competitive Position
 
-| Metric | Value |
-|--------|-------|
-| Lines of code | 18,214 |
-| Test count | 409 |
-| Test files | 10 |
-| Source files | 35 |
-| Memory types | 4 |
-| Phases complete | 5 of 6 |
-| Integrations | 7 |
-| Version | 0.6.0 |
+| Aspect | ChatGPT/Claude | Local LLM UIs | Voice Assistants | Animus |
+|--------|----------------|---------------|------------------|--------|
+| Memory | None | None | Limited | 4 types, persistent |
+| Data location | Cloud | Local | Cloud | Local-first |
+| Cross-device | Via account | None | Via account | P2P sync |
+| Learning | Hidden | None | Hidden | Transparent, reversible |
+| Sovereignty | Vendor-owned | Partial | Vendor-owned | User-owned |
+| Offline | No | Yes | No | Yes |
+
+**Unique position:** The only open-source, local-first personal AI with guardrailed self-learning and structured memory types.
+
+---
+
+## Results & Metrics
+
+| Category | Metric |
+|----------|--------|
+| **Code** | 18,000+ lines of Python |
+| **Tests** | 333 test functions |
+| **Coverage** | Comprehensive (all major components) |
+| **Modules** | 41 source files across 5 packages |
+| **Docs** | 5 major documents (Architecture, Roadmap, Use Cases, Safety, Connectivity) |
+
+**Engineering practices:**
+- Full type hints (mypy validated)
+- Comprehensive test suite (pytest)
+- Consistent formatting (ruff)
+- Protocol-based extensibility
+- Security-first design (AES-256, audit logging)
 
 ---
 
 ## Tech Stack
 
-Python 3.10+ · Ollama (Llama 3.2, Mistral) · ChromaDB · FastAPI · OpenAI Whisper · Rich CLI · WebSockets · Zeroconf · Google Calendar/Gmail API · Todoist API · pytest · Ruff · mypy
+```
+Python 3.10+  ·  Ollama (Llama 3.2, Mistral)  ·  ChromaDB
+FastAPI  ·  OpenAI Whisper  ·  Rich CLI  ·  WebSockets
+Zeroconf  ·  Google Calendar/Gmail API  ·  Todoist API
+pytest  ·  Ruff  ·  mypy
+```
+
+---
+
+## Demo Points
+
+For interviews and walkthroughs:
+
+1. **Memory recall** — Show multi-turn conversation where Animus remembers context from previous sessions
+2. **Learning system** — Demonstrate pattern detection → approval → application flow
+3. **Guardrails** — Show how immutable constraints prevent unsafe learned behavior
+4. **Cross-device** — Sync context between two devices in real-time
+5. **Voice mode** — Hands-free interaction with STT/TTS
+
+---
+
+## Why This Matters
+
+**For AI Engineering roles:**
+- Demonstrates understanding of LLM limitations and how to work around them
+- Shows production patterns: type safety, testing, security, modularity
+- Implements non-trivial systems: vector search, sync protocols, learning with rollback
+
+**For Solutions Engineering roles:**
+- End-to-end product thinking: problem → architecture → implementation → interfaces
+- Multiple integration points (OAuth, APIs, WebSockets)
+- Clear documentation and explainability
+
+**For Developer Relations roles:**
+- Open-source project with comprehensive docs
+- Teaches concepts through working code
+- Designed for extensibility and community contribution
+
+---
+
+## Links
+
+- **Repository:** [github.com/AreteDriver/animus](https://github.com/AreteDriver/animus)
+- **Architecture:** [docs/ARCHITECTURE.md](ARCHITECTURE.md)
+- **Use Cases:** [docs/USE_CASES.md](USE_CASES.md)
+- **Safety Model:** [docs/SAFETY.md](SAFETY.md)
+- **Roadmap:** [docs/ROADMAP.md](ROADMAP.md)
