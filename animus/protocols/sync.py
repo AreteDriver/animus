@@ -12,8 +12,9 @@ from animus.sync.state import StateDelta
 class SyncProvider(Protocol):
     """Structural interface for device sync clients."""
 
-    @property
-    def is_connected(self) -> bool: ...
+    # Note: Using attribute annotation instead of @property for Python 3.10/3.11
+    # compatibility with @runtime_checkable isinstance() checks.
+    is_connected: bool
 
     def add_delta_callback(self, callback: Callable[[StateDelta], None]) -> None: ...
     async def connect(self, address: str) -> bool: ...
