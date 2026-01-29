@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, Protocol, runtime_checkable
 
-from animus.sync.state import StateDelta, SyncableState
+from animus.sync.state import StateDelta
 
 
 @runtime_checkable
