@@ -3,8 +3,27 @@
 *An exocortex architecture for personal cognitive sovereignty*
 
 [![CI](https://github.com/AreteDriver/animus/actions/workflows/ci.yml/badge.svg)](https://github.com/AreteDriver/animus/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/AreteDriver/animus/graph/badge.svg)](https://codecov.io/gh/AreteDriver/animus)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/cli-session.png" alt="CLI Session" width="70%">
+</p>
+
+<p align="center">
+  <em>Interactive CLI with memory recall and contextual responses</em>
+</p>
+
+<!-- TODO: Add screenshots:
+     1. CLI session showing multi-turn conversation
+     2. Memory recall example (animus remembering past context)
+     3. Optional: API response in terminal
+     Save to docs/screenshots/ -->
 
 ---
 
