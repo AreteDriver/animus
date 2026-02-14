@@ -18,6 +18,28 @@ if TYPE_CHECKING:
 
 logger = get_logger("integrations")
 
+# Optional encryption support
+ENCRYPTION_AVAILABLE = False
+Fernet = None  # type: ignore[assignment,misc]
+InvalidToken = Exception  # type: ignore[assignment,misc]
+try:
+    from cryptography.fernet import Fernet, InvalidToken  # type: ignore[assignment,no-redef]
+
+    ENCRYPTION_AVAILABLE = True
+except BaseException:
+    pass
+
+
+def _load_or_create_key(key_path: Path) -> bytes:
+    """Load or generate a Fernet encryption key."""
+    if key_path.exists():
+        return key_path.read_bytes().strip()
+    key = Fernet.generate_key()
+    key_path.write_bytes(key)
+    key_path.chmod(0o600)
+    logger.info("Generated new credential encryption key")
+    return key
+
 
 class IntegrationManager:
     """
@@ -41,7 +63,18 @@ class IntegrationManager:
         self._integrations: dict[str, BaseIntegration] = {}
         self._data_dir = data_dir or Path.home() / ".animus" / "integrations"
         self._data_dir.mkdir(parents=True, exist_ok=True)
-        logger.debug(f"IntegrationManager initialized, data_dir: {self._data_dir}")
+
+        # Setup credential encryption
+        self._fernet = None
+        if ENCRYPTION_AVAILABLE:
+            key = _load_or_create_key(self._data_dir / ".credentials.key")
+            self._fernet = Fernet(key)
+            self._migrate_plaintext_credentials()
+
+        logger.debug(
+            f"IntegrationManager initialized, data_dir: {self._data_dir}, "
+            f"encryption={'enabled' if self._fernet else 'disabled'}"
+        )
 
     def register(self, integration: BaseIntegration) -> None:
         """
@@ -224,37 +257,77 @@ class IntegrationManager:
             if integration.is_connected
         }
 
-    def _credentials_path(self, name: str) -> Path:
+    def _credentials_path(self, name: str, encrypted: bool = True) -> Path:
         """Get path for integration credentials file."""
-        return self._data_dir / f"{name}.json"
+        suffix = ".enc" if encrypted and self._fernet else ".json"
+        return self._data_dir / f"{name}{suffix}"
 
     def _save_credentials(self, name: str, credentials: dict[str, Any]) -> None:
-        """Save credentials to disk (encrypted in future)."""
-        path = self._credentials_path(name)
-        # TODO: Encrypt credentials before saving
-        with open(path, "w") as f:
-            json.dump(credentials, f)
-        path.chmod(0o600)  # Owner read/write only
-        logger.debug(f"Saved credentials for: {name}")
+        """Save credentials to disk with encryption if available."""
+        payload = json.dumps(credentials).encode()
+
+        if self._fernet:
+            path = self._data_dir / f"{name}.enc"
+            path.write_bytes(self._fernet.encrypt(payload))
+            # Remove legacy plaintext if it exists
+            plaintext_path = self._data_dir / f"{name}.json"
+            if plaintext_path.exists():
+                plaintext_path.unlink()
+        else:
+            path = self._data_dir / f"{name}.json"
+            path.write_bytes(payload)
+
+        path.chmod(0o600)
+        logger.debug(f"Saved credentials for: {name} (encrypted={self._fernet is not None})")
 
     def _load_credentials(self, name: str) -> dict[str, Any] | None:
-        """Load credentials from disk."""
-        path = self._credentials_path(name)
-        if not path.exists():
-            return None
-        try:
-            with open(path) as f:
-                return json.load(f)
-        except (json.JSONDecodeError, OSError) as e:
-            logger.error(f"Failed to load credentials for {name}: {e}")
-            return None
+        """Load credentials from disk, decrypting if needed."""
+        # Try encrypted first
+        enc_path = self._data_dir / f"{name}.enc"
+        if enc_path.exists() and self._fernet:
+            try:
+                decrypted = self._fernet.decrypt(enc_path.read_bytes())
+                return json.loads(decrypted)
+            except (InvalidToken, json.JSONDecodeError, OSError) as e:
+                logger.error(f"Failed to decrypt credentials for {name}: {e}")
+                return None
+
+        # Fall back to plaintext
+        plain_path = self._data_dir / f"{name}.json"
+        if plain_path.exists():
+            try:
+                return json.loads(plain_path.read_bytes())
+            except (json.JSONDecodeError, OSError) as e:
+                logger.error(f"Failed to load credentials for {name}: {e}")
+                return None
+
+        return None
 
     def _clear_credentials(self, name: str) -> None:
-        """Remove stored credentials."""
-        path = self._credentials_path(name)
-        if path.exists():
-            path.unlink()
-            logger.debug(f"Cleared credentials for: {name}")
+        """Remove stored credentials (both encrypted and plaintext)."""
+        for suffix in (".enc", ".json"):
+            path = self._data_dir / f"{name}{suffix}"
+            if path.exists():
+                path.unlink()
+        logger.debug(f"Cleared credentials for: {name}")
+
+    def _migrate_plaintext_credentials(self) -> None:
+        """Migrate any existing plaintext credential files to encrypted format."""
+        if not self._fernet:
+            return
+        for path in self._data_dir.glob("*.json"):
+            if path.name.startswith("."):
+                continue
+            name = path.stem
+            try:
+                credentials = json.loads(path.read_bytes())
+                enc_path = self._data_dir / f"{name}.enc"
+                enc_path.write_bytes(self._fernet.encrypt(json.dumps(credentials).encode()))
+                enc_path.chmod(0o600)
+                path.unlink()
+                logger.info(f"Migrated plaintext credentials to encrypted: {name}")
+            except Exception as e:
+                logger.warning(f"Failed to migrate credentials for {name}: {e}")
 
     def get_status_summary(self) -> dict[str, Any]:
         """

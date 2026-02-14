@@ -39,21 +39,15 @@ Last updated: 2026-01-27 (v0.6.0)
 
 ---
 
-### LOW: Voice Interface Testing
+### ~~LOW: Voice Interface Testing~~ RESOLVED
 
-**Problem:** Voice interface requires audio hardware, cannot test in CI.
+**Status:** Resolved — `tests/test_voice.py` added with `MockWhisperModel` and `MockSoundDevice`
 
-**Affected Components:**
-- `VoiceInput` - Microphone capture
-- `VoiceOutput` - Audio playback
-- Whisper transcription
-
-**Proposed Solution:**
-- Add audio file input mode for testing
-- Mock `sounddevice` for unit tests
-- Integration test with pre-recorded audio files
-
-**Priority:** Low - Hardware dependent
+**Solution implemented:**
+- `MockWhisperModel` with configurable transcriptions and call history
+- `MockSoundDevice` for recording/playback without hardware
+- 15+ tests covering VoiceInput, VoiceOutput, and VoiceInterface
+- Tests run in CI without audio dependencies
 
 ---
 
@@ -85,18 +79,16 @@ Last updated: 2026-01-27 (v0.6.0)
 
 ## Feature Gaps
 
-### No Web Dashboard
+### ~~No Web Dashboard~~ RESOLVED
 
-**Problem:** Learning transparency data has no visual interface.
+**Status:** Resolved — `animus/dashboard.py` + `/dashboard` endpoint added
 
-**Current:** CLI-only via `/learning` command
-
-**Proposed:**
-- Simple HTML dashboard served by API
-- Or separate React/Vue frontend
-- Real-time updates via WebSocket
-
-**Priority:** Medium - Usability
+**Solution implemented:**
+- Single-page HTML dashboard with embedded CSS/JS served at `/dashboard`
+- Shows: total learned, pending approvals, events today, guardrail violations
+- Category and confidence distribution bar charts
+- Tables for learned items, guardrails, and recent event history
+- Auto-refreshes every 30 seconds
 
 ---
 
@@ -108,17 +100,14 @@ Last updated: 2026-01-27 (v0.6.0)
 
 ---
 
-### No Data Export
+### ~~No Data Export~~ RESOLVED
 
-**Problem:** No way to export memories, learnings, or decisions.
+**Status:** Resolved — CLI commands and API endpoints added
 
-**Proposed:**
-- `/export memories` - JSON/CSV export
-- `/export learnings` - Learning history
-- `/export decisions` - Decision log
-- API endpoints for same
-
-**Priority:** Low - Nice to have
+**Solution implemented:**
+- CLI: `/export-learnings [path]`, `/export-decisions [path]`, `/export-tasks [path]`
+- API: `GET /export/memories`, `GET /export/learnings`, `GET /export/decisions`, `GET /export/tasks`
+- All exports in JSON format with full metadata
 
 ---
 
@@ -159,3 +148,10 @@ Last updated: 2026-01-27 (v0.6.0)
 4. [x] Add Memory.create() factory method
 5. [x] Implement background scheduler for auto-scan
 6. [x] Security audit of tool inputs
+7. [x] Encrypt integration credentials at rest
+8. [x] Implement memory consolidation
+9. [x] Implement incremental sync (since_version)
+10. [x] Add data export (learnings, decisions, tasks)
+11. [x] Build web dashboard for learning transparency
+12. [x] Add voice testing infrastructure
+13. [x] Add screenshots to README

@@ -275,11 +275,27 @@ class SyncServer:
         peer: ConnectedPeer,
         message: SyncMessage,
     ) -> None:
-        """Handle snapshot request."""
-        # TODO: Use since_version for incremental sync
-        _ = message.payload.get("since_version", 0)
+        """Handle snapshot request, using incremental sync when possible."""
+        since_version = message.payload.get("since_version", 0)
 
-        # Get current snapshot
+        if since_version > 0:
+            # Try incremental sync first
+            incremental = self.state.collect_state_since(since_version)
+            if incremental is not None:
+                await peer.websocket.send(
+                    create_snapshot_response(
+                        self.state.device_id,
+                        {"incremental": True, "changes": incremental},
+                        self.state.version,
+                    ).to_json()
+                )
+                logger.debug(
+                    f"Sent incremental sync to {peer.device_name} "
+                    f"(since v{since_version})"
+                )
+                return
+
+        # Fall back to full snapshot
         snapshot = self.state.create_snapshot()
 
         await peer.websocket.send(
@@ -290,7 +306,7 @@ class SyncServer:
             ).to_json()
         )
 
-        logger.debug(f"Sent snapshot to {peer.device_name}")
+        logger.debug(f"Sent full snapshot to {peer.device_name}")
 
     async def _handle_delta_push(self, peer: ConnectedPeer, message: SyncMessage) -> None:
         """Handle incoming delta from peer."""
@@ -312,6 +328,9 @@ class SyncServer:
             )
 
             if success:
+                # Record delta for future incremental sync
+                self.state.record_delta(delta)
+
                 # Notify callbacks
                 for callback in self._on_sync:
                     try:

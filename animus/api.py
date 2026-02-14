@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from animus.cognitive import CognitiveLayer, ReasoningMode, detect_mode
 from animus.config import AnimusConfig
+from animus.dashboard import DASHBOARD_HTML
 from animus.decision import DecisionFramework
 from animus.logging import get_logger
 from animus.memory import Conversation, MemoryLayer, MemoryType
@@ -222,6 +223,15 @@ class RollbackPointResponse(BaseModel):
     timestamp: str
     description: str
     item_count: int
+
+
+class ExportResponse(BaseModel):
+    """Data export response."""
+
+    export_type: str
+    format: str
+    count: int
+    data: list[dict]
 
 
 # =============================================================================
@@ -433,6 +443,13 @@ def create_app() -> FastAPI:
     # =========================================================================
     # Endpoints
     # =========================================================================
+
+    @app.get("/dashboard")
+    async def dashboard():
+        """Serve the learning transparency dashboard."""
+        from fastapi.responses import HTMLResponse
+
+        return HTMLResponse(content=DASHBOARD_HTML)
 
     @app.get("/status", response_model=StatusResponse)
     async def get_status():
@@ -1112,5 +1129,55 @@ def create_app() -> FastAPI:
         if success:
             return {"status": "rolled_back", "unlearned_count": len(unlearned)}
         raise HTTPException(status_code=404, detail="Rollback point not found")
+
+    # =========================================================================
+    # Data Export Endpoints
+    # =========================================================================
+
+    @app.get("/export/memories", response_model=ExportResponse)
+    async def export_memories(
+        format: str = Query(default="json", description="Export format: json or csv"),
+        memory_type: str | None = Query(default=None),
+        _auth: bool = Depends(verify_api_key),
+    ):
+        """Export all memories."""
+        state = get_state()
+        mem_type = None
+        if memory_type:
+            try:
+                mem_type = MemoryType(memory_type)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid memory type: {memory_type}")
+
+        memories = state.memory.store.list_all(mem_type)
+        data = [m.to_dict() for m in memories]
+        return ExportResponse(export_type="memories", format=format, count=len(data), data=data)
+
+    @app.get("/export/learnings", response_model=ExportResponse)
+    async def export_learnings(_auth: bool = Depends(verify_api_key)):
+        """Export all learned items."""
+        state = get_state()
+        if not hasattr(state, "learning") or state.learning is None:
+            return ExportResponse(export_type="learnings", format="json", count=0, data=[])
+
+        items = state.learning.get_all_learnings()
+        data = [item.to_dict() for item in items]
+        return ExportResponse(export_type="learnings", format="json", count=len(data), data=data)
+
+    @app.get("/export/decisions")
+    async def export_decisions(_auth: bool = Depends(verify_api_key)):
+        """Export decision history from episodic memories tagged as decisions."""
+        state = get_state()
+        memories = state.memory.recall("decision", limit=100)
+        data = [m.to_dict() for m in memories]
+        return ExportResponse(export_type="decisions", format="json", count=len(data), data=data)
+
+    @app.get("/export/tasks", response_model=ExportResponse)
+    async def export_tasks(_auth: bool = Depends(verify_api_key)):
+        """Export all tasks."""
+        state = get_state()
+        tasks = state.tasks.list(include_completed=True)
+        data = [t.to_dict() for t in tasks]
+        return ExportResponse(export_type="tasks", format="json", count=len(data), data=data)
 
     return app

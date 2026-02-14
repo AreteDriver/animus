@@ -2,6 +2,7 @@
 
 import asyncio
 import atexit
+import json
 from pathlib import Path
 
 from prompt_toolkit import prompt
@@ -84,9 +85,13 @@ def show_help():
   /procedure <name> | <trigger> | <step1>; <step2>...  - Store procedure
 
 [bold]Export/Import:[/bold]
-  /export [path]   - Export memories to JSON (default: ~/animus-export.json)
-  /import <path>   - Import memories from file
-  /backup [path]   - Create full backup
+  /export [path]           - Export memories to JSON (default: ~/animus-export.json)
+  /export-learnings [path] - Export learnings to JSON
+  /export-decisions [path] - Export decisions to JSON
+  /export-tasks [path]     - Export tasks to JSON
+  /import <path>           - Import memories from file
+  /backup [path]           - Create full backup
+  /consolidate             - Merge duplicates & summarize old memories
 
 [bold]Tools (Phase 2):[/bold]
   /tools             - List available tools
@@ -621,6 +626,59 @@ def main():
                 data = memory.export_memories()
                 export_path.write_text(data)
                 console.print(f"[green]Exported to:[/green] {export_path}")
+                continue
+
+            if user_input.startswith("/export-learnings"):
+                parts = user_input.split()
+                if len(parts) > 1:
+                    export_path = Path(parts[1]).expanduser()
+                else:
+                    export_path = Path.home() / "animus-learnings.json"
+
+                if learning:
+                    items = learning.get_all_learnings()
+                    data = [item.to_dict() for item in items]
+                    export_path.write_text(json.dumps(data, indent=2, default=str))
+                    console.print(f"[green]Exported {len(data)} learnings to:[/green] {export_path}")
+                else:
+                    console.print("[dim]Learning is disabled in configuration[/dim]")
+                continue
+
+            if user_input.startswith("/export-decisions"):
+                parts = user_input.split()
+                if len(parts) > 1:
+                    export_path = Path(parts[1]).expanduser()
+                else:
+                    export_path = Path.home() / "animus-decisions.json"
+
+                decision_memories = memory.recall("decision", limit=100)
+                data = [m.to_dict() for m in decision_memories]
+                export_path.write_text(json.dumps(data, indent=2, default=str))
+                console.print(f"[green]Exported {len(data)} decisions to:[/green] {export_path}")
+                continue
+
+            if user_input.startswith("/export-tasks"):
+                parts = user_input.split()
+                if len(parts) > 1:
+                    export_path = Path(parts[1]).expanduser()
+                else:
+                    export_path = Path.home() / "animus-tasks.json"
+
+                all_tasks = tasks.list(include_completed=True)
+                data = [t.to_dict() for t in all_tasks]
+                export_path.write_text(json.dumps(data, indent=2, default=str))
+                console.print(f"[green]Exported {len(data)} tasks to:[/green] {export_path}")
+                continue
+
+            if user_input == "/consolidate":
+                console.print("[dim]Consolidating memories...[/dim]")
+                stats = memory.consolidate()
+                console.print(
+                    f"[green]Consolidation complete:[/green]\n"
+                    f"  Merged duplicates: {stats['merged_duplicates']}\n"
+                    f"  Summarized conversations: {stats['summarized_conversations']}\n"
+                    f"  Removed low-confidence: {stats['removed_low_confidence']}"
+                )
                 continue
 
             if user_input.startswith("/import "):

@@ -12,18 +12,12 @@
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/cli-session.png" alt="CLI Session" width="70%">
+  <img src="docs/screenshots/cli-session.svg" alt="CLI Session — memory, recall, and learning" width="70%">
 </p>
 
 <p align="center">
-  <em>Interactive CLI with memory recall and contextual responses</em>
+  <em>Interactive CLI with memory storage, recall, and the learning dashboard</em>
 </p>
-
-<!-- TODO: Add screenshots:
-     1. CLI session showing multi-turn conversation
-     2. Memory recall example (animus remembering past context)
-     3. Optional: API response in terminal
-     Save to docs/screenshots/ -->
 
 ---
 

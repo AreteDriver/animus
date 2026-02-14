@@ -247,6 +247,61 @@ class SyncableState:
         }
         return state
 
+    def collect_state_since(self, since_version: int) -> dict[str, Any] | None:
+        """
+        Collect only state changes since a given version using stored delta log.
+
+        Args:
+            since_version: Return changes after this version.
+
+        Returns:
+            Aggregated changes dict, or None if full sync is required.
+        """
+        delta_log = self._load_delta_log()
+
+        relevant = [d for d in delta_log if d.get("version", 0) > since_version]
+        if not relevant:
+            return None
+
+        aggregated: dict[str, Any] = {"added": {}, "modified": {}, "deleted": []}
+        for entry in relevant:
+            changes = entry.get("changes", {})
+            for key, value in changes.get("added", {}).items():
+                aggregated["added"][key] = value
+            for key, value in changes.get("modified", {}).items():
+                aggregated["modified"][key] = value
+            aggregated["deleted"].extend(changes.get("deleted", []))
+
+        return aggregated
+
+    def record_delta(self, delta: "StateDelta") -> None:
+        """Append a delta to the persistent log for incremental sync."""
+        delta_log = self._load_delta_log()
+        delta_log.append({
+            "version": self._version,
+            "timestamp": delta.timestamp.isoformat(),
+            "changes": delta.changes,
+        })
+        # Keep only last 100 deltas to bound storage
+        if len(delta_log) > 100:
+            delta_log = delta_log[-100:]
+        self._save_delta_log(delta_log)
+
+    def _load_delta_log(self) -> list[dict]:
+        """Load the delta log from disk."""
+        log_file = self.sync_dir / "delta_log.json"
+        if log_file.exists():
+            try:
+                return json.loads(log_file.read_text())
+            except (json.JSONDecodeError, OSError):
+                return []
+        return []
+
+    def _save_delta_log(self, log: list[dict]) -> None:
+        """Save the delta log to disk."""
+        log_file = self.sync_dir / "delta_log.json"
+        log_file.write_text(json.dumps(log, indent=2, default=str))
+
     def _collect_memories(self) -> list[dict]:
         """Collect memories for sync."""
         memories_file = self.data_dir / "memories.json"

@@ -955,10 +955,119 @@ class MemoryLayer:
             "top_tags": sorted(tags.items(), key=lambda x: x[1], reverse=True)[:10],
         }
 
-    def consolidate(self):
+    def consolidate(
+        self,
+        max_age_days: int = 90,
+        min_memories: int = 5,
+        similarity_threshold: float = 0.85,
+    ) -> dict:
         """
-        Consolidate memories - summarize and compress.
+        Consolidate memories - merge duplicates, summarize old conversations,
+        and compress low-confidence inferred memories.
 
-        TODO: Implement summarization logic
+        Args:
+            max_age_days: Memories older than this are candidates for summarization.
+            min_memories: Minimum conversation memories needed before consolidation.
+            similarity_threshold: Content overlap ratio to consider memories duplicates.
+
+        Returns:
+            Dict with consolidation statistics.
         """
-        pass
+        from datetime import timedelta
+
+        all_memories = self.store.list_all()
+        cutoff = datetime.now() - timedelta(days=max_age_days)
+        stats = {"merged_duplicates": 0, "summarized_conversations": 0, "removed_low_confidence": 0}
+
+        # 1. Remove near-duplicate semantic memories (keep highest confidence)
+        semantic = [m for m in all_memories if m.memory_type == MemoryType.SEMANTIC]
+        seen: dict[str, Memory] = {}
+        for mem in sorted(semantic, key=lambda m: -m.confidence):
+            normalized = mem.content.lower().strip()
+            merged = False
+            for key, existing in seen.items():
+                if self._content_similarity(normalized, key) >= similarity_threshold:
+                    # Merge tags into the higher-confidence copy
+                    for tag in mem.tags:
+                        existing.add_tag(tag)
+                    self.store.update(existing)
+                    self.store.delete(mem.id)
+                    stats["merged_duplicates"] += 1
+                    merged = True
+                    break
+            if not merged:
+                seen[normalized] = mem
+
+        # 2. Summarize old episodic memories (conversations)
+        episodic = [
+            m
+            for m in all_memories
+            if m.memory_type == MemoryType.EPISODIC and m.created_at < cutoff
+        ]
+        if len(episodic) >= min_memories:
+            # Group by month
+            by_month: dict[str, list[Memory]] = {}
+            for mem in episodic:
+                key = mem.created_at.strftime("%Y-%m")
+                by_month.setdefault(key, []).append(mem)
+
+            for month, memories in by_month.items():
+                if len(memories) < 2:
+                    continue
+                topics = []
+                for m in memories:
+                    first_line = m.content.split("\n")[0]
+                    topics.append(first_line)
+
+                summary_content = (
+                    f"Consolidated conversations from {month} "
+                    f"({len(memories)} sessions):\n"
+                    + "\n".join(f"- {t}" for t in topics)
+                )
+
+                # Collect all tags from consolidated memories
+                all_tags = set()
+                for m in memories:
+                    all_tags.update(m.tags)
+
+                self.remember(
+                    content=summary_content,
+                    memory_type=MemoryType.EPISODIC,
+                    tags=list(all_tags) + ["consolidated"],
+                    source="learned",
+                    confidence=0.8,
+                    subtype="consolidated",
+                )
+
+                # Remove originals
+                for m in memories:
+                    self.store.delete(m.id)
+
+                stats["summarized_conversations"] += len(memories)
+
+        # 3. Remove very low-confidence inferred memories older than cutoff
+        inferred_old = [
+            m
+            for m in all_memories
+            if m.source == "inferred" and m.confidence < 0.3 and m.created_at < cutoff
+        ]
+        for mem in inferred_old:
+            self.store.delete(mem.id)
+            stats["removed_low_confidence"] += 1
+
+        logger.info(
+            f"Consolidation complete: {stats['merged_duplicates']} merged, "
+            f"{stats['summarized_conversations']} conversations summarized, "
+            f"{stats['removed_low_confidence']} low-confidence removed"
+        )
+        return stats
+
+    @staticmethod
+    def _content_similarity(a: str, b: str) -> float:
+        """Compute simple token overlap ratio between two strings."""
+        tokens_a = set(a.split())
+        tokens_b = set(b.split())
+        if not tokens_a or not tokens_b:
+            return 0.0
+        intersection = tokens_a & tokens_b
+        return len(intersection) / max(len(tokens_a), len(tokens_b))

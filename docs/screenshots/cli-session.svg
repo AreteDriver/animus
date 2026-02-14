@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="520" font-family="'SF Mono','Fira Code','Cascadia Code',Menlo,monospace" font-size="13">
+  <defs>
+    <style>
+      .bg { fill: #0d1117; }
+      .titlebar { fill: #161b22; }
+      .border { fill: none; stroke: #30363d; stroke-width: 1; }
+      .text { fill: #c9d1d9; }
+      .dim { fill: #8b949e; }
+      .cyan { fill: #58a6ff; }
+      .green { fill: #3fb950; }
+      .yellow { fill: #d29922; }
+      .red { fill: #f85149; }
+      .bold { font-weight: 700; }
+      .prompt { fill: #3fb950; font-weight: 700; }
+      .dot-red { fill: #ff5f56; }
+      .dot-yellow { fill: #ffbd2e; }
+      .dot-green { fill: #27c93f; }
+    </style>
+  </defs>
+  <!-- Window -->
+  <rect class="bg" width="720" height="520" rx="8"/>
+  <rect class="titlebar" width="720" height="32" rx="8"/>
+  <rect class="bg" x="0" y="24" width="720" height="10"/>
+  <rect class="border" x="0" y="0" width="720" height="520" rx="8"/>
+  <!-- Window dots -->
+  <circle class="dot-red" cx="18" cy="16" r="6"/>
+  <circle class="dot-yellow" cx="38" cy="16" r="6"/>
+  <circle class="dot-green" cx="58" cy="16" r="6"/>
+  <text class="dim" x="320" y="20" text-anchor="middle" font-size="12">animus — ~/</text>
+
+  <!-- Content -->
+  <g transform="translate(16, 48)">
+    <!-- Animus banner -->
+    <text class="cyan bold" y="0">╭──────────────────────────────────╮</text>
+    <text class="cyan bold" y="18">│           Animus                 │</text>
+    <text class="dim" y="36">│  Personal cognitive sovereignty  │</text>
+    <text class="cyan bold" y="54">╰──────────────────────────────────╯</text>
+
+    <text class="dim" y="80">Type 'help' for commands, 'exit' to quit</text>
+
+    <!-- Memory store -->
+    <text class="prompt" y="108">>>> </text><text class="text" x="36" y="108">/remember User prefers dark mode and concise responses</text>
+    <text class="green" y="126">Remembered: a1b2c3d4</text>
+
+    <!-- Recall -->
+    <text class="prompt" y="152">>>> </text><text class="text" x="36" y="152">/recall communication preferences</text>
+    <text class="dim" y="170">a1b2c3d4</text><text class="text" x="72" y="170"> [semantic] User prefers dark mode and concise r...</text>
+
+    <!-- Conversation with context -->
+    <text class="prompt" y="196">>>> </text><text class="text" x="36" y="196">How should you respond to me?</text>
+    <text class="text" y="220">Based on your preferences, I'll keep responses concise and</text>
+    <text class="text" y="238">focused. You prefer brevity over elaboration.</text>
+
+    <!-- Learning -->
+    <text class="prompt" y="268">>>> </text><text class="text" x="36" y="268">/learning</text>
+    <text class="text bold" y="290">Learning Dashboard</text>
+    <text class="text" y="310">  Total learned:     <tspan class="cyan">12</tspan></text>
+    <text class="text" y="328">  Pending approval:  <tspan class="yellow">2</tspan></text>
+    <text class="text" y="346">  Events today:      <tspan class="green">5</tspan></text>
+    <text class="text" y="364">  Guardrail blocks:  <tspan class="red">0</tspan></text>
+
+    <!-- Tags -->
+    <text class="prompt" y="394">>>> </text><text class="text" x="36" y="394">/tags</text>
+    <text class="text bold" y="412">Tags (4):</text>
+    <text class="cyan" y="430">  preference</text><text class="text" x="108" y="430">: 3</text>
+    <text class="cyan" y="448">  communication</text><text class="text" x="130" y="448">: 2</text>
+  </g>
+</svg>
