@@ -1021,8 +1021,7 @@ class MemoryLayer:
 
                 summary_content = (
                     f"Consolidated conversations from {month} "
-                    f"({len(memories)} sessions):\n"
-                    + "\n".join(f"- {t}" for t in topics)
+                    f"({len(memories)} sessions):\n" + "\n".join(f"- {t}" for t in topics)
                 )
 
                 # Collect all tags from consolidated memories

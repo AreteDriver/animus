@@ -40,11 +40,13 @@ class MockSoundDevice:
     def rec(self, frames, samplerate=16000, channels=1, dtype="float32"):
         import numpy as np
 
-        self.recordings.append({
-            "frames": frames,
-            "samplerate": samplerate,
-            "channels": channels,
-        })
+        self.recordings.append(
+            {
+                "frames": frames,
+                "samplerate": samplerate,
+                "channels": channels,
+            }
+        )
         if self._audio_data is not None:
             return self._audio_data
         # Return fake audio with some "speech" energy
@@ -91,9 +93,7 @@ class TestVoiceInput:
         audio_file = tmp_path / "test.wav"
         audio_file.write_bytes(b"\x00" * 100)
 
-        mock_model = MockWhisperModel(
-            transcriptions={str(audio_file): "test transcription"}
-        )
+        mock_model = MockWhisperModel(transcriptions={str(audio_file): "test transcription"})
         vi._model = mock_model
 
         result = vi.transcribe_file(audio_file)
@@ -250,9 +250,7 @@ class TestMockWhisperModel:
         assert result["text"] == "default response"
 
     def test_file_specific_transcription(self):
-        model = MockWhisperModel(transcriptions={
-            "/path/to/audio.wav": "specific text"
-        })
+        model = MockWhisperModel(transcriptions={"/path/to/audio.wav": "specific text"})
         result = model.transcribe("/path/to/audio.wav")
         assert result["text"] == "specific text"
 

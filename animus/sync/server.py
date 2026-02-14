@@ -290,8 +290,7 @@ class SyncServer:
                     ).to_json()
                 )
                 logger.debug(
-                    f"Sent incremental sync to {peer.device_name} "
-                    f"(since v{since_version})"
+                    f"Sent incremental sync to {peer.device_name} (since v{since_version})"
                 )
                 return
 

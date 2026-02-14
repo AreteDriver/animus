@@ -277,11 +277,13 @@ class SyncableState:
     def record_delta(self, delta: "StateDelta") -> None:
         """Append a delta to the persistent log for incremental sync."""
         delta_log = self._load_delta_log()
-        delta_log.append({
-            "version": self._version,
-            "timestamp": delta.timestamp.isoformat(),
-            "changes": delta.changes,
-        })
+        delta_log.append(
+            {
+                "version": self._version,
+                "timestamp": delta.timestamp.isoformat(),
+                "changes": delta.changes,
+            }
+        )
         # Keep only last 100 deltas to bound storage
         if len(delta_log) > 100:
             delta_log = delta_log[-100:]

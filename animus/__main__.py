@@ -639,7 +639,9 @@ def main():
                     items = learning.get_all_learnings()
                     data = [item.to_dict() for item in items]
                     export_path.write_text(json.dumps(data, indent=2, default=str))
-                    console.print(f"[green]Exported {len(data)} learnings to:[/green] {export_path}")
+                    console.print(
+                        f"[green]Exported {len(data)} learnings to:[/green] {export_path}"
+                    )
                 else:
                     console.print("[dim]Learning is disabled in configuration[/dim]")
                 continue

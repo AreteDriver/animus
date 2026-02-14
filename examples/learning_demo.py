@@ -11,7 +11,6 @@ Run with: python examples/learning_demo.py
 import sys
 import tempfile
 from pathlib import Path
-from datetime import datetime
 
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -21,25 +20,27 @@ from rich.panel import Panel
 from rich.table import Table
 
 from animus.config import AnimusConfig
-from animus.memory import MemoryLayer, Memory, MemoryType, MemorySource
 from animus.learning import LearningLayer
+from animus.memory import MemoryLayer, MemoryType
 
 console = Console()
 
 
 def print_section(title: str):
     """Print a section header."""
-    console.print(f"\n[bold cyan]{'='*60}[/]")
+    console.print(f"\n[bold cyan]{'=' * 60}[/]")
     console.print(f"[bold cyan]{title}[/]")
-    console.print(f"[bold cyan]{'='*60}[/]\n")
+    console.print(f"[bold cyan]{'=' * 60}[/]\n")
 
 
 def main():
-    console.print(Panel.fit(
-        "[bold green]Animus Learning System Demo[/]\n"
-        "Demonstrating persistent learning across sessions",
-        title="🧠 Animus",
-    ))
+    console.print(
+        Panel.fit(
+            "[bold green]Animus Learning System Demo[/]\n"
+            "Demonstrating persistent learning across sessions",
+            title="🧠 Animus",
+        )
+    )
 
     # Create temporary data directory for demo
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -94,8 +95,12 @@ def main():
 
             for pattern in detected:
                 table.add_row(
-                    pattern.description[:50] + "..." if len(pattern.description) > 50 else pattern.description,
-                    pattern.suggested_category.value if hasattr(pattern.suggested_category, 'value') else str(pattern.suggested_category),
+                    pattern.description[:50] + "..."
+                    if len(pattern.description) > 50
+                    else pattern.description,
+                    pattern.suggested_category.value
+                    if hasattr(pattern.suggested_category, "value")
+                    else str(pattern.suggested_category),
                     f"{pattern.confidence:.2f}",
                 )
 
@@ -118,7 +123,7 @@ def main():
             for item in active[:5]:  # Show top 5
                 table.add_row(
                     item.content[:40] + "..." if len(item.content) > 40 else item.content,
-                    item.category.value if hasattr(item.category, 'value') else str(item.category),
+                    item.category.value if hasattr(item.category, "value") else str(item.category),
                     f"{item.confidence:.2f}",
                 )
 
@@ -157,7 +162,11 @@ def main():
         if pending_items:
             console.print("\nItems awaiting approval:")
             for item in pending_items[:3]:
-                console.print(f"  • [cyan]{item.content[:50]}...[/]" if len(item.content) > 50 else f"  • [cyan]{item.content}[/]")
+                console.print(
+                    f"  • [cyan]{item.content[:50]}...[/]"
+                    if len(item.content) > 50
+                    else f"  • [cyan]{item.content}[/]"
+                )
 
         # === SESSION 6: Persistence Demo ===
         print_section("SESSION 6: Persistence Across Sessions")
@@ -194,13 +203,15 @@ def main():
 
         console.print(summary)
 
-        console.print(Panel.fit(
-            "[bold green]Demo Complete![/]\n\n"
-            "Animus learns from your interactions, detects patterns,\n"
-            "infers preferences, and persists everything across sessions.\n\n"
-            "All learning is transparent, reversible, and respects guardrails.",
-            title="✨",
-        ))
+        console.print(
+            Panel.fit(
+                "[bold green]Demo Complete![/]\n\n"
+                "Animus learns from your interactions, detects patterns,\n"
+                "infers preferences, and persists everything across sessions.\n\n"
+                "All learning is transparent, reversible, and respects guardrails.",
+                title="✨",
+            )
+        )
 
 
 if __name__ == "__main__":
