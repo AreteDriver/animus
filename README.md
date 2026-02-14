@@ -2,289 +2,249 @@
 
 *An exocortex architecture for personal cognitive sovereignty*
 
-[![CI](https://github.com/AreteDriver/animus/actions/workflows/ci.yml/badge.svg)](https://github.com/AreteDriver/animus/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/AreteDriver/animus/graph/badge.svg)](https://codecov.io/gh/AreteDriver/animus)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
----
-
-## Screenshots
-
-<p align="center">
-  <img src="docs/screenshots/cli-session.png" alt="CLI Session" width="70%">
-</p>
-
-<p align="center">
-  <em>Interactive CLI with memory recall and contextual responses</em>
-</p>
-
-<!-- TODO: Add screenshots:
-     1. CLI session showing multi-turn conversation
-     2. Memory recall example (animus remembering past context)
-     3. Optional: API response in terminal
-     Save to docs/screenshots/ -->
-
 ---
 
 ## What is this?
 
-Animus is a framework for building a **personal AI** - one that persists, learns, and serves a single user by design.
+Animus is a framework for building a **personal AI** — one that persists, learns, and serves a single user by design.
 
 Current AI assistants are rented. Your context exists at the discretion of platform providers. Memory is a feature that can be revoked. The relationship resets at their convenience.
 
 Animus explores an alternative: an AI that is **yours**.
 
-```
-17,000+ lines of Python | 266 tests | Local-first by default
-```
-
 ---
 
-## Quick Start
+## The Concept
 
-```bash
-# Install
-pip install -e .
+The idea of a personal guiding intelligence is ancient — daemons, familiars, advisory entities that serve one person's interests across time.
 
-# Run the interactive CLI
-animus
-
-# Or with API server
-pip install -e ".[api]"
-animus --api
-```
-
-### Minimal Example
-
-```python
-from animus import AnimusConfig, MemoryLayer, CognitiveLayer, ModelConfig
-
-# Initialize
-config = AnimusConfig()
-memory = MemoryLayer(config.data_dir)
-cognitive = CognitiveLayer(ModelConfig(provider="ollama", model="llama3.2"))
-
-# Remember something
-memory.remember(
-    content="User prefers concise responses",
-    memory_type="semantic",
-    tags=["preference", "communication"],
-    confidence=0.9,
-)
-
-# Retrieve relevant context
-context = memory.recall("How should I communicate?", limit=5)
-
-# Generate response with context
-response = cognitive.think(
-    prompt="Summarize my communication preferences",
-    context=context,
-)
-```
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Interface Layer                         │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────────┐  │
-│  │   CLI    │ │   API    │ │  Voice   │ │     Sync      │  │
-│  │ (Rich)   │ │(FastAPI) │ │(Whisper) │ │  (WebSocket)  │  │
-│  └──────────┘ └──────────┘ └──────────┘ └───────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│                    Cognitive Layer                          │
-│         CognitiveLayer, ReasoningMode, ToolRegistry         │
-├─────────────────────────────────────────────────────────────┤
-│                     Memory Layer                            │
-│     MemoryLayer (ChromaDB), SemanticFact, Conversation      │
-├─────────────────────────────────────────────────────────────┤
-│                    Learning Layer                           │
-│       LearningLayer, Guardrails, Patterns, Rollback         │
-├─────────────────────────────────────────────────────────────┤
-│                      Core Layer                             │
-│       AnimusConfig, DecisionFramework, TaskTracker          │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Key Components
-
-| Module | Purpose |
-|--------|---------|
-| `memory.py` | Vector storage with ChromaDB, episodic/semantic/procedural memory types |
-| `cognitive.py` | Model-agnostic reasoning (Ollama, Anthropic, OpenAI) |
-| `learning/` | Pattern detection, preference inference, guardrails |
-| `tools.py` | Extensible tool registry for file system, web, integrations |
-| `sync/` | Cross-device state synchronization via WebSocket |
-| `api.py` | FastAPI server for external integrations |
-| `voice.py` | Whisper STT + TTS for voice interaction |
+This project translates that concept into modern architecture: a persistent, private, portable AI co-pilot that extends your cognitive capacity without compromising your sovereignty.
 
 ---
 
 ## Core Principles
 
-- **Persistence** - Context accumulates across sessions, devices, and years
-- **Sovereignty** - Your data stays yours. Local-first by default.
-- **Loyalty** - Aligned to you, not to a platform's incentives
-- **Portability** - Moves with you: CLI, API, voice, sync across devices
-- **Growth** - Learns your patterns, priorities, and goals over time
-- **Safety** - Guardrails are user-defined but inviolable
+- **Persistence** — Context accumulates across sessions, devices, and years
+- **Sovereignty** — Your data stays yours. Local-first by default.
+- **Loyalty** — Aligned to you, not to a platform's incentives
+- **Portability** — Moves with you: desktop, mobile, wearable
+- **Growth** — Learns your patterns, priorities, and goals over time
+- **Safety** — Cannot harm its user. Guardrails are user-defined but inviolable.
 
 ---
 
-## Learning System
+## The Stack
 
-Animus learns from interactions while respecting strict boundaries:
+Animus is the user-facing layer of a multi-project architecture. Each layer is an independent, open-source project that can be used standalone or composed into the full system.
 
-```python
-from animus import LearningLayer, MemoryLayer, AnimusConfig
-
-config = AnimusConfig()
-memory = MemoryLayer(config.data_dir)
-learning = LearningLayer(memory, config.data_dir)
-
-# Scan memories for patterns
-patterns = learning.scan_and_learn()
-
-# Review what was learned (transparency)
-active = learning.get_active_learnings()
-
-# Approve or reject pending learnings
-pending = learning.get_pending_learnings()
-learning.approve(pending[0].id)
-
-# Rollback if needed
-checkpoints = learning.rollback.list_checkpoints()
-learning.rollback.restore(checkpoints[0].id)
+```
+┌──────────────────────────────────┐
+│            ANIMUS                │  You are here
+│   Identity · Memory · Interface  │
+│                                  │
+│   The sovereign personal AI.     │
+│   Knows you, serves you, is     │
+│   yours.                         │
+├──────────────────────────────────┤
+│            GORGON                │  github.com/AreteDriver/Gorgon
+│   Workflows · Budgets · Gates    │
+│                                  │
+│   Multi-agent orchestration.     │
+│   When Animus needs to do        │
+│   complex work, Gorgon           │
+│   decomposes, delegates, and     │
+│   quality-checks.                │
+├──────────────────────────────────┤
+│          CONVERGENT              │  github.com/AreteDriver/Convergent
+│   Intent Graph · Stability       │
+│                                  │
+│   Parallel agent coordination.   │
+│   Agents converge on compatible  │
+│   outputs without a supervisor   │
+│   bottleneck. Inspired by        │
+│   flocking and stigmergy.        │
+├──────────────────────────────────┤
+│        INFERENCE ENGINE          │
+│   Ollama · Claude API · Any LLM  │
+│                                  │
+│   Model-agnostic. Swap local     │
+│   and cloud providers without    │
+│   changing a line of code.       │
+└──────────────────────────────────┘
 ```
 
-### Safety Guardrails
+### How They Connect
 
-```python
-from animus.learning import GuardrailManager, Guardrail
+**Animus** is the product — the thing you talk to, the thing that remembers you, the thing that runs on your devices. It doesn't do complex work alone.
 
-guardrails = GuardrailManager(config.data_dir)
+**Gorgon** is the engine room. When Animus receives a request that requires multiple steps — research a topic, draft a document, review and refine — it hands the task to Gorgon. Gorgon decomposes it into agent roles (planner, builder, tester, reviewer), manages token budgets, enforces quality gates, and checkpoints progress so nothing is lost if a step fails.
 
-# View default safety rules
-for g in guardrails.get_all_guardrails():
-    print(f"{g.rule} (immutable: {g.immutable})")
+**Convergent** is the coordination protocol inside Gorgon. When multiple agents work in parallel, Convergent's intent graph and stability scoring ensure they arrive at compatible outputs — without centralized message passing. Each agent observes a shared landscape and adjusts independently. Coherent results emerge the same way flocking emerges in birds.
 
-# Core guardrails cannot be overridden by learned behavior
+**The inference engine** is pluggable. Run a 70B model locally via Ollama for air-gapped sovereignty, or route to Claude API when you need frontier reasoning. Gorgon's router handles tier-based selection automatically — heavy reasoning gets the best available model, simple tasks get the fastest.
+
+### Use Them Independently
+
+Each project stands on its own:
+
+| Project | Standalone Use |
+|---------|---------------|
+| **Animus** | Personal AI assistant with persistent memory |
+| **Gorgon** | General-purpose multi-agent workflow orchestration |
+| **Convergent** | Coordination primitive for any parallel agent system |
+
+You don't need Animus to use Gorgon. You don't need Gorgon to use Convergent. But together, they form something greater than the sum.
+
+---
+
+## Architecture
+
+Animus itself is a four-layer system:
+
+```
+┌─────────────────────────────────────┐
+│           Interface Layer           │
+│   (voice, text, wearable, desktop)  │
+├─────────────────────────────────────┤
+│           Cognitive Layer           │
+│ (reasoning, analysis, generation)   │
+│         ┌─────────────┐            │
+│         │   Gorgon    │  ← orchestration for complex tasks
+│         │ Convergent  │  ← parallel coordination
+│         └─────────────┘            │
+├─────────────────────────────────────┤
+│           Memory Layer              │
+│ (episodic, semantic, procedural)    │
+├─────────────────────────────────────┤
+│            Core Layer               │
+│  (identity, security, preferences)  │
+└─────────────────────────────────────┘
+```
+
+### Core Layer
+
+The foundation. Defines *who* this Animus belongs to.
+
+- **Identity** — Cryptographic ownership. This instance serves one user.
+- **Preferences** — Communication style, priorities, boundaries
+- **Security** — Encryption at rest, access control, authentication
+- **Ethics config** — User-defined behavioral constraints
+
+### Memory Layer
+
+What makes it *yours* over time.
+
+- **Episodic memory** — Conversations, events, decisions (what happened)
+- **Semantic memory** — Facts, knowledge, learnings (what you know)
+- **Procedural memory** — Workflows, habits, patterns (how you do things)
+- **Active context** — Current situation, recent threads, live priorities
+
+### Cognitive Layer
+
+The reasoning engine — where Gorgon and Convergent plug in.
+
+- **Model agnostic** — Swap local or cloud LLMs as needed
+- **Simple requests** — Direct LLM inference, single-turn
+- **Complex requests** — Routed to Gorgon for multi-agent orchestration
+- **Tool use** — File access, web search, API calls, device control
+- **Register translation** — Adjusts communication to context
+
+### Interface Layer
+
+How you interact across contexts.
+
+- **Desktop** — Full interface, long-form work
+- **Mobile** — Voice-first, quick exchanges
+- **Wearable** — Minimal, ambient, notification-based
+- **API** — Integrations with other tools and services
+
+Seamless handoff: start a thought on desktop, continue on phone. Context follows you.
+
+---
+
+## Data Flow
+
+```
+User input (any device)
+         │
+         ▼
+   Interface Layer ──── Captures, normalizes
+         │
+         ▼
+     Core Layer ──────── Authenticates, applies preferences
+         │
+         ▼
+    Memory Layer ─────── Retrieves relevant context
+         │
+         ▼
+   Cognitive Layer ───── Reasons, generates response
+    │         │
+    │    (complex tasks)
+    │         ▼
+    │      Gorgon ─────── Decomposes → agents → quality gates
+    │         │
+    │     Convergent ──── Coordinates parallel agents
+    │         │
+    ◄─────────┘
+         │
+         ▼
+    Memory Layer ─────── Stores new context, updates patterns
+         │
+         ▼
+   Interface Layer ───── Delivers response
 ```
 
 ---
 
-## Installation Options
+## Reference Hardware
 
-```bash
-# Core only (Ollama + ChromaDB)
-pip install -e .
+Animus is designed to run on consumer hardware. The reference deployment:
 
-# With Anthropic Claude support
-pip install -e ".[anthropic]"
+| Machine | Role | What It Runs |
+|---------|------|-------------|
+| Mac Studio M4 Max 128GB | Primary workstation | Animus core, Gorgon orchestrator, 70B reasoning model |
+| Mac Studio M4 Max 128GB | Inference server | Agent pool (8B-14B models), Gorgon workers |
 
-# With API server
-pip install -e ".[api]"
+Connected via Thunderbolt 5 using [exo](https://github.com/exo-explore/exo) for distributed inference. Combined 256GB unified memory runs frontier-class models (DeepSeek V3 671B at 4-bit) fully local, zero API cost.
 
-# With voice (Whisper + TTS)
-pip install -e ".[voice]"
-
-# With integrations (Todoist, Google)
-pip install -e ".[integrations]"
-
-# With cross-device sync
-pip install -e ".[sync]"
-
-# Everything
-pip install -e ".[all]"
-```
+Animus also runs on a single laptop with smaller models. The architecture scales down gracefully — fewer agents, smaller models, same sovereignty.
 
 ---
 
-## CLI Usage
+## What's Buildable Now vs. Aspirational
 
-```bash
-# Interactive mode
-animus
+### Buildable today
+- Local LLM with persistent memory (Ollama + ChromaDB)
+- Desktop + mobile text interface
+- Basic voice integration
+- Personal knowledge base with retrieval
+- Multi-agent task execution via Gorgon
 
-# Single query
-animus "What's on my schedule today?"
+### Near-term (6-12 months)
+- Cross-device sync with encrypted handoff
+- Improved local models approaching API quality
+- Wearable integrations (existing hardware)
+- Proactive notifications and scheduling
 
-# With specific model
-animus --model claude-3-5-sonnet-20241022
-
-# Start API server
-animus --api --port 8000
-
-# Voice mode
-animus --voice
-```
-
----
-
-## API Server
-
-```bash
-animus --api
-```
-
-```python
-import httpx
-
-# Chat endpoint
-response = httpx.post("http://localhost:8000/chat", json={
-    "message": "What are my priorities today?",
-    "context_limit": 10,
-})
-print(response.json()["response"])
-
-# Memory endpoints
-httpx.post("http://localhost:8000/memory", json={
-    "content": "Meeting with team at 3pm",
-    "type": "episodic",
-    "tags": ["calendar", "work"],
-})
-
-memories = httpx.get("http://localhost:8000/memory/search", params={
-    "query": "meetings",
-    "limit": 5,
-})
-```
+### Aspirational
+- True seamless multi-device presence
+- Real-time ambient awareness
+- Minimal form factor (ring, glasses) with full capability
+- Self-improving personalization within safety boundaries
 
 ---
 
-## Documentation
+## Project Status
 
-- [Architecture Overview](docs/ARCHITECTURE.md) - System design and data flow
-- [Implementation Roadmap](docs/ROADMAP.md) - Development phases
-- [Use Cases](docs/USE_CASES.md) - Practical applications
-- [Connectivity & Interfaces](docs/CONNECTIVITY.md) - Device integration
-- [Safety & Ethics](docs/SAFETY.md) - Guardrails and privacy
-- [Contributing](CONTRIBUTING.md) - How to contribute
+🚧 **Early Development**
 
----
+The stack is being built bottom-up:
 
-## Development
+- [x] **Convergent** — Core library complete (Rust + Python, intent graph, stability scorer)
+- [ ] **Gorgon** — Core implementation in progress (contracts, workflows, budget, agents)
+- [ ] **Animus** — Architecture defined, implementation follows Gorgon completion
 
-```bash
-# Install dev dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Run tests with coverage
-pytest --cov=animus --cov-report=term-missing
-
-# Lint
-ruff check .
-ruff format .
-
-# Type check
-mypy animus/
-```
+See each project's repo for detailed status.
 
 ---
 
@@ -292,14 +252,42 @@ mypy animus/
 
 > "You don't own it. You rent access."
 
-This is the fundamental problem with current AI assistants. Your relationship with the AI - the context it has about you, the patterns it's learned, the history you've built - exists at the pleasure of corporations whose incentives may diverge from yours at any moment.
+This is the fundamental problem with current AI assistants. Your relationship with the AI — the context it has about you, the patterns it's learned, the history you've built — exists at the pleasure of corporations whose incentives may diverge from yours at any moment.
 
 Animus is an attempt to build something different: an AI that serves you because it's *yours*, not because a company's business model temporarily aligns with your needs.
 
-The goal isn't to replace cloud AI services entirely - they have capabilities that local systems can't match. The goal is **sovereignty**: you control the core, you own the memory, you decide what gets shared and what stays private.
+The goal isn't to replace cloud AI services entirely — they have capabilities that local systems can't match. The goal is **sovereignty**: you control the core, you own the memory, you decide what gets shared and what stays private.
+
+---
+
+## Related Projects
+
+| Project | Description | Repo |
+|---------|-------------|------|
+| **Gorgon** | Multi-agent orchestration with budget controls, checkpoint/resume, and YAML workflows | [AreteDriver/Gorgon](https://github.com/AreteDriver/Gorgon) |
+| **Convergent** | Parallel agent coordination via intent graphs and stigmergy-inspired stability scoring | [AreteDriver/Convergent](https://github.com/AreteDriver/Convergent) |
+
+---
+
+## Documentation
+
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [Implementation Roadmap](docs/ROADMAP.md)
+- [Safety & Ethics](docs/SAFETY.md)
 
 ---
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) for details.
+MIT License — See [LICENSE](LICENSE) for details.
+
+---
+
+## Acknowledgments
+
+This project draws inspiration from:
+- Ancient concepts of personal guiding intelligences (daemons, familiars)
+- The exocortex concept from transhumanist thought
+- Lean manufacturing and Toyota Production System principles
+- Open-source AI projects pushing local-first development
+- Everyone building toward a future where AI serves individuals, not platforms
