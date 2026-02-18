@@ -232,12 +232,15 @@ class EntityConfig:
 
     enabled: bool = True
     auto_extract: bool = True  # Auto-extract entities from conversations
+    auto_discover: bool = False  # Auto-discover new entities via heuristic NER
 
     def __post_init__(self):
         if env_enabled := os.environ.get("ANIMUS_ENTITIES_ENABLED"):
             self.enabled = env_enabled.lower() in ("true", "1", "yes")
         if env_extract := os.environ.get("ANIMUS_ENTITIES_AUTO_EXTRACT"):
             self.auto_extract = env_extract.lower() in ("true", "1", "yes")
+        if env_discover := os.environ.get("ANIMUS_ENTITIES_AUTO_DISCOVER"):
+            self.auto_discover = env_discover.lower() in ("true", "1", "yes")
 
 
 @dataclass
@@ -351,6 +354,7 @@ class AnimusConfig:
             "entities": {
                 "enabled": self.entities.enabled,
                 "auto_extract": self.entities.auto_extract,
+                "auto_discover": self.entities.auto_discover,
             },
         }
 
@@ -488,6 +492,8 @@ class AnimusConfig:
                     config.entities.enabled = entity_data["enabled"]
                 if "auto_extract" in entity_data:
                     config.entities.auto_extract = entity_data["auto_extract"]
+                if "auto_discover" in entity_data:
+                    config.entities.auto_discover = entity_data["auto_discover"]
 
             # Re-apply environment overrides
             config.__post_init__()

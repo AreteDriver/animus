@@ -673,10 +673,12 @@ class MemoryLayer:
         data_dir: Path,
         backend: str = "chroma",
         entity_memory: "EntityMemory | None" = None,
+        auto_discover_entities: bool = False,
     ):
         self.data_dir = data_dir
         self.backend_type = backend
         self.entity_memory = entity_memory
+        self.auto_discover_entities = auto_discover_entities
 
         self.store: MemoryProvider
         if backend == "chroma":
@@ -737,7 +739,11 @@ class MemoryLayer:
         # Link entities mentioned in the content to this memory
         if self.entity_memory:
             try:
-                self.entity_memory.extract_and_link(content, memory_id=memory.id)
+                self.entity_memory.extract_and_link(
+                    content,
+                    memory_id=memory.id,
+                    auto_discover=self.auto_discover_entities,
+                )
             except Exception as e:
                 logger.debug(f"Entity linking during remember failed: {e}")
 
@@ -966,7 +972,11 @@ class MemoryLayer:
             # Link entities mentioned in the imported memory
             if self.entity_memory:
                 try:
-                    self.entity_memory.extract_and_link(memory.content, memory_id=memory.id)
+                    self.entity_memory.extract_and_link(
+                        memory.content,
+                        memory_id=memory.id,
+                        auto_discover=self.auto_discover_entities,
+                    )
                 except Exception as e:
                     logger.debug(f"Entity linking during import failed: {e}")
 

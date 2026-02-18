@@ -377,6 +377,7 @@ def main():
     if config.entities.enabled:
         entity_memory = EntityMemory(config.data_dir / "entities")
         memory.entity_memory = entity_memory
+        memory.auto_discover_entities = config.entities.auto_discover
         logger.info("Entity memory initialized")
 
     # Proactive Engine

@@ -1375,3 +1375,271 @@ class TestRemoveInteractionsForMemorySaveBug:
             em2 = EntityMemory(Path(tmpdir) / "entities")
             alice2 = em2.find_entity("Alice")
             assert "orphan-mem-id" not in alice2.memory_ids
+
+
+# =============================================================================
+# LLM-Powered Proactive Content Tests
+# =============================================================================
+
+
+class TestProactiveLLMSynthesis:
+    """Test that proactive engine uses cognitive layer for synthesis when available."""
+
+    def test_morning_brief_uses_cognitive(self):
+        from unittest.mock import MagicMock
+
+        from animus.proactive import ProactiveEngine
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_memory = MagicMock()
+            mock_memory.store.list_all.return_value = []
+
+            mock_cognitive = MagicMock()
+            mock_cognitive.think.return_value = "Synthesized briefing content"
+
+            engine = ProactiveEngine(Path(tmpdir), mock_memory, cognitive=mock_cognitive)
+            nudge = engine.generate_morning_brief()
+            # With no data, cognitive.think is not called (no sections)
+            assert nudge.content == "No notable items for today's briefing."
+
+    def test_morning_brief_calls_cognitive_with_data(self):
+        from unittest.mock import MagicMock
+
+        from animus.memory import Memory, MemoryType
+        from animus.proactive import ProactiveEngine
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            recent_mem = Memory.create("Test item", MemoryType.EPISODIC)
+
+            mock_memory = MagicMock()
+            mock_memory.store.list_all.return_value = [recent_mem]
+
+            mock_cognitive = MagicMock()
+            mock_cognitive.think.return_value = "LLM-synthesized briefing"
+
+            engine = ProactiveEngine(Path(tmpdir), mock_memory, cognitive=mock_cognitive)
+            nudge = engine.generate_morning_brief()
+            mock_cognitive.think.assert_called_once()
+            assert nudge.content == "LLM-synthesized briefing"
+
+    def test_follow_up_uses_cognitive(self):
+        from unittest.mock import MagicMock
+
+        from animus.memory import Memory, MemoryType
+        from animus.proactive import ProactiveEngine
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mem = Memory.create(
+                "I need to follow up on the budget review",
+                MemoryType.EPISODIC,
+            )
+            mem.created_at = datetime.now() - timedelta(days=2)
+
+            mock_memory = MagicMock()
+            mock_memory.store.list_all.return_value = [mem]
+
+            mock_cognitive = MagicMock()
+            mock_cognitive.think.return_value = "Follow up on budget review ASAP"
+
+            engine = ProactiveEngine(Path(tmpdir), mock_memory, cognitive=mock_cognitive)
+            nudges = engine.scan_follow_ups()
+            assert len(nudges) >= 1
+            mock_cognitive.think.assert_called()
+            assert nudges[0].content == "Follow up on budget review ASAP"
+
+    def test_deadline_uses_cognitive(self):
+        from unittest.mock import MagicMock
+
+        from animus.memory import Memory, MemoryType
+        from animus.proactive import ProactiveEngine
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mem = Memory.create(
+                "Deadline: submit report by Friday",
+                MemoryType.SEMANTIC,
+                tags=["deadline"],
+            )
+
+            mock_memory = MagicMock()
+            mock_memory.recall.return_value = [mem]
+            mock_memory.store.list_all.return_value = []
+
+            mock_cognitive = MagicMock()
+            mock_cognitive.think.return_value = "Submit report by Friday"
+
+            engine = ProactiveEngine(Path(tmpdir), mock_memory, cognitive=mock_cognitive)
+            nudges = engine.scan_deadlines()
+            assert len(nudges) >= 1
+            mock_cognitive.think.assert_called()
+            assert nudges[0].content == "Submit report by Friday"
+
+    def test_context_nudge_uses_cognitive(self):
+        from unittest.mock import MagicMock
+
+        from animus.memory import Memory, MemoryType
+        from animus.proactive import ProactiveEngine
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_mem = Memory.create("Past discussion about budgets", MemoryType.EPISODIC)
+            old_mem.created_at = datetime.now() - timedelta(days=5)
+            old_mem.confidence = 0.9
+
+            mock_memory = MagicMock()
+            mock_memory.recall.return_value = [old_mem]
+            mock_memory.store.list_all.return_value = []
+
+            mock_cognitive = MagicMock()
+            mock_cognitive.think.return_value = "You discussed budgets 5 days ago"
+
+            engine = ProactiveEngine(Path(tmpdir), mock_memory, cognitive=mock_cognitive)
+            nudge = engine.generate_context_nudge("Let's talk about budgets")
+            assert nudge is not None
+            mock_cognitive.think.assert_called()
+            assert nudge.content == "You discussed budgets 5 days ago"
+
+
+# =============================================================================
+# NER Entity Auto-Discovery Tests
+# =============================================================================
+
+
+class TestEntityAutoDiscovery:
+    """Test heuristic NER-based entity auto-discovery."""
+
+    def test_discover_entities_finds_proper_nouns(self):
+        from animus.entities import EntityMemory
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            candidates = em.discover_entities(
+                "I met with Sarah Johnson and talked about Project Phoenix."
+            )
+            assert "Sarah Johnson" in candidates
+            assert "Project Phoenix" in candidates
+
+    def test_discover_entities_skips_stopwords(self):
+        from animus.entities import EntityMemory
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            candidates = em.discover_entities("Hello there, I was thinking about Monday.")
+            assert "Hello" not in candidates
+            assert "Monday" not in candidates
+
+    def test_discover_entities_skips_known_entities(self):
+        from animus.entities import EntityMemory, EntityType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            em.add_entity("Alice", EntityType.PERSON)
+            candidates = em.discover_entities("I talked to Alice and Bob today.")
+            assert "Alice" not in candidates
+            assert "Bob" in candidates
+
+    def test_extract_and_link_with_auto_discover(self):
+        from animus.entities import EntityMemory, EntityType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            em.add_entity("Alice", EntityType.PERSON)
+
+            found = em.extract_and_link("Alice met with Bob at Acme Corp", auto_discover=True)
+            # Alice was known, Bob and Acme Corp should be auto-discovered
+            names = [e.name for e in found]
+            assert "Alice" in names
+            assert "Bob" in names
+            assert "Acme Corp" in names
+
+    def test_extract_and_link_without_auto_discover(self):
+        from animus.entities import EntityMemory, EntityType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            em.add_entity("Alice", EntityType.PERSON)
+
+            found = em.extract_and_link("Alice met with Bob at Acme Corp", auto_discover=False)
+            # Only Alice should be found
+            names = [e.name for e in found]
+            assert "Alice" in names
+            assert "Bob" not in names
+
+    def test_auto_discover_deduplicates(self):
+        from animus.entities import EntityMemory
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            candidates = em.discover_entities("Bob talked to Bob about the project.")
+            assert candidates.count("Bob") == 1
+
+    def test_memory_layer_auto_discover_integration(self):
+        from animus.entities import EntityMemory, EntityType
+        from animus.memory import MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            memory = MemoryLayer(
+                Path(tmpdir),
+                backend="json",
+                entity_memory=em,
+                auto_discover_entities=True,
+            )
+
+            em.add_entity("Alice", EntityType.PERSON)
+            memory.remember("Alice introduced me to Charlie at the meeting")
+
+            # Charlie should have been auto-discovered
+            charlie = em.find_entity("Charlie")
+            assert charlie is not None
+            assert charlie.notes == "Auto-discovered from text"
+
+    def test_config_auto_discover_field(self):
+        from animus.config import EntityConfig
+
+        cfg = EntityConfig()
+        assert cfg.auto_discover is False  # Default off
+
+        cfg2 = EntityConfig(auto_discover=True)
+        assert cfg2.auto_discover is True
+
+
+# =============================================================================
+# Dashboard Live Refresh Tests
+# =============================================================================
+
+
+class TestDashboardLiveRefresh:
+    """Test that dashboard HTML includes live refresh functionality."""
+
+    def test_dashboard_has_auto_refresh_toggle(self):
+        from animus.dashboard import DASHBOARD_HTML
+
+        assert "auto-refresh-toggle" in DASHBOARD_HTML
+        assert "toggleAutoRefresh" in DASHBOARD_HTML
+
+    def test_dashboard_has_refresh_data_function(self):
+        from animus.dashboard import DASHBOARD_HTML
+
+        assert "async function refreshData()" in DASHBOARD_HTML
+        assert "fetch('/dashboard/data')" in DASHBOARD_HTML
+
+    def test_dashboard_has_schedule_refresh(self):
+        from animus.dashboard import DASHBOARD_HTML
+
+        assert "scheduleRefresh" in DASHBOARD_HTML
+        assert "REFRESH_INTERVAL" in DASHBOARD_HTML
+
+    def test_dashboard_has_live_indicator(self):
+        from animus.dashboard import DASHBOARD_HTML
+
+        assert "live-indicator" in DASHBOARD_HTML
+        assert "live-dot" in DASHBOARD_HTML
+
+    def test_rendered_dashboard_has_data_endpoint(self):
+        from animus.dashboard import render_dashboard
+        from animus.memory import MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            memory = MemoryLayer(Path(tmpdir), backend="json")
+            html = render_dashboard(memory)
+            assert "/dashboard/data" in html
+            assert "scheduleRefresh()" in html

@@ -597,20 +597,137 @@ class EntityMemory:
     # Entity Extraction
     # =========================================================================
 
-    def extract_and_link(self, text: str, memory_id: str | None = None) -> list[Entity]:
+    # Common words that look like proper nouns but aren't entities
+    _NER_STOPWORDS: set[str] = {
+        "I",
+        "The",
+        "This",
+        "That",
+        "These",
+        "Those",
+        "Here",
+        "There",
+        "What",
+        "When",
+        "Where",
+        "Who",
+        "Why",
+        "How",
+        "Which",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+        "Today",
+        "Tomorrow",
+        "Yesterday",
+        "Yes",
+        "No",
+        "Ok",
+        "Sure",
+        "Hello",
+        "Hi",
+        "Hey",
+        "Thanks",
+        "Thank",
+        "Please",
+        "Sorry",
+        "Also",
+        "Just",
+        "Well",
+        "Now",
+        "Then",
+        "But",
+        "And",
+        "Or",
+        "User",
+        "Animus",
+        "Conversation",
+    }
+
+    def discover_entities(self, text: str) -> list[str]:
+        """
+        Discover potential new entity names from text using heuristic NER.
+
+        Looks for capitalized proper noun patterns that don't match existing
+        entities or common stopwords. Returns candidate names for review.
+
+        Args:
+            text: Text to scan for potential entities
+
+        Returns:
+            List of candidate entity name strings
+        """
+        # Match capitalized words/phrases that look like proper nouns
+        # Pattern: one or more capitalized words in sequence
+        pattern = r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b"
+        matches = re.findall(pattern, text)
+
+        candidates = []
+        seen = set()
+        for match in matches:
+            # Skip single-character or very short matches
+            if len(match) < 2:
+                continue
+            # Skip stopwords
+            if match in self._NER_STOPWORDS:
+                continue
+            # Skip if it's a known entity already
+            if self.find_entity(match):
+                continue
+            # Deduplicate
+            if match.lower() in seen:
+                continue
+            seen.add(match.lower())
+            candidates.append(match)
+
+        return candidates
+
+    def extract_and_link(
+        self,
+        text: str,
+        memory_id: str | None = None,
+        auto_discover: bool = False,
+    ) -> list[Entity]:
         """
         Extract known entity mentions from text and record interactions.
 
         When a memory_id is provided, records interactions (bumping mention counts)
         and auto-creates MENTIONED_WITH relationships between co-occurring entities.
 
+        When auto_discover is True, uses heuristic NER to find and auto-create
+        new entities from capitalized proper noun patterns in the text.
+
         Args:
             text: Text to scan for entity mentions
             memory_id: Optional memory ID to link
+            auto_discover: If True, auto-create entities from proper noun patterns
 
         Returns:
-            List of entities found in the text
+            List of entities found in the text (including any newly discovered)
         """
+        # Auto-discover new entities first (if enabled)
+        if auto_discover:
+            candidates = self.discover_entities(text)
+            for name in candidates:
+                self.add_entity(name, EntityType.CUSTOM, notes="Auto-discovered from text")
+                logger.info(f"Auto-discovered entity: {name}")
+
         found = []
         text_lower = text.lower()
 

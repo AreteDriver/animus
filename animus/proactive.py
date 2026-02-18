@@ -299,12 +299,25 @@ class ProactiveEngine:
             elif "deadline" in mem.tags:
                 priority = NudgePriority.MEDIUM
 
+            deadline_content = mem.content
+
+            # Synthesize with LLM if available
+            if self.cognitive:
+                try:
+                    synth_prompt = (
+                        "Summarize this deadline in 1-2 actionable sentences. "
+                        f"What's due and what should I do?\n\n{mem.content[:500]}"
+                    )
+                    deadline_content = self.cognitive.think(synth_prompt)
+                except Exception as e:
+                    logger.debug(f"Deadline synthesis failed: {e}")
+
             nudge = Nudge(
                 id=str(uuid.uuid4()),
                 nudge_type=NudgeType.DEADLINE_WARNING,
                 priority=priority,
                 title=f"Deadline: {mem.content[:60]}",
-                content=mem.content,
+                content=deadline_content,
                 created_at=now,
                 expires_at=now + timedelta(days=1),
                 source_memory_ids=[mem.id],
@@ -420,12 +433,25 @@ class ProactiveEngine:
             age_days = (datetime.now() - mem.created_at).days
             priority = NudgePriority.HIGH if age_days >= 3 else NudgePriority.MEDIUM
 
+            raw_content = f"You may need to follow up on: {mem.content[:200]}"
+
+            # Synthesize with LLM if available
+            if self.cognitive:
+                try:
+                    synth_prompt = (
+                        "Summarize this follow-up item in 1-2 actionable sentences. "
+                        f"What needs to happen next?\n\n{mem.content[:500]}"
+                    )
+                    raw_content = self.cognitive.think(synth_prompt)
+                except Exception as e:
+                    logger.debug(f"Follow-up synthesis failed: {e}")
+
             nudge = Nudge(
                 id=str(uuid.uuid4()),
                 nudge_type=NudgeType.FOLLOW_UP,
                 priority=priority,
                 title=f"Follow up ({age_days}d ago)",
-                content=f"You may need to follow up on: {mem.content[:200]}",
+                content=raw_content,
                 created_at=datetime.now(),
                 expires_at=datetime.now() + timedelta(days=2),
                 source_memory_ids=[mem.id],
@@ -467,7 +493,21 @@ class ProactiveEngine:
             date_str = mem.created_at.strftime("%b %d")
             items.append(f"[{date_str}] {mem.content[:150]}")
 
-        content = "You previously discussed related topics:\n" + "\n".join(items)
+        raw_context = "\n".join(items)
+        content = f"You previously discussed related topics:\n{raw_context}"
+
+        # Synthesize with LLM if available
+        if self.cognitive:
+            try:
+                synth_prompt = (
+                    "The user is discussing something related to past conversations. "
+                    "Briefly summarize the relevant context (2-3 sentences) that would "
+                    f"be helpful to recall:\n\nCurrent topic: {user_input[:200]}\n\n"
+                    f"Past context:\n{raw_context}"
+                )
+                content = self.cognitive.think(synth_prompt)
+            except Exception as e:
+                logger.debug(f"Context nudge synthesis failed: {e}")
 
         nudge = Nudge(
             id=str(uuid.uuid4()),

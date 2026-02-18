@@ -114,13 +114,27 @@ header h1 span { color: var(--accent); }
               font-size: 14px; margin-bottom: 12px; }
 .search-box:focus { outline: none; border-color: var(--accent); }
 .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 20px; }
+
+/* Live indicator */
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+            display: inline-block; }
+.live-dot.paused { background: var(--muted); }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.live-dot.fetching { animation: pulse 0.8s ease-in-out infinite; }
 </style>
 </head>
 <body>
 <div class="container">
   <header>
     <h1><span>&#9670;</span> Animus Dashboard</h1>
-    <button class="refresh-btn" onclick="location.reload()">Refresh</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span id="live-indicator" class="live-dot"></span>
+      <label style="font-size:12px;color:var(--muted);cursor:pointer;">
+        <input type="checkbox" id="auto-refresh-toggle" checked onchange="toggleAutoRefresh()">
+        Live
+      </label>
+      <button class="refresh-btn" onclick="refreshData()">Refresh</button>
+    </div>
   </header>
 
   <div class="tabs">
@@ -312,13 +326,59 @@ function renderNudges() {
 }
 
 // Initial render
-renderMemoryStats();
-renderEntityStats();
-renderNudgeSummary();
-renderRecentActivity();
-renderMemories();
-renderEntities();
-renderNudges();
+function renderAll() {
+  renderMemoryStats();
+  renderEntityStats();
+  renderNudgeSummary();
+  renderRecentActivity();
+  renderMemories();
+  renderEntities();
+  renderNudges();
+}
+renderAll();
+
+// Auto-refresh
+let autoRefreshEnabled = true;
+let refreshTimer = null;
+const REFRESH_INTERVAL = 15000; // 15 seconds
+
+function toggleAutoRefresh() {
+  autoRefreshEnabled = document.getElementById('auto-refresh-toggle').checked;
+  const dot = document.getElementById('live-indicator');
+  if (autoRefreshEnabled) {
+    dot.classList.remove('paused');
+    scheduleRefresh();
+  } else {
+    dot.classList.add('paused');
+    if (refreshTimer) { clearTimeout(refreshTimer); refreshTimer = null; }
+  }
+}
+
+async function refreshData() {
+  const dot = document.getElementById('live-indicator');
+  dot.classList.add('fetching');
+  try {
+    const resp = await fetch('/dashboard/data');
+    if (resp.ok) {
+      const newData = await resp.json();
+      Object.assign(DATA, newData);
+      renderAll();
+    }
+  } catch (e) {
+    console.warn('Dashboard refresh failed:', e);
+  } finally {
+    dot.classList.remove('fetching');
+  }
+}
+
+function scheduleRefresh() {
+  if (!autoRefreshEnabled) return;
+  refreshTimer = setTimeout(async () => {
+    await refreshData();
+    scheduleRefresh();
+  }, REFRESH_INTERVAL);
+}
+scheduleRefresh();
 </script>
 </body>
 </html>"""
