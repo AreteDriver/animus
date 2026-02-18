@@ -274,6 +274,8 @@ class APIServer:
         api_key: str | None = None,
         integrations: object | None = None,
         learning: object | None = None,
+        entity_memory: object | None = None,
+        proactive: object | None = None,
     ):
         """
         Initialize API server.
@@ -289,6 +291,8 @@ class APIServer:
             api_key: Optional API key for authentication
             integrations: Optional IntegrationManager instance
             learning: Optional LearningLayer instance
+            entity_memory: Optional EntityMemory instance
+            proactive: Optional ProactiveEngine instance
         """
         if not FASTAPI_AVAILABLE:
             raise ImportError("FastAPI not installed. Install with: pip install 'animus[api]'")
@@ -303,6 +307,8 @@ class APIServer:
         self.api_key = api_key
         self.integrations = integrations
         self.learning = learning
+        self.entity_memory = entity_memory
+        self.proactive = proactive
 
         self._server_thread: threading.Thread | None = None
         self._server: uvicorn.Server | None = None
@@ -327,6 +333,8 @@ class APIServer:
             conversations={},
             integrations=self.integrations,
             learning=self.learning,
+            entity_memory=self.entity_memory,
+            proactive=self.proactive,
         )
 
         # Update config with API key if provided

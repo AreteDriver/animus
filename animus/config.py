@@ -210,6 +210,37 @@ class LearningConfig:
 
 
 @dataclass
+class ProactiveConfig:
+    """Configuration for the proactive intelligence system."""
+
+    enabled: bool = True
+    background_enabled: bool = False
+    background_interval_seconds: int = 300
+    deadline_scan_interval_minutes: int = 60
+    follow_up_scan_interval_minutes: int = 120
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("ANIMUS_PROACTIVE_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+        if env_bg := os.environ.get("ANIMUS_PROACTIVE_BACKGROUND"):
+            self.background_enabled = env_bg.lower() in ("true", "1", "yes")
+
+
+@dataclass
+class EntityConfig:
+    """Configuration for the entity/relationship memory system."""
+
+    enabled: bool = True
+    auto_extract: bool = True  # Auto-extract entities from conversations
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("ANIMUS_ENTITIES_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+        if env_extract := os.environ.get("ANIMUS_ENTITIES_AUTO_EXTRACT"):
+            self.auto_extract = env_extract.lower() in ("true", "1", "yes")
+
+
+@dataclass
 class AnimusConfig:
     """Main configuration for Animus."""
 
@@ -223,6 +254,8 @@ class AnimusConfig:
     integrations: IntegrationConfig = field(default_factory=IntegrationConfig)
     learning: LearningConfig = field(default_factory=LearningConfig)
     tools_security: ToolsSecurityConfig = field(default_factory=ToolsSecurityConfig)
+    proactive: ProactiveConfig = field(default_factory=ProactiveConfig)
+    entities: EntityConfig = field(default_factory=EntityConfig)
 
     def __post_init__(self):
         # Convert string to Path if needed
@@ -309,6 +342,15 @@ class AnimusConfig:
                 "min_pattern_occurrences": self.learning.min_pattern_occurrences,
                 "min_pattern_confidence": self.learning.min_pattern_confidence,
                 "lookback_days": self.learning.lookback_days,
+            },
+            "proactive": {
+                "enabled": self.proactive.enabled,
+                "background_enabled": self.proactive.background_enabled,
+                "background_interval_seconds": self.proactive.background_interval_seconds,
+            },
+            "entities": {
+                "enabled": self.entities.enabled,
+                "auto_extract": self.entities.auto_extract,
             },
         }
 
@@ -431,6 +473,22 @@ class AnimusConfig:
                 if "lookback_days" in learning_data:
                     config.learning.lookback_days = learning_data["lookback_days"]
 
+            if proactive_data := data.get("proactive"):
+                if "enabled" in proactive_data:
+                    config.proactive.enabled = proactive_data["enabled"]
+                if "background_enabled" in proactive_data:
+                    config.proactive.background_enabled = proactive_data["background_enabled"]
+                if "background_interval_seconds" in proactive_data:
+                    config.proactive.background_interval_seconds = proactive_data[
+                        "background_interval_seconds"
+                    ]
+
+            if entity_data := data.get("entities"):
+                if "enabled" in entity_data:
+                    config.entities.enabled = entity_data["enabled"]
+                if "auto_extract" in entity_data:
+                    config.entities.auto_extract = entity_data["auto_extract"]
+
             # Re-apply environment overrides
             config.__post_init__()
             config.model.__post_init__()
@@ -442,6 +500,8 @@ class AnimusConfig:
             config.integrations.filesystem.__post_init__()
             config.integrations.webhooks.__post_init__()
             config.learning.__post_init__()
+            config.proactive.__post_init__()
+            config.entities.__post_init__()
 
         return config
 

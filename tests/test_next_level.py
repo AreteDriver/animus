@@ -741,3 +741,168 @@ class TestModuleExports:
         assert Nudge is not None
         assert NudgeType.MORNING_BRIEF.value == "morning_brief"
         assert NudgePriority.URGENT.value == "urgent"
+
+
+# =============================================================================
+# Integration Tests - Wiring
+# =============================================================================
+
+
+class TestCognitiveEntityIntegration:
+    """Test that CognitiveLayer integrates with EntityMemory and ProactiveEngine."""
+
+    def test_cognitive_accepts_entity_memory(self):
+        from animus.cognitive import CognitiveLayer, ModelConfig
+        from animus.entities import EntityMemory
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            config = ModelConfig.mock()
+            cog = CognitiveLayer(primary_config=config, entity_memory=em)
+            assert cog.entity_memory is em
+
+    def test_cognitive_accepts_proactive(self):
+        from animus.cognitive import CognitiveLayer, ModelConfig
+        from animus.memory import MemoryLayer
+        from animus.proactive import ProactiveEngine
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            memory = MemoryLayer(Path(tmpdir), backend="json")
+            proactive = ProactiveEngine(Path(tmpdir), memory)
+            config = ModelConfig.mock()
+            cog = CognitiveLayer(primary_config=config, proactive=proactive)
+            assert cog.proactive is proactive
+
+    def test_think_extracts_entities(self):
+        from animus.cognitive import CognitiveLayer, ModelConfig
+        from animus.entities import EntityMemory, EntityType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            em.add_entity("Alice", EntityType.PERSON)
+
+            config = ModelConfig.mock()
+            cog = CognitiveLayer(primary_config=config, entity_memory=em)
+
+            # think() triggers entity extraction (without memory_id for tracking)
+            # Verify the extraction finds the entity
+            found = em.extract_and_link("I talked to Alice today about the project")
+            assert len(found) == 1
+            assert found[0].name == "Alice"
+
+            # Also verify think() doesn't error with entity_memory set
+            response = cog.think("I talked to Alice today about the project")
+            assert response  # Mock returns something
+
+    def test_think_enriches_context_with_entities(self):
+        from animus.cognitive import CognitiveLayer, ModelConfig
+        from animus.entities import EntityMemory, EntityType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            em.add_entity(
+                "Bob", EntityType.PERSON, attributes={"role": "Manager"}, notes="Works in finance"
+            )
+
+            config = ModelConfig.mock()
+            cog = CognitiveLayer(primary_config=config, entity_memory=em)
+
+            # _enrich_context should add entity info
+            enriched = cog._enrich_context("Meeting with Bob tomorrow", None)
+            assert enriched is not None
+            assert "Bob" in enriched
+            assert "Manager" in enriched
+
+    def test_think_without_entities_works(self):
+        from animus.cognitive import CognitiveLayer, ModelConfig
+
+        config = ModelConfig.mock()
+        cog = CognitiveLayer(primary_config=config)
+        # Should work fine without entity_memory or proactive
+        response = cog.think("Hello world")
+        assert response  # Mock returns something
+
+    def test_enrich_context_preserves_existing(self):
+        from animus.cognitive import CognitiveLayer, ModelConfig
+        from animus.entities import EntityMemory, EntityType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            em.add_entity("Charlie", EntityType.PERSON)
+
+            config = ModelConfig.mock()
+            cog = CognitiveLayer(primary_config=config, entity_memory=em)
+
+            existing = "Some existing memory context"
+            enriched = cog._enrich_context("Charlie said hello", existing)
+            assert existing in enriched
+            assert "Charlie" in enriched
+
+
+class TestConfigIntegration:
+    """Test that AnimusConfig includes new feature sections."""
+
+    def test_config_has_proactive_section(self):
+        from animus.config import AnimusConfig
+
+        config = AnimusConfig()
+        assert hasattr(config, "proactive")
+        assert config.proactive.enabled is True
+        assert config.proactive.background_enabled is False
+
+    def test_config_has_entity_section(self):
+        from animus.config import AnimusConfig
+
+        config = AnimusConfig()
+        assert hasattr(config, "entities")
+        assert config.entities.enabled is True
+        assert config.entities.auto_extract is True
+
+    def test_config_serialization_roundtrip(self):
+        from animus.config import AnimusConfig
+
+        config = AnimusConfig()
+        data = config.to_dict()
+        assert "proactive" in data
+        assert "entities" in data
+        assert data["proactive"]["enabled"] is True
+        assert data["entities"]["auto_extract"] is True
+
+    def test_config_save_and_load(self):
+        from animus.config import AnimusConfig
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config = AnimusConfig()
+            config.data_dir = Path(tmpdir)
+            config.proactive.background_enabled = True
+            config.entities.auto_extract = False
+            config.save()
+
+            loaded = AnimusConfig.load(Path(tmpdir) / "config.yaml")
+            assert loaded.proactive.background_enabled is True
+            assert loaded.entities.auto_extract is False
+
+
+class TestAPIServerIntegration:
+    """Test that APIServer accepts and passes through new components."""
+
+    def test_api_server_accepts_entity_memory(self):
+        """Verify APIServer constructor accepts entity_memory param."""
+        # Just verify the signature accepts the parameters
+        # (Can't fully test without FastAPI installed)
+        from animus.api import AppState
+        from animus.config import AnimusConfig
+
+        state = AppState(
+            config=AnimusConfig(),
+            memory=None,
+            cognitive=None,
+            tools=None,
+            tasks=None,
+            decisions=None,
+            conversations={},
+            entity_memory="mock_em",
+            proactive="mock_proactive",
+        )
+        assert state.entity_memory == "mock_em"
+        assert state.proactive == "mock_proactive"

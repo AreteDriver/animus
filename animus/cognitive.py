@@ -19,8 +19,10 @@ from animus.protocols.intelligence import IntelligenceProvider
 from animus.register import RegisterTranslator
 
 if TYPE_CHECKING:
+    from animus.entities import EntityMemory
     from animus.learning import LearningLayer
     from animus.memory import MemoryLayer
+    from animus.proactive import ProactiveEngine
     from animus.tools import ToolRegistry
 
 logger = get_logger("cognitive")
@@ -262,10 +264,14 @@ class CognitiveLayer:
         primary_config: ModelConfig | None = None,
         fallback_config: ModelConfig | None = None,
         learning: "LearningLayer | None" = None,
+        entity_memory: "EntityMemory | None" = None,
+        proactive: "ProactiveEngine | None" = None,
     ):
         self.primary_config = primary_config or ModelConfig.ollama()
         self.fallback_config = fallback_config
         self.learning = learning
+        self.entity_memory = entity_memory
+        self.proactive = proactive
         self.register_translator = RegisterTranslator()
 
         self.primary: IntelligenceProvider = create_model(self.primary_config)
@@ -297,6 +303,10 @@ class CognitiveLayer:
         """
         # Detect user's register and build system prompt
         self.register_translator.detect_and_set(prompt)
+
+        # Enrich context with entity knowledge
+        context = self._enrich_context(prompt, context)
+
         system = self._build_system_prompt(context, mode)
         logger.debug(
             f"Thinking with mode={mode.value}, "
@@ -306,14 +316,54 @@ class CognitiveLayer:
 
         # Try primary model
         try:
-            return self.primary.generate(prompt, system)
+            response = self.primary.generate(prompt, system)
         except Exception as e:
             logger.warning(f"Primary model failed: {e}")
             # Fall back if available
             if self.fallback:
                 logger.info("Falling back to secondary model")
-                return self.fallback.generate(prompt, system)
-            raise e
+                response = self.fallback.generate(prompt, system)
+            else:
+                raise e
+
+        # Post-processing: extract entities from the conversation
+        if self.entity_memory:
+            try:
+                self.entity_memory.extract_and_link(prompt)
+            except Exception as e:
+                logger.debug(f"Entity extraction failed: {e}")
+
+        return response
+
+    def _enrich_context(self, prompt: str, context: str | None) -> str | None:
+        """Enrich context with entity knowledge and proactive nudges."""
+        extra_parts = []
+
+        # Entity context
+        if self.entity_memory:
+            try:
+                entity_context = self.entity_memory.get_context_for_text(prompt)
+                if entity_context:
+                    extra_parts.append(entity_context)
+            except Exception as e:
+                logger.debug(f"Entity context generation failed: {e}")
+
+        # Proactive context nudge
+        if self.proactive:
+            try:
+                nudge = self.proactive.generate_context_nudge(prompt)
+                if nudge:
+                    extra_parts.append(f"Related past context:\n{nudge.content}")
+            except Exception as e:
+                logger.debug(f"Context nudge generation failed: {e}")
+
+        if not extra_parts:
+            return context
+
+        enrichment = "\n\n".join(extra_parts)
+        if context:
+            return f"{context}\n\n{enrichment}"
+        return enrichment
 
     def _build_system_prompt(
         self,

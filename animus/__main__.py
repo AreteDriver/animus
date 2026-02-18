@@ -14,6 +14,7 @@ from animus.api import APIServer
 from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode, detect_mode
 from animus.config import AnimusConfig
 from animus.decision import DecisionFramework
+from animus.entities import EntityMemory, EntityType
 from animus.integrations import (
     FilesystemIntegration,
     IntegrationManager,
@@ -23,6 +24,7 @@ from animus.integrations import (
 from animus.learning import LearningLayer
 from animus.logging import get_logger, setup_logging
 from animus.memory import Conversation, MemoryLayer, MemoryType
+from animus.proactive import ProactiveEngine
 from animus.tasks import TaskTracker
 from animus.tools import create_default_registry, create_memory_tools
 from animus.voice import VoiceInterface
@@ -137,6 +139,18 @@ def show_help():
   /guardrail add <rule>   - Add a user-defined guardrail
   /learning rollback      - List rollback checkpoints
   /learning rollback <id> - Rollback to checkpoint
+
+[bold]Proactive Intelligence:[/bold]
+  /briefing               - Generate morning briefing
+  /nudges                 - Show active nudges
+  /nudges dismiss [id]    - Dismiss a nudge (or all)
+  /meeting-prep <topic>   - Prepare context for a meeting
+
+[bold]Entities & Relationships:[/bold]
+  /entities               - List tracked entities
+  /entity add <name> <type>   - Add an entity (types: person, project, organization, etc.)
+  /entity <name>          - Show entity details and context
+  /entity delete <name>   - Delete an entity
 
 [bold]Cross-Device Sync (Phase 6):[/bold]
   /sync start             - Start sync server (enables discovery)
@@ -358,7 +372,24 @@ def main():
         )
         logger.info("Learning layer initialized")
 
-    cognitive = CognitiveLayer(primary_config=model_config, learning=learning)
+    # Entity Memory
+    entity_memory: EntityMemory | None = None
+    if config.entities.enabled:
+        entity_memory = EntityMemory(config.data_dir / "entities")
+        logger.info("Entity memory initialized")
+
+    # Proactive Engine
+    proactive: ProactiveEngine | None = None
+    if config.proactive.enabled:
+        proactive = ProactiveEngine(config.data_dir, memory)
+        logger.info("Proactive engine initialized")
+
+    cognitive = CognitiveLayer(
+        primary_config=model_config,
+        learning=learning,
+        entity_memory=entity_memory if config.entities.auto_extract else None,
+        proactive=proactive,
+    )
 
     # Initialize Phase 2 components
     tools = create_default_registry(security_config=config.tools_security)
@@ -413,6 +444,11 @@ def main():
             logger.warning(f"Voice dependencies not available: {e}")
             voice = None
 
+    # Start proactive background scanning if configured
+    if proactive and config.proactive.background_enabled:
+        proactive.start_background(config.proactive.background_interval_seconds)
+        logger.info("Proactive background scanning started")
+
     # Auto-start API server if configured
     if config.api.enabled:
         try:
@@ -426,6 +462,8 @@ def main():
                 port=config.api.port,
                 api_key=config.api.api_key,
                 integrations=integrations,
+                entity_memory=entity_memory,
+                proactive=proactive,
             )
             api_server.start()
             console.print(f"[dim]API server started on {config.api.host}:{config.api.port}[/dim]")
@@ -446,6 +484,9 @@ def main():
             logger.info(
                 f"Saved conversation {conversation.id[:8]} with {len(conversation.messages)} messages"
             )
+        if proactive and proactive.is_running:
+            proactive.stop_background()
+            logger.info("Proactive background stopped")
         if api_server and api_server.is_running:
             api_server.stop()
             logger.info("API server stopped")
@@ -846,6 +887,8 @@ def main():
                             port=port,
                             api_key=config.api.api_key,
                             integrations=integrations,
+                            entity_memory=entity_memory,
+                            proactive=proactive,
                         )
                         api_server.start()
                         console.print(
@@ -1290,6 +1333,175 @@ def main():
 
             # =========================================================
             # End Phase 5 commands
+            # =========================================================
+
+            # =========================================================
+            # Proactive Intelligence commands
+            # =========================================================
+
+            if user_input == "/briefing":
+                if not proactive:
+                    console.print("[dim]Proactive engine is disabled in configuration[/dim]")
+                    continue
+
+                console.print("[dim]Generating briefing...[/dim]\n")
+                nudge = proactive.generate_morning_brief()
+                console.print(Panel(nudge.content, title="Morning Briefing", border_style="cyan"))
+                continue
+
+            if user_input == "/nudges":
+                if not proactive:
+                    console.print("[dim]Proactive engine is disabled in configuration[/dim]")
+                    continue
+
+                active = proactive.get_active_nudges()
+                if not active:
+                    console.print("[dim]No active nudges[/dim]")
+                    continue
+
+                console.print(f"\n[bold]Active Nudges ({len(active)}):[/bold]\n")
+                for n in active:
+                    priority_color = {
+                        "urgent": "red",
+                        "high": "yellow",
+                        "medium": "cyan",
+                        "low": "dim",
+                    }.get(n.priority.value, "white")
+                    console.print(
+                        f"  [{priority_color}]{n.priority.value:6}[/{priority_color}] "
+                        f"[dim]{n.id[:8]}[/dim] {n.title}"
+                    )
+                    console.print(f"         {n.content[:100]}")
+                console.print()
+                continue
+
+            if user_input.startswith("/nudges dismiss"):
+                if not proactive:
+                    console.print("[dim]Proactive engine is disabled in configuration[/dim]")
+                    continue
+
+                parts = user_input.split()
+                if len(parts) > 2:
+                    nudge_id = parts[2]
+                    # Try partial match
+                    matched = False
+                    for n in proactive.get_active_nudges():
+                        if n.id.startswith(nudge_id) or n.id == nudge_id:
+                            proactive.dismiss_nudge(n.id)
+                            console.print(f"[yellow]Dismissed: {n.title}[/yellow]")
+                            matched = True
+                            break
+                    if not matched:
+                        console.print(f"[red]Nudge not found: {nudge_id}[/red]")
+                else:
+                    count = proactive.dismiss_all()
+                    console.print(f"[yellow]Dismissed {count} nudges[/yellow]")
+                continue
+
+            if user_input.startswith("/meeting-prep "):
+                if not proactive:
+                    console.print("[dim]Proactive engine is disabled in configuration[/dim]")
+                    continue
+
+                topic = user_input[14:].strip()
+                if not topic:
+                    console.print("[red]Usage: /meeting-prep <person or topic>[/red]")
+                    continue
+
+                console.print(f"[dim]Preparing context for '{topic}'...[/dim]\n")
+                nudge = proactive.prepare_meeting_context(topic)
+                console.print(
+                    Panel(nudge.content, title=f"Meeting Prep: {topic}", border_style="cyan")
+                )
+                continue
+
+            # =========================================================
+            # Entity/Relationship commands
+            # =========================================================
+
+            if user_input == "/entities":
+                if not entity_memory:
+                    console.print("[dim]Entity memory is disabled in configuration[/dim]")
+                    continue
+
+                entities = entity_memory.list_entities(limit=30)
+                if not entities:
+                    console.print("[dim]No entities tracked yet[/dim]")
+                    continue
+
+                console.print(f"\n[bold]Tracked Entities ({len(entities)}):[/bold]\n")
+                for e in entities:
+                    aliases = f" ({', '.join(e.aliases)})" if e.aliases else ""
+                    last = e.last_mentioned.strftime("%b %d") if e.last_mentioned else "never"
+                    console.print(
+                        f"  [cyan]{e.entity_type.value:12}[/cyan] "
+                        f"{e.name}{aliases} "
+                        f"[dim]mentions: {e.mention_count}, last: {last}[/dim]"
+                    )
+                console.print()
+                continue
+
+            if user_input.startswith("/entity add "):
+                if not entity_memory:
+                    console.print("[dim]Entity memory is disabled in configuration[/dim]")
+                    continue
+
+                parts = user_input[12:].split()
+                if len(parts) < 2:
+                    console.print("[red]Usage: /entity add <name> <type> [alias1,alias2][/red]")
+                    console.print(
+                        "[dim]Types: person, project, organization, place, topic, event, tool[/dim]"
+                    )
+                    continue
+
+                name = parts[0]
+                try:
+                    etype = EntityType(parts[1].lower())
+                except ValueError:
+                    console.print(f"[red]Unknown entity type: {parts[1]}[/red]")
+                    continue
+
+                aliases = parts[2].split(",") if len(parts) > 2 else []
+                entity = entity_memory.add_entity(name, etype, aliases=aliases)
+                console.print(f"[green]Entity added:[/green] {entity.name} ({etype.value})")
+                continue
+
+            if user_input.startswith("/entity delete "):
+                if not entity_memory:
+                    console.print("[dim]Entity memory is disabled in configuration[/dim]")
+                    continue
+
+                name = user_input[15:].strip()
+                found = entity_memory.find_entity(name)
+                if not found:
+                    console.print(f"[red]Entity not found: {name}[/red]")
+                    continue
+
+                entity_memory.delete_entity(found.id)
+                console.print(f"[yellow]Deleted entity: {found.name}[/yellow]")
+                continue
+
+            if (
+                user_input.startswith("/entity ")
+                and not user_input.startswith("/entity add ")
+                and not user_input.startswith("/entity delete ")
+            ):
+                if not entity_memory:
+                    console.print("[dim]Entity memory is disabled in configuration[/dim]")
+                    continue
+
+                name = user_input[8:].strip()
+                found = entity_memory.find_entity(name)
+                if not found:
+                    console.print(f"[red]Entity not found: {name}[/red]")
+                    continue
+
+                context = entity_memory.generate_entity_context(found.id)
+                console.print(Panel(context, title=found.name, border_style="cyan"))
+                continue
+
+            # =========================================================
+            # End Proactive & Entity commands
             # =========================================================
 
             # =========================================================
