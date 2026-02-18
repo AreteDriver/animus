@@ -895,11 +895,14 @@ class MemoryLayer:
         return False
 
     def save_conversation(self, conversation: Conversation) -> Memory:
-        """Save a conversation as an episodic memory, linking entities."""
+        """Save a conversation as an episodic memory.
+
+        Entity linking is handled by remember() automatically.
+        """
         conversation.ended_at = datetime.now()
         content = conversation.to_memory_content()
 
-        mem = self.remember(
+        return self.remember(
             content=content,
             memory_type=MemoryType.EPISODIC,
             metadata={
@@ -911,15 +914,6 @@ class MemoryLayer:
             },
             subtype="conversation",
         )
-
-        # Link entities mentioned in the conversation to this memory
-        if self.entity_memory:
-            try:
-                self.entity_memory.extract_and_link(content, memory_id=mem.id)
-            except Exception as e:
-                logger.debug(f"Entity linking during conversation save failed: {e}")
-
-        return mem
 
     # Export/Import functionality
 
