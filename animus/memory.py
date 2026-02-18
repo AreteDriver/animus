@@ -957,6 +957,13 @@ class MemoryLayer:
             self.store.store(memory)
             count += 1
 
+            # Link entities mentioned in the imported memory
+            if self.entity_memory:
+                try:
+                    self.entity_memory.extract_and_link(memory.content, memory_id=memory.id)
+                except Exception as e:
+                    logger.debug(f"Entity linking during import failed: {e}")
+
         logger.info(f"Imported {count} memories")
         return count
 
@@ -1069,9 +1076,14 @@ class MemoryLayer:
                 subtype="consolidated",
             )
 
-            # Remove originals
+            # Remove originals and clean up entity references
             for mem in memories:
                 self.store.delete(mem.id)
+                if self.entity_memory:
+                    try:
+                        self.entity_memory.remove_interactions_for_memory(mem.id)
+                    except Exception as e:
+                        logger.debug(f"Entity cleanup during consolidation failed: {e}")
                 consolidated_count += 1
 
         logger.info(f"Consolidated {consolidated_count} memories into summaries")

@@ -1133,3 +1133,149 @@ class TestEntityLinkingOnRemember:
             mem = memory.remember("Alice likes coffee")
             assert mem is not None
             assert mem.id
+
+
+class TestRemoveInteractionsForMemory:
+    """Test EntityMemory.remove_interactions_for_memory()."""
+
+    def test_removes_interaction_records(self):
+        from animus.entities import EntityMemory, EntityType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            alice = em.add_entity("Alice", EntityType.PERSON)
+
+            em.record_interaction(alice.id, "mem-1", "First mention")
+            em.record_interaction(alice.id, "mem-2", "Second mention")
+            assert len(em._interactions) == 2
+
+            removed = em.remove_interactions_for_memory("mem-1")
+            assert removed == 1
+            assert len(em._interactions) == 1
+            assert em._interactions[0].memory_id == "mem-2"
+
+    def test_removes_memory_id_from_entity(self):
+        from animus.entities import EntityMemory, EntityType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            alice = em.add_entity("Alice", EntityType.PERSON)
+
+            em.record_interaction(alice.id, "mem-1", "Mentioned Alice")
+            assert "mem-1" in alice.memory_ids
+
+            em.remove_interactions_for_memory("mem-1")
+            assert "mem-1" not in alice.memory_ids
+
+    def test_noop_for_unknown_memory_id(self):
+        from animus.entities import EntityMemory, EntityType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            em.add_entity("Alice", EntityType.PERSON)
+
+            removed = em.remove_interactions_for_memory("nonexistent")
+            assert removed == 0
+
+
+class TestImportMemoriesEntityLinking:
+    """Test that import_memories() entity-links imported memories."""
+
+    def test_import_links_entities(self):
+        from animus.entities import EntityMemory, EntityType
+        from animus.memory import MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            memory = MemoryLayer(Path(tmpdir), backend="json", entity_memory=em)
+
+            em.add_entity("Alice", EntityType.PERSON)
+
+            # Export a memory from a fresh layer (no entity_memory)
+            plain = MemoryLayer(Path(tmpdir) / "plain", backend="json")
+            plain.remember("Alice prefers dark mode")
+            exported = plain.export_memories()
+
+            # Import into the entity-aware layer
+            count = memory.import_memories(exported)
+            assert count == 1
+
+            alice = em.find_entity("Alice")
+            assert alice.mention_count >= 1
+
+    def test_import_without_entity_memory_works(self):
+        from animus.memory import MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Export
+            src = MemoryLayer(Path(tmpdir) / "src", backend="json")
+            src.remember("Some fact")
+            exported = src.export_memories()
+
+            # Import into a layer without entity_memory
+            dst = MemoryLayer(Path(tmpdir) / "dst", backend="json")
+            count = dst.import_memories(exported)
+            assert count == 1
+
+
+class TestConsolidateEntityCleanup:
+    """Test that consolidate() cleans up entity references for deleted memories."""
+
+    def test_consolidate_removes_orphaned_interactions(self):
+        from animus.entities import EntityMemory, EntityType
+        from animus.memory import MemoryLayer, MemoryType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            memory = MemoryLayer(Path(tmpdir), backend="json", entity_memory=em)
+
+            em.add_entity("Alice", EntityType.PERSON)
+
+            # Create old memories mentioning Alice (> 0 days old for test)
+            from datetime import timedelta
+
+            old_date = datetime.now() - timedelta(days=100)
+            for i in range(3):
+                mem = memory.remember(
+                    f"Alice did thing {i}",
+                    memory_type=MemoryType.EPISODIC,
+                    tags=["project"],
+                )
+                # Backdate the memory
+                mem.created_at = old_date
+                memory.update_memory(mem)
+
+            alice = em.find_entity("Alice")
+            assert alice.mention_count >= 3
+            interactions_before = len([ir for ir in em._interactions if ir.entity_id == alice.id])
+            assert interactions_before >= 3
+
+            # Consolidate with max_age_days=0 to catch our "old" memories
+            consolidated = memory.consolidate(max_age_days=0, min_group_size=3)
+            assert consolidated == 3
+
+            # Old interaction records should be cleaned up
+            interactions_after = len([ir for ir in em._interactions if ir.entity_id == alice.id])
+            # The old ones were removed; a new one was created for the summary
+            assert interactions_after < interactions_before
+
+    def test_consolidate_without_entity_memory_works(self):
+        from animus.memory import MemoryLayer, MemoryType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            memory = MemoryLayer(Path(tmpdir), backend="json")
+
+            from datetime import timedelta
+
+            old_date = datetime.now() - timedelta(days=100)
+            for i in range(3):
+                mem = memory.remember(
+                    f"Old event {i}",
+                    memory_type=MemoryType.EPISODIC,
+                    tags=["work"],
+                )
+                mem.created_at = old_date
+                memory.update_memory(mem)
+
+            consolidated = memory.consolidate(max_age_days=0, min_group_size=3)
+            assert consolidated == 3

@@ -513,6 +513,28 @@ class EntityMemory:
         )
         self._save()
 
+    def remove_interactions_for_memory(self, memory_id: str) -> int:
+        """Remove all interaction records and entity references for a memory.
+
+        Used when a memory is deleted (e.g. during consolidation) to prevent
+        orphaned references.
+
+        Returns:
+            Number of interaction records removed
+        """
+        before = len(self._interactions)
+        self._interactions = [i for i in self._interactions if i.memory_id != memory_id]
+        removed = before - len(self._interactions)
+
+        # Also remove memory_id from entity memory_ids lists
+        for entity in self._entities.values():
+            if memory_id in entity.memory_ids:
+                entity.memory_ids.remove(memory_id)
+
+        if removed > 0:
+            self._save()
+        return removed
+
     def get_interaction_timeline(
         self,
         entity_id: str,
