@@ -906,3 +906,152 @@ class TestAPIServerIntegration:
         )
         assert state.entity_memory == "mock_em"
         assert state.proactive == "mock_proactive"
+
+
+# =============================================================================
+# Entity Linking & Auto-Relationship Tests
+# =============================================================================
+
+
+class TestEntityLinkingOnConversationSave:
+    """Test that saving conversations links entities and tracks mentions."""
+
+    def test_save_conversation_links_entities(self):
+        from animus.entities import EntityMemory, EntityType
+        from animus.memory import Conversation, MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            memory = MemoryLayer(Path(tmpdir), backend="json", entity_memory=em)
+
+            em.add_entity("Alice", EntityType.PERSON)
+            em.add_entity("Bob", EntityType.PERSON)
+
+            convo = Conversation.new()
+            convo.add_message("user", "I talked to Alice and Bob today")
+            convo.add_message("assistant", "That sounds great!")
+
+            memory.save_conversation(convo)
+
+            alice = em.find_entity("Alice")
+            bob = em.find_entity("Bob")
+            assert alice.mention_count >= 1
+            assert bob.mention_count >= 1
+
+    def test_save_conversation_creates_mentioned_with_relationship(self):
+        from animus.entities import EntityMemory, EntityType, RelationType
+        from animus.memory import Conversation, MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            memory = MemoryLayer(Path(tmpdir), backend="json", entity_memory=em)
+
+            alice = em.add_entity("Alice", EntityType.PERSON)
+            bob = em.add_entity("Bob", EntityType.PERSON)
+
+            convo = Conversation.new()
+            convo.add_message("user", "Alice and Bob met for lunch")
+            convo.add_message("assistant", "Nice!")
+
+            memory.save_conversation(convo)
+
+            # Check MENTIONED_WITH relationship exists (sorted IDs for consistent direction)
+            src, tgt = (alice.id, bob.id) if alice.id < bob.id else (bob.id, alice.id)
+            rel = em.get_relationship(src, tgt, RelationType.MENTIONED_WITH)
+            assert rel is not None
+            assert rel.relation_type == RelationType.MENTIONED_WITH
+
+    def test_mentioned_with_reinforces_on_repeated_co_mention(self):
+        from animus.entities import EntityMemory, EntityType, RelationType
+        from animus.memory import Conversation, MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            memory = MemoryLayer(Path(tmpdir), backend="json", entity_memory=em)
+
+            alice = em.add_entity("Alice", EntityType.PERSON)
+            bob = em.add_entity("Bob", EntityType.PERSON)
+
+            # First conversation
+            c1 = Conversation.new()
+            c1.add_message("user", "Alice and Bob are working on the project")
+            memory.save_conversation(c1)
+
+            src, tgt = (alice.id, bob.id) if alice.id < bob.id else (bob.id, alice.id)
+            rel1 = em.get_relationship(src, tgt, RelationType.MENTIONED_WITH)
+            first_updated = rel1.updated_at
+
+            # Second conversation — reinforce() still called even if strength is capped
+            c2 = Conversation.new()
+            c2.add_message("user", "Alice told Bob about the deadline")
+            memory.save_conversation(c2)
+
+            rel2 = em.get_relationship(src, tgt, RelationType.MENTIONED_WITH)
+            # Reinforcement updates the timestamp
+            assert rel2.updated_at >= first_updated
+            # Same relationship object was reused (not duplicated)
+            assert rel2.id == rel1.id
+
+    def test_no_relationship_for_single_entity(self):
+        from animus.entities import EntityMemory, EntityType
+        from animus.memory import Conversation, MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            memory = MemoryLayer(Path(tmpdir), backend="json", entity_memory=em)
+
+            em.add_entity("Alice", EntityType.PERSON)
+
+            convo = Conversation.new()
+            convo.add_message("user", "I saw Alice today")
+            memory.save_conversation(convo)
+
+            # Should still track the mention
+            alice = em.find_entity("Alice")
+            assert alice.mention_count >= 1
+            # But no relationships created
+            rels = em.get_relationships_for(alice.id)
+            assert len(rels) == 0
+
+    def test_save_conversation_without_entity_memory_works(self):
+        from animus.memory import Conversation, MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            memory = MemoryLayer(Path(tmpdir), backend="json")
+
+            convo = Conversation.new()
+            convo.add_message("user", "Hello")
+            convo.add_message("assistant", "Hi there!")
+
+            mem = memory.save_conversation(convo)
+            assert mem is not None
+            assert mem.id
+
+    def test_three_entities_create_three_relationships(self):
+        from animus.entities import EntityMemory, EntityType, RelationType
+        from animus.memory import Conversation, MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            memory = MemoryLayer(Path(tmpdir), backend="json", entity_memory=em)
+
+            em.add_entity("Alice", EntityType.PERSON)
+            em.add_entity("Bob", EntityType.PERSON)
+            em.add_entity("Charlie", EntityType.PERSON)
+
+            convo = Conversation.new()
+            convo.add_message("user", "Alice, Bob, and Charlie had a meeting")
+            memory.save_conversation(convo)
+
+            # 3 entities = 3 pairs: (A,B), (A,C), (B,C)
+            mentioned_rels = [
+                r for r in em._relationships if r.relation_type == RelationType.MENTIONED_WITH
+            ]
+            assert len(mentioned_rels) == 3
+
+    def test_memory_layer_entity_memory_default_none(self):
+        from animus.memory import MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            memory = MemoryLayer(Path(tmpdir), backend="json")
+            assert memory.entity_memory is None

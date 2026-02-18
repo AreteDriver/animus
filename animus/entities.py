@@ -576,6 +576,9 @@ class EntityMemory:
         """
         Extract known entity mentions from text and record interactions.
 
+        When a memory_id is provided, records interactions (bumping mention counts)
+        and auto-creates MENTIONED_WITH relationships between co-occurring entities.
+
         Args:
             text: Text to scan for entity mentions
             memory_id: Optional memory ID to link
@@ -600,6 +603,19 @@ class EntityMemory:
                             text[:200],
                         )
                     break  # Don't double-count same entity
+
+        # Auto-create MENTIONED_WITH relationships for co-occurring entities
+        if memory_id and len(found) >= 2:
+            for i, e1 in enumerate(found):
+                for e2 in found[i + 1 :]:
+                    # Use sorted IDs for consistent directionality
+                    src, tgt = (e1.id, e2.id) if e1.id < e2.id else (e2.id, e1.id)
+                    self.add_relationship(
+                        src,
+                        tgt,
+                        RelationType.MENTIONED_WITH,
+                        f"Co-mentioned in memory {memory_id[:8]}",
+                    )
 
         return found
 

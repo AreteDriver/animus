@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 from animus.logging import get_logger
 
 if TYPE_CHECKING:
+    from animus.entities import EntityMemory
     from animus.protocols.memory import MemoryProvider
 
 logger = get_logger("memory")
@@ -667,9 +668,15 @@ class MemoryLayer:
     Coordinates between different memory types and storage backends.
     """
 
-    def __init__(self, data_dir: Path, backend: str = "chroma"):
+    def __init__(
+        self,
+        data_dir: Path,
+        backend: str = "chroma",
+        entity_memory: "EntityMemory | None" = None,
+    ):
         self.data_dir = data_dir
         self.backend_type = backend
+        self.entity_memory = entity_memory
 
         self.store: MemoryProvider
         if backend == "chroma":
@@ -880,11 +887,11 @@ class MemoryLayer:
         return False
 
     def save_conversation(self, conversation: Conversation) -> Memory:
-        """Save a conversation as an episodic memory."""
+        """Save a conversation as an episodic memory, linking entities."""
         conversation.ended_at = datetime.now()
         content = conversation.to_memory_content()
 
-        return self.remember(
+        mem = self.remember(
             content=content,
             memory_type=MemoryType.EPISODIC,
             metadata={
@@ -896,6 +903,15 @@ class MemoryLayer:
             },
             subtype="conversation",
         )
+
+        # Link entities mentioned in the conversation to this memory
+        if self.entity_memory:
+            try:
+                self.entity_memory.extract_and_link(content, memory_id=mem.id)
+            except Exception as e:
+                logger.debug(f"Entity linking during conversation save failed: {e}")
+
+        return mem
 
     # Export/Import functionality
 
