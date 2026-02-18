@@ -357,7 +357,16 @@ def main():
         model_config.base_url = config.model.ollama_url
     elif config.model.provider == "anthropic":
         model_config = ModelConfig.anthropic(config.model.name)
+        if config.model.anthropic_api_key:
+            model_config.api_key = config.model.anthropic_api_key
+    elif config.model.provider == "openai":
+        model_config = ModelConfig.openai(config.model.name)
+        if config.model.openai_api_key:
+            model_config.api_key = config.model.openai_api_key
+        if config.model.openai_base_url:
+            model_config.base_url = config.model.openai_base_url
     else:
+        logger.warning(f"Unknown model provider '{config.model.provider}', falling back to ollama")
         model_config = ModelConfig.ollama(config.model.name)
 
     # Phase 5: Learning Layer (initialized before cognitive to pass reference)

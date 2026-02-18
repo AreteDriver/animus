@@ -276,3 +276,111 @@ class TestDecisionFrameworkWithMock:
 
         result = framework.quick_decide("Should I use Redis or Memcached?")
         assert result == "Go with option B."
+
+
+# ---------------------------------------------------------------------------
+# Provider flexibility tests
+# ---------------------------------------------------------------------------
+
+
+class TestModelProviders:
+    """Test that all model providers are properly wired."""
+
+    def test_create_model_ollama(self):
+        from animus.cognitive import OllamaModel
+
+        config = ModelConfig.ollama("llama3:8b")
+        model = create_model(config)
+        assert isinstance(model, OllamaModel)
+
+    def test_create_model_anthropic(self):
+        from animus.cognitive import AnthropicModel
+
+        config = ModelConfig.anthropic("claude-3-haiku-20240307")
+        model = create_model(config)
+        assert isinstance(model, AnthropicModel)
+
+    def test_create_model_openai(self):
+        from animus.cognitive import OpenAIModel
+
+        config = ModelConfig.openai("gpt-4o")
+        model = create_model(config)
+        assert isinstance(model, OpenAIModel)
+
+    def test_create_model_mock(self):
+        config = ModelConfig.mock()
+        model = create_model(config)
+        assert isinstance(model, MockModel)
+
+    def test_create_model_unknown_provider_raises(self):
+        import pytest
+
+        config = ModelConfig(provider=ModelProvider.OLLAMA, model_name="test")
+        # Manually set a bogus provider to trigger the else branch
+        config.provider = "bogus"
+        with pytest.raises(ValueError, match="Unsupported provider"):
+            create_model(config)
+
+    def test_openai_config_factory(self):
+        config = ModelConfig.openai("gpt-4o-mini")
+        assert config.provider == ModelProvider.OPENAI
+        assert config.model_name == "gpt-4o-mini"
+
+    def test_openai_config_base_url(self):
+        """OpenAI-compatible endpoints use base_url for custom servers."""
+        config = ModelConfig.openai("local-model")
+        config.base_url = "http://localhost:8080/v1"
+        assert config.base_url == "http://localhost:8080/v1"
+
+    def test_all_providers_in_enum(self):
+        assert ModelProvider.OLLAMA.value == "ollama"
+        assert ModelProvider.ANTHROPIC.value == "anthropic"
+        assert ModelProvider.OPENAI.value == "openai"
+        assert ModelProvider.MOCK.value == "mock"
+
+
+class TestConfigProviderWiring:
+    """Test that AnimusConfig properly maps to cognitive ModelConfig."""
+
+    def test_config_openai_base_url_field(self):
+        from animus.config import ModelConfig as CfgModelConfig
+
+        cfg = CfgModelConfig(
+            provider="openai",
+            name="gpt-4o",
+            openai_base_url="http://localhost:1234/v1",
+        )
+        assert cfg.openai_base_url == "http://localhost:1234/v1"
+
+    def test_config_serialization_includes_openai_base_url(self):
+        from animus.config import AnimusConfig
+
+        config = AnimusConfig()
+        config.model.openai_base_url = "http://custom:8080/v1"
+        d = config.to_dict()
+        assert d["model"]["openai_base_url"] == "http://custom:8080/v1"
+
+    def test_config_roundtrip_openai_base_url(self):
+        import tempfile
+        from pathlib import Path
+
+        from animus.config import AnimusConfig
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config = AnimusConfig(data_dir=Path(tmpdir))
+            config.model.provider = "openai"
+            config.model.name = "gpt-4o"
+            config.model.openai_base_url = "http://myserver:8080/v1"
+            config.save()
+
+            loaded = AnimusConfig.load(config.config_file)
+            assert loaded.model.provider == "openai"
+            assert loaded.model.name == "gpt-4o"
+            assert loaded.model.openai_base_url == "http://myserver:8080/v1"
+
+    def test_ollama_is_default_provider(self):
+        from animus.config import ModelConfig as CfgModelConfig
+
+        cfg = CfgModelConfig()
+        assert cfg.provider == "ollama"
+        assert cfg.name == "llama3:8b"

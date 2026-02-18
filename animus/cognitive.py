@@ -240,6 +240,59 @@ class AnthropicModel(ModelInterface):
         yield self.generate(prompt, system)
 
 
+class OpenAIModel(ModelInterface):
+    """OpenAI-compatible model interface.
+
+    Works with OpenAI's API as well as any OpenAI-compatible endpoint
+    (e.g. LM Studio, vLLM, text-generation-webui, Together, Groq, etc.)
+    by setting a custom base_url.
+    """
+
+    def __init__(self, config: ModelConfig):
+        self.config = config
+        logger.debug(f"OpenAIModel initialized with {config.model_name}")
+
+    def generate(self, prompt: str, system: str | None = None) -> str:
+        """Generate using OpenAI-compatible API."""
+        try:
+            import openai
+
+            client_kwargs: dict = {}
+            if self.config.api_key:
+                client_kwargs["api_key"] = self.config.api_key
+            if self.config.base_url:
+                client_kwargs["base_url"] = self.config.base_url
+
+            client = openai.OpenAI(**client_kwargs)
+
+            messages: list[dict] = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+
+            logger.debug(
+                f"OpenAI request: model={self.config.model_name}, prompt_len={len(prompt)}"
+            )
+            response = client.chat.completions.create(
+                model=self.config.model_name,
+                messages=messages,
+            )
+            result = response.choices[0].message.content or ""
+            logger.debug(f"OpenAI response: len={len(result)}")
+            return result
+
+        except ImportError:
+            logger.error("openai package not installed")
+            return "[Error: openai package not installed. Install with: pip install openai]"
+        except Exception as e:
+            logger.error(f"OpenAI error: {e}")
+            return f"[Error communicating with OpenAI: {e}]"
+
+    async def generate_stream(self, prompt: str, system: str | None = None) -> AsyncIterator[str]:
+        """Streaming generation - to be implemented."""
+        yield self.generate(prompt, system)
+
+
 def create_model(config: ModelConfig) -> ModelInterface:
     """Factory function to create the appropriate model interface."""
     if config.provider == ModelProvider.MOCK:
@@ -248,6 +301,8 @@ def create_model(config: ModelConfig) -> ModelInterface:
         return OllamaModel(config)
     elif config.provider == ModelProvider.ANTHROPIC:
         return AnthropicModel(config)
+    elif config.provider == ModelProvider.OPENAI:
+        return OpenAIModel(config)
     else:
         raise ValueError(f"Unsupported provider: {config.provider}")
 

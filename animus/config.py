@@ -18,13 +18,21 @@ def default_data_dir() -> Path:
 
 @dataclass
 class ModelConfig:
-    """Configuration for the cognitive model."""
+    """Configuration for the cognitive model.
+
+    Supports three providers:
+      - "ollama"    — local models via Ollama (default)
+      - "anthropic" — Claude models via Anthropic API
+      - "openai"    — OpenAI models, or any OpenAI-compatible endpoint
+                      (LM Studio, vLLM, Together, Groq, etc.) via openai_base_url
+    """
 
     provider: str = "ollama"
     name: str = "llama3:8b"
     ollama_url: str = "http://localhost:11434"
     anthropic_api_key: str | None = None
     openai_api_key: str | None = None
+    openai_base_url: str | None = None  # For OpenAI-compatible endpoints
 
     def __post_init__(self):
         # Allow environment overrides
@@ -33,6 +41,7 @@ class ModelConfig:
         self.ollama_url = os.environ.get("ANIMUS_OLLAMA_URL", self.ollama_url)
         self.anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY", self.anthropic_api_key)
         self.openai_api_key = os.environ.get("OPENAI_API_KEY", self.openai_api_key)
+        self.openai_base_url = os.environ.get("OPENAI_BASE_URL", self.openai_base_url)
 
 
 @dataclass
@@ -304,6 +313,7 @@ class AnimusConfig:
                 "provider": self.model.provider,
                 "name": self.model.name,
                 "ollama_url": self.model.ollama_url,
+                "openai_base_url": self.model.openai_base_url,
             },
             "memory": {
                 "backend": self.memory.backend,
@@ -400,6 +410,8 @@ class AnimusConfig:
                     config.model.name = model_data["name"]
                 if "ollama_url" in model_data:
                     config.model.ollama_url = model_data["ollama_url"]
+                if "openai_base_url" in model_data:
+                    config.model.openai_base_url = model_data["openai_base_url"]
 
             if memory_data := data.get("memory"):
                 if "backend" in memory_data:
