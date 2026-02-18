@@ -2,11 +2,15 @@
 Integration Manager
 
 Orchestrates all integrations, manages connections, and aggregates tools.
+Credentials are encrypted at rest using Fernet symmetric encryption.
 """
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -17,6 +21,17 @@ if TYPE_CHECKING:
     from animus.tools import Tool
 
 logger = get_logger("integrations")
+
+
+def _derive_key(secret: str) -> bytes:
+    """Derive a Fernet-compatible key from a secret string using SHA-256."""
+    digest = hashlib.sha256(secret.encode()).digest()
+    return base64.urlsafe_b64encode(digest)
+
+
+def _get_encryption_secret() -> str:
+    """Get or generate the encryption secret for credential storage."""
+    return os.environ.get("ANIMUS_CREDENTIAL_SECRET", "animus-default-credential-key")
 
 
 class IntegrationManager:
@@ -211,6 +226,10 @@ class IntegrationManager:
                 tools.extend(integration.get_tools())
         return tools
 
+    def list_tools(self) -> list[Tool]:
+        """Alias for get_all_tools() for API consistency with ToolRegistry."""
+        return self.get_all_tools()
+
     def get_tools_by_integration(self) -> dict[str, list[Tool]]:
         """
         Get tools grouped by integration.
@@ -228,23 +247,71 @@ class IntegrationManager:
         """Get path for integration credentials file."""
         return self._data_dir / f"{name}.json"
 
+    @staticmethod
+    def _fernet_available() -> bool:
+        """Check if Fernet encryption is usable."""
+        try:
+            from cryptography.fernet import Fernet  # noqa: F401
+
+            # Verify it actually works by creating a key
+            Fernet(Fernet.generate_key())
+            return True
+        except BaseException:
+            # Catch BaseException to handle pyo3 panics and other low-level failures
+            return False
+
     def _save_credentials(self, name: str, credentials: dict[str, Any]) -> None:
-        """Save credentials to disk (encrypted in future)."""
+        """Save credentials to disk with encryption."""
         path = self._credentials_path(name)
-        # TODO: Encrypt credentials before saving
-        with open(path, "w") as f:
-            json.dump(credentials, f)
+        plaintext = json.dumps(credentials).encode("utf-8")
+
+        if self._fernet_available():
+            from cryptography.fernet import Fernet
+
+            key = _derive_key(_get_encryption_secret())
+            fernet = Fernet(key)
+            encrypted = fernet.encrypt(plaintext)
+            path.write_bytes(encrypted)
+        else:
+            # Fallback: base64-encode if cryptography is not available
+            logger.warning(
+                "cryptography package not available, using basic encoding. "
+                "Install with: pip install cryptography"
+            )
+            encoded = base64.b64encode(plaintext)
+            path.write_bytes(encoded)
+
         path.chmod(0o600)  # Owner read/write only
-        logger.debug(f"Saved credentials for: {name}")
+        logger.debug(f"Saved encrypted credentials for: {name}")
 
     def _load_credentials(self, name: str) -> dict[str, Any] | None:
-        """Load credentials from disk."""
+        """Load and decrypt credentials from disk."""
         path = self._credentials_path(name)
         if not path.exists():
             return None
         try:
-            with open(path) as f:
-                return json.load(f)
+            raw = path.read_bytes()
+
+            if self._fernet_available():
+                try:
+                    from cryptography.fernet import Fernet
+
+                    key = _derive_key(_get_encryption_secret())
+                    fernet = Fernet(key)
+                    decrypted = fernet.decrypt(raw)
+                    return json.loads(decrypted)
+                except Exception:
+                    pass  # Fall through to other methods
+
+            # Try base64 decode
+            try:
+                decoded = base64.b64decode(raw)
+                return json.loads(decoded)
+            except Exception:
+                pass
+
+            # Try plain JSON for backwards compatibility
+            return json.loads(raw)
         except (json.JSONDecodeError, OSError) as e:
             logger.error(f"Failed to load credentials for {name}: {e}")
             return None

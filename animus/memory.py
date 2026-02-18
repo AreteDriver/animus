@@ -415,6 +415,34 @@ class ChromaMemoryStore(MemoryStore):
     Provides semantic search using embeddings.
     """
 
+    @staticmethod
+    def prewarm() -> bool:
+        """
+        Pre-download the sentence-transformer model used by ChromaDB.
+
+        Call this during setup/install to avoid the ~3s cold-start delay
+        on first use. Safe to call multiple times (no-op if already cached).
+
+        Returns:
+            True if model is ready, False on error
+        """
+        try:
+            from sentence_transformers import SentenceTransformer
+
+            logger.info("Pre-warming ChromaDB embedding model...")
+            SentenceTransformer("all-MiniLM-L6-v2")
+            logger.info("ChromaDB embedding model ready")
+            return True
+        except ImportError:
+            logger.warning(
+                "sentence-transformers not installed. "
+                "ChromaDB will download the model on first use."
+            )
+            return False
+        except Exception as e:
+            logger.warning(f"Failed to pre-warm ChromaDB model: {e}")
+            return False
+
     def __init__(self, data_dir: Path, collection_name: str = "animus_memories"):
         self.data_dir = data_dir
         self.collection_name = collection_name
@@ -955,10 +983,124 @@ class MemoryLayer:
             "top_tags": sorted(tags.items(), key=lambda x: x[1], reverse=True)[:10],
         }
 
-    def consolidate(self):
+    def consolidate(self, max_age_days: int = 90, min_group_size: int = 3) -> int:
         """
-        Consolidate memories - summarize and compress.
+        Consolidate memories by grouping related older memories into summaries.
 
-        TODO: Implement summarization logic
+        Groups episodic memories that share tags and are older than max_age_days,
+        then replaces each group with a single summary memory.
+
+        Args:
+            max_age_days: Only consolidate memories older than this many days
+            min_group_size: Minimum group size required to trigger consolidation
+
+        Returns:
+            Number of memories consolidated (removed)
         """
-        pass
+        from datetime import timedelta
+
+        cutoff = datetime.now() - timedelta(days=max_age_days)
+        all_memories = self.store.list_all(memory_type=MemoryType.EPISODIC)
+
+        # Filter to old memories
+        old_memories = [m for m in all_memories if m.created_at < cutoff]
+        if not old_memories:
+            logger.info("No memories old enough to consolidate")
+            return 0
+
+        # Group by primary tag (first tag, or "untagged")
+        groups: dict[str, list[Memory]] = {}
+        for mem in old_memories:
+            group_key = mem.tags[0] if mem.tags else "untagged"
+            if group_key not in groups:
+                groups[group_key] = []
+            groups[group_key].append(mem)
+
+        consolidated_count = 0
+        for group_key, memories in groups.items():
+            if len(memories) < min_group_size:
+                continue
+
+            # Sort by date
+            memories.sort(key=lambda m: m.created_at)
+            date_range = (
+                f"{memories[0].created_at.strftime('%Y-%m-%d')} to "
+                f"{memories[-1].created_at.strftime('%Y-%m-%d')}"
+            )
+
+            # Build summary from content snippets
+            snippets = [m.content[:150] for m in memories]
+            summary_content = (
+                f"Consolidated summary ({date_range}, {len(memories)} items, "
+                f"tag: {group_key}):\n- " + "\n- ".join(snippets)
+            )
+
+            # Collect all tags from the group
+            all_tags: set[str] = set()
+            for mem in memories:
+                all_tags.update(mem.tags)
+            all_tags.add("consolidated")
+
+            # Create summary memory
+            self.remember(
+                content=summary_content,
+                memory_type=MemoryType.EPISODIC,
+                tags=list(all_tags),
+                source="learned",
+                confidence=0.9,
+                subtype="consolidated",
+            )
+
+            # Remove originals
+            for mem in memories:
+                self.store.delete(mem.id)
+                consolidated_count += 1
+
+        logger.info(f"Consolidated {consolidated_count} memories into summaries")
+        return consolidated_count
+
+    def export_memories_csv(self) -> str:
+        """
+        Export all memories to CSV format.
+
+        Returns:
+            CSV string with headers
+        """
+        import csv
+        import io
+
+        memories = self.store.list_all()
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Header
+        writer.writerow(
+            [
+                "id",
+                "content",
+                "memory_type",
+                "created_at",
+                "updated_at",
+                "tags",
+                "source",
+                "confidence",
+                "subtype",
+            ]
+        )
+
+        for mem in memories:
+            writer.writerow(
+                [
+                    mem.id,
+                    mem.content,
+                    mem.memory_type.value,
+                    mem.created_at.isoformat(),
+                    mem.updated_at.isoformat(),
+                    ";".join(mem.tags),
+                    mem.source,
+                    mem.confidence,
+                    mem.subtype or "",
+                ]
+            )
+
+        return output.getvalue()

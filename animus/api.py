@@ -1113,4 +1113,65 @@ def create_app() -> FastAPI:
             return {"status": "rolled_back", "unlearned_count": len(unlearned)}
         raise HTTPException(status_code=404, detail="Rollback point not found")
 
+    # =====================================================================
+    # Memory Export & Consolidation
+    # =====================================================================
+
+    @app.get("/memory/export/csv")
+    async def export_memories_csv(_auth: bool = Depends(verify_api_key)):
+        """Export all memories in CSV format."""
+        state = get_state()
+        csv_data = state.memory.export_memories_csv()
+        from starlette.responses import Response
+
+        return Response(
+            content=csv_data,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=memories.csv"},
+        )
+
+    @app.post("/memory/consolidate")
+    async def consolidate_memories(
+        max_age_days: int = 90,
+        min_group_size: int = 3,
+        _auth: bool = Depends(verify_api_key),
+    ):
+        """Consolidate old memories into summaries."""
+        state = get_state()
+        count = state.memory.consolidate(
+            max_age_days=max_age_days,
+            min_group_size=min_group_size,
+        )
+        return {"consolidated": count}
+
+    # =====================================================================
+    # Register Translation
+    # =====================================================================
+
+    @app.get("/register")
+    async def get_register(_auth: bool = Depends(verify_api_key)):
+        """Get current communication register."""
+        state = get_state()
+        return state.cognitive.register_translator.get_register_context()
+
+    @app.post("/register/{register_name}")
+    async def set_register(register_name: str, _auth: bool = Depends(verify_api_key)):
+        """Override communication register (formal, casual, technical, neutral)."""
+        from animus.register import Register
+
+        state = get_state()
+        try:
+            reg = Register(register_name)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown register: {register_name}. Use: formal, casual, technical, neutral",
+            )
+
+        if reg == Register.NEUTRAL:
+            state.cognitive.register_translator.set_override(None)
+        else:
+            state.cognitive.register_translator.set_override(reg)
+        return state.cognitive.register_translator.get_register_context()
+
     return app

@@ -14,6 +14,7 @@ from animus.memory import (
     Procedure,
     SemanticFact,
 )
+from animus.register import Register, RegisterTranslator, detect_register
 from animus.tasks import Task, TaskStatus, TaskTracker
 from animus.tools import Tool, ToolRegistry, ToolResult, create_default_registry
 
@@ -64,6 +65,8 @@ __all__ = [
     "ModelConfig",
     "Procedure",
     "ReasoningMode",
+    "Register",
+    "RegisterTranslator",
     "SemanticFact",
     "Task",
     "TaskStatus",
@@ -77,4 +80,5 @@ __all__ = [
     "__version__",
     "create_default_registry",
     "detect_mode",
+    "detect_register",
 ]

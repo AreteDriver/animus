@@ -443,6 +443,110 @@ def _tool_run_command(params: dict) -> ToolResult:
         )
 
 
+def _tool_http_request(params: dict) -> ToolResult:
+    """Make an HTTP request to a REST API endpoint."""
+    url = params.get("url")
+    if not url:
+        return ToolResult(
+            tool_name="http_request",
+            success=False,
+            output=None,
+            error="Missing required parameter: url",
+        )
+
+    method = params.get("method", "GET").upper()
+    if method not in ("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"):
+        return ToolResult(
+            tool_name="http_request",
+            success=False,
+            output=None,
+            error=f"Unsupported HTTP method: {method}",
+        )
+
+    timeout = min(params.get("timeout", 30), 60)
+
+    try:
+        import urllib.parse
+        import urllib.request
+
+        # Validate URL scheme
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return ToolResult(
+                tool_name="http_request",
+                success=False,
+                output=None,
+                error=f"Unsupported URL scheme: {parsed.scheme}",
+            )
+
+        # Build headers
+        headers = params.get("headers", {}) or {}
+
+        # Apply auth
+        auth_type = params.get("auth_type", "none").lower()
+        auth_value = params.get("auth_value", "")
+        if auth_type == "bearer" and auth_value:
+            headers["Authorization"] = f"Bearer {auth_value}"
+        elif auth_type == "basic" and auth_value:
+            import base64
+
+            encoded = base64.b64encode(auth_value.encode()).decode()
+            headers["Authorization"] = f"Basic {encoded}"
+        elif auth_type == "api_key" and auth_value:
+            headers["X-API-Key"] = auth_value
+
+        # Build request body
+        body_data = None
+        body_str = params.get("body")
+        if body_str and method in ("POST", "PUT", "PATCH"):
+            body_data = body_str.encode("utf-8")
+            if "Content-Type" not in headers:
+                headers["Content-Type"] = "application/json"
+
+        req = urllib.request.Request(url, data=body_data, headers=headers, method=method)
+
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            response_body = response.read().decode("utf-8", errors="replace")
+            status_code = response.status
+            response_headers = dict(response.headers)
+
+        # Truncate long responses
+        if len(response_body) > 50_000:
+            response_body = response_body[:50_000] + "\n... [truncated]"
+
+        output = f"HTTP {status_code}\n"
+        for hdr_key, hdr_val in response_headers.items():
+            output += f"{hdr_key}: {hdr_val}\n"
+        output += f"\n{response_body}"
+
+        return ToolResult(
+            tool_name="http_request",
+            success=200 <= status_code < 400,
+            output=output,
+            error=None if 200 <= status_code < 400 else f"HTTP {status_code}",
+        )
+
+    except urllib.error.HTTPError as e:
+        error_body = ""
+        try:
+            error_body = e.read().decode("utf-8", errors="replace")[:5000]
+        except Exception:
+            pass
+        return ToolResult(
+            tool_name="http_request",
+            success=False,
+            output=error_body or None,
+            error=f"HTTP {e.code}: {e.reason}",
+        )
+    except Exception as e:
+        return ToolResult(
+            tool_name="http_request",
+            success=False,
+            output=None,
+            error=str(e),
+        )
+
+
 def _tool_web_search(params: dict) -> ToolResult:
     """Search the web using DuckDuckGo Instant Answer API."""
     query = params.get("query")
@@ -608,6 +712,47 @@ BUILTIN_TOOLS = [
             "required": ["query"],
         },
         handler=_tool_web_search,
+        category="web",
+    ),
+    Tool(
+        name="http_request",
+        description="Make an HTTP request to a REST API endpoint",
+        parameters={
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "Full URL to request",
+                },
+                "method": {
+                    "type": "string",
+                    "description": "HTTP method: GET, POST, PUT, PATCH, DELETE (default: GET)",
+                },
+                "headers": {
+                    "type": "object",
+                    "description": "HTTP headers as key-value pairs",
+                },
+                "body": {
+                    "type": "string",
+                    "description": "Request body (JSON string for POST/PUT/PATCH)",
+                },
+                "auth_type": {
+                    "type": "string",
+                    "description": "Auth type: none, bearer, basic, api_key (default: none)",
+                },
+                "auth_value": {
+                    "type": "string",
+                    "description": "Auth token/key value",
+                },
+                "timeout": {
+                    "type": "integer",
+                    "description": "Request timeout in seconds (default: 30, max: 60)",
+                },
+            },
+            "required": ["url"],
+        },
+        handler=_tool_http_request,
+        requires_approval=True,
         category="web",
     ),
 ]

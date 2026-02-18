@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 
 from animus.logging import get_logger
 from animus.protocols.intelligence import IntelligenceProvider
+from animus.register import RegisterTranslator
 
 if TYPE_CHECKING:
     from animus.learning import LearningLayer
@@ -265,6 +266,7 @@ class CognitiveLayer:
         self.primary_config = primary_config or ModelConfig.ollama()
         self.fallback_config = fallback_config
         self.learning = learning
+        self.register_translator = RegisterTranslator()
 
         self.primary: IntelligenceProvider = create_model(self.primary_config)
         self.fallback: IntelligenceProvider | None = (
@@ -293,10 +295,13 @@ class CognitiveLayer:
         Returns:
             Generated response
         """
-        # Build system prompt
+        # Detect user's register and build system prompt
+        self.register_translator.detect_and_set(prompt)
         system = self._build_system_prompt(context, mode)
         logger.debug(
-            f"Thinking with mode={mode.value}, context_len={len(context) if context else 0}"
+            f"Thinking with mode={mode.value}, "
+            f"register={self.register_translator.active_register.value}, "
+            f"context_len={len(context) if context else 0}"
         )
 
         # Try primary model
@@ -356,6 +361,9 @@ To use a tool, respond with a JSON block in this format:
 
 You can use multiple tools. After tool results are returned, continue your response.
 When you have gathered enough information, provide your final answer."""
+
+        # Apply register translation
+        base = self.register_translator.adapt_prompt(base)
 
         return base
 

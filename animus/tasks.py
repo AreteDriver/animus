@@ -253,6 +253,15 @@ class TaskTracker:
 
         return sorted(tasks, key=sort_key)
 
+    def list_all(
+        self,
+        status: TaskStatus | None = None,
+        tags: list[str] | None = None,
+        include_completed: bool = False,
+    ) -> list[Task]:
+        """Alias for list() for API consistency across modules."""
+        return self.list(status=status, tags=tags, include_completed=include_completed)
+
     def list_overdue(self) -> list[Task]:
         """List overdue tasks."""
         return [t for t in self._tasks.values() if t.is_overdue()]

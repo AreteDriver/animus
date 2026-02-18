@@ -151,9 +151,20 @@ class PreferenceEngine:
             PatternType.TEMPORAL: "scheduling",
             PatternType.FREQUENCY: "workflow",
             PatternType.CORRECTION: "communication",
+            PatternType.SEQUENTIAL: "workflow",
+            PatternType.CONTEXTUAL: "general",
         }
 
         domain = domain_map.get(pattern.pattern_type, "general")
+
+        # Refine domain based on content keywords
+        desc_lower = pattern.description.lower()
+        if any(w in desc_lower for w in ("time", "morning", "evening", "schedule", "hour")):
+            domain = "scheduling"
+        elif any(w in desc_lower for w in ("tone", "formal", "casual", "verbose", "brief")):
+            domain = "communication"
+        elif any(w in desc_lower for w in ("tool", "command", "file", "editor")):
+            domain = "tools"
 
         # Extract key and value from pattern description
         description = pattern.description
