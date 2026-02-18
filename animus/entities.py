@@ -391,7 +391,7 @@ class EntityMemory:
         return entity
 
     def delete_entity(self, entity_id: str) -> bool:
-        """Delete an entity and its relationships."""
+        """Delete an entity, its relationships, and interaction records."""
         if entity_id not in self._entities:
             return False
 
@@ -399,6 +399,7 @@ class EntityMemory:
         self._relationships = [
             r for r in self._relationships if r.source_id != entity_id and r.target_id != entity_id
         ]
+        self._interactions = [i for i in self._interactions if i.entity_id != entity_id]
         self._save()
         logger.info(f"Deleted entity: {entity_id}")
         return True
@@ -527,11 +528,13 @@ class EntityMemory:
         removed = before - len(self._interactions)
 
         # Also remove memory_id from entity memory_ids lists
+        refs_cleaned = False
         for entity in self._entities.values():
             if memory_id in entity.memory_ids:
                 entity.memory_ids.remove(memory_id)
+                refs_cleaned = True
 
-        if removed > 0:
+        if removed > 0 or refs_cleaned:
             self._save()
         return removed
 

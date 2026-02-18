@@ -887,11 +887,17 @@ class MemoryLayer:
         return self.store.get_all_tags()
 
     def forget(self, memory_id: str) -> bool:
-        """Delete a specific memory."""
+        """Delete a specific memory and clean up entity references."""
         # Try partial match
         memory = self.get_memory(memory_id)
         if memory:
-            return self.store.delete(memory.id)
+            deleted = self.store.delete(memory.id)
+            if deleted and self.entity_memory:
+                try:
+                    self.entity_memory.remove_interactions_for_memory(memory.id)
+                except Exception as e:
+                    logger.debug(f"Entity cleanup during forget failed: {e}")
+            return deleted
         return False
 
     def save_conversation(self, conversation: Conversation) -> Memory:

@@ -1279,3 +1279,99 @@ class TestConsolidateEntityCleanup:
 
             consolidated = memory.consolidate(max_age_days=0, min_group_size=3)
             assert consolidated == 3
+
+
+class TestForgetEntityCleanup:
+    """Test that forget() cleans up entity interactions."""
+
+    def test_forget_removes_entity_interactions(self):
+        from animus.entities import EntityMemory, EntityType
+        from animus.memory import MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            memory = MemoryLayer(Path(tmpdir), backend="json", entity_memory=em)
+
+            em.add_entity("Alice", EntityType.PERSON)
+
+            mem = memory.remember("Alice likes coffee")
+            alice = em.find_entity("Alice")
+            assert alice.mention_count >= 1
+            assert mem.id in alice.memory_ids
+
+            memory.forget(mem.id)
+
+            # Interaction records and memory_ids should be cleaned up
+            assert mem.id not in alice.memory_ids
+            interactions = [i for i in em._interactions if i.memory_id == mem.id]
+            assert len(interactions) == 0
+
+    def test_forget_without_entity_memory_works(self):
+        from animus.memory import MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            memory = MemoryLayer(Path(tmpdir), backend="json")
+
+            mem = memory.remember("Some fact")
+            assert memory.forget(mem.id)
+
+
+class TestDeleteEntityInteractionCleanup:
+    """Test that delete_entity() cleans up interaction records."""
+
+    def test_delete_entity_removes_interactions(self):
+        from animus.entities import EntityMemory, EntityType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            alice = em.add_entity("Alice", EntityType.PERSON)
+
+            em.record_interaction(alice.id, "mem-1", "Talked about Alice")
+            em.record_interaction(alice.id, "mem-2", "Alice again")
+            assert len([i for i in em._interactions if i.entity_id == alice.id]) == 2
+
+            em.delete_entity(alice.id)
+
+            # All interaction records for Alice should be gone
+            assert len([i for i in em._interactions if i.entity_id == alice.id]) == 0
+
+    def test_delete_entity_preserves_other_interactions(self):
+        from animus.entities import EntityMemory, EntityType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            alice = em.add_entity("Alice", EntityType.PERSON)
+            bob = em.add_entity("Bob", EntityType.PERSON)
+
+            em.record_interaction(alice.id, "mem-1", "Alice stuff")
+            em.record_interaction(bob.id, "mem-2", "Bob stuff")
+
+            em.delete_entity(alice.id)
+
+            # Bob's interactions should remain
+            assert len([i for i in em._interactions if i.entity_id == bob.id]) == 1
+
+
+class TestRemoveInteractionsForMemorySaveBug:
+    """Test that remove_interactions_for_memory() saves even when only memory_ids change."""
+
+    def test_saves_when_only_memory_ids_cleaned(self):
+        from animus.entities import EntityMemory, EntityType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            alice = em.add_entity("Alice", EntityType.PERSON)
+
+            # Manually add a memory_id without a corresponding interaction record
+            alice.memory_ids.append("orphan-mem-id")
+            em._save()
+
+            assert "orphan-mem-id" in alice.memory_ids
+
+            removed = em.remove_interactions_for_memory("orphan-mem-id")
+            assert removed == 0  # No interaction records to remove
+
+            # Reload from disk to verify the memory_id removal was persisted
+            em2 = EntityMemory(Path(tmpdir) / "entities")
+            alice2 = em2.find_entity("Alice")
+            assert "orphan-mem-id" not in alice2.memory_ids
