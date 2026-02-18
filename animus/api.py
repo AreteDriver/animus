@@ -31,6 +31,7 @@ logger = get_logger("api")
 try:
     import uvicorn
     from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+    from fastapi.responses import JSONResponse
     from fastapi.security import APIKeyHeader
 
     FASTAPI_AVAILABLE = True
@@ -244,6 +245,7 @@ class AppState:
     learning: object | None = None  # LearningLayer (optional)
     entity_memory: object | None = None  # EntityMemory (optional)
     proactive: object | None = None  # ProactiveEngine (optional)
+    executor: object | None = None  # AutonomousExecutor (optional)
 
 
 _state: AppState | None = None
@@ -276,6 +278,7 @@ class APIServer:
         learning: object | None = None,
         entity_memory: object | None = None,
         proactive: object | None = None,
+        executor: object | None = None,
     ):
         """
         Initialize API server.
@@ -293,6 +296,7 @@ class APIServer:
             learning: Optional LearningLayer instance
             entity_memory: Optional EntityMemory instance
             proactive: Optional ProactiveEngine instance
+            executor: Optional AutonomousExecutor instance
         """
         if not FASTAPI_AVAILABLE:
             raise ImportError("FastAPI not installed. Install with: pip install 'animus[api]'")
@@ -309,6 +313,7 @@ class APIServer:
         self.learning = learning
         self.entity_memory = entity_memory
         self.proactive = proactive
+        self.executor = executor
 
         self._server_thread: threading.Thread | None = None
         self._server: uvicorn.Server | None = None
@@ -335,6 +340,7 @@ class APIServer:
             learning=self.learning,
             entity_memory=self.entity_memory,
             proactive=self.proactive,
+            executor=self.executor,
         )
 
         # Update config with API key if provided
@@ -1366,6 +1372,70 @@ def create_app() -> FastAPI:
     # =====================================================================
     # Dashboard
     # =====================================================================
+
+    # =====================================================================
+    # Autonomous Action Endpoints
+    # =====================================================================
+
+    @app.get("/autonomous/actions")
+    async def list_autonomous_actions(limit: int = 20, _auth: bool = Depends(verify_api_key)):
+        """List recent autonomous actions."""
+        state = get_state()
+        ex = getattr(state, "executor", None)
+        if not ex:
+            return {"actions": [], "enabled": False}
+        return {
+            "actions": [a.to_dict() for a in ex.get_recent_actions(limit)],
+            "enabled": True,
+        }
+
+    @app.get("/autonomous/pending")
+    async def list_pending_actions(_auth: bool = Depends(verify_api_key)):
+        """List actions awaiting user approval."""
+        state = get_state()
+        ex = getattr(state, "executor", None)
+        if not ex:
+            return {"actions": []}
+        return {"actions": [a.to_dict() for a in ex.get_pending_actions()]}
+
+    @app.post("/autonomous/actions/{action_id}/approve")
+    async def approve_action(action_id: str, _auth: bool = Depends(verify_api_key)):
+        """Approve a pending autonomous action."""
+        state = get_state()
+        ex = getattr(state, "executor", None)
+        if not ex:
+            return JSONResponse(
+                status_code=404, content={"detail": "Autonomous executor not enabled"}
+            )
+        action = ex.approve_action(action_id)
+        if not action:
+            return JSONResponse(status_code=404, content={"detail": "Action not found"})
+        return action.to_dict()
+
+    @app.post("/autonomous/actions/{action_id}/deny")
+    async def deny_action(action_id: str, _auth: bool = Depends(verify_api_key)):
+        """Deny a pending autonomous action."""
+        state = get_state()
+        ex = getattr(state, "executor", None)
+        if not ex:
+            return JSONResponse(
+                status_code=404, content={"detail": "Autonomous executor not enabled"}
+            )
+        action = ex.deny_action(action_id)
+        if not action:
+            return JSONResponse(status_code=404, content={"detail": "Action not found"})
+        return action.to_dict()
+
+    @app.get("/autonomous/stats")
+    async def autonomous_stats(_auth: bool = Depends(verify_api_key)):
+        """Get autonomous executor statistics."""
+        state = get_state()
+        ex = getattr(state, "executor", None)
+        if not ex:
+            return {"enabled": False}
+        stats = ex.get_statistics()
+        stats["enabled"] = True
+        return stats
 
     try:
         from animus.dashboard import add_dashboard_routes

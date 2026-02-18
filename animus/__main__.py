@@ -11,6 +11,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from animus.api import APIServer
+from animus.autonomous import ActionLevel, ActionPolicy, AutonomousExecutor
 from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode, detect_mode
 from animus.config import AnimusConfig
 from animus.decision import DecisionFramework
@@ -407,6 +408,26 @@ def main():
     for tool in create_memory_tools(memory):
         tools.register(tool)
 
+    # Autonomous Executor
+    executor: AutonomousExecutor | None = None
+    if config.autonomous.enabled:
+        policies = {
+            ActionLevel.OBSERVE: ActionPolicy(config.autonomous.observe_policy),
+            ActionLevel.NOTIFY: ActionPolicy(config.autonomous.notify_policy),
+            ActionLevel.ACT: ActionPolicy(config.autonomous.act_policy),
+            ActionLevel.EXECUTE: ActionPolicy(config.autonomous.execute_policy),
+        }
+        executor = AutonomousExecutor(
+            data_dir=config.data_dir / "autonomous",
+            cognitive=cognitive,
+            tools=tools,
+            policies=policies,
+        )
+        # Wire executor into proactive engine so nudges can trigger actions
+        if proactive:
+            proactive.executor = executor
+        logger.info("Autonomous executor initialized")
+
     tasks = TaskTracker(config.data_dir)
     decisions = DecisionFramework(cognitive)
 
@@ -475,6 +496,7 @@ def main():
                 integrations=integrations,
                 entity_memory=entity_memory,
                 proactive=proactive,
+                executor=executor,
             )
             api_server.start()
             console.print(f"[dim]API server started on {config.api.host}:{config.api.port}[/dim]")
@@ -900,6 +922,7 @@ def main():
                             integrations=integrations,
                             entity_memory=entity_memory,
                             proactive=proactive,
+                            executor=executor,
                         )
                         api_server.start()
                         console.print(

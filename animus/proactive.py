@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 from animus.logging import get_logger
 
 if TYPE_CHECKING:
+    from animus.autonomous import AutonomousExecutor
     from animus.cognitive import CognitiveLayer
     from animus.memory import MemoryLayer
 
@@ -148,10 +149,12 @@ class ProactiveEngine:
         data_dir: Path,
         memory: MemoryLayer,
         cognitive: CognitiveLayer | None = None,
+        executor: AutonomousExecutor | None = None,
     ):
         self.data_dir = data_dir
         self.memory = memory
         self.cognitive = cognitive
+        self.executor = executor
 
         self._nudges: list[Nudge] = []
         self._callbacks: list[Callable[[Nudge], None]] = []
@@ -194,7 +197,7 @@ class ProactiveEngine:
         self._callbacks.append(callback)
 
     def _emit_nudge(self, nudge: Nudge) -> None:
-        """Store and notify callbacks about a new nudge."""
+        """Store, notify callbacks, and optionally trigger autonomous action."""
         self._nudges.append(nudge)
         self._save_nudges()
         for cb in self._callbacks:
@@ -202,6 +205,14 @@ class ProactiveEngine:
                 cb(nudge)
             except Exception as e:
                 logger.error(f"Nudge callback error: {e}")
+
+        # Let the autonomous executor decide if this nudge warrants action
+        if self.executor:
+            try:
+                self.executor.handle_nudge(nudge)
+            except Exception as e:
+                logger.error(f"Autonomous action for nudge failed: {e}")
+
         logger.info(f"Nudge emitted: [{nudge.priority.value}] {nudge.title}")
 
     # =========================================================================

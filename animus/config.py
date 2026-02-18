@@ -253,6 +253,39 @@ class EntityConfig:
 
 
 @dataclass
+class AutonomousConfig:
+    """Configuration for the autonomous action system.
+
+    Controls whether Animus can take independent actions and at what
+    risk levels. Policies map action levels to handling strategies:
+      - "auto"    — execute without asking
+      - "approve" — queue for user approval
+      - "deny"    — never execute autonomously
+
+    Default is conservative: only observe/notify are auto, act requires
+    approval, execute is denied.
+    """
+
+    enabled: bool = False  # Master switch — off by default
+    observe_policy: str = "auto"
+    notify_policy: str = "auto"
+    act_policy: str = "approve"
+    execute_policy: str = "deny"
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("ANIMUS_AUTONOMOUS_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+        if env_obs := os.environ.get("ANIMUS_AUTONOMOUS_OBSERVE_POLICY"):
+            self.observe_policy = env_obs
+        if env_not := os.environ.get("ANIMUS_AUTONOMOUS_NOTIFY_POLICY"):
+            self.notify_policy = env_not
+        if env_act := os.environ.get("ANIMUS_AUTONOMOUS_ACT_POLICY"):
+            self.act_policy = env_act
+        if env_exec := os.environ.get("ANIMUS_AUTONOMOUS_EXECUTE_POLICY"):
+            self.execute_policy = env_exec
+
+
+@dataclass
 class AnimusConfig:
     """Main configuration for Animus."""
 
@@ -268,6 +301,7 @@ class AnimusConfig:
     tools_security: ToolsSecurityConfig = field(default_factory=ToolsSecurityConfig)
     proactive: ProactiveConfig = field(default_factory=ProactiveConfig)
     entities: EntityConfig = field(default_factory=EntityConfig)
+    autonomous: AutonomousConfig = field(default_factory=AutonomousConfig)
 
     def __post_init__(self):
         # Convert string to Path if needed
@@ -365,6 +399,13 @@ class AnimusConfig:
                 "enabled": self.entities.enabled,
                 "auto_extract": self.entities.auto_extract,
                 "auto_discover": self.entities.auto_discover,
+            },
+            "autonomous": {
+                "enabled": self.autonomous.enabled,
+                "observe_policy": self.autonomous.observe_policy,
+                "notify_policy": self.autonomous.notify_policy,
+                "act_policy": self.autonomous.act_policy,
+                "execute_policy": self.autonomous.execute_policy,
             },
         }
 
@@ -507,6 +548,18 @@ class AnimusConfig:
                 if "auto_discover" in entity_data:
                     config.entities.auto_discover = entity_data["auto_discover"]
 
+            if autonomous_data := data.get("autonomous"):
+                if "enabled" in autonomous_data:
+                    config.autonomous.enabled = autonomous_data["enabled"]
+                if "observe_policy" in autonomous_data:
+                    config.autonomous.observe_policy = autonomous_data["observe_policy"]
+                if "notify_policy" in autonomous_data:
+                    config.autonomous.notify_policy = autonomous_data["notify_policy"]
+                if "act_policy" in autonomous_data:
+                    config.autonomous.act_policy = autonomous_data["act_policy"]
+                if "execute_policy" in autonomous_data:
+                    config.autonomous.execute_policy = autonomous_data["execute_policy"]
+
             # Re-apply environment overrides
             config.__post_init__()
             config.model.__post_init__()
@@ -520,6 +573,7 @@ class AnimusConfig:
             config.learning.__post_init__()
             config.proactive.__post_init__()
             config.entities.__post_init__()
+            config.autonomous.__post_init__()
 
         return config
 

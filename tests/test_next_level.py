@@ -1643,3 +1643,651 @@ class TestDashboardLiveRefresh:
             html = render_dashboard(memory)
             assert "/dashboard/data" in html
             assert "scheduleRefresh()" in html
+
+
+# =============================================================================
+# Autonomous Action System Tests
+# =============================================================================
+
+
+class TestActionDataStructures:
+    """Test AutonomousAction and related enums."""
+
+    def test_action_creation(self):
+        from animus.autonomous import ActionLevel, ActionStatus, AutonomousAction
+
+        action = AutonomousAction(
+            id="test-1",
+            level=ActionLevel.NOTIFY,
+            title="Test action",
+            description="A test",
+        )
+        assert action.status == ActionStatus.PLANNED
+        assert action.level == ActionLevel.NOTIFY
+        assert action.result is None
+        assert not action.is_expired()
+
+    def test_action_expiry(self):
+        from animus.autonomous import ActionLevel, AutonomousAction
+
+        action = AutonomousAction(
+            id="test-2",
+            level=ActionLevel.OBSERVE,
+            title="Expired",
+            description="Old",
+            expires_at=datetime.now() - timedelta(hours=1),
+        )
+        assert action.is_expired()
+
+    def test_action_serialization_roundtrip(self):
+        from animus.autonomous import ActionLevel, ActionStatus, AutonomousAction
+
+        action = AutonomousAction(
+            id="test-3",
+            level=ActionLevel.ACT,
+            title="Save note",
+            description="Save a memory",
+            tool_name="save_memory",
+            tool_params={"content": "hello"},
+            status=ActionStatus.COMPLETED,
+            result="Saved",
+        )
+        d = action.to_dict()
+        restored = AutonomousAction.from_dict(d)
+        assert restored.id == action.id
+        assert restored.level == action.level
+        assert restored.status == action.status
+        assert restored.tool_name == "save_memory"
+        assert restored.result == "Saved"
+
+    def test_action_levels(self):
+        from animus.autonomous import ActionLevel
+
+        assert ActionLevel.OBSERVE.value == "observe"
+        assert ActionLevel.NOTIFY.value == "notify"
+        assert ActionLevel.ACT.value == "act"
+        assert ActionLevel.EXECUTE.value == "execute"
+
+    def test_action_policies(self):
+        from animus.autonomous import ActionPolicy
+
+        assert ActionPolicy.AUTO.value == "auto"
+        assert ActionPolicy.APPROVE.value == "approve"
+        assert ActionPolicy.DENY.value == "deny"
+
+
+class TestActionLog:
+    """Test the audit log."""
+
+    def test_record_and_retrieve(self):
+        from animus.autonomous import ActionLevel, ActionLog, AutonomousAction
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log = ActionLog(Path(tmpdir))
+            action = AutonomousAction(
+                id="log-1",
+                level=ActionLevel.NOTIFY,
+                title="Test",
+                description="Logged",
+            )
+            log.record(action)
+            recent = log.get_recent(10)
+            assert len(recent) == 1
+            assert recent[0].id == "log-1"
+
+    def test_persistence(self):
+        from animus.autonomous import ActionLevel, ActionLog, AutonomousAction
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log1 = ActionLog(Path(tmpdir))
+            log1.record(
+                AutonomousAction(
+                    id="persist-1",
+                    level=ActionLevel.ACT,
+                    title="Persisted",
+                    description="Should survive reload",
+                )
+            )
+
+            log2 = ActionLog(Path(tmpdir))
+            assert len(log2.get_recent(10)) == 1
+            assert log2.get_recent(10)[0].id == "persist-1"
+
+    def test_get_pending_approval(self):
+        from animus.autonomous import (
+            ActionLevel,
+            ActionLog,
+            ActionStatus,
+            AutonomousAction,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log = ActionLog(Path(tmpdir))
+            log.record(
+                AutonomousAction(
+                    id="pending-1",
+                    level=ActionLevel.ACT,
+                    title="Pending",
+                    description="Needs approval",
+                    status=ActionStatus.PLANNED,
+                    expires_at=datetime.now() + timedelta(hours=1),
+                )
+            )
+            log.record(
+                AutonomousAction(
+                    id="done-1",
+                    level=ActionLevel.NOTIFY,
+                    title="Done",
+                    description="Already complete",
+                    status=ActionStatus.COMPLETED,
+                )
+            )
+            pending = log.get_pending_approval()
+            assert len(pending) == 1
+            assert pending[0].id == "pending-1"
+
+    def test_get_by_id(self):
+        from animus.autonomous import ActionLevel, ActionLog, AutonomousAction
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log = ActionLog(Path(tmpdir))
+            log.record(
+                AutonomousAction(
+                    id="find-me",
+                    level=ActionLevel.OBSERVE,
+                    title="Findable",
+                    description="Can be found",
+                )
+            )
+            found = log.get_by_id("find-me")
+            assert found is not None
+            assert found.title == "Findable"
+            assert log.get_by_id("nonexistent") is None
+
+    def test_statistics(self):
+        from animus.autonomous import (
+            ActionLevel,
+            ActionLog,
+            ActionStatus,
+            AutonomousAction,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log = ActionLog(Path(tmpdir))
+            log.record(
+                AutonomousAction(
+                    id="s1",
+                    level=ActionLevel.NOTIFY,
+                    title="A",
+                    description="a",
+                    status=ActionStatus.COMPLETED,
+                )
+            )
+            log.record(
+                AutonomousAction(
+                    id="s2",
+                    level=ActionLevel.ACT,
+                    title="B",
+                    description="b",
+                    status=ActionStatus.PLANNED,
+                    expires_at=datetime.now() + timedelta(hours=1),
+                )
+            )
+            stats = log.get_statistics()
+            assert stats["total_actions"] == 2
+            assert stats["by_level"]["notify"] == 1
+            assert stats["by_level"]["act"] == 1
+            assert stats["pending_approval"] == 1
+
+
+class TestAutonomousExecutor:
+    """Test the executor's policy enforcement and action lifecycle."""
+
+    def test_default_policies(self):
+        from animus.autonomous import ActionLevel, ActionPolicy, AutonomousExecutor
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(Path(tmpdir))
+            assert ex.get_policy(ActionLevel.OBSERVE) == ActionPolicy.AUTO
+            assert ex.get_policy(ActionLevel.NOTIFY) == ActionPolicy.AUTO
+            assert ex.get_policy(ActionLevel.ACT) == ActionPolicy.APPROVE
+            assert ex.get_policy(ActionLevel.EXECUTE) == ActionPolicy.DENY
+
+    def test_deny_policy_blocks_action(self):
+        from animus.autonomous import (
+            ActionLevel,
+            ActionStatus,
+            AutonomousAction,
+            AutonomousExecutor,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(Path(tmpdir))
+            action = AutonomousAction(
+                id="denied-1",
+                level=ActionLevel.EXECUTE,
+                title="Blocked",
+                description="Should be denied",
+            )
+            result = ex.execute_action(action)
+            assert result.status == ActionStatus.DENIED
+            assert "denies" in result.error
+
+    def test_approve_policy_queues_action(self):
+        from animus.autonomous import (
+            ActionLevel,
+            ActionStatus,
+            AutonomousAction,
+            AutonomousExecutor,
+        )
+
+        approvals = []
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(
+                Path(tmpdir),
+                on_approval_needed=lambda a: approvals.append(a),
+            )
+            action = AutonomousAction(
+                id="approve-1",
+                level=ActionLevel.ACT,
+                title="Needs OK",
+                description="Waiting",
+                expires_at=datetime.now() + timedelta(hours=1),
+            )
+            result = ex.execute_action(action)
+            assert result.status == ActionStatus.PLANNED
+            assert len(approvals) == 1
+
+    def test_auto_policy_executes_with_cognitive(self):
+        from unittest.mock import MagicMock
+
+        from animus.autonomous import (
+            ActionLevel,
+            ActionStatus,
+            AutonomousAction,
+            AutonomousExecutor,
+        )
+
+        mock_cognitive = MagicMock()
+        mock_cognitive.think.return_value = "Done thinking"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(Path(tmpdir), cognitive=mock_cognitive)
+            action = AutonomousAction(
+                id="auto-1",
+                level=ActionLevel.OBSERVE,
+                title="Think about it",
+                description="Observe and analyze",
+            )
+            result = ex.execute_action(action)
+            assert result.status == ActionStatus.COMPLETED
+            assert result.result == "Done thinking"
+            mock_cognitive.think.assert_called_once()
+
+    def test_auto_policy_executes_with_tool(self):
+        from unittest.mock import MagicMock
+
+        from animus.autonomous import (
+            ActionLevel,
+            ActionStatus,
+            AutonomousAction,
+            AutonomousExecutor,
+        )
+
+        mock_tools = MagicMock()
+        mock_result = MagicMock()
+        mock_result.success = True
+        mock_result.output = "Tool output"
+        mock_tools.execute.return_value = mock_result
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(Path(tmpdir), tools=mock_tools)
+            action = AutonomousAction(
+                id="tool-1",
+                level=ActionLevel.NOTIFY,
+                title="Run tool",
+                description="Execute",
+                tool_name="get_datetime",
+                tool_params={"format": "%Y-%m-%d"},
+            )
+            result = ex.execute_action(action)
+            assert result.status == ActionStatus.COMPLETED
+            assert result.result == "Tool output"
+            mock_tools.execute.assert_called_once_with("get_datetime", {"format": "%Y-%m-%d"})
+
+    def test_tool_failure_records_error(self):
+        from unittest.mock import MagicMock
+
+        from animus.autonomous import (
+            ActionLevel,
+            ActionStatus,
+            AutonomousAction,
+            AutonomousExecutor,
+        )
+
+        mock_tools = MagicMock()
+        mock_result = MagicMock()
+        mock_result.success = False
+        mock_result.error = "Tool broke"
+        mock_tools.execute.return_value = mock_result
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(Path(tmpdir), tools=mock_tools)
+            action = AutonomousAction(
+                id="fail-1",
+                level=ActionLevel.NOTIFY,
+                title="Broken",
+                description="Will fail",
+                tool_name="broken_tool",
+            )
+            result = ex.execute_action(action)
+            assert result.status == ActionStatus.FAILED
+            assert result.error == "Tool broke"
+
+    def test_approve_then_execute(self):
+        from unittest.mock import MagicMock
+
+        from animus.autonomous import (
+            ActionLevel,
+            ActionPolicy,
+            ActionStatus,
+            AutonomousAction,
+            AutonomousExecutor,
+        )
+
+        mock_cognitive = MagicMock()
+        mock_cognitive.think.return_value = "Approved result"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(
+                Path(tmpdir),
+                cognitive=mock_cognitive,
+                policies={
+                    ActionLevel.OBSERVE: ActionPolicy.AUTO,
+                    ActionLevel.NOTIFY: ActionPolicy.AUTO,
+                    ActionLevel.ACT: ActionPolicy.APPROVE,
+                    ActionLevel.EXECUTE: ActionPolicy.DENY,
+                },
+            )
+            action = AutonomousAction(
+                id="appex-1",
+                level=ActionLevel.ACT,
+                title="Needs approval",
+                description="Then execute",
+                expires_at=datetime.now() + timedelta(hours=1),
+            )
+            # First attempt queues for approval
+            queued = ex.execute_action(action)
+            assert queued.status == ActionStatus.PLANNED
+
+            # Approve triggers execution
+            executed = ex.approve_action("appex-1")
+            assert executed.status == ActionStatus.COMPLETED
+            assert executed.result == "Approved result"
+
+    def test_deny_action(self):
+        from animus.autonomous import (
+            ActionLevel,
+            ActionStatus,
+            AutonomousAction,
+            AutonomousExecutor,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(Path(tmpdir))
+            action = AutonomousAction(
+                id="deny-1",
+                level=ActionLevel.ACT,
+                title="To deny",
+                description="Will be denied",
+                expires_at=datetime.now() + timedelta(hours=1),
+            )
+            ex.execute_action(action)
+            denied = ex.deny_action("deny-1")
+            assert denied.status == ActionStatus.DENIED
+            assert denied.error == "Denied by user"
+
+    def test_expired_approval(self):
+        from animus.autonomous import (
+            ActionLevel,
+            ActionStatus,
+            AutonomousAction,
+            AutonomousExecutor,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(Path(tmpdir))
+            action = AutonomousAction(
+                id="exp-1",
+                level=ActionLevel.ACT,
+                title="Expired",
+                description="Too late",
+                expires_at=datetime.now() - timedelta(hours=1),
+            )
+            ex.log.record(action)
+            result = ex.approve_action("exp-1")
+            assert result.status == ActionStatus.EXPIRED
+
+    def test_set_policy(self):
+        from animus.autonomous import ActionLevel, ActionPolicy, AutonomousExecutor
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(Path(tmpdir))
+            assert ex.get_policy(ActionLevel.EXECUTE) == ActionPolicy.DENY
+            ex.set_policy(ActionLevel.EXECUTE, ActionPolicy.APPROVE)
+            assert ex.get_policy(ActionLevel.EXECUTE) == ActionPolicy.APPROVE
+
+    def test_plan_action_for_nudge_without_cognitive(self):
+        from animus.autonomous import AutonomousExecutor
+        from animus.proactive import Nudge, NudgePriority, NudgeType
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(Path(tmpdir))
+            nudge = Nudge(
+                id="n1",
+                nudge_type=NudgeType.DEADLINE_WARNING,
+                priority=NudgePriority.HIGH,
+                title="Deadline",
+                content="Report due",
+                created_at=datetime.now(),
+            )
+            assert ex.plan_action_for_nudge(nudge) is None
+
+    def test_plan_action_for_nudge_with_cognitive(self):
+        from unittest.mock import MagicMock
+
+        from animus.autonomous import AutonomousExecutor
+        from animus.proactive import Nudge, NudgePriority, NudgeType
+
+        mock_cognitive = MagicMock()
+        mock_cognitive.think.return_value = (
+            '{"action": "Save reminder", "description": "Save deadline to memory", '
+            '"level": "act", "tool": "save_memory", "params": {"content": "Report due"}}'
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(Path(tmpdir), cognitive=mock_cognitive)
+            nudge = Nudge(
+                id="n2",
+                nudge_type=NudgeType.DEADLINE_WARNING,
+                priority=NudgePriority.HIGH,
+                title="Deadline",
+                content="Report due",
+                created_at=datetime.now(),
+            )
+            action = ex.plan_action_for_nudge(nudge)
+            assert action is not None
+            assert action.title == "Save reminder"
+            assert action.tool_name == "save_memory"
+
+    def test_plan_action_no_action_response(self):
+        from unittest.mock import MagicMock
+
+        from animus.autonomous import AutonomousExecutor
+        from animus.proactive import Nudge, NudgePriority, NudgeType
+
+        mock_cognitive = MagicMock()
+        mock_cognitive.think.return_value = "NO_ACTION - just informational"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(Path(tmpdir), cognitive=mock_cognitive)
+            nudge = Nudge(
+                id="n3",
+                nudge_type=NudgeType.FOLLOW_UP,
+                priority=NudgePriority.LOW,
+                title="FYI",
+                content="No action needed",
+                created_at=datetime.now(),
+            )
+            assert ex.plan_action_for_nudge(nudge) is None
+
+    def test_handle_nudge_end_to_end(self):
+        from unittest.mock import MagicMock
+
+        from animus.autonomous import (
+            ActionLevel,
+            ActionPolicy,
+            ActionStatus,
+            AutonomousExecutor,
+        )
+        from animus.proactive import Nudge, NudgePriority, NudgeType
+
+        mock_cognitive = MagicMock()
+        mock_cognitive.think.side_effect = [
+            # First call: plan_action_for_nudge
+            '{"action": "Check status", "description": "Look up info", '
+            '"level": "observe", "tool": null, "params": {}}',
+            # Second call: execute_action (cognitive-only)
+            "Status looks good",
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(
+                Path(tmpdir),
+                cognitive=mock_cognitive,
+                policies={
+                    ActionLevel.OBSERVE: ActionPolicy.AUTO,
+                    ActionLevel.NOTIFY: ActionPolicy.AUTO,
+                    ActionLevel.ACT: ActionPolicy.APPROVE,
+                    ActionLevel.EXECUTE: ActionPolicy.DENY,
+                },
+            )
+            nudge = Nudge(
+                id="e2e-1",
+                nudge_type=NudgeType.CONTEXT_RECALL,
+                priority=NudgePriority.LOW,
+                title="Context",
+                content="Related info found",
+                created_at=datetime.now(),
+            )
+            action = ex.handle_nudge(nudge)
+            assert action is not None
+            assert action.status == ActionStatus.COMPLETED
+            assert action.result == "Status looks good"
+
+    def test_get_statistics(self):
+        from animus.autonomous import AutonomousExecutor
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ex = AutonomousExecutor(Path(tmpdir))
+            stats = ex.get_statistics()
+            assert "total_actions" in stats
+            assert "policies" in stats
+            assert stats["policies"]["observe"] == "auto"
+
+
+class TestAutonomousConfig:
+    """Test autonomous configuration."""
+
+    def test_default_config(self):
+        from animus.config import AutonomousConfig
+
+        cfg = AutonomousConfig()
+        assert cfg.enabled is False
+        assert cfg.observe_policy == "auto"
+        assert cfg.notify_policy == "auto"
+        assert cfg.act_policy == "approve"
+        assert cfg.execute_policy == "deny"
+
+    def test_config_in_animus_config(self):
+        from animus.config import AnimusConfig
+
+        config = AnimusConfig()
+        assert hasattr(config, "autonomous")
+        assert config.autonomous.enabled is False
+
+    def test_config_serialization(self):
+        from animus.config import AnimusConfig
+
+        config = AnimusConfig()
+        config.autonomous.enabled = True
+        config.autonomous.execute_policy = "approve"
+        d = config.to_dict()
+        assert d["autonomous"]["enabled"] is True
+        assert d["autonomous"]["execute_policy"] == "approve"
+
+    def test_config_roundtrip(self):
+        from animus.config import AnimusConfig
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config = AnimusConfig(data_dir=Path(tmpdir))
+            config.autonomous.enabled = True
+            config.autonomous.act_policy = "auto"
+            config.save()
+
+            loaded = AnimusConfig.load(config.config_file)
+            assert loaded.autonomous.enabled is True
+            assert loaded.autonomous.act_policy == "auto"
+
+
+class TestProactiveExecutorIntegration:
+    """Test that proactive engine properly wires to autonomous executor."""
+
+    def test_proactive_accepts_executor(self):
+        from unittest.mock import MagicMock
+
+        from animus.autonomous import AutonomousExecutor
+        from animus.proactive import ProactiveEngine
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_memory = MagicMock()
+            mock_memory.store.list_all.return_value = []
+
+            ex = AutonomousExecutor(Path(tmpdir) / "auto")
+            engine = ProactiveEngine(Path(tmpdir), mock_memory, executor=ex)
+            assert engine.executor is ex
+
+    def test_emit_nudge_calls_executor(self):
+        from unittest.mock import MagicMock
+
+        from animus.proactive import ProactiveEngine
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_memory = MagicMock()
+            mock_memory.store.list_all.return_value = []
+            mock_memory.recall.return_value = []
+
+            mock_executor = MagicMock()
+            mock_executor.handle_nudge.return_value = None
+
+            engine = ProactiveEngine(Path(tmpdir), mock_memory, executor=mock_executor)
+            engine.generate_morning_brief()
+            mock_executor.handle_nudge.assert_called_once()
+
+    def test_executor_failure_doesnt_crash_engine(self):
+        from unittest.mock import MagicMock
+
+        from animus.proactive import ProactiveEngine
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_memory = MagicMock()
+            mock_memory.store.list_all.return_value = []
+
+            mock_executor = MagicMock()
+            mock_executor.handle_nudge.side_effect = RuntimeError("boom")
+
+            engine = ProactiveEngine(Path(tmpdir), mock_memory, executor=mock_executor)
+            # Should not raise
+            nudge = engine.generate_morning_brief()
+            assert nudge is not None
