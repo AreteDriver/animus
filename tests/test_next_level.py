@@ -1055,3 +1055,81 @@ class TestEntityLinkingOnConversationSave:
         with tempfile.TemporaryDirectory() as tmpdir:
             memory = MemoryLayer(Path(tmpdir), backend="json")
             assert memory.entity_memory is None
+
+
+class TestEntityLinkingOnRemember:
+    """Test that remember() also links entities, not just save_conversation()."""
+
+    def test_remember_links_entities(self):
+        from animus.entities import EntityMemory, EntityType
+        from animus.memory import MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            memory = MemoryLayer(Path(tmpdir), backend="json", entity_memory=em)
+
+            em.add_entity("Alice", EntityType.PERSON)
+
+            memory.remember("Alice prefers dark mode")
+
+            alice = em.find_entity("Alice")
+            assert alice.mention_count >= 1
+
+    def test_remember_creates_mentioned_with(self):
+        from animus.entities import EntityMemory, EntityType, RelationType
+        from animus.memory import MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            memory = MemoryLayer(Path(tmpdir), backend="json", entity_memory=em)
+
+            alice = em.add_entity("Alice", EntityType.PERSON)
+            bob = em.add_entity("Bob", EntityType.PERSON)
+
+            memory.remember("Alice and Bob prefer the same IDE")
+
+            src, tgt = (alice.id, bob.id) if alice.id < bob.id else (bob.id, alice.id)
+            rel = em.get_relationship(src, tgt, RelationType.MENTIONED_WITH)
+            assert rel is not None
+
+    def test_remember_without_entity_memory_works(self):
+        from animus.memory import MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            memory = MemoryLayer(Path(tmpdir), backend="json")
+
+            mem = memory.remember("Just a plain fact")
+            assert mem is not None
+            assert mem.id
+
+    def test_remember_fact_links_entities(self):
+        from animus.entities import EntityMemory, EntityType
+        from animus.memory import MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            em = EntityMemory(Path(tmpdir) / "entities")
+            memory = MemoryLayer(Path(tmpdir), backend="json", entity_memory=em)
+
+            em.add_entity("Alice", EntityType.PERSON)
+
+            memory.remember_fact("Alice", "prefers", "dark mode")
+
+            alice = em.find_entity("Alice")
+            assert alice.mention_count >= 1
+
+    def test_remember_entity_linking_failure_nonfatal(self):
+        from unittest.mock import MagicMock
+
+        from animus.memory import MemoryLayer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            memory = MemoryLayer(Path(tmpdir), backend="json")
+            # Attach a broken entity_memory that raises on extract_and_link
+            mock_em = MagicMock()
+            mock_em.extract_and_link.side_effect = RuntimeError("boom")
+            memory.entity_memory = mock_em
+
+            # Should not raise — failure is caught and logged
+            mem = memory.remember("Alice likes coffee")
+            assert mem is not None
+            assert mem.id

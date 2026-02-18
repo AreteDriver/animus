@@ -733,6 +733,14 @@ class MemoryLayer:
 
         self.store.store(memory)
         logger.info(f"Remembered {memory_type.value} memory: {content[:50]}...")
+
+        # Link entities mentioned in the content to this memory
+        if self.entity_memory:
+            try:
+                self.entity_memory.extract_and_link(content, memory_id=memory.id)
+            except Exception as e:
+                logger.debug(f"Entity linking during remember failed: {e}")
+
         return memory
 
     def remember_fact(
