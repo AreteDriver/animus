@@ -5,6 +5,7 @@ __version__ = "0.6.0"
 from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode, detect_mode
 from animus.config import AnimusConfig
 from animus.decision import Decision, DecisionFramework
+from animus.entities import Entity, EntityMemory, EntityType, RelationType
 from animus.memory import (
     Conversation,
     Memory,
@@ -14,6 +15,8 @@ from animus.memory import (
     Procedure,
     SemanticFact,
 )
+from animus.proactive import Nudge, NudgePriority, NudgeType, ProactiveEngine
+from animus.register import Register, RegisterTranslator, detect_register
 from animus.tasks import Task, TaskStatus, TaskTracker
 from animus.tools import Tool, ToolRegistry, ToolResult, create_default_registry
 
@@ -52,6 +55,9 @@ __all__ = [
     "Conversation",
     "Decision",
     "DecisionFramework",
+    "Entity",
+    "EntityMemory",
+    "EntityType",
     "Guardrail",
     "GuardrailManager",
     "LearnedItem",
@@ -62,8 +68,15 @@ __all__ = [
     "MemorySource",
     "MemoryType",
     "ModelConfig",
+    "Nudge",
+    "NudgePriority",
+    "NudgeType",
     "Procedure",
+    "ProactiveEngine",
     "ReasoningMode",
+    "Register",
+    "RegisterTranslator",
+    "RelationType",
     "SemanticFact",
     "Task",
     "TaskStatus",
@@ -77,4 +90,5 @@ __all__ = [
     "__version__",
     "create_default_registry",
     "detect_mode",
+    "detect_register",
 ]

@@ -31,6 +31,7 @@ logger = get_logger("api")
 try:
     import uvicorn
     from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+    from fastapi.responses import JSONResponse
     from fastapi.security import APIKeyHeader
 
     FASTAPI_AVAILABLE = True
@@ -242,6 +243,9 @@ class AppState:
     conversations: dict[str, Conversation]
     integrations: object | None = None  # IntegrationManager (optional)
     learning: object | None = None  # LearningLayer (optional)
+    entity_memory: object | None = None  # EntityMemory (optional)
+    proactive: object | None = None  # ProactiveEngine (optional)
+    executor: object | None = None  # AutonomousExecutor (optional)
 
 
 _state: AppState | None = None
@@ -272,6 +276,9 @@ class APIServer:
         api_key: str | None = None,
         integrations: object | None = None,
         learning: object | None = None,
+        entity_memory: object | None = None,
+        proactive: object | None = None,
+        executor: object | None = None,
     ):
         """
         Initialize API server.
@@ -287,6 +294,9 @@ class APIServer:
             api_key: Optional API key for authentication
             integrations: Optional IntegrationManager instance
             learning: Optional LearningLayer instance
+            entity_memory: Optional EntityMemory instance
+            proactive: Optional ProactiveEngine instance
+            executor: Optional AutonomousExecutor instance
         """
         if not FASTAPI_AVAILABLE:
             raise ImportError("FastAPI not installed. Install with: pip install 'animus[api]'")
@@ -301,6 +311,9 @@ class APIServer:
         self.api_key = api_key
         self.integrations = integrations
         self.learning = learning
+        self.entity_memory = entity_memory
+        self.proactive = proactive
+        self.executor = executor
 
         self._server_thread: threading.Thread | None = None
         self._server: uvicorn.Server | None = None
@@ -325,6 +338,9 @@ class APIServer:
             conversations={},
             integrations=self.integrations,
             learning=self.learning,
+            entity_memory=self.entity_memory,
+            proactive=self.proactive,
+            executor=self.executor,
         )
 
         # Update config with API key if provided
@@ -1112,5 +1128,320 @@ def create_app() -> FastAPI:
         if success:
             return {"status": "rolled_back", "unlearned_count": len(unlearned)}
         raise HTTPException(status_code=404, detail="Rollback point not found")
+
+    # =====================================================================
+    # Memory Export & Consolidation
+    # =====================================================================
+
+    @app.get("/memory/export/csv")
+    async def export_memories_csv(_auth: bool = Depends(verify_api_key)):
+        """Export all memories in CSV format."""
+        state = get_state()
+        csv_data = state.memory.export_memories_csv()
+        from starlette.responses import Response
+
+        return Response(
+            content=csv_data,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=memories.csv"},
+        )
+
+    @app.post("/memory/consolidate")
+    async def consolidate_memories(
+        max_age_days: int = 90,
+        min_group_size: int = 3,
+        _auth: bool = Depends(verify_api_key),
+    ):
+        """Consolidate old memories into summaries."""
+        state = get_state()
+        count = state.memory.consolidate(
+            max_age_days=max_age_days,
+            min_group_size=min_group_size,
+        )
+        return {"consolidated": count}
+
+    # =====================================================================
+    # Register Translation
+    # =====================================================================
+
+    @app.get("/register")
+    async def get_register(_auth: bool = Depends(verify_api_key)):
+        """Get current communication register."""
+        state = get_state()
+        return state.cognitive.register_translator.get_register_context()
+
+    @app.post("/register/{register_name}")
+    async def set_register(register_name: str, _auth: bool = Depends(verify_api_key)):
+        """Override communication register (formal, casual, technical, neutral)."""
+        from animus.register import Register
+
+        state = get_state()
+        try:
+            reg = Register(register_name)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown register: {register_name}. Use: formal, casual, technical, neutral",
+            )
+
+        if reg == Register.NEUTRAL:
+            state.cognitive.register_translator.set_override(None)
+        else:
+            state.cognitive.register_translator.set_override(reg)
+        return state.cognitive.register_translator.get_register_context()
+
+    # =====================================================================
+    # Proactive Intelligence
+    # =====================================================================
+
+    @app.get("/nudges")
+    async def get_nudges(_auth: bool = Depends(verify_api_key)):
+        """Get active proactive nudges."""
+        state = get_state()
+        if not hasattr(state, "proactive") or state.proactive is None:
+            return {"nudges": [], "count": 0}
+        nudges = state.proactive.get_active_nudges()
+        return {
+            "nudges": [n.to_dict() for n in nudges],
+            "count": len(nudges),
+        }
+
+    @app.post("/nudges/briefing")
+    async def generate_briefing(_auth: bool = Depends(verify_api_key)):
+        """Generate a morning briefing."""
+        state = get_state()
+        if not hasattr(state, "proactive") or state.proactive is None:
+            raise HTTPException(status_code=503, detail="Proactive engine not available")
+        nudge = state.proactive.generate_morning_brief()
+        return nudge.to_dict()
+
+    @app.post("/nudges/meeting-prep")
+    async def meeting_prep(topic: str, _auth: bool = Depends(verify_api_key)):
+        """Prepare context for a meeting."""
+        state = get_state()
+        if not hasattr(state, "proactive") or state.proactive is None:
+            raise HTTPException(status_code=503, detail="Proactive engine not available")
+        nudge = state.proactive.prepare_meeting_context(topic)
+        return nudge.to_dict()
+
+    @app.post("/nudges/{nudge_id}/dismiss")
+    async def dismiss_nudge(nudge_id: str, _auth: bool = Depends(verify_api_key)):
+        """Dismiss a nudge."""
+        state = get_state()
+        if not hasattr(state, "proactive") or state.proactive is None:
+            raise HTTPException(status_code=503, detail="Proactive engine not available")
+        success = state.proactive.dismiss_nudge(nudge_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Nudge not found")
+        return {"status": "dismissed"}
+
+    @app.get("/proactive/stats")
+    async def proactive_stats(_auth: bool = Depends(verify_api_key)):
+        """Get proactive engine statistics."""
+        state = get_state()
+        if not hasattr(state, "proactive") or state.proactive is None:
+            return {"background_running": False, "active_nudges": 0}
+        return state.proactive.get_statistics()
+
+    # =====================================================================
+    # Entity Memory
+    # =====================================================================
+
+    @app.get("/entities")
+    async def list_entities(
+        entity_type: str | None = None,
+        limit: int = 50,
+        _auth: bool = Depends(verify_api_key),
+    ):
+        """List tracked entities."""
+        state = get_state()
+        if not hasattr(state, "entity_memory") or state.entity_memory is None:
+            return {"entities": [], "count": 0}
+
+        from animus.entities import EntityType
+
+        etype = EntityType(entity_type) if entity_type else None
+        entities = state.entity_memory.list_entities(entity_type=etype, limit=limit)
+        return {
+            "entities": [e.to_dict() for e in entities],
+            "count": len(entities),
+        }
+
+    @app.post("/entities")
+    async def create_entity(
+        name: str,
+        entity_type: str,
+        aliases: str | None = None,
+        notes: str = "",
+        _auth: bool = Depends(verify_api_key),
+    ):
+        """Add a new entity."""
+        state = get_state()
+        if not hasattr(state, "entity_memory") or state.entity_memory is None:
+            raise HTTPException(status_code=503, detail="Entity memory not available")
+
+        from animus.entities import EntityType
+
+        try:
+            etype = EntityType(entity_type)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Unknown entity type: {entity_type}")
+
+        alias_list = [a.strip() for a in aliases.split(",")] if aliases else []
+        entity = state.entity_memory.add_entity(
+            name=name, entity_type=etype, aliases=alias_list, notes=notes
+        )
+        return entity.to_dict()
+
+    @app.get("/entities/search")
+    async def search_entities(
+        query: str,
+        entity_type: str | None = None,
+        _auth: bool = Depends(verify_api_key),
+    ):
+        """Search entities by name, alias, or content."""
+        state = get_state()
+        if not hasattr(state, "entity_memory") or state.entity_memory is None:
+            return {"entities": [], "count": 0}
+
+        from animus.entities import EntityType
+
+        etype = EntityType(entity_type) if entity_type else None
+        results = state.entity_memory.search_entities(query, entity_type=etype)
+        return {
+            "entities": [e.to_dict() for e in results],
+            "count": len(results),
+        }
+
+    @app.get("/entities/{entity_id}")
+    async def get_entity(entity_id: str, _auth: bool = Depends(verify_api_key)):
+        """Get entity details with context."""
+        state = get_state()
+        if not hasattr(state, "entity_memory") or state.entity_memory is None:
+            raise HTTPException(status_code=503, detail="Entity memory not available")
+
+        entity = state.entity_memory.get_entity(entity_id)
+        if not entity:
+            raise HTTPException(status_code=404, detail="Entity not found")
+
+        context = state.entity_memory.generate_entity_context(entity_id)
+        data = entity.to_dict()
+        data["context"] = context
+        data["relationships"] = [
+            r.to_dict() for r in state.entity_memory.get_relationships_for(entity_id)
+        ]
+        return data
+
+    @app.delete("/entities/{entity_id}")
+    async def delete_entity(entity_id: str, _auth: bool = Depends(verify_api_key)):
+        """Delete an entity."""
+        state = get_state()
+        if not hasattr(state, "entity_memory") or state.entity_memory is None:
+            raise HTTPException(status_code=503, detail="Entity memory not available")
+
+        success = state.entity_memory.delete_entity(entity_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Entity not found")
+        return {"status": "deleted"}
+
+    @app.get("/entities/{entity_id}/timeline")
+    async def entity_timeline(
+        entity_id: str,
+        limit: int = 20,
+        _auth: bool = Depends(verify_api_key),
+    ):
+        """Get interaction timeline for an entity."""
+        state = get_state()
+        if not hasattr(state, "entity_memory") or state.entity_memory is None:
+            raise HTTPException(status_code=503, detail="Entity memory not available")
+
+        timeline = state.entity_memory.get_interaction_timeline(entity_id, limit=limit)
+        return {
+            "entity_id": entity_id,
+            "interactions": [i.to_dict() for i in timeline],
+        }
+
+    @app.get("/entities/stats")
+    async def entity_stats(_auth: bool = Depends(verify_api_key)):
+        """Get entity memory statistics."""
+        state = get_state()
+        if not hasattr(state, "entity_memory") or state.entity_memory is None:
+            return {"total_entities": 0}
+        return state.entity_memory.get_statistics()
+
+    # =====================================================================
+    # Dashboard
+    # =====================================================================
+
+    # =====================================================================
+    # Autonomous Action Endpoints
+    # =====================================================================
+
+    @app.get("/autonomous/actions")
+    async def list_autonomous_actions(limit: int = 20, _auth: bool = Depends(verify_api_key)):
+        """List recent autonomous actions."""
+        state = get_state()
+        ex = getattr(state, "executor", None)
+        if not ex:
+            return {"actions": [], "enabled": False}
+        return {
+            "actions": [a.to_dict() for a in ex.get_recent_actions(limit)],
+            "enabled": True,
+        }
+
+    @app.get("/autonomous/pending")
+    async def list_pending_actions(_auth: bool = Depends(verify_api_key)):
+        """List actions awaiting user approval."""
+        state = get_state()
+        ex = getattr(state, "executor", None)
+        if not ex:
+            return {"actions": []}
+        return {"actions": [a.to_dict() for a in ex.get_pending_actions()]}
+
+    @app.post("/autonomous/actions/{action_id}/approve")
+    async def approve_action(action_id: str, _auth: bool = Depends(verify_api_key)):
+        """Approve a pending autonomous action."""
+        state = get_state()
+        ex = getattr(state, "executor", None)
+        if not ex:
+            return JSONResponse(
+                status_code=404, content={"detail": "Autonomous executor not enabled"}
+            )
+        action = ex.approve_action(action_id)
+        if not action:
+            return JSONResponse(status_code=404, content={"detail": "Action not found"})
+        return action.to_dict()
+
+    @app.post("/autonomous/actions/{action_id}/deny")
+    async def deny_action(action_id: str, _auth: bool = Depends(verify_api_key)):
+        """Deny a pending autonomous action."""
+        state = get_state()
+        ex = getattr(state, "executor", None)
+        if not ex:
+            return JSONResponse(
+                status_code=404, content={"detail": "Autonomous executor not enabled"}
+            )
+        action = ex.deny_action(action_id)
+        if not action:
+            return JSONResponse(status_code=404, content={"detail": "Action not found"})
+        return action.to_dict()
+
+    @app.get("/autonomous/stats")
+    async def autonomous_stats(_auth: bool = Depends(verify_api_key)):
+        """Get autonomous executor statistics."""
+        state = get_state()
+        ex = getattr(state, "executor", None)
+        if not ex:
+            return {"enabled": False}
+        stats = ex.get_statistics()
+        stats["enabled"] = True
+        return stats
+
+    try:
+        from animus.dashboard import add_dashboard_routes
+
+        add_dashboard_routes(app, get_state, verify_api_key)
+    except ImportError:
+        pass
 
     return app

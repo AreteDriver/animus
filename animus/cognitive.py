@@ -16,10 +16,13 @@ from typing import TYPE_CHECKING
 
 from animus.logging import get_logger
 from animus.protocols.intelligence import IntelligenceProvider
+from animus.register import RegisterTranslator
 
 if TYPE_CHECKING:
+    from animus.entities import EntityMemory
     from animus.learning import LearningLayer
     from animus.memory import MemoryLayer
+    from animus.proactive import ProactiveEngine
     from animus.tools import ToolRegistry
 
 logger = get_logger("cognitive")
@@ -237,6 +240,59 @@ class AnthropicModel(ModelInterface):
         yield self.generate(prompt, system)
 
 
+class OpenAIModel(ModelInterface):
+    """OpenAI-compatible model interface.
+
+    Works with OpenAI's API as well as any OpenAI-compatible endpoint
+    (e.g. LM Studio, vLLM, text-generation-webui, Together, Groq, etc.)
+    by setting a custom base_url.
+    """
+
+    def __init__(self, config: ModelConfig):
+        self.config = config
+        logger.debug(f"OpenAIModel initialized with {config.model_name}")
+
+    def generate(self, prompt: str, system: str | None = None) -> str:
+        """Generate using OpenAI-compatible API."""
+        try:
+            import openai
+
+            client_kwargs: dict = {}
+            if self.config.api_key:
+                client_kwargs["api_key"] = self.config.api_key
+            if self.config.base_url:
+                client_kwargs["base_url"] = self.config.base_url
+
+            client = openai.OpenAI(**client_kwargs)
+
+            messages: list[dict] = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+
+            logger.debug(
+                f"OpenAI request: model={self.config.model_name}, prompt_len={len(prompt)}"
+            )
+            response = client.chat.completions.create(
+                model=self.config.model_name,
+                messages=messages,
+            )
+            result = response.choices[0].message.content or ""
+            logger.debug(f"OpenAI response: len={len(result)}")
+            return result
+
+        except ImportError:
+            logger.error("openai package not installed")
+            return "[Error: openai package not installed. Install with: pip install openai]"
+        except Exception as e:
+            logger.error(f"OpenAI error: {e}")
+            return f"[Error communicating with OpenAI: {e}]"
+
+    async def generate_stream(self, prompt: str, system: str | None = None) -> AsyncIterator[str]:
+        """Streaming generation - to be implemented."""
+        yield self.generate(prompt, system)
+
+
 def create_model(config: ModelConfig) -> ModelInterface:
     """Factory function to create the appropriate model interface."""
     if config.provider == ModelProvider.MOCK:
@@ -245,6 +301,8 @@ def create_model(config: ModelConfig) -> ModelInterface:
         return OllamaModel(config)
     elif config.provider == ModelProvider.ANTHROPIC:
         return AnthropicModel(config)
+    elif config.provider == ModelProvider.OPENAI:
+        return OpenAIModel(config)
     else:
         raise ValueError(f"Unsupported provider: {config.provider}")
 
@@ -261,10 +319,15 @@ class CognitiveLayer:
         primary_config: ModelConfig | None = None,
         fallback_config: ModelConfig | None = None,
         learning: "LearningLayer | None" = None,
+        entity_memory: "EntityMemory | None" = None,
+        proactive: "ProactiveEngine | None" = None,
     ):
         self.primary_config = primary_config or ModelConfig.ollama()
         self.fallback_config = fallback_config
         self.learning = learning
+        self.entity_memory = entity_memory
+        self.proactive = proactive
+        self.register_translator = RegisterTranslator()
 
         self.primary: IntelligenceProvider = create_model(self.primary_config)
         self.fallback: IntelligenceProvider | None = (
@@ -293,22 +356,69 @@ class CognitiveLayer:
         Returns:
             Generated response
         """
-        # Build system prompt
+        # Detect user's register and build system prompt
+        self.register_translator.detect_and_set(prompt)
+
+        # Enrich context with entity knowledge
+        context = self._enrich_context(prompt, context)
+
         system = self._build_system_prompt(context, mode)
         logger.debug(
-            f"Thinking with mode={mode.value}, context_len={len(context) if context else 0}"
+            f"Thinking with mode={mode.value}, "
+            f"register={self.register_translator.active_register.value}, "
+            f"context_len={len(context) if context else 0}"
         )
 
         # Try primary model
         try:
-            return self.primary.generate(prompt, system)
+            response = self.primary.generate(prompt, system)
         except Exception as e:
             logger.warning(f"Primary model failed: {e}")
             # Fall back if available
             if self.fallback:
                 logger.info("Falling back to secondary model")
-                return self.fallback.generate(prompt, system)
-            raise e
+                response = self.fallback.generate(prompt, system)
+            else:
+                raise e
+
+        # Post-processing: extract entities from the conversation
+        if self.entity_memory:
+            try:
+                self.entity_memory.extract_and_link(prompt)
+            except Exception as e:
+                logger.debug(f"Entity extraction failed: {e}")
+
+        return response
+
+    def _enrich_context(self, prompt: str, context: str | None) -> str | None:
+        """Enrich context with entity knowledge and proactive nudges."""
+        extra_parts = []
+
+        # Entity context
+        if self.entity_memory:
+            try:
+                entity_context = self.entity_memory.get_context_for_text(prompt)
+                if entity_context:
+                    extra_parts.append(entity_context)
+            except Exception as e:
+                logger.debug(f"Entity context generation failed: {e}")
+
+        # Proactive context nudge
+        if self.proactive:
+            try:
+                nudge = self.proactive.generate_context_nudge(prompt)
+                if nudge:
+                    extra_parts.append(f"Related past context:\n{nudge.content}")
+            except Exception as e:
+                logger.debug(f"Context nudge generation failed: {e}")
+
+        if not extra_parts:
+            return context
+
+        enrichment = "\n\n".join(extra_parts)
+        if context:
+            return f"{context}\n\n{enrichment}"
+        return enrichment
 
     def _build_system_prompt(
         self,
@@ -356,6 +466,9 @@ To use a tool, respond with a JSON block in this format:
 
 You can use multiple tools. After tool results are returned, continue your response.
 When you have gathered enough information, provide your final answer."""
+
+        # Apply register translation
+        base = self.register_translator.adapt_prompt(base)
 
         return base
 

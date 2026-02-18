@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 from animus.logging import get_logger
 
 if TYPE_CHECKING:
+    from animus.entities import EntityMemory
     from animus.protocols.memory import MemoryProvider
 
 logger = get_logger("memory")
@@ -415,6 +416,34 @@ class ChromaMemoryStore(MemoryStore):
     Provides semantic search using embeddings.
     """
 
+    @staticmethod
+    def prewarm() -> bool:
+        """
+        Pre-download the sentence-transformer model used by ChromaDB.
+
+        Call this during setup/install to avoid the ~3s cold-start delay
+        on first use. Safe to call multiple times (no-op if already cached).
+
+        Returns:
+            True if model is ready, False on error
+        """
+        try:
+            from sentence_transformers import SentenceTransformer
+
+            logger.info("Pre-warming ChromaDB embedding model...")
+            SentenceTransformer("all-MiniLM-L6-v2")
+            logger.info("ChromaDB embedding model ready")
+            return True
+        except ImportError:
+            logger.warning(
+                "sentence-transformers not installed. "
+                "ChromaDB will download the model on first use."
+            )
+            return False
+        except Exception as e:
+            logger.warning(f"Failed to pre-warm ChromaDB model: {e}")
+            return False
+
     def __init__(self, data_dir: Path, collection_name: str = "animus_memories"):
         self.data_dir = data_dir
         self.collection_name = collection_name
@@ -639,9 +668,17 @@ class MemoryLayer:
     Coordinates between different memory types and storage backends.
     """
 
-    def __init__(self, data_dir: Path, backend: str = "chroma"):
+    def __init__(
+        self,
+        data_dir: Path,
+        backend: str = "chroma",
+        entity_memory: "EntityMemory | None" = None,
+        auto_discover_entities: bool = False,
+    ):
         self.data_dir = data_dir
         self.backend_type = backend
+        self.entity_memory = entity_memory
+        self.auto_discover_entities = auto_discover_entities
 
         self.store: MemoryProvider
         if backend == "chroma":
@@ -698,6 +735,18 @@ class MemoryLayer:
 
         self.store.store(memory)
         logger.info(f"Remembered {memory_type.value} memory: {content[:50]}...")
+
+        # Link entities mentioned in the content to this memory
+        if self.entity_memory:
+            try:
+                self.entity_memory.extract_and_link(
+                    content,
+                    memory_id=memory.id,
+                    auto_discover=self.auto_discover_entities,
+                )
+            except Exception as e:
+                logger.debug(f"Entity linking during remember failed: {e}")
+
         return memory
 
     def remember_fact(
@@ -844,15 +893,24 @@ class MemoryLayer:
         return self.store.get_all_tags()
 
     def forget(self, memory_id: str) -> bool:
-        """Delete a specific memory."""
+        """Delete a specific memory and clean up entity references."""
         # Try partial match
         memory = self.get_memory(memory_id)
         if memory:
-            return self.store.delete(memory.id)
+            deleted = self.store.delete(memory.id)
+            if deleted and self.entity_memory:
+                try:
+                    self.entity_memory.remove_interactions_for_memory(memory.id)
+                except Exception as e:
+                    logger.debug(f"Entity cleanup during forget failed: {e}")
+            return deleted
         return False
 
     def save_conversation(self, conversation: Conversation) -> Memory:
-        """Save a conversation as an episodic memory."""
+        """Save a conversation as an episodic memory.
+
+        Entity linking is handled by remember() automatically.
+        """
         conversation.ended_at = datetime.now()
         content = conversation.to_memory_content()
 
@@ -911,6 +969,17 @@ class MemoryLayer:
             self.store.store(memory)
             count += 1
 
+            # Link entities mentioned in the imported memory
+            if self.entity_memory:
+                try:
+                    self.entity_memory.extract_and_link(
+                        memory.content,
+                        memory_id=memory.id,
+                        auto_discover=self.auto_discover_entities,
+                    )
+                except Exception as e:
+                    logger.debug(f"Entity linking during import failed: {e}")
+
         logger.info(f"Imported {count} memories")
         return count
 
@@ -955,10 +1024,129 @@ class MemoryLayer:
             "top_tags": sorted(tags.items(), key=lambda x: x[1], reverse=True)[:10],
         }
 
-    def consolidate(self):
+    def consolidate(self, max_age_days: int = 90, min_group_size: int = 3) -> int:
         """
-        Consolidate memories - summarize and compress.
+        Consolidate memories by grouping related older memories into summaries.
 
-        TODO: Implement summarization logic
+        Groups episodic memories that share tags and are older than max_age_days,
+        then replaces each group with a single summary memory.
+
+        Args:
+            max_age_days: Only consolidate memories older than this many days
+            min_group_size: Minimum group size required to trigger consolidation
+
+        Returns:
+            Number of memories consolidated (removed)
         """
-        pass
+        from datetime import timedelta
+
+        cutoff = datetime.now() - timedelta(days=max_age_days)
+        all_memories = self.store.list_all(memory_type=MemoryType.EPISODIC)
+
+        # Filter to old memories
+        old_memories = [m for m in all_memories if m.created_at < cutoff]
+        if not old_memories:
+            logger.info("No memories old enough to consolidate")
+            return 0
+
+        # Group by primary tag (first tag, or "untagged")
+        groups: dict[str, list[Memory]] = {}
+        for mem in old_memories:
+            group_key = mem.tags[0] if mem.tags else "untagged"
+            if group_key not in groups:
+                groups[group_key] = []
+            groups[group_key].append(mem)
+
+        consolidated_count = 0
+        for group_key, memories in groups.items():
+            if len(memories) < min_group_size:
+                continue
+
+            # Sort by date
+            memories.sort(key=lambda m: m.created_at)
+            date_range = (
+                f"{memories[0].created_at.strftime('%Y-%m-%d')} to "
+                f"{memories[-1].created_at.strftime('%Y-%m-%d')}"
+            )
+
+            # Build summary from content snippets
+            snippets = [m.content[:150] for m in memories]
+            summary_content = (
+                f"Consolidated summary ({date_range}, {len(memories)} items, "
+                f"tag: {group_key}):\n- " + "\n- ".join(snippets)
+            )
+
+            # Collect all tags from the group
+            all_tags: set[str] = set()
+            for mem in memories:
+                all_tags.update(mem.tags)
+            all_tags.add("consolidated")
+
+            # Create summary memory
+            self.remember(
+                content=summary_content,
+                memory_type=MemoryType.EPISODIC,
+                tags=list(all_tags),
+                source="learned",
+                confidence=0.9,
+                subtype="consolidated",
+            )
+
+            # Remove originals and clean up entity references
+            for mem in memories:
+                self.store.delete(mem.id)
+                if self.entity_memory:
+                    try:
+                        self.entity_memory.remove_interactions_for_memory(mem.id)
+                    except Exception as e:
+                        logger.debug(f"Entity cleanup during consolidation failed: {e}")
+                consolidated_count += 1
+
+        logger.info(f"Consolidated {consolidated_count} memories into summaries")
+        return consolidated_count
+
+    def export_memories_csv(self) -> str:
+        """
+        Export all memories to CSV format.
+
+        Returns:
+            CSV string with headers
+        """
+        import csv
+        import io
+
+        memories = self.store.list_all()
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Header
+        writer.writerow(
+            [
+                "id",
+                "content",
+                "memory_type",
+                "created_at",
+                "updated_at",
+                "tags",
+                "source",
+                "confidence",
+                "subtype",
+            ]
+        )
+
+        for mem in memories:
+            writer.writerow(
+                [
+                    mem.id,
+                    mem.content,
+                    mem.memory_type.value,
+                    mem.created_at.isoformat(),
+                    mem.updated_at.isoformat(),
+                    ";".join(mem.tags),
+                    mem.source,
+                    mem.confidence,
+                    mem.subtype or "",
+                ]
+            )
+
+        return output.getvalue()

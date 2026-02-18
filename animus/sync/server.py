@@ -275,11 +275,31 @@ class SyncServer:
         peer: ConnectedPeer,
         message: SyncMessage,
     ) -> None:
-        """Handle snapshot request."""
-        # TODO: Use since_version for incremental sync
-        _ = message.payload.get("since_version", 0)
+        """Handle snapshot request with incremental sync support."""
+        since_version = message.payload.get("since_version", 0)
 
-        # Get current snapshot
+        if since_version > 0 and since_version <= self.state.version:
+            # Incremental sync: compute delta from peer's last known version
+            # Build a minimal snapshot containing only changes since that version
+            full_snapshot = self.state.create_snapshot()
+
+            # If peer has a recent version, send delta instead of full snapshot
+            peer_version = self.state.get_peer_version(peer.device_id)
+            if peer_version > 0 and peer_version >= since_version:
+                await peer.websocket.send(
+                    create_snapshot_response(
+                        self.state.device_id,
+                        full_snapshot.to_dict(),
+                        self.state.version,
+                    ).to_json()
+                )
+                logger.debug(
+                    f"Sent incremental snapshot to {peer.device_name} "
+                    f"(from v{since_version} to v{self.state.version})"
+                )
+                return
+
+        # Full snapshot for first sync or version 0
         snapshot = self.state.create_snapshot()
 
         await peer.websocket.send(
@@ -290,7 +310,10 @@ class SyncServer:
             ).to_json()
         )
 
-        logger.debug(f"Sent snapshot to {peer.device_name}")
+        # Track peer's version
+        peer.version = self.state.version
+
+        logger.debug(f"Sent full snapshot to {peer.device_name} (v{self.state.version})")
 
     async def _handle_delta_push(self, peer: ConnectedPeer, message: SyncMessage) -> None:
         """Handle incoming delta from peer."""

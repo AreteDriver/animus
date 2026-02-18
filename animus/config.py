@@ -18,13 +18,21 @@ def default_data_dir() -> Path:
 
 @dataclass
 class ModelConfig:
-    """Configuration for the cognitive model."""
+    """Configuration for the cognitive model.
+
+    Supports three providers:
+      - "ollama"    — local models via Ollama (default)
+      - "anthropic" — Claude models via Anthropic API
+      - "openai"    — OpenAI models, or any OpenAI-compatible endpoint
+                      (LM Studio, vLLM, Together, Groq, etc.) via openai_base_url
+    """
 
     provider: str = "ollama"
     name: str = "llama3:8b"
     ollama_url: str = "http://localhost:11434"
     anthropic_api_key: str | None = None
     openai_api_key: str | None = None
+    openai_base_url: str | None = None  # For OpenAI-compatible endpoints
 
     def __post_init__(self):
         # Allow environment overrides
@@ -33,6 +41,7 @@ class ModelConfig:
         self.ollama_url = os.environ.get("ANIMUS_OLLAMA_URL", self.ollama_url)
         self.anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY", self.anthropic_api_key)
         self.openai_api_key = os.environ.get("OPENAI_API_KEY", self.openai_api_key)
+        self.openai_base_url = os.environ.get("OPENAI_BASE_URL", self.openai_base_url)
 
 
 @dataclass
@@ -210,6 +219,73 @@ class LearningConfig:
 
 
 @dataclass
+class ProactiveConfig:
+    """Configuration for the proactive intelligence system."""
+
+    enabled: bool = True
+    background_enabled: bool = False
+    background_interval_seconds: int = 300
+    deadline_scan_interval_minutes: int = 60
+    follow_up_scan_interval_minutes: int = 120
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("ANIMUS_PROACTIVE_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+        if env_bg := os.environ.get("ANIMUS_PROACTIVE_BACKGROUND"):
+            self.background_enabled = env_bg.lower() in ("true", "1", "yes")
+
+
+@dataclass
+class EntityConfig:
+    """Configuration for the entity/relationship memory system."""
+
+    enabled: bool = True
+    auto_extract: bool = True  # Auto-extract entities from conversations
+    auto_discover: bool = False  # Auto-discover new entities via heuristic NER
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("ANIMUS_ENTITIES_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+        if env_extract := os.environ.get("ANIMUS_ENTITIES_AUTO_EXTRACT"):
+            self.auto_extract = env_extract.lower() in ("true", "1", "yes")
+        if env_discover := os.environ.get("ANIMUS_ENTITIES_AUTO_DISCOVER"):
+            self.auto_discover = env_discover.lower() in ("true", "1", "yes")
+
+
+@dataclass
+class AutonomousConfig:
+    """Configuration for the autonomous action system.
+
+    Controls whether Animus can take independent actions and at what
+    risk levels. Policies map action levels to handling strategies:
+      - "auto"    — execute without asking
+      - "approve" — queue for user approval
+      - "deny"    — never execute autonomously
+
+    Default is conservative: only observe/notify are auto, act requires
+    approval, execute is denied.
+    """
+
+    enabled: bool = False  # Master switch — off by default
+    observe_policy: str = "auto"
+    notify_policy: str = "auto"
+    act_policy: str = "approve"
+    execute_policy: str = "deny"
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("ANIMUS_AUTONOMOUS_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+        if env_obs := os.environ.get("ANIMUS_AUTONOMOUS_OBSERVE_POLICY"):
+            self.observe_policy = env_obs
+        if env_not := os.environ.get("ANIMUS_AUTONOMOUS_NOTIFY_POLICY"):
+            self.notify_policy = env_not
+        if env_act := os.environ.get("ANIMUS_AUTONOMOUS_ACT_POLICY"):
+            self.act_policy = env_act
+        if env_exec := os.environ.get("ANIMUS_AUTONOMOUS_EXECUTE_POLICY"):
+            self.execute_policy = env_exec
+
+
+@dataclass
 class AnimusConfig:
     """Main configuration for Animus."""
 
@@ -223,6 +299,9 @@ class AnimusConfig:
     integrations: IntegrationConfig = field(default_factory=IntegrationConfig)
     learning: LearningConfig = field(default_factory=LearningConfig)
     tools_security: ToolsSecurityConfig = field(default_factory=ToolsSecurityConfig)
+    proactive: ProactiveConfig = field(default_factory=ProactiveConfig)
+    entities: EntityConfig = field(default_factory=EntityConfig)
+    autonomous: AutonomousConfig = field(default_factory=AutonomousConfig)
 
     def __post_init__(self):
         # Convert string to Path if needed
@@ -268,6 +347,7 @@ class AnimusConfig:
                 "provider": self.model.provider,
                 "name": self.model.name,
                 "ollama_url": self.model.ollama_url,
+                "openai_base_url": self.model.openai_base_url,
             },
             "memory": {
                 "backend": self.memory.backend,
@@ -309,6 +389,23 @@ class AnimusConfig:
                 "min_pattern_occurrences": self.learning.min_pattern_occurrences,
                 "min_pattern_confidence": self.learning.min_pattern_confidence,
                 "lookback_days": self.learning.lookback_days,
+            },
+            "proactive": {
+                "enabled": self.proactive.enabled,
+                "background_enabled": self.proactive.background_enabled,
+                "background_interval_seconds": self.proactive.background_interval_seconds,
+            },
+            "entities": {
+                "enabled": self.entities.enabled,
+                "auto_extract": self.entities.auto_extract,
+                "auto_discover": self.entities.auto_discover,
+            },
+            "autonomous": {
+                "enabled": self.autonomous.enabled,
+                "observe_policy": self.autonomous.observe_policy,
+                "notify_policy": self.autonomous.notify_policy,
+                "act_policy": self.autonomous.act_policy,
+                "execute_policy": self.autonomous.execute_policy,
             },
         }
 
@@ -354,6 +451,8 @@ class AnimusConfig:
                     config.model.name = model_data["name"]
                 if "ollama_url" in model_data:
                     config.model.ollama_url = model_data["ollama_url"]
+                if "openai_base_url" in model_data:
+                    config.model.openai_base_url = model_data["openai_base_url"]
 
             if memory_data := data.get("memory"):
                 if "backend" in memory_data:
@@ -431,6 +530,36 @@ class AnimusConfig:
                 if "lookback_days" in learning_data:
                     config.learning.lookback_days = learning_data["lookback_days"]
 
+            if proactive_data := data.get("proactive"):
+                if "enabled" in proactive_data:
+                    config.proactive.enabled = proactive_data["enabled"]
+                if "background_enabled" in proactive_data:
+                    config.proactive.background_enabled = proactive_data["background_enabled"]
+                if "background_interval_seconds" in proactive_data:
+                    config.proactive.background_interval_seconds = proactive_data[
+                        "background_interval_seconds"
+                    ]
+
+            if entity_data := data.get("entities"):
+                if "enabled" in entity_data:
+                    config.entities.enabled = entity_data["enabled"]
+                if "auto_extract" in entity_data:
+                    config.entities.auto_extract = entity_data["auto_extract"]
+                if "auto_discover" in entity_data:
+                    config.entities.auto_discover = entity_data["auto_discover"]
+
+            if autonomous_data := data.get("autonomous"):
+                if "enabled" in autonomous_data:
+                    config.autonomous.enabled = autonomous_data["enabled"]
+                if "observe_policy" in autonomous_data:
+                    config.autonomous.observe_policy = autonomous_data["observe_policy"]
+                if "notify_policy" in autonomous_data:
+                    config.autonomous.notify_policy = autonomous_data["notify_policy"]
+                if "act_policy" in autonomous_data:
+                    config.autonomous.act_policy = autonomous_data["act_policy"]
+                if "execute_policy" in autonomous_data:
+                    config.autonomous.execute_policy = autonomous_data["execute_policy"]
+
             # Re-apply environment overrides
             config.__post_init__()
             config.model.__post_init__()
@@ -442,6 +571,9 @@ class AnimusConfig:
             config.integrations.filesystem.__post_init__()
             config.integrations.webhooks.__post_init__()
             config.learning.__post_init__()
+            config.proactive.__post_init__()
+            config.entities.__post_init__()
+            config.autonomous.__post_init__()
 
         return config
 
