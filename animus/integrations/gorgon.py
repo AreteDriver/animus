@@ -1,9 +1,12 @@
 """
-Gorgon Integration — Connects Animus to Gorgon's task queue API.
+Gorgon Integration — Connects Animus to Gorgon's orchestration API.
 
 Gorgon is a headless multi-agent orchestration engine. This integration
 allows Animus to delegate complex tasks (code review, refactoring, testing,
 security audits) to Gorgon's autonomous agent pipeline.
+
+Supports both the legacy task queue API (/v1/tasks) and the workflow
+execution API (/v1/workflows, /v1/executions) with approval gates.
 
 Requires: httpx (optional dependency)
 """
@@ -12,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from animus.integrations.base import AuthType, BaseIntegration
@@ -31,7 +35,7 @@ except ImportError:
 
 
 class GorgonClient:
-    """Async HTTP client for Gorgon's task queue API."""
+    """Async HTTP client for Gorgon's orchestration API."""
 
     def __init__(
         self,
@@ -135,11 +139,148 @@ class GorgonClient:
 
         while time.monotonic() - start < max_wait:
             result = await self.get_task(task_id)
-            if result.get("status") in ("completed", "failed", "cancelled"):
+            if result.get("status") in (
+                "completed",
+                "failed",
+                "cancelled",
+                "awaiting_approval",
+            ):
                 return result
             await asyncio.sleep(poll_interval)
 
         return await self.get_task(task_id)
+
+    # ------------------------------------------------------------------
+    # Workflow execution API (targets /v1/workflows and /v1/executions)
+    # ------------------------------------------------------------------
+
+    async def execute_workflow(
+        self,
+        workflow_id: str,
+        variables: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Start a workflow execution on Gorgon.
+
+        Returns: {execution_id, workflow_id, workflow_name, status, poll_url}
+        """
+        client = await self._ensure_client()
+        payload: dict[str, Any] = {"variables": variables or {}}
+        resp = await client.post(f"/v1/workflows/{workflow_id}/execute", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_execution(self, execution_id: str) -> dict[str, Any]:
+        """Get execution status and details."""
+        client = await self._ensure_client()
+        resp = await client.get(f"/v1/executions/{execution_id}")
+        resp.raise_for_status()
+        return resp.json()
+
+    async def list_executions(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        status: str | None = None,
+    ) -> dict[str, Any]:
+        """List workflow executions with pagination."""
+        client = await self._ensure_client()
+        params: dict[str, Any] = {"page": page, "page_size": page_size}
+        if status:
+            params["status"] = status
+        resp = await client.get("/v1/executions", params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_approval_status(self, execution_id: str) -> dict[str, Any]:
+        """Get pending approval details for an execution.
+
+        Returns: {execution_id, pending_approvals: [...], total_tokens}
+        """
+        client = await self._ensure_client()
+        resp = await client.get(f"/v1/executions/{execution_id}/approval")
+        resp.raise_for_status()
+        return resp.json()
+
+    async def resume_execution(
+        self,
+        execution_id: str,
+        token: str | None = None,
+        approve: bool = True,
+        approved_by: str = "animus",
+        reason: str = "",
+    ) -> dict[str, Any]:
+        """Resume a paused or approval-awaiting execution.
+
+        For approval gates, token is required.
+        """
+        client = await self._ensure_client()
+        body: dict[str, Any] | None = None
+        if token:
+            body = {
+                "token": token,
+                "approve": approve,
+                "approved_by": approved_by,
+            }
+            if reason:
+                body["reason"] = reason
+        resp = await client.post(f"/v1/executions/{execution_id}/resume", json=body)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def cancel_execution(self, execution_id: str) -> dict[str, Any]:
+        """Cancel a running or paused execution."""
+        client = await self._ensure_client()
+        resp = await client.post(f"/v1/executions/{execution_id}/cancel")
+        resp.raise_for_status()
+        return resp.json()
+
+    async def execute_and_wait(
+        self,
+        workflow_id: str,
+        variables: dict[str, Any] | None = None,
+        poll_interval: float = 5.0,
+        max_wait: float = 300.0,
+        on_approval: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
+    ) -> dict[str, Any]:
+        """Execute a workflow and poll until completion.
+
+        If the execution enters ``awaiting_approval`` and *on_approval*
+        is provided, the callback receives the approval info dict and
+        must return ``{"approve": bool, "reason": str}``.
+
+        Without a callback, returns immediately when an approval gate
+        is reached so the caller can handle it.
+        """
+        exec_result = await self.execute_workflow(workflow_id, variables)
+        execution_id = exec_result["execution_id"]
+        start = time.monotonic()
+
+        while time.monotonic() - start < max_wait:
+            execution = await self.get_execution(execution_id)
+            status = execution.get("status")
+
+            if status in ("completed", "failed", "cancelled"):
+                return execution
+
+            if status == "awaiting_approval":
+                if on_approval is None:
+                    return execution
+                approval_info = await self.get_approval_status(execution_id)
+                decision = await on_approval(approval_info)
+                for pending in approval_info.get("pending_approvals", []):
+                    if pending.get("status") == "pending":
+                        await self.resume_execution(
+                            execution_id,
+                            token=pending["token"],
+                            approve=decision.get("approve", True),
+                            approved_by="animus",
+                            reason=decision.get("reason", ""),
+                        )
+                # Continue polling after approval
+
+            await asyncio.sleep(poll_interval)
+
+        return await self.get_execution(execution_id)
 
 
 class GorgonIntegration(BaseIntegration):

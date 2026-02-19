@@ -706,3 +706,263 @@ class TestIntegrationsInit:
         import animus.integrations
 
         assert "GorgonIntegration" in animus.integrations.__all__
+
+
+# =============================================================================
+# GorgonClient Execution API Tests
+# =============================================================================
+
+
+class TestGorgonClientExecutions:
+    """Tests for execution API methods on GorgonClient."""
+
+    def _make_client(self):
+        from animus.integrations.gorgon import GorgonClient
+
+        client = GorgonClient()
+        mock_http = AsyncMock()
+        mock_http.is_closed = False
+        client._client = mock_http
+        return client, mock_http
+
+    def _mock_response(self, data):
+        resp = MagicMock()
+        resp.json.return_value = data
+        resp.raise_for_status = MagicMock()
+        return resp
+
+    def test_execute_workflow(self):
+        client, mock_http = self._make_client()
+        mock_http.post.return_value = self._mock_response(
+            {"execution_id": "exec-1", "status": "running", "poll_url": "/v1/executions/exec-1"}
+        )
+
+        async def _run():
+            result = await client.execute_workflow("my-workflow", {"key": "val"})
+            assert result["execution_id"] == "exec-1"
+            mock_http.post.assert_awaited_once_with(
+                "/v1/workflows/my-workflow/execute",
+                json={"variables": {"key": "val"}},
+            )
+
+        asyncio.run(_run())
+
+    def test_execute_workflow_no_variables(self):
+        client, mock_http = self._make_client()
+        mock_http.post.return_value = self._mock_response({"execution_id": "exec-2"})
+
+        async def _run():
+            await client.execute_workflow("wf-1")
+            call_args = mock_http.post.call_args
+            assert call_args[1]["json"] == {"variables": {}}
+
+        asyncio.run(_run())
+
+    def test_get_execution(self):
+        client, mock_http = self._make_client()
+        mock_http.get.return_value = self._mock_response({"id": "exec-1", "status": "completed"})
+
+        async def _run():
+            result = await client.get_execution("exec-1")
+            assert result["status"] == "completed"
+            mock_http.get.assert_awaited_once_with("/v1/executions/exec-1")
+
+        asyncio.run(_run())
+
+    def test_list_executions(self):
+        client, mock_http = self._make_client()
+        mock_http.get.return_value = self._mock_response({"data": [], "total": 0, "page": 1})
+
+        async def _run():
+            result = await client.list_executions(page=2, page_size=10, status="running")
+            assert result["total"] == 0
+            mock_http.get.assert_awaited_once_with(
+                "/v1/executions",
+                params={"page": 2, "page_size": 10, "status": "running"},
+            )
+
+        asyncio.run(_run())
+
+    def test_list_executions_no_status_filter(self):
+        client, mock_http = self._make_client()
+        mock_http.get.return_value = self._mock_response({"data": [], "total": 5})
+
+        async def _run():
+            await client.list_executions()
+            call_args = mock_http.get.call_args
+            assert "status" not in call_args[1]["params"]
+
+        asyncio.run(_run())
+
+    def test_get_approval_status(self):
+        client, mock_http = self._make_client()
+        mock_http.get.return_value = self._mock_response(
+            {
+                "execution_id": "exec-1",
+                "pending_approvals": [
+                    {"token": "abc123", "step_id": "gate", "prompt": "Deploy?", "status": "pending"}
+                ],
+                "total_tokens": 1,
+            }
+        )
+
+        async def _run():
+            result = await client.get_approval_status("exec-1")
+            assert len(result["pending_approvals"]) == 1
+            assert result["pending_approvals"][0]["token"] == "abc123"
+            mock_http.get.assert_awaited_once_with("/v1/executions/exec-1/approval")
+
+        asyncio.run(_run())
+
+    def test_resume_execution_with_token(self):
+        client, mock_http = self._make_client()
+        mock_http.post.return_value = self._mock_response(
+            {"status": "approved", "execution_id": "exec-1"}
+        )
+
+        async def _run():
+            result = await client.resume_execution(
+                "exec-1", token="abc123", approve=True, approved_by="user"
+            )
+            assert result["status"] == "approved"
+            mock_http.post.assert_awaited_once_with(
+                "/v1/executions/exec-1/resume",
+                json={"token": "abc123", "approve": True, "approved_by": "user"},
+            )
+
+        asyncio.run(_run())
+
+    def test_resume_execution_reject_with_reason(self):
+        client, mock_http = self._make_client()
+        mock_http.post.return_value = self._mock_response({"status": "rejected"})
+
+        async def _run():
+            await client.resume_execution("exec-1", token="abc", approve=False, reason="Not ready")
+            call_args = mock_http.post.call_args
+            body = call_args[1]["json"]
+            assert body["approve"] is False
+            assert body["reason"] == "Not ready"
+
+        asyncio.run(_run())
+
+    def test_resume_execution_no_token(self):
+        client, mock_http = self._make_client()
+        mock_http.post.return_value = self._mock_response({"status": "success"})
+
+        async def _run():
+            await client.resume_execution("exec-1")
+            call_args = mock_http.post.call_args
+            assert call_args[1]["json"] is None
+
+        asyncio.run(_run())
+
+    def test_cancel_execution(self):
+        client, mock_http = self._make_client()
+        mock_http.post.return_value = self._mock_response({"status": "success"})
+
+        async def _run():
+            result = await client.cancel_execution("exec-1")
+            assert result["status"] == "success"
+            mock_http.post.assert_awaited_once_with("/v1/executions/exec-1/cancel")
+
+        asyncio.run(_run())
+
+    def test_execute_and_wait_completes(self):
+        client, mock_http = self._make_client()
+        mock_http.post.return_value = self._mock_response(
+            {"execution_id": "exec-1", "status": "running"}
+        )
+        mock_http.get.return_value = self._mock_response(
+            {"id": "exec-1", "status": "completed", "result": "done"}
+        )
+
+        async def _run():
+            result = await client.execute_and_wait("wf-1", poll_interval=0.01)
+            assert result["status"] == "completed"
+
+        asyncio.run(_run())
+
+    def test_execute_and_wait_approval_no_callback(self):
+        """Without on_approval, returns immediately on awaiting_approval."""
+        client, mock_http = self._make_client()
+        mock_http.post.return_value = self._mock_response(
+            {"execution_id": "exec-1", "status": "running"}
+        )
+        mock_http.get.return_value = self._mock_response(
+            {"id": "exec-1", "status": "awaiting_approval"}
+        )
+
+        async def _run():
+            result = await client.execute_and_wait("wf-1", poll_interval=0.01)
+            assert result["status"] == "awaiting_approval"
+
+        asyncio.run(_run())
+
+    def test_execute_and_wait_approval_with_callback(self):
+        """With on_approval, calls callback, resumes, continues polling."""
+        client, mock_http = self._make_client()
+
+        # First call: POST execute_workflow
+        exec_resp = self._mock_response({"execution_id": "exec-1"})
+
+        # Track GET call count for get_execution
+        call_count = 0
+
+        def _get_side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            url = args[0] if args else kwargs.get("url", "")
+            if "/approval" in str(url):
+                return self._mock_response(
+                    {
+                        "execution_id": "exec-1",
+                        "pending_approvals": [
+                            {"token": "tok-1", "status": "pending", "prompt": "Deploy?"}
+                        ],
+                    }
+                )
+            # First poll: awaiting_approval, second: completed
+            if call_count <= 1:
+                return self._mock_response({"id": "exec-1", "status": "awaiting_approval"})
+            return self._mock_response({"id": "exec-1", "status": "completed"})
+
+        mock_http.post.return_value = exec_resp
+        mock_http.get.side_effect = _get_side_effect
+
+        callback = AsyncMock(return_value={"approve": True, "reason": "LGTM"})
+
+        async def _run():
+            result = await client.execute_and_wait("wf-1", poll_interval=0.01, on_approval=callback)
+            assert result["status"] == "completed"
+            callback.assert_awaited_once()
+            # Verify resume was called with the token
+            resume_calls = [c for c in mock_http.post.call_args_list if "/resume" in str(c)]
+            assert len(resume_calls) == 1
+
+        asyncio.run(_run())
+
+    def test_execute_and_wait_timeout(self):
+        """Returns last status on timeout."""
+        client, mock_http = self._make_client()
+        mock_http.post.return_value = self._mock_response({"execution_id": "exec-1"})
+        mock_http.get.return_value = self._mock_response({"id": "exec-1", "status": "running"})
+
+        async def _run():
+            result = await client.execute_and_wait("wf-1", poll_interval=0.01, max_wait=0.05)
+            assert result["status"] == "running"
+
+        asyncio.run(_run())
+
+    def test_submit_and_wait_awaiting_approval_terminal(self):
+        """submit_and_wait treats awaiting_approval as terminal."""
+        client, mock_http = self._make_client()
+        mock_http.post.return_value = self._mock_response({"id": "task-1"})
+        mock_http.get.return_value = self._mock_response(
+            {"id": "task-1", "status": "awaiting_approval"}
+        )
+
+        async def _run():
+            result = await client.submit_and_wait("T", "D", poll_interval=0.01)
+            assert result["status"] == "awaiting_approval"
+
+        asyncio.run(_run())
