@@ -14,8 +14,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from animus.integrations.oauth import OAuth2Token
-
 # ===================================================================
 # Gmail Coverage (51% → 85%+)
 # ===================================================================
@@ -27,9 +25,8 @@ class TestGmailCoveragePush:
     def test_connect_missing_credentials(self, tmp_path: Path):
         """Lines 90-92: missing client_id/client_secret."""
         import animus.integrations.google.gmail as gmail_mod
-        from animus.integrations.google.gmail import GmailIntegration
 
-        gmail = GmailIntegration(data_dir=tmp_path)
+        gmail = gmail_mod.GmailIntegration(data_dir=tmp_path)
         with (
             patch.object(gmail_mod, "GOOGLE_API_AVAILABLE", True),
             patch.object(gmail_mod, "GOOGLE_AUTH_AVAILABLE", True),
@@ -41,9 +38,8 @@ class TestGmailCoveragePush:
     def test_connect_token_in_credentials(self, tmp_path: Path):
         """Line 98-99: token passed in credentials dict."""
         import animus.integrations.google.gmail as gmail_mod
-        from animus.integrations.google.gmail import GmailIntegration
 
-        gmail = GmailIntegration(data_dir=tmp_path)
+        gmail = gmail_mod.GmailIntegration(data_dir=tmp_path)
         token_dict = {
             "access_token": "tok",
             "refresh_token": "ref",
@@ -68,9 +64,9 @@ class TestGmailCoveragePush:
     def test_connect_expired_with_refresh(self, tmp_path: Path):
         """Lines 102-106: expired token triggers refresh."""
         import animus.integrations.google.gmail as gmail_mod
-        from animus.integrations.google.gmail import GmailIntegration
+        from animus.integrations.oauth import OAuth2Token
 
-        gmail = GmailIntegration(data_dir=tmp_path)
+        gmail = gmail_mod.GmailIntegration(data_dir=tmp_path)
         expired_token = OAuth2Token(
             access_token="old",
             refresh_token="ref",
@@ -103,9 +99,9 @@ class TestGmailCoveragePush:
     def test_connect_no_token_full_flow(self, tmp_path: Path):
         """Lines 108-119: no token, run full OAuth flow."""
         import animus.integrations.google.gmail as gmail_mod
-        from animus.integrations.google.gmail import GmailIntegration
+        from animus.integrations.oauth import OAuth2Token
 
-        gmail = GmailIntegration(data_dir=tmp_path)
+        gmail = gmail_mod.GmailIntegration(data_dir=tmp_path)
         new_token = OAuth2Token(
             access_token="new",
             refresh_token="ref",
@@ -131,9 +127,8 @@ class TestGmailCoveragePush:
     def test_connect_flow_fails(self, tmp_path: Path):
         """Lines 113-115: OAuth flow returns None."""
         import animus.integrations.google.gmail as gmail_mod
-        from animus.integrations.google.gmail import GmailIntegration
 
-        gmail = GmailIntegration(data_dir=tmp_path)
+        gmail = gmail_mod.GmailIntegration(data_dir=tmp_path)
         mock_flow = MagicMock()
         mock_flow.run_local_server.return_value = None
 
@@ -516,7 +511,7 @@ class TestOAuth2FlowCoverage:
         """Lines 246-248: no refresh token available."""
         import animus.integrations.oauth as oauth_mod
 
-        token = OAuth2Token(
+        token = oauth_mod.OAuth2Token(
             access_token="tok",
             refresh_token=None,
             token_type="Bearer",
@@ -532,7 +527,7 @@ class TestOAuth2FlowCoverage:
         """Lines 250-272: refresh succeeds."""
         import animus.integrations.oauth as oauth_mod
 
-        token = OAuth2Token(
+        token = oauth_mod.OAuth2Token(
             access_token="old",
             refresh_token="ref",
             token_type="Bearer",
@@ -561,7 +556,7 @@ class TestOAuth2FlowCoverage:
         """Lines 273-275: refresh raises exception."""
         import animus.integrations.oauth as oauth_mod
 
-        token = OAuth2Token(
+        token = oauth_mod.OAuth2Token(
             access_token="old",
             refresh_token="ref",
             token_type="Bearer",
@@ -594,9 +589,8 @@ class TestCalendarCoveragePush:
     def test_connect_missing_credentials(self, tmp_path: Path):
         """Lines 88-90."""
         import animus.integrations.google.calendar as cal_mod
-        from animus.integrations.google.calendar import GoogleCalendarIntegration
 
-        cal = GoogleCalendarIntegration(data_dir=tmp_path)
+        cal = cal_mod.GoogleCalendarIntegration(data_dir=tmp_path)
         with (
             patch.object(cal_mod, "GOOGLE_API_AVAILABLE", True),
             patch.object(cal_mod, "GOOGLE_AUTH_AVAILABLE", True),
@@ -607,9 +601,8 @@ class TestCalendarCoveragePush:
     def test_connect_token_in_credentials(self, tmp_path: Path):
         """Lines 96-97."""
         import animus.integrations.google.calendar as cal_mod
-        from animus.integrations.google.calendar import GoogleCalendarIntegration
 
-        cal = GoogleCalendarIntegration(data_dir=tmp_path)
+        cal = cal_mod.GoogleCalendarIntegration(data_dir=tmp_path)
         token_dict = {
             "access_token": "tok",
             "refresh_token": "ref",
@@ -632,9 +625,9 @@ class TestCalendarCoveragePush:
     def test_connect_expired_with_refresh(self, tmp_path: Path):
         """Lines 100-104."""
         import animus.integrations.google.calendar as cal_mod
-        from animus.integrations.google.calendar import GoogleCalendarIntegration
+        from animus.integrations.oauth import OAuth2Token
 
-        cal = GoogleCalendarIntegration(data_dir=tmp_path)
+        cal = cal_mod.GoogleCalendarIntegration(data_dir=tmp_path)
         expired_token = OAuth2Token(
             access_token="old",
             refresh_token="ref",
@@ -667,9 +660,9 @@ class TestCalendarCoveragePush:
     def test_connect_full_flow(self, tmp_path: Path):
         """Lines 106-117: no token, full OAuth flow."""
         import animus.integrations.google.calendar as cal_mod
-        from animus.integrations.google.calendar import GoogleCalendarIntegration
+        from animus.integrations.oauth import OAuth2Token
 
-        cal = GoogleCalendarIntegration(data_dir=tmp_path)
+        cal = cal_mod.GoogleCalendarIntegration(data_dir=tmp_path)
         new_token = OAuth2Token(
             access_token="new",
             refresh_token="ref",
