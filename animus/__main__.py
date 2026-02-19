@@ -17,6 +17,7 @@ from animus.cognitive import (
     ModelConfig,
     ReasoningMode,
     detect_mode,
+    should_delegate_to_gorgon,
 )
 from animus.config import AnimusConfig
 from animus.decision import DecisionFramework
@@ -149,6 +150,12 @@ def show_help():
   /gorgon list         - List recent Gorgon tasks
   /gorgon check <id>   - Check task status
   /gorgon cancel <id>  - Cancel a pending task
+  /gorgon run <wf_id>  - Execute workflow (interactive approval)
+  /gorgon exec         - List recent executions
+  /gorgon exec <id>    - Check execution status
+  /gorgon approvals <id> - View pending approval gates
+  /gorgon approve <id> - Approve gate (interactive y/n + reason)
+  /gorgon reject <id>  - Reject gate with reason
 
 [bold]Self-Learning (Phase 5):[/bold]
   /learning               - Show learning dashboard
@@ -1293,10 +1300,191 @@ def main():
                         console.print(f"[red]{result.error}[/red]")
                     continue
 
+                if gorgon_cmd.startswith("run "):
+                    workflow_id = gorgon_cmd[4:].strip()
+                    if not workflow_id:
+                        console.print("[dim]Usage: /gorgon run <workflow_id>[/dim]")
+                        continue
+
+                    async def _approval_callback(info: dict) -> dict:
+                        """Interactive approval handler for CLI."""
+                        for gate in info.get("pending_approvals", []):
+                            console.print(
+                                f"\n[bold yellow]Approval Required[/bold yellow]\n"
+                                f"  Step:   {gate.get('step_id', '?')}\n"
+                                f"  Prompt: {gate.get('prompt', '-')}\n"
+                                f"  Token:  {gate.get('token', '?')[:12]}..."
+                            )
+                            if gate.get("preview"):
+                                console.print(f"  Preview: {gate['preview']}")
+                        answer = prompt("  Approve? [y/n]: ").strip().lower()
+                        approved = answer in ("y", "yes")
+                        reason = ""
+                        if not approved:
+                            reason = prompt("  Reason: ").strip()
+                        return {"approve": approved, "reason": reason}
+
+                    console.print(f"[dim]Executing workflow {workflow_id}...[/dim]")
+                    result = loop.run_until_complete(
+                        gorgon_int._tool_execute(workflow_id=workflow_id, wait=True)
+                    )
+                    if result.success:
+                        e = result.output
+                        status_color = {
+                            "completed": "green",
+                            "failed": "red",
+                            "cancelled": "yellow",
+                            "awaiting_approval": "bold yellow",
+                            "running": "cyan",
+                        }.get(e.get("status", ""), "white")
+                        console.print(
+                            f"\n[{status_color}]{e.get('status', '?')}[/{status_color}] "
+                            f"Execution {e.get('execution_id', e.get('id', '?'))[:12]}\n"
+                        )
+                    else:
+                        console.print(f"[red]{result.error}[/red]")
+                    continue
+
+                if gorgon_cmd == "exec":
+                    result = loop.run_until_complete(gorgon_int._tool_executions(limit=10))
+                    if result.success and result.output.get("data"):
+                        console.print("\n[bold]Recent Executions:[/bold]\n")
+                        for e in result.output["data"]:
+                            status_color = {
+                                "completed": "green",
+                                "running": "cyan",
+                                "failed": "red",
+                                "awaiting_approval": "bold yellow",
+                            }.get(e.get("status", ""), "white")
+                            console.print(
+                                f"  [{status_color}]{e.get('status', '?'):20}[/{status_color}] "
+                                f"[dim]{e.get('id', '?')[:12]}[/dim] "
+                                f"{e.get('workflow_name', '')}"
+                            )
+                        console.print()
+                    else:
+                        console.print("[dim]No executions found.[/dim]")
+                    continue
+
+                if gorgon_cmd.startswith("exec "):
+                    exec_id = gorgon_cmd[5:].strip()
+                    result = loop.run_until_complete(
+                        gorgon_int._tool_execution_status(execution_id=exec_id)
+                    )
+                    if result.success:
+                        e = result.output
+                        console.print(
+                            f"\n[bold]Execution {e.get('id', exec_id)[:12]}[/bold]\n"
+                            f"  Status:   {e.get('status', '?')}\n"
+                            f"  Workflow: {e.get('workflow_name', '-')}\n"
+                        )
+                        if e.get("logs"):
+                            console.print("  [dim]Logs:[/dim]")
+                            for log in e["logs"][-5:]:
+                                console.print(f"    {log}")
+                    else:
+                        console.print(f"[red]{result.error}[/red]")
+                    continue
+
+                if gorgon_cmd.startswith("approvals "):
+                    exec_id = gorgon_cmd[10:].strip()
+                    result = loop.run_until_complete(
+                        gorgon_int._tool_approvals(execution_id=exec_id)
+                    )
+                    if result.success:
+                        approvals = result.output.get("pending_approvals", [])
+                        if approvals:
+                            console.print(
+                                f"\n[bold yellow]Pending Approvals ({len(approvals)}):[/bold yellow]\n"
+                            )
+                            for a in approvals:
+                                console.print(
+                                    f"  Token:  {a.get('token', '?')[:12]}...\n"
+                                    f"  Step:   {a.get('step_id', '?')}\n"
+                                    f"  Prompt: {a.get('prompt', '-')}\n"
+                                )
+                        else:
+                            console.print("[dim]No pending approvals.[/dim]")
+                    else:
+                        console.print(f"[red]{result.error}[/red]")
+                    continue
+
+                if gorgon_cmd.startswith("approve "):
+                    exec_id = gorgon_cmd[8:].strip()
+                    # Fetch pending approvals to get the token
+                    approval_result = loop.run_until_complete(
+                        gorgon_int._tool_approvals(execution_id=exec_id)
+                    )
+                    if not approval_result.success:
+                        console.print(f"[red]{approval_result.error}[/red]")
+                        continue
+                    approvals = approval_result.output.get("pending_approvals", [])
+                    pending = [a for a in approvals if a.get("status") == "pending"]
+                    if not pending:
+                        console.print("[dim]No pending approvals for this execution.[/dim]")
+                        continue
+                    gate = pending[0]
+                    console.print(
+                        f"\n[bold yellow]Approval Gate[/bold yellow]\n"
+                        f"  Step:   {gate.get('step_id', '?')}\n"
+                        f"  Prompt: {gate.get('prompt', '-')}"
+                    )
+                    reason = prompt("  Reason (optional): ").strip()
+                    result = loop.run_until_complete(
+                        gorgon_int._tool_approve(
+                            execution_id=exec_id,
+                            token=gate["token"],
+                            approve=True,
+                            reason=reason,
+                        )
+                    )
+                    if result.success:
+                        console.print("[green]Approved.[/green]")
+                    else:
+                        console.print(f"[red]{result.error}[/red]")
+                    continue
+
+                if gorgon_cmd.startswith("reject "):
+                    exec_id = gorgon_cmd[7:].strip()
+                    approval_result = loop.run_until_complete(
+                        gorgon_int._tool_approvals(execution_id=exec_id)
+                    )
+                    if not approval_result.success:
+                        console.print(f"[red]{approval_result.error}[/red]")
+                        continue
+                    approvals = approval_result.output.get("pending_approvals", [])
+                    pending = [a for a in approvals if a.get("status") == "pending"]
+                    if not pending:
+                        console.print("[dim]No pending approvals for this execution.[/dim]")
+                        continue
+                    gate = pending[0]
+                    console.print(
+                        f"\n[bold red]Reject Gate[/bold red]\n"
+                        f"  Step:   {gate.get('step_id', '?')}\n"
+                        f"  Prompt: {gate.get('prompt', '-')}"
+                    )
+                    reason = prompt("  Reason: ").strip()
+                    result = loop.run_until_complete(
+                        gorgon_int._tool_approve(
+                            execution_id=exec_id,
+                            token=gate["token"],
+                            approve=False,
+                            reason=reason,
+                        )
+                    )
+                    if result.success:
+                        console.print("[yellow]Rejected.[/yellow]")
+                    else:
+                        console.print(f"[red]{result.error}[/red]")
+                    continue
+
                 if not gorgon_cmd:
                     console.print(
                         "[dim]Usage: /gorgon <task> | /gorgon status | "
-                        "/gorgon list | /gorgon check <id> | /gorgon cancel <id>[/dim]"
+                        "/gorgon list | /gorgon check <id> | /gorgon cancel <id>\n"
+                        "       /gorgon run <wf_id> | /gorgon exec [id] | "
+                        "/gorgon approvals <id> | /gorgon approve <id> | "
+                        "/gorgon reject <id>[/dim]"
                     )
                     continue
 
@@ -2151,7 +2339,12 @@ def main():
             # Generate response — delegate to Gorgon when connected + auto_delegate
             console.print()
             gorgon_int = integrations.get("gorgon") if GORGON_AVAILABLE else None
-            if gorgon_int and gorgon_int.is_connected and config.integrations.gorgon.auto_delegate:
+            if (
+                gorgon_int
+                and gorgon_int.is_connected
+                and config.integrations.gorgon.auto_delegate
+                and should_delegate_to_gorgon(user_input)
+            ):
                 console.print("[dim]Delegating to Gorgon...[/dim]")
                 result = loop.run_until_complete(
                     gorgon_int._tool_delegate(task=user_input, priority=5, wait=True)
