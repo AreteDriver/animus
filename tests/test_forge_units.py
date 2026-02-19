@@ -209,7 +209,7 @@ class TestLoader:
                 archetype: x
                 inputs: [ghost.brief]
         """)
-        with pytest.raises(ForgeError, match="undefined agent 'ghost'"):
+        with pytest.raises(ForgeError, match="agent 'ghost'"):
             load_workflow_str(bad)
 
     def test_gate_ref_undefined_agent_raises(self) -> None:

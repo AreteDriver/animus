@@ -7,7 +7,7 @@
 - **Version**: 0.6.0
 - **Python**: >=3.10
 - **Package layout**: `animus/` (setuptools, flat layout with `forge/` subpackage)
-- **Tests**: `tests/` (pytest, 1132 tests, 80% coverage, fail_under=80)
+- **Tests**: `tests/` (pytest, 1346 tests, 80% coverage, fail_under=80)
 - **License**: MIT
 
 ## Build & Run
@@ -26,6 +26,7 @@ animus                          # Interactive CLI (prompt-toolkit)
 pytest tests/ -v                           # Full suite
 pytest tests/test_forge_units.py -v        # Forge unit tests
 pytest tests/test_forge_integration.py -v  # Forge integration tests
+pytest tests/test_swarm.py -v              # Swarm unit + integration tests
 ```
 
 ## Linting
@@ -70,6 +71,12 @@ animus/
 │   ├── checkpoint.py        #   SQLite WAL state persistence (pause/resume)
 │   ├── agent.py             #   ForgeAgent — CognitiveLayer wrapper with archetype prompts
 │   └── engine.py            #   ForgeEngine — sequential orchestration loop
+├── swarm/                   # ★ Parallel agent orchestration (stigmergic coordination)
+│   ├── __init__.py          #   Public API with lazy imports
+│   ├── models.py            #   SwarmConfig, SwarmStage, IntentEntry, SwarmError
+│   ├── graph.py             #   DAG analysis + Kahn's topological sort → parallel stages
+│   ├── intent.py            #   Thread-safe IntentGraph + IntentResolver (stability-based)
+│   └── engine.py            #   SwarmEngine — parallel execution via ThreadPoolExecutor
 └── dashboard.py             # Streamlit ops dashboard
 ```
 
@@ -79,7 +86,7 @@ animus/
 
 **Forge** (`animus/forge/`) — Multi-agent orchestration. Declarative YAML workflows, token budgets, quality gates, SQLite checkpoint/resume. Sequential execution MVP. Provider-agnostic via CognitiveLayer.
 
-**Swarm** — Not yet implemented. Stigmergic coordination for parallel agent execution.
+**Swarm** (`animus/swarm/`) — Parallel agent orchestration. DAG-based stage derivation, ThreadPoolExecutor parallel execution, stigmergic intent graph for conflict detection. Extends Forge (reuses ForgeAgent, BudgetTracker, CheckpointStore, gates). YAML `execution_mode: parallel` triggers Swarm engine.
 
 ## Key Patterns
 
@@ -122,6 +129,31 @@ gates:
     type: automated             # or "human"
     pass_condition: "true"      # safe expression
     on_fail: halt               # halt, skip, or revise
+```
+
+## Swarm YAML Schema
+
+```yaml
+name: parallel_workflow
+execution_mode: parallel    # Enables SwarmEngine (default: sequential → ForgeEngine)
+provider: ollama
+model: llama3:8b
+max_cost_usd: 1.0
+
+agents:
+  - name: researcher
+    archetype: researcher
+    outputs: [brief]
+
+  - name: fact_checker
+    archetype: analyst
+    outputs: [facts]
+
+  - name: writer
+    archetype: writer
+    inputs: [researcher.brief, fact_checker.facts]  # Forward refs OK in parallel mode
+    outputs: [draft]
+# Stages derived from DAG: [researcher, fact_checker] → [writer]
 ```
 
 ## Optional Dependencies

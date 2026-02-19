@@ -52,12 +52,27 @@ def load_workflow_str(yaml_str: str) -> WorkflowConfig:
     if not name:
         raise ForgeError("Workflow must have a 'name' field")
 
+    execution_mode = data.get("execution_mode", "sequential")
+    if execution_mode not in ("sequential", "parallel"):
+        raise ForgeError(
+            f"Invalid execution_mode: {execution_mode!r}. Must be 'sequential' or 'parallel'"
+        )
+
     raw_agents = data.get("agents", [])
     if not raw_agents:
         raise ForgeError("Workflow must have at least one agent")
 
-    agents = _parse_agents(raw_agents)
+    agents = _parse_agents(raw_agents, execution_mode)
     agent_names = {a.name for a in agents}
+
+    # Post-parse: validate all input refs point to defined agents
+    for agent in agents:
+        for inp in agent.inputs:
+            ref_agent = inp.split(".")[0]
+            if ref_agent not in agent_names:
+                raise ForgeError(
+                    f"Agent {agent.name!r} input {inp!r} references undefined agent {ref_agent!r}"
+                )
 
     gates = _parse_gates(data.get("gates", []), agent_names)
 
@@ -69,10 +84,11 @@ def load_workflow_str(yaml_str: str) -> WorkflowConfig:
         max_cost_usd=float(data.get("max_cost_usd", 1.0)),
         provider=data.get("provider", "ollama"),
         model=data.get("model", "llama3:8b"),
+        execution_mode=execution_mode,
     )
 
 
-def _parse_agents(raw: list[dict]) -> list[AgentConfig]:
+def _parse_agents(raw: list[dict], execution_mode: str = "sequential") -> list[AgentConfig]:
     """Parse and validate agent configs."""
     agents: list[AgentConfig] = []
     seen_names: set[str] = set()
@@ -93,16 +109,19 @@ def _parse_agents(raw: list[dict]) -> list[AgentConfig]:
         if not archetype:
             raise ForgeError(f"Agent {name!r} must have an 'archetype'")
 
-        # Validate inputs reference previously defined agent outputs
+        # Validate input format (must use agent.output notation)
         inputs = entry.get("inputs", [])
         for inp in inputs:
             if "." not in inp:
                 raise ForgeError(f"Agent {name!r} input {inp!r} must use 'agent.output' format")
-            ref_agent = inp.split(".")[0]
-            if ref_agent not in seen_names:
-                raise ForgeError(
-                    f"Agent {name!r} input {inp!r} references undefined agent {ref_agent!r}"
-                )
+            # In sequential mode, inputs must reference previously defined agents
+            if execution_mode == "sequential":
+                ref_agent = inp.split(".")[0]
+                if ref_agent not in seen_names:
+                    raise ForgeError(
+                        f"Agent {name!r} input {inp!r} references "
+                        f"agent {ref_agent!r} not yet defined (sequential mode)"
+                    )
 
         outputs = entry.get("outputs", [])
         for out in outputs:

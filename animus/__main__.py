@@ -2158,11 +2158,21 @@ def main():
                         f"Budget: ${wf_config.max_cost_usd:.2f}\n"
                     )
 
-                    engine = ForgeEngine(
-                        cognitive=cognitive,
-                        checkpoint_dir=checkpoint_dir,
-                        tools=tools,
-                    )
+                    if wf_config.execution_mode == "parallel":
+                        from animus.swarm.engine import SwarmEngine
+
+                        engine = SwarmEngine(
+                            cognitive=cognitive,
+                            checkpoint_dir=checkpoint_dir,
+                            tools=tools,
+                        )
+                        console.print("  [cyan]Mode: parallel (Swarm)[/cyan]")
+                    else:
+                        engine = ForgeEngine(
+                            cognitive=cognitive,
+                            checkpoint_dir=checkpoint_dir,
+                            tools=tools,
+                        )
 
                     try:
                         state = engine.run(wf_config)

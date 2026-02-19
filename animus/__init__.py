@@ -43,6 +43,11 @@ from animus.forge import (
 )
 
 try:
+    from animus.swarm import SwarmEngine
+except ImportError:
+    SwarmEngine = None  # type: ignore[misc, assignment]
+
+try:
     from animus.learning import (
         Guardrail,
         GuardrailManager,
@@ -91,6 +96,7 @@ __all__ = [
     "RelationType",
     "SemanticFact",
     "StepResult",
+    "SwarmEngine",
     "Task",
     "TaskStatus",
     "TaskTracker",

@@ -53,6 +53,7 @@ class WorkflowConfig:
     max_cost_usd: float = 1.0
     provider: str = "ollama"
     model: str = "llama3:8b"
+    execution_mode: str = "sequential"
 
 
 @dataclass
