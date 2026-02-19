@@ -154,6 +154,29 @@ class WebhookConfig:
 
 
 @dataclass
+class GorgonConfig:
+    """Configuration for Gorgon orchestration integration."""
+
+    enabled: bool = False
+    url: str = "http://localhost:8000"
+    api_key: str | None = None
+    timeout: float = 30.0
+    poll_interval: float = 5.0
+    max_wait: float = 300.0
+    auto_delegate: bool = False
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("GORGON_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+        self.url = os.environ.get("GORGON_URL", self.url)
+        self.api_key = os.environ.get("GORGON_API_KEY", self.api_key)
+        if env_timeout := os.environ.get("GORGON_TIMEOUT"):
+            self.timeout = float(env_timeout)
+        if env_auto := os.environ.get("GORGON_AUTO_DELEGATE"):
+            self.auto_delegate = env_auto.lower() in ("true", "1", "yes")
+
+
+@dataclass
 class IntegrationConfig:
     """Configuration for all external integrations."""
 
@@ -161,6 +184,7 @@ class IntegrationConfig:
     todoist: TodoistConfig = field(default_factory=TodoistConfig)
     filesystem: FilesystemConfig = field(default_factory=FilesystemConfig)
     webhooks: WebhookConfig = field(default_factory=WebhookConfig)
+    gorgon: GorgonConfig = field(default_factory=GorgonConfig)
 
 
 @dataclass
@@ -381,6 +405,12 @@ class AnimusConfig:
                     "enabled": self.integrations.webhooks.enabled,
                     "port": self.integrations.webhooks.port,
                 },
+                "gorgon": {
+                    "enabled": self.integrations.gorgon.enabled,
+                    "url": self.integrations.gorgon.url,
+                    "timeout": self.integrations.gorgon.timeout,
+                    "auto_delegate": self.integrations.gorgon.auto_delegate,
+                },
             },
             "learning": {
                 "enabled": self.learning.enabled,
@@ -511,6 +541,23 @@ class AnimusConfig:
                         config.integrations.webhooks.port = webhook_data["port"]
                     if "secret" in webhook_data:
                         config.integrations.webhooks.secret = webhook_data["secret"]
+                if gorgon_data := integrations_data.get("gorgon"):
+                    if "enabled" in gorgon_data:
+                        config.integrations.gorgon.enabled = gorgon_data["enabled"]
+                    if "url" in gorgon_data:
+                        config.integrations.gorgon.url = gorgon_data["url"]
+                    if "api_key" in gorgon_data:
+                        config.integrations.gorgon.api_key = gorgon_data["api_key"]
+                    if "timeout" in gorgon_data:
+                        config.integrations.gorgon.timeout = float(gorgon_data["timeout"])
+                    if "poll_interval" in gorgon_data:
+                        config.integrations.gorgon.poll_interval = float(
+                            gorgon_data["poll_interval"]
+                        )
+                    if "max_wait" in gorgon_data:
+                        config.integrations.gorgon.max_wait = float(gorgon_data["max_wait"])
+                    if "auto_delegate" in gorgon_data:
+                        config.integrations.gorgon.auto_delegate = gorgon_data["auto_delegate"]
 
             if learning_data := data.get("learning"):
                 if "enabled" in learning_data:
@@ -570,6 +617,7 @@ class AnimusConfig:
             config.integrations.todoist.__post_init__()
             config.integrations.filesystem.__post_init__()
             config.integrations.webhooks.__post_init__()
+            config.integrations.gorgon.__post_init__()
             config.learning.__post_init__()
             config.proactive.__post_init__()
             config.entities.__post_init__()

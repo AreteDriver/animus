@@ -40,3 +40,11 @@ try:
     __all__.append("GmailIntegration")
 except ImportError:
     GmailIntegration = None  # type: ignore[misc, assignment]
+
+# Optional Gorgon integration (requires httpx)
+try:
+    from animus.integrations.gorgon import GorgonIntegration
+
+    __all__.append("GorgonIntegration")
+except ImportError:
+    GorgonIntegration = None  # type: ignore[misc, assignment]

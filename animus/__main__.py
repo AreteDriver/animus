@@ -12,7 +12,12 @@ from rich.table import Table
 
 from animus.api import APIServer
 from animus.autonomous import ActionLevel, ActionPolicy, AutonomousExecutor
-from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode, detect_mode
+from animus.cognitive import (
+    CognitiveLayer,
+    ModelConfig,
+    ReasoningMode,
+    detect_mode,
+)
 from animus.config import AnimusConfig
 from animus.decision import DecisionFramework
 from animus.entities import EntityMemory, EntityType
@@ -53,6 +58,15 @@ except ImportError:
     GOOGLE_INTEGRATIONS_AVAILABLE = False
     GoogleCalendarIntegration = None
     GmailIntegration = None
+
+# Optional Gorgon integration
+try:
+    from animus.integrations.gorgon import GorgonIntegration
+
+    GORGON_AVAILABLE = True
+except ImportError:
+    GORGON_AVAILABLE = False
+    GorgonIntegration = None
 
 console = Console()
 logger = get_logger("cli")
@@ -127,7 +141,14 @@ def show_help():
   /integrations           - List all integrations with status
   /integrate <service>    - Connect an integration
   /disconnect <service>   - Disconnect an integration
-  Services: filesystem, todoist, google_calendar, gmail, webhooks
+  Services: filesystem, todoist, google_calendar, gmail, webhooks, gorgon
+
+[bold]Gorgon Orchestration:[/bold]
+  /gorgon <task>       - Delegate task to Gorgon agent pipeline
+  /gorgon status       - Show Gorgon queue stats
+  /gorgon list         - List recent Gorgon tasks
+  /gorgon check <id>   - Check task status
+  /gorgon cancel <id>  - Cancel a pending task
 
 [bold]Self-Learning (Phase 5):[/bold]
   /learning               - Show learning dashboard
@@ -325,6 +346,11 @@ def show_tags(memory: MemoryLayer):
 
 def main():
     """Main entry point for Animus CLI."""
+    # Create a persistent event loop — asyncio.run() creates and closes a new loop
+    # each call, breaking httpx AsyncClient connections bound to the previous loop.
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
     # Load configuration
     config = AnimusConfig.load()
     config.ensure_dirs()
@@ -453,8 +479,27 @@ def main():
         integrations.register(GoogleCalendarIntegration(config.data_dir / "integrations"))
         integrations.register(GmailIntegration(config.data_dir / "integrations"))
 
+    if GORGON_AVAILABLE:
+        integrations.register(GorgonIntegration())
+
     # Reconnect integrations from stored credentials
-    asyncio.run(integrations.reconnect_from_stored())
+    loop.run_until_complete(integrations.reconnect_from_stored())
+
+    # Auto-connect Gorgon if enabled (via config or env vars)
+    if GORGON_AVAILABLE and config.integrations.gorgon.enabled:
+        gorgon_int = integrations.get("gorgon")
+        if gorgon_int and not gorgon_int.is_connected:
+            gorgon_creds = {
+                "url": config.integrations.gorgon.url,
+                "timeout": config.integrations.gorgon.timeout,
+            }
+            if config.integrations.gorgon.api_key:
+                gorgon_creds["api_key"] = config.integrations.gorgon.api_key
+            connected = loop.run_until_complete(integrations.connect("gorgon", gorgon_creds))
+            if connected:
+                console.print(f"[dim]Gorgon connected at {config.integrations.gorgon.url}[/dim]")
+            else:
+                console.print("[yellow]Gorgon enabled but connection failed[/yellow]")
 
     # Register integration tools with main registry
     for tool in integrations.get_all_tools():
@@ -528,13 +573,15 @@ def main():
             logger.info("Voice listening stopped")
         # Cleanup sync components
         if sync_client and sync_client.is_connected:
-            asyncio.run(sync_client.disconnect())
+            if not loop.is_closed():
+                loop.run_until_complete(sync_client.disconnect())
             logger.info("Sync client disconnected")
         if discovery and discovery.is_running:
             discovery.stop()
             logger.info("Discovery stopped")
         if sync_server and sync_server.is_running:
-            asyncio.run(sync_server.stop())
+            if not loop.is_closed():
+                loop.run_until_complete(sync_server.stop())
             logger.info("Sync server stopped")
 
     atexit.register(cleanup_on_exit)
@@ -1107,6 +1154,18 @@ def main():
                     if secret:
                         credentials["secret"] = secret
 
+                elif service == "gorgon":
+                    if not GORGON_AVAILABLE:
+                        console.print("[red]Gorgon integration not available.[/red]")
+                        console.print("[dim]Install with: pip install httpx[/dim]")
+                        continue
+
+                    url = config.integrations.gorgon.url
+                    api_key = config.integrations.gorgon.api_key
+                    credentials = {"url": url, "timeout": config.integrations.gorgon.timeout}
+                    if api_key:
+                        credentials["api_key"] = api_key
+
                 elif service in ["google_calendar", "gmail"]:
                     if not GOOGLE_INTEGRATIONS_AVAILABLE:
                         console.print("[red]Google integration libraries not installed.[/red]")
@@ -1132,7 +1191,7 @@ def main():
 
                 # Attempt connection
                 console.print(f"[dim]Connecting to {service}...[/dim]")
-                success = asyncio.run(integrations.connect(service, credentials))
+                success = loop.run_until_complete(integrations.connect(service, credentials))
 
                 if success:
                     console.print(f"[green]Connected to {service}[/green]")
@@ -1156,12 +1215,98 @@ def main():
                     console.print(f"[dim]{service} is not connected[/dim]")
                     continue
 
-                success = asyncio.run(integrations.disconnect(service))
+                success = loop.run_until_complete(integrations.disconnect(service))
 
                 if success:
                     console.print(f"[yellow]Disconnected from {service}[/yellow]")
                 else:
                     console.print(f"[red]Failed to disconnect from {service}[/red]")
+                continue
+
+            # Gorgon delegation commands
+            if user_input.startswith("/gorgon"):
+                gorgon_int = integrations.get("gorgon")
+                if not gorgon_int or not gorgon_int.is_connected:
+                    console.print(
+                        "[red]Gorgon not connected.[/red] [dim]Use /integrate gorgon first[/dim]"
+                    )
+                    continue
+
+                gorgon_cmd = user_input[7:].strip()
+
+                if gorgon_cmd == "status" or gorgon_cmd == "stats":
+                    result = loop.run_until_complete(gorgon_int._tool_stats())
+                    if result.success:
+                        console.print(f"\n[bold]Gorgon Queue Stats:[/bold] {result.output}\n")
+                    else:
+                        console.print(f"[red]{result.error}[/red]")
+                    continue
+
+                if gorgon_cmd.startswith("check "):
+                    task_id = gorgon_cmd[6:].strip()
+                    result = loop.run_until_complete(gorgon_int._tool_check(task_id=task_id))
+                    if result.success:
+                        t = result.output
+                        console.print(
+                            f"\n[bold]Task {t['id'][:8]}[/bold]\n"
+                            f"  Status: {t.get('status')}\n"
+                            f"  Title:  {t.get('title', '')}\n"
+                            f"  Result: {t.get('result', '-')}\n"
+                        )
+                    else:
+                        console.print(f"[red]{result.error}[/red]")
+                    continue
+
+                if gorgon_cmd == "list":
+                    result = loop.run_until_complete(gorgon_int._tool_list(limit=10))
+                    if result.success and result.output:
+                        console.print("\n[bold]Recent Gorgon Tasks:[/bold]\n")
+                        for t in result.output:
+                            status_color = {
+                                "completed": "green",
+                                "pending": "yellow",
+                                "running": "cyan",
+                                "failed": "red",
+                            }.get(t.get("status", ""), "white")
+                            console.print(
+                                f"  [{status_color}]{t.get('status', '?'):10}[/{status_color}] "
+                                f"[dim]{t['id'][:8]}[/dim] {t.get('title', '')}"
+                            )
+                        console.print()
+                    else:
+                        console.print("[dim]No tasks found.[/dim]")
+                    continue
+
+                if gorgon_cmd.startswith("cancel "):
+                    task_id = gorgon_cmd[7:].strip()
+                    result = loop.run_until_complete(gorgon_int._tool_cancel(task_id=task_id))
+                    if result.success:
+                        console.print(f"[yellow]Cancelled task {task_id[:8]}[/yellow]")
+                    else:
+                        console.print(f"[red]{result.error}[/red]")
+                    continue
+
+                if not gorgon_cmd:
+                    console.print(
+                        "[dim]Usage: /gorgon <task> | /gorgon status | "
+                        "/gorgon list | /gorgon check <id> | /gorgon cancel <id>[/dim]"
+                    )
+                    continue
+
+                # Delegate the task
+                console.print("[dim]Delegating to Gorgon...[/dim]")
+                result = loop.run_until_complete(
+                    gorgon_int._tool_delegate(task=gorgon_cmd, priority=5, wait=True)
+                )
+                if result.success:
+                    t = result.output
+                    console.print(
+                        f"\n[green]Task completed:[/green] {t['id'][:8]}\n"
+                        f"  Status: {t.get('status')}\n"
+                        f"  Result: {t.get('result', '-')}\n"
+                    )
+                else:
+                    console.print(f"[red]Delegation failed: {result.error}[/red]")
                 continue
 
             # =========================================================
@@ -1568,7 +1713,7 @@ def main():
                         port=8422,
                     )
 
-                    success = asyncio.run(sync_server.start())
+                    success = loop.run_until_complete(sync_server.start())
                     if not success:
                         console.print("[red]Failed to start sync server[/red]")
                         continue
@@ -1598,7 +1743,7 @@ def main():
                     stopped_something = False
 
                     if sync_client and sync_client.is_connected:
-                        asyncio.run(sync_client.disconnect())
+                        loop.run_until_complete(sync_client.disconnect())
                         sync_client = None
                         stopped_something = True
 
@@ -1607,7 +1752,7 @@ def main():
                         stopped_something = True
 
                     if sync_server and sync_server.is_running:
-                        asyncio.run(sync_server.stop())
+                        loop.run_until_complete(sync_server.stop())
                         stopped_something = True
 
                     if stopped_something:
@@ -1719,7 +1864,7 @@ def main():
                     sync_client = SyncClient(state=sync_state, shared_secret=secret)
 
                     console.print(f"[dim]Connecting to {address}...[/dim]")
-                    success = asyncio.run(sync_client.connect(address))
+                    success = loop.run_until_complete(sync_client.connect(address))
 
                     if success:
                         console.print(f"[green]Connected to {sync_client.peer_device_name}[/green]")
@@ -1734,7 +1879,7 @@ def main():
                         continue
 
                     peer_name = sync_client.peer_device_name
-                    asyncio.run(sync_client.disconnect())
+                    loop.run_until_complete(sync_client.disconnect())
                     sync_client = None
                     console.print(f"[yellow]Disconnected from {peer_name}[/yellow]")
                     continue
@@ -1747,7 +1892,7 @@ def main():
                         continue
 
                     console.print("[dim]Syncing...[/dim]")
-                    result = asyncio.run(sync_client.sync())
+                    result = loop.run_until_complete(sync_client.sync())
 
                     if result.success:
                         console.print(
@@ -1794,10 +1939,29 @@ def main():
             context_memories = memory.recall(user_input, limit=3)
             context = "\n".join(m.content for m in context_memories) if context_memories else None
 
-            # Generate response
+            # Generate response — delegate to Gorgon when connected + auto_delegate
             console.print()
-            logger.debug(f"Generating response with mode={mode.value}")
-            response = cognitive.think(user_input, context=context, mode=mode)
+            gorgon_int = integrations.get("gorgon") if GORGON_AVAILABLE else None
+            if gorgon_int and gorgon_int.is_connected and config.integrations.gorgon.auto_delegate:
+                console.print("[dim]Delegating to Gorgon...[/dim]")
+                result = loop.run_until_complete(
+                    gorgon_int._tool_delegate(task=user_input, priority=5, wait=True)
+                )
+                if result.success:
+                    t = result.output
+                    task_result = t.get("result")
+                    if task_result:
+                        response = str(task_result)
+                    else:
+                        response = (
+                            f"[Gorgon task {t['id'][:8]}] Status: {t.get('status', 'submitted')}"
+                        )
+                else:
+                    logger.warning(f"Gorgon delegation failed: {result.error}, using local model")
+                    response = cognitive.think(user_input, context=context, mode=mode)
+            else:
+                logger.debug(f"Generating response with mode={mode.value}")
+                response = cognitive.think(user_input, context=context, mode=mode)
 
             # Record assistant response
             conversation.add_message("assistant", response)
@@ -1822,6 +1986,9 @@ def main():
         except Exception as e:
             logger.exception(f"Error in main loop: {e}")
             console.print(f"[red]Error: {e}[/red]")
+
+    # Close the persistent event loop
+    loop.close()
 
 
 if __name__ == "__main__":
