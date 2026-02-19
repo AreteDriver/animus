@@ -1,293 +1,160 @@
 # Animus
 
-*An exocortex architecture for personal cognitive sovereignty*
+**A personal AI exocortex with industrial-grade multi-agent orchestration.**
 
----
+Animus is a three-layer system that combines a persistent personal AI interface, a dynamic multi-agent workflow engine, and a novel coordination protocol based on stigmergy — the same principle that lets birds flock without a leader.
 
-## What is this?
-
-Animus is a framework for building a **personal AI** — one that persists, learns, and serves a single user by design.
-
-Current AI assistants are rented. Your context exists at the discretion of platform providers. Memory is a feature that can be revoked. The relationship resets at their convenience.
-
-Animus explores an alternative: an AI that is **yours**.
-
----
-
-## The Concept
-
-The idea of a personal guiding intelligence is ancient — daemons, familiars, advisory entities that serve one person's interests across time.
-
-This project translates that concept into modern architecture: a persistent, private, portable AI co-pilot that extends your cognitive capacity without compromising your sovereignty.
-
----
-
-## Core Principles
-
-- **Persistence** — Context accumulates across sessions, devices, and years
-- **Sovereignty** — Your data stays yours. Local-first by default.
-- **Loyalty** — Aligned to you, not to a platform's incentives
-- **Portability** — Moves with you: desktop, mobile, wearable
-- **Growth** — Learns your patterns, priorities, and goals over time
-- **Safety** — Cannot harm its user. Guardrails are user-defined but inviolable.
-
----
-
-## The Stack
-
-Animus is the user-facing layer of a multi-project architecture. Each layer is an independent, open-source project that can be used standalone or composed into the full system.
-
-```
-┌──────────────────────────────────┐
-│            ANIMUS                │  You are here
-│   Identity · Memory · Interface  │
-│                                  │
-│   The sovereign personal AI.     │
-│   Knows you, serves you, is     │
-│   yours.                         │
-├──────────────────────────────────┤
-│            GORGON                │  github.com/AreteDriver/Gorgon
-│   Workflows · Budgets · Gates    │
-│                                  │
-│   Multi-agent orchestration.     │
-│   When Animus needs to do        │
-│   complex work, Gorgon           │
-│   decomposes, delegates, and     │
-│   quality-checks.                │
-├──────────────────────────────────┤
-│          CONVERGENT              │  github.com/AreteDriver/Convergent
-│   Intent Graph · Stability       │
-│                                  │
-│   Parallel agent coordination.   │
-│   Agents converge on compatible  │
-│   outputs without a supervisor   │
-│   bottleneck. Inspired by        │
-│   flocking and stigmergy.        │
-├──────────────────────────────────┤
-│        INFERENCE ENGINE          │
-│   Ollama · Claude API · Any LLM  │
-│                                  │
-│   Model-agnostic. Swap local     │
-│   and cloud providers without    │
-│   changing a line of code.       │
-└──────────────────────────────────┘
-```
-
-### How They Connect
-
-**Animus** is the product — the thing you talk to, the thing that remembers you, the thing that runs on your devices. It doesn't do complex work alone.
-
-**Gorgon** is the engine room. When Animus receives a request that requires multiple steps — research a topic, draft a document, review and refine — it hands the task to Gorgon. Gorgon decomposes it into agent roles (planner, builder, tester, reviewer), manages token budgets, enforces quality gates, and checkpoints progress so nothing is lost if a step fails.
-
-**Convergent** is the coordination protocol inside Gorgon. When multiple agents work in parallel, Convergent's intent graph and stability scoring ensure they arrive at compatible outputs — without centralized message passing. Each agent observes a shared landscape and adjusts independently. Coherent results emerge the same way flocking emerges in birds.
-
-**The inference engine** is pluggable. Run a 70B model locally via Ollama for air-gapped sovereignty, or route to Claude API when you need frontier reasoning. Gorgon's router handles tier-based selection automatically — heavy reasoning gets the best available model, simple tasks get the fastest.
-
-### Use Them Independently
-
-Each project stands on its own:
-
-| Project | Standalone Use |
-|---------|---------------|
-| **Animus** | Personal AI assistant with persistent memory |
-| **Gorgon** | General-purpose multi-agent workflow orchestration |
-| **Convergent** | Coordination primitive for any parallel agent system |
-
-You don't need Animus to use Gorgon. You don't need Gorgon to use Convergent. But together, they form something greater than the sum.
+Most personal AI projects slap memory onto a chatbot. Animus builds the full stack: from coordination primitives through orchestration to a sovereign user interface.
 
 ---
 
 ## Architecture
 
-Animus itself is a four-layer system:
-
 ```
-┌─────────────────────────────────────┐
-│           Interface Layer           │
-│   (voice, text, wearable, desktop)  │
-├─────────────────────────────────────┤
-│           Cognitive Layer           │
-│ (reasoning, analysis, generation)   │
-│         ┌─────────────┐            │
-│         │   Gorgon    │  ← orchestration for complex tasks
-│         │ Convergent  │  ← parallel coordination
-│         └─────────────┘            │
-├─────────────────────────────────────┤
-│           Memory Layer              │
-│ (episodic, semantic, procedural)    │
-├─────────────────────────────────────┤
-│            Core Layer               │
-│  (identity, security, preferences)  │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│              ANIMUS CORE                  │
+│  Identity · Memory · Multi-device UI      │
+│  The layer you talk to.                   │
+├──────────────────────────────────────────┤
+│              ANIMUS FORGE                 │
+│  Workflows · Budgets · Quality Gates      │
+│  The layer that gets things done.         │
+├──────────────────────────────────────────┤
+│              ANIMUS SWARM                 │
+│  Intent Graph · Stability · Resolution    │
+│  The layer that keeps agents aligned.     │
+└──────────────────────────────────────────┘
 ```
 
-### Core Layer
+**Core** receives your intent and translates it into structured task definitions. It maintains persistent memory (episodic, semantic, procedural) across sessions and devices. It's the only layer users interact with directly.
 
-The foundation. Defines *who* this Animus belongs to.
+**Forge** is a headless orchestration engine. It receives situation configs from Core, spins up purpose-built agents from reusable templates, manages token/cost budgets, enforces quality gates, and persists state via SQLite for checkpoint/resume. Pipelines are defined in declarative YAML — new use case, new config file, no new code.
 
-- **Identity** — Cryptographic ownership. This instance serves one user.
-- **Preferences** — Communication style, priorities, boundaries
-- **Security** — Encryption at rest, access control, authentication
-- **Ethics config** — User-defined behavioral constraints
-
-### Memory Layer
-
-What makes it *yours* over time.
-
-- **Episodic memory** — Conversations, events, decisions (what happened)
-- **Semantic memory** — Facts, knowledge, learnings (what you know)
-- **Procedural memory** — Workflows, habits, patterns (how you do things)
-- **Active context** — Current situation, recent threads, live priorities
-
-### Cognitive Layer
-
-The reasoning engine — where Gorgon and Convergent plug in.
-
-- **Model agnostic** — Swap local or cloud LLMs as needed
-- **Simple requests** — Direct LLM inference, single-turn
-- **Complex requests** — Routed to Gorgon for multi-agent orchestration
-- **Tool use** — File access, web search, API calls, device control
-- **Register translation** — Adjusts communication to context
-
-### Interface Layer
-
-How you interact across contexts.
-
-- **Desktop** — Full interface, long-form work
-- **Mobile** — Voice-first, quick exchanges
-- **Wearable** — Minimal, ambient, notification-based
-- **API** — Integrations with other tools and services
-
-Seamless handoff: start a thought on desktop, continue on phone. Context follows you.
+**Swarm** prevents parallel agents from colliding without a centralized supervisor. Each agent reads a shared intent graph before making decisions and self-adjusts to be compatible with high-stability commitments from other agents. No inter-agent messaging. O(n) reads instead of O(n²) messages. Based on biological stigmergy and flocking behaviors.
 
 ---
 
-## Data Flow
+## How It Works
+
+You tell Animus what you need. Animus figures out how to get it done.
 
 ```
-User input (any device)
-         │
-         ▼
-   Interface Layer ──── Captures, normalizes
-         │
-         ▼
-     Core Layer ──────── Authenticates, applies preferences
-         │
-         ▼
-    Memory Layer ─────── Retrieves relevant context
-         │
-         ▼
-   Cognitive Layer ───── Reasons, generates response
-    │         │
-    │    (complex tasks)
-    │         ▼
-    │      Gorgon ─────── Decomposes → agents → quality gates
-    │         │
-    │     Convergent ──── Coordinates parallel agents
-    │         │
-    ◄─────────┘
-         │
-         ▼
-    Memory Layer ─────── Stores new context, updates patterns
-         │
-         ▼
-   Interface Layer ───── Delivers response
+You → Core: "Produce today's Story Fire episode"
+
+Core (knows your channels, schedule, preferences)
+  → Forge API: situation config + parameters
+
+Forge spins up pipeline:
+  Research → Script → Voice → Video → QA → Publish
+  (parallel where possible, Swarm keeps them aligned)
+
+Forge → Core: results
+Core → You: "Episode published. Here's the summary."
+```
+
+The same system handles media production, code review pipelines, research workflows, or any multi-step task you define in YAML.
+
+---
+
+## Design Principles
+
+**Situation-driven orchestration.** Forge doesn't have hardcoded pipelines. It reads YAML situation configs and dynamically assembles the right agents with the right tools. Adding a new workflow means writing a config file, not writing code.
+
+**Budget-first execution.** Every agent has a token budget. Every workflow has a cost ceiling. Inspired by Toyota Production System — make cost visible, make waste impossible to ignore.
+
+**No supervisor bottleneck.** The industry default for multi-agent coordination is a supervisor agent that watches everything. This is expensive (burns tokens on monitoring) and creates a single point of failure. Swarm replaces this with environmental awareness — agents observe shared state and independently converge, the way flocking birds coordinate without a lead bird.
+
+**Checkpoint/resume.** All Forge workflows persist state to SQLite. If a pipeline fails at step 4 of 6, it restarts at step 4. No wasted compute.
+
+**Provider-agnostic.** LLM calls go through a shared interface. Swap Claude API for OpenAI or Ollama without touching agent code.
+
+**Local-first sovereignty.** Your memory, your identity, your hardware. Data doesn't leave unless you explicitly configure it to.
+
+---
+
+## Active Workload: Media Engine
+
+The first production deployment of the full stack. Three AI-powered YouTube channels producing autonomous content:
+
+| Channel | Domain | Content |
+|---------|--------|---------|
+| Story Fire | World folklore & mythology | Narrative retellings |
+| New Eden Whispers | EVE Online lore | In-universe storytelling |
+| Holmes Wisdom | Sherlock Holmes | Wisdom & deduction lessons |
+
+8 languages per channel. ~480 videos/month. Fully autonomous via Core + Forge.
+
+Each channel has a situation config that defines its agent pipeline. Same orchestration engine, different configs, completely different outputs.
+
+---
+
+## Repository Structure
+
+```
+Animus/
+├── core/              ← Identity, memory, multi-device interface
+│   ├── memory/        ← Episodic, semantic, procedural
+│   ├── identity/      ← User profile, preferences
+│   └── interface/     ← CLI, voice, desktop, mobile adapters
+├── forge/             ← Multi-agent orchestration engine
+│   ├── workflows/     ← YAML pipeline definitions
+│   ├── agents/        ← Agent archetypes (researcher, writer, reviewer...)
+│   ├── budget/        ← Token/cost management
+│   ├── gates/         ← Quality checkpoints
+│   └── checkpoint/    ← SQLite state persistence
+├── swarm/             ← Stigmergic coordination protocol
+│   ├── intent_graph/  ← Shared decision graph
+│   ├── stability/     ← Confidence scoring
+│   └── resolver/      ← Per-agent intent resolution
+├── shared/            ← Cross-layer types, config, LLM interface
+├── configs/           ← Situation definitions (media engine, etc.)
+├── docs/              ← Architecture docs, whitepapers
+└── tests/
 ```
 
 ---
 
-## Reference Hardware
+## Tech Stack
 
-Animus is designed to run on consumer hardware. The reference deployment:
-
-| Machine | Role | What It Runs |
-|---------|------|-------------|
-| Mac Studio M4 Max 128GB | Primary workstation | Animus core, Gorgon orchestrator, 70B reasoning model |
-| Mac Studio M4 Max 128GB | Inference server | Agent pool (8B-14B models), Gorgon workers |
-
-Connected via Thunderbolt 5 using [exo](https://github.com/exo-explore/exo) for distributed inference. Combined 256GB unified memory runs frontier-class models (DeepSeek V3 671B at 4-bit) fully local, zero API cost.
-
-Animus also runs on a single laptop with smaller models. The architecture scales down gracefully — fewer agents, smaller models, same sovereignty.
+| Layer | Technology |
+|-------|-----------|
+| Language | Python (primary), TypeScript (dashboard) |
+| State | SQLite (checkpoints, procedural memory), ChromaDB (semantic memory) |
+| Workflows | Declarative YAML |
+| LLM | Provider-agnostic (Claude API, OpenAI, Ollama) |
+| Dashboard | FastAPI + React (ops monitoring, admin only) |
+| Deployment | Docker + Docker Compose |
 
 ---
 
-## What's Buildable Now vs. Aspirational
+## Status
 
-### Buildable today
-- Local LLM with persistent memory (Ollama + ChromaDB)
-- Desktop + mobile text interface
-- Basic voice integration
-- Personal knowledge base with retrieval
-- Multi-agent task execution via Gorgon
-
-### Near-term (6-12 months)
-- Cross-device sync with encrypted handoff
-- Improved local models approaching API quality
-- Wearable integrations (existing hardware)
-- Proactive notifications and scheduling
-
-### Aspirational
-- True seamless multi-device presence
-- Real-time ambient awareness
-- Minimal form factor (ring, glasses) with full capability
-- Self-improving personalization within safety boundaries
+| Layer | Stage |
+|-------|-------|
+| Core | Architecture documented. CLI prototype is next. |
+| Forge | Pre-Phase 2. Implementation prompts scaffolded. FastAPI backend scoped. |
+| Swarm | Whitepaper complete with full architecture spec and worked examples. Pre-implementation. |
 
 ---
 
-## Project Status
+## Background
 
-🚧 **Early Development**
+This project grew out of 17+ years of enterprise operations experience, including applying Toyota Production System principles to AI workflow systematization. The orchestration layer (Forge) treats multi-agent execution the way a lean manufacturing line treats production — visible budgets, quality gates at every stage, and waste elimination through checkpoint/resume.
 
-The stack is being built bottom-up:
-
-- [x] **Convergent** — Core library complete (Rust + Python, intent graph, stability scorer)
-- [ ] **Gorgon** — Core implementation in progress (contracts, workflows, budget, agents)
-- [ ] **Animus** — Architecture defined, implementation follows Gorgon completion
-
-See each project's repo for detailed status.
-
----
-
-## Philosophy
-
-> "You don't own it. You rent access."
-
-This is the fundamental problem with current AI assistants. Your relationship with the AI — the context it has about you, the patterns it's learned, the history you've built — exists at the pleasure of corporations whose incentives may diverge from yours at any moment.
-
-Animus is an attempt to build something different: an AI that serves you because it's *yours*, not because a company's business model temporarily aligns with your needs.
-
-The goal isn't to replace cloud AI services entirely — they have capabilities that local systems can't match. The goal is **sovereignty**: you control the core, you own the memory, you decide what gets shared and what stays private.
+The coordination layer (Swarm) draws from biological systems research. Traditional multi-agent coordination uses either sequential execution (safe but slow) or supervisor patterns (flexible but expensive). Swarm introduces a third option: stigmergic coordination, where agents self-organize through shared environmental state rather than direct communication.
 
 ---
 
 ## Related Projects
 
-| Project | Description | Repo |
-|---------|-------------|------|
-| **Gorgon** | Multi-agent orchestration with budget controls, checkpoint/resume, and YAML workflows | [AreteDriver/Gorgon](https://github.com/AreteDriver/Gorgon) |
-| **Convergent** | Parallel agent coordination via intent graphs and stigmergy-inspired stability scoring | [AreteDriver/Convergent](https://github.com/AreteDriver/Convergent) |
-
----
-
-## Documentation
-
-- [Architecture Overview](docs/ARCHITECTURE.md)
-- [Implementation Roadmap](docs/ROADMAP.md)
-- [Safety & Ethics](docs/SAFETY.md)
+| Project | Relationship |
+|---------|-------------|
+| [BenchGoblins](https://github.com/AreteDriver/BenchGoblins) | Fantasy sports decision engine. Will use Forge workflows for analysis pipelines. |
+| [EVE_Collection](https://github.com/AreteDriver/EVE_Collection) | Media Engine's "New Eden Whispers" channel draws from EVE lore. |
+| [LinuxTools](https://github.com/AreteDriver/LinuxTools) | Potential future Animus integration for voice-driven tool control. |
 
 ---
 
 ## License
 
-MIT License — See [LICENSE](LICENSE) for details.
-
----
-
-## Acknowledgments
-
-This project draws inspiration from:
-- Ancient concepts of personal guiding intelligences (daemons, familiars)
-- The exocortex concept from transhumanist thought
-- Lean manufacturing and Toyota Production System principles
-- Open-source AI projects pushing local-first development
-- Everyone building toward a future where AI serves individuals, not platforms
+MIT
