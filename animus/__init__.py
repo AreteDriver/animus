@@ -33,6 +33,15 @@ except ImportError:
     VoiceInterface = None  # type: ignore[misc, assignment]
     VoiceOutput = None  # type: ignore[misc, assignment]
 
+from animus.forge import (
+    AgentConfig,
+    ForgeError,
+    GateConfig,
+    StepResult,
+    WorkflowConfig,
+    WorkflowState,
+)
+
 try:
     from animus.learning import (
         Guardrail,
@@ -50,14 +59,17 @@ except ImportError:
 
 __all__ = [
     "APIServer",
+    "AgentConfig",
     "AnimusConfig",
     "CognitiveLayer",
     "Conversation",
     "Decision",
     "DecisionFramework",
     "Entity",
+    "ForgeError",
     "EntityMemory",
     "EntityType",
+    "GateConfig",
     "Guardrail",
     "GuardrailManager",
     "LearnedItem",
@@ -78,6 +90,7 @@ __all__ = [
     "RegisterTranslator",
     "RelationType",
     "SemanticFact",
+    "StepResult",
     "Task",
     "TaskStatus",
     "TaskTracker",
@@ -87,6 +100,8 @@ __all__ = [
     "VoiceInput",
     "VoiceInterface",
     "VoiceOutput",
+    "WorkflowConfig",
+    "WorkflowState",
     "__version__",
     "create_default_registry",
     "detect_mode",
