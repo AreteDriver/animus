@@ -774,9 +774,9 @@ class TestGoogleCalendarIntegration:
         assert result is False
 
     def test_connect_success(self, tmp_path: Path):
-        from animus.integrations.google.calendar import GoogleCalendarIntegration
+        import animus.integrations.google.calendar as cal_mod
 
-        cal = GoogleCalendarIntegration(data_dir=tmp_path)
+        cal = cal_mod.GoogleCalendarIntegration(data_dir=tmp_path)
         mock_service = MagicMock()
         mock_token = OAuth2Token(
             access_token="tok",
@@ -785,8 +785,6 @@ class TestGoogleCalendarIntegration:
             expires_at=datetime(2099, 1, 1),
             scopes=[],
         )
-
-        import animus.integrations.google.calendar as cal_mod
 
         with (
             patch.object(cal_mod, "GOOGLE_API_AVAILABLE", True),
@@ -799,9 +797,9 @@ class TestGoogleCalendarIntegration:
         assert result is True
 
     def test_connect_error(self, tmp_path: Path):
-        from animus.integrations.google.calendar import GoogleCalendarIntegration
+        import animus.integrations.google.calendar as cal_mod
 
-        cal = GoogleCalendarIntegration(data_dir=tmp_path)
+        cal = cal_mod.GoogleCalendarIntegration(data_dir=tmp_path)
         mock_token = OAuth2Token(
             access_token="tok",
             refresh_token="ref",
@@ -809,8 +807,6 @@ class TestGoogleCalendarIntegration:
             expires_at=datetime(2099, 1, 1),
             scopes=[],
         )
-
-        import animus.integrations.google.calendar as cal_mod
 
         with (
             patch.object(cal_mod, "GOOGLE_API_AVAILABLE", True),
@@ -923,9 +919,9 @@ class TestGmailIntegration:
         assert result is False
 
     def test_connect_success(self, tmp_path: Path):
-        from animus.integrations.google.gmail import GmailIntegration
+        import animus.integrations.google.gmail as gmail_mod
 
-        gmail = GmailIntegration(data_dir=tmp_path)
+        gmail = gmail_mod.GmailIntegration(data_dir=tmp_path)
         mock_service = MagicMock()
         mock_token = OAuth2Token(
             access_token="tok",
@@ -934,8 +930,6 @@ class TestGmailIntegration:
             expires_at=datetime(2099, 1, 1),
             scopes=[],
         )
-
-        import animus.integrations.google.gmail as gmail_mod
 
         with (
             patch.object(gmail_mod, "GOOGLE_API_AVAILABLE", True),
@@ -948,9 +942,9 @@ class TestGmailIntegration:
         assert result is True
 
     def test_connect_error(self, tmp_path: Path):
-        from animus.integrations.google.gmail import GmailIntegration
+        import animus.integrations.google.gmail as gmail_mod
 
-        gmail = GmailIntegration(data_dir=tmp_path)
+        gmail = gmail_mod.GmailIntegration(data_dir=tmp_path)
         mock_token = OAuth2Token(
             access_token="tok",
             refresh_token="ref",
@@ -958,8 +952,6 @@ class TestGmailIntegration:
             expires_at=datetime(2099, 1, 1),
             scopes=[],
         )
-
-        import animus.integrations.google.gmail as gmail_mod
 
         with (
             patch.object(gmail_mod, "GOOGLE_API_AVAILABLE", True),

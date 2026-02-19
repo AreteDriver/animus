@@ -530,8 +530,8 @@ def _tool_http_request(params: dict) -> ToolResult:
         error_body = ""
         try:
             error_body = e.read().decode("utf-8", errors="replace")[:5000]
-        except Exception:
-            pass
+        except Exception as read_err:
+            logger.debug("Failed to read HTTP error body: %s", read_err)
         return ToolResult(
             tool_name="http_request",
             success=False,

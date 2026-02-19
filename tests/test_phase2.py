@@ -353,7 +353,8 @@ class TestTaskTracker:
             tracker = TaskTracker(Path(tmpdir))
             task = tracker.add("To delete")
 
-            assert tracker.delete(task.id) is True
+            deleted = tracker.delete(task.id)
+            assert deleted is True
             assert tracker.get(task.id) is None
 
     def test_list_tasks(self):

@@ -127,8 +127,8 @@ class SyncServer:
         for peer in list(self._peers.values()):
             try:
                 await peer.websocket.close()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Error closing peer websocket: %s", e)
 
         self._peers.clear()
 
@@ -263,8 +263,8 @@ class SyncServer:
                         "message_error",
                     ).to_json()
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Error sending error message to peer: %s", e)
 
     async def _handle_ping(self, peer: ConnectedPeer, message: SyncMessage) -> None:
         """Handle ping message."""

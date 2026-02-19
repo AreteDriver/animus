@@ -738,14 +738,16 @@ class TestTaskTrackerAdditional:
 
         tracker = TaskTracker(data_dir=tmp_path)
         task = tracker.add("Delete me")
-        assert tracker.delete(task.id) is True
+        deleted = tracker.delete(task.id)
+        assert deleted is True
         assert tracker.get(task.id) is None
 
     def test_delete_missing(self, tmp_path: Path):
         from animus.tasks import TaskTracker
 
         tracker = TaskTracker(data_dir=tmp_path)
-        assert tracker.delete("nonexistent") is False
+        deleted = tracker.delete("nonexistent")
+        assert deleted is False
 
     def test_list_with_tags(self, tmp_path: Path):
         from animus.tasks import TaskTracker

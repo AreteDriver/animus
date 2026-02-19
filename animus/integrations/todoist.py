@@ -21,7 +21,7 @@ try:
 
     TODOIST_AVAILABLE = True
 except ImportError:
-    pass
+    TodoistAPI = None  # type: ignore[assignment,misc]
 
 
 class TodoistIntegration(BaseIntegration):

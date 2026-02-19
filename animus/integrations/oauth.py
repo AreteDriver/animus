@@ -29,7 +29,9 @@ try:
 
     GOOGLE_AUTH_AVAILABLE = True
 except ImportError:
-    pass
+    Request = None  # type: ignore[assignment,misc]
+    Credentials = None  # type: ignore[assignment,misc]
+    Flow = None  # type: ignore[assignment,misc]
 
 
 @dataclass
