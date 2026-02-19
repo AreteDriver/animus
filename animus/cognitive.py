@@ -369,25 +369,17 @@ class CognitiveLayer:
         primary_config: ModelConfig | None = None,
         fallback_config: ModelConfig | None = None,
         learning: "LearningLayer | None" = None,
-<<<<<<< Updated upstream
         entity_memory: "EntityMemory | None" = None,
         proactive: "ProactiveEngine | None" = None,
-||||||| Stash base
-=======
         gorgon_client: "GorgonClient | None" = None,
->>>>>>> Stashed changes
     ):
         self.primary_config = primary_config or ModelConfig.ollama()
         self.fallback_config = fallback_config
         self.learning = learning
-<<<<<<< Updated upstream
         self.entity_memory = entity_memory
         self.proactive = proactive
         self.register_translator = RegisterTranslator()
-||||||| Stash base
-=======
         self.gorgon_client: GorgonClient | None = gorgon_client
->>>>>>> Stashed changes
 
         self.primary: IntelligenceProvider = create_model(self.primary_config)
         self.fallback: IntelligenceProvider | None = (
