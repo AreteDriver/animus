@@ -7,18 +7,16 @@ Covers: integrations/oauth.py, webhooks.py, todoist.py, manager.py,
 from __future__ import annotations
 
 import asyncio
-import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from animus.integrations.oauth import OAuth2Token, load_token, save_token
-from animus.integrations.webhooks import WebhookEvent, WebhookIntegration
-from animus.integrations.todoist import TodoistIntegration
 from animus.integrations.manager import IntegrationManager, _derive_key, _get_encryption_secret
-
+from animus.integrations.oauth import OAuth2Token, load_token, save_token
+from animus.integrations.todoist import TodoistIntegration
+from animus.integrations.webhooks import WebhookEvent, WebhookIntegration
 
 # ===================================================================
 # OAuth2
@@ -248,8 +246,11 @@ class TestWebhookIntegration:
         wh.register_callback("src", "type", bad_cb)
 
         event = WebhookEvent(
-            id="e1", source="src", event_type="type",
-            payload={}, received_at=datetime.now(),
+            id="e1",
+            source="src",
+            event_type="type",
+            payload={},
+            received_at=datetime.now(),
         )
         wh._receive_event(event)  # Should not raise
 
@@ -273,14 +274,20 @@ class TestWebhookIntegration:
         wh = WebhookIntegration()
         wh._receive_event(
             WebhookEvent(
-                id="e1", source="src", event_type="push",
-                payload={}, received_at=datetime.now(),
+                id="e1",
+                source="src",
+                event_type="push",
+                payload={},
+                received_at=datetime.now(),
             )
         )
         wh._receive_event(
             WebhookEvent(
-                id="e2", source="src", event_type="pr",
-                payload={}, received_at=datetime.now(),
+                id="e2",
+                source="src",
+                event_type="pr",
+                payload={},
+                received_at=datetime.now(),
             )
         )
         result = asyncio.run(wh._tool_list_events(event_type="push"))
@@ -290,8 +297,11 @@ class TestWebhookIntegration:
         wh = WebhookIntegration()
         wh._receive_event(
             WebhookEvent(
-                id="target-id", source="src", event_type="type",
-                payload={"key": "val"}, received_at=datetime.now(),
+                id="target-id",
+                source="src",
+                event_type="type",
+                payload={"key": "val"},
+                received_at=datetime.now(),
             )
         )
         result = asyncio.run(wh._tool_get_event("target-id"))
@@ -722,9 +732,7 @@ class TestIntegrationManager:
         integration = MagicMock()
         integration.name = "test"
         integration.is_connected = True
-        integration.get_info.return_value = MagicMock(
-            status=MagicMock(value="connected")
-        )
+        integration.get_info.return_value = MagicMock(status=MagicMock(value="connected"))
         mgr.register(integration)
 
         summary = mgr.get_status_summary()
@@ -771,20 +779,23 @@ class TestGoogleCalendarIntegration:
         cal = GoogleCalendarIntegration(data_dir=tmp_path)
         mock_service = MagicMock()
         mock_token = OAuth2Token(
-            access_token="tok", refresh_token="ref",
-            token_type="Bearer", expires_at=datetime(2099, 1, 1), scopes=[],
+            access_token="tok",
+            refresh_token="ref",
+            token_type="Bearer",
+            expires_at=datetime(2099, 1, 1),
+            scopes=[],
         )
 
         import animus.integrations.google.calendar as cal_mod
 
-        with patch.object(cal_mod, "GOOGLE_API_AVAILABLE", True), \
-             patch.object(cal_mod, "GOOGLE_AUTH_AVAILABLE", True), \
-             patch.object(cal_mod, "load_token", return_value=mock_token), \
-             patch.object(cal_mod, "Credentials", create=True, return_value=MagicMock()), \
-             patch.object(cal_mod, "build", create=True, return_value=mock_service):
-            result = asyncio.run(
-                cal.connect({"client_id": "id", "client_secret": "secret"})
-            )
+        with (
+            patch.object(cal_mod, "GOOGLE_API_AVAILABLE", True),
+            patch.object(cal_mod, "GOOGLE_AUTH_AVAILABLE", True),
+            patch.object(cal_mod, "load_token", return_value=mock_token),
+            patch.object(cal_mod, "Credentials", create=True, return_value=MagicMock()),
+            patch.object(cal_mod, "build", create=True, return_value=mock_service),
+        ):
+            result = asyncio.run(cal.connect({"client_id": "id", "client_secret": "secret"}))
         assert result is True
 
     def test_connect_error(self, tmp_path: Path):
@@ -792,16 +803,21 @@ class TestGoogleCalendarIntegration:
 
         cal = GoogleCalendarIntegration(data_dir=tmp_path)
         mock_token = OAuth2Token(
-            access_token="tok", refresh_token="ref",
-            token_type="Bearer", expires_at=datetime(2099, 1, 1), scopes=[],
+            access_token="tok",
+            refresh_token="ref",
+            token_type="Bearer",
+            expires_at=datetime(2099, 1, 1),
+            scopes=[],
         )
 
         import animus.integrations.google.calendar as cal_mod
 
-        with patch.object(cal_mod, "GOOGLE_API_AVAILABLE", True), \
-             patch.object(cal_mod, "GOOGLE_AUTH_AVAILABLE", True), \
-             patch.object(cal_mod, "load_token", return_value=mock_token), \
-             patch.object(cal_mod, "Credentials", create=True, side_effect=Exception("auth fail")):
+        with (
+            patch.object(cal_mod, "GOOGLE_API_AVAILABLE", True),
+            patch.object(cal_mod, "GOOGLE_AUTH_AVAILABLE", True),
+            patch.object(cal_mod, "load_token", return_value=mock_token),
+            patch.object(cal_mod, "Credentials", create=True, side_effect=Exception("auth fail")),
+        ):
             result = asyncio.run(cal.connect({"client_id": "id", "client_secret": "secret"}))
         assert result is False
 
@@ -854,9 +870,7 @@ class TestGoogleCalendarIntegration:
         from animus.integrations.google.calendar import GoogleCalendarIntegration
 
         cal = GoogleCalendarIntegration()
-        result = asyncio.run(
-            cal._tool_create_event("Test", "2025-01-01T10:00", "2025-01-01T11:00")
-        )
+        result = asyncio.run(cal._tool_create_event("Test", "2025-01-01T10:00", "2025-01-01T11:00"))
         assert not result.success
 
     def test_tool_create_event_success(self):
@@ -882,9 +896,7 @@ class TestGoogleCalendarIntegration:
         from animus.integrations.google.calendar import GoogleCalendarIntegration
 
         cal = GoogleCalendarIntegration()
-        result = asyncio.run(
-            cal._tool_check_availability("2025-01-01T10:00", "2025-01-01T11:00")
-        )
+        result = asyncio.run(cal._tool_check_availability("2025-01-01T10:00", "2025-01-01T11:00"))
         assert not result.success
 
 
@@ -916,20 +928,23 @@ class TestGmailIntegration:
         gmail = GmailIntegration(data_dir=tmp_path)
         mock_service = MagicMock()
         mock_token = OAuth2Token(
-            access_token="tok", refresh_token="ref",
-            token_type="Bearer", expires_at=datetime(2099, 1, 1), scopes=[],
+            access_token="tok",
+            refresh_token="ref",
+            token_type="Bearer",
+            expires_at=datetime(2099, 1, 1),
+            scopes=[],
         )
 
         import animus.integrations.google.gmail as gmail_mod
 
-        with patch.object(gmail_mod, "GOOGLE_API_AVAILABLE", True), \
-             patch.object(gmail_mod, "GOOGLE_AUTH_AVAILABLE", True), \
-             patch.object(gmail_mod, "load_token", return_value=mock_token), \
-             patch.object(gmail_mod, "Credentials", create=True, return_value=MagicMock()), \
-             patch.object(gmail_mod, "build", create=True, return_value=mock_service):
-            result = asyncio.run(
-                gmail.connect({"client_id": "id", "client_secret": "secret"})
-            )
+        with (
+            patch.object(gmail_mod, "GOOGLE_API_AVAILABLE", True),
+            patch.object(gmail_mod, "GOOGLE_AUTH_AVAILABLE", True),
+            patch.object(gmail_mod, "load_token", return_value=mock_token),
+            patch.object(gmail_mod, "Credentials", create=True, return_value=MagicMock()),
+            patch.object(gmail_mod, "build", create=True, return_value=mock_service),
+        ):
+            result = asyncio.run(gmail.connect({"client_id": "id", "client_secret": "secret"}))
         assert result is True
 
     def test_connect_error(self, tmp_path: Path):
@@ -937,16 +952,21 @@ class TestGmailIntegration:
 
         gmail = GmailIntegration(data_dir=tmp_path)
         mock_token = OAuth2Token(
-            access_token="tok", refresh_token="ref",
-            token_type="Bearer", expires_at=datetime(2099, 1, 1), scopes=[],
+            access_token="tok",
+            refresh_token="ref",
+            token_type="Bearer",
+            expires_at=datetime(2099, 1, 1),
+            scopes=[],
         )
 
         import animus.integrations.google.gmail as gmail_mod
 
-        with patch.object(gmail_mod, "GOOGLE_API_AVAILABLE", True), \
-             patch.object(gmail_mod, "GOOGLE_AUTH_AVAILABLE", True), \
-             patch.object(gmail_mod, "load_token", return_value=mock_token), \
-             patch.object(gmail_mod, "Credentials", create=True, side_effect=Exception("auth fail")):
+        with (
+            patch.object(gmail_mod, "GOOGLE_API_AVAILABLE", True),
+            patch.object(gmail_mod, "GOOGLE_AUTH_AVAILABLE", True),
+            patch.object(gmail_mod, "load_token", return_value=mock_token),
+            patch.object(gmail_mod, "Credentials", create=True, side_effect=Exception("auth fail")),
+        ):
             result = asyncio.run(gmail.connect({"client_id": "id", "client_secret": "secret"}))
         assert result is False
 
@@ -988,11 +1008,13 @@ class TestGmailIntegration:
         mock_service.users.return_value.messages.return_value.get.return_value.execute.return_value = {
             "id": "m1",
             "snippet": "Test email",
-            "payload": {"headers": [
-                {"name": "Subject", "value": "Test"},
-                {"name": "From", "value": "test@example.com"},
-                {"name": "Date", "value": "2025-01-01"},
-            ]},
+            "payload": {
+                "headers": [
+                    {"name": "Subject", "value": "Test"},
+                    {"name": "From", "value": "test@example.com"},
+                    {"name": "Date", "value": "2025-01-01"},
+                ]
+            },
         }
         gmail._service = mock_service
         result = asyncio.run(gmail._tool_list_inbox())
@@ -1009,9 +1031,7 @@ class TestGmailIntegration:
         from animus.integrations.google.gmail import GmailIntegration
 
         gmail = GmailIntegration()
-        result = asyncio.run(
-            gmail._tool_send_email("to@test.com", "Subject", "Body")
-        )
+        result = asyncio.run(gmail._tool_send_email("to@test.com", "Subject", "Body"))
         assert not result.success
 
     def test_tool_send_email_success(self):
@@ -1024,7 +1044,5 @@ class TestGmailIntegration:
             "labelIds": ["SENT"],
         }
         gmail._service = mock_service
-        result = asyncio.run(
-            gmail._tool_send_email("to@test.com", "Subject", "Body")
-        )
+        result = asyncio.run(gmail._tool_send_email("to@test.com", "Subject", "Body"))
         assert result.success

@@ -6,8 +6,7 @@ Covers: learning/patterns.py, learning/__init__.py, learning/preferences.py,
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -21,7 +20,6 @@ from animus.learning.patterns import (
     PatternType,
 )
 from animus.memory import MemoryType
-
 
 # ===================================================================
 # Pattern Signal / DetectedPattern
@@ -86,8 +84,13 @@ class TestDetectedPattern:
 # ===================================================================
 
 
-def _make_memory(content: str, memory_id: str = "m1", memory_type=MemoryType.EPISODIC,
-                 created_at: datetime | None = None, hour: int = 10):
+def _make_memory(
+    content: str,
+    memory_id: str = "m1",
+    memory_type=MemoryType.EPISODIC,
+    created_at: datetime | None = None,
+    hour: int = 10,
+):
     """Create a mock memory object."""
     m = MagicMock()
     m.id = memory_id
@@ -113,10 +116,7 @@ class TestPatternDetector:
         assert result == []
 
     def test_scan_frequency_patterns(self):
-        memories = [
-            _make_memory("can you summarize this document", f"m{i}")
-            for i in range(5)
-        ]
+        memories = [_make_memory("can you summarize this document", f"m{i}") for i in range(5)]
         det = self._make_detector(memories, min_occ=3, min_conf=0.3)
         result = det.scan_for_patterns()
         # Should detect frequency pattern for "summarize this document"
@@ -140,7 +140,7 @@ class TestPatternDetector:
             _make_memory("i hate unnecessary comments in code", "m2"),
         ]
         det = self._make_detector(memories, min_occ=1, min_conf=0.3)
-        result = det.scan_for_patterns()
+        det.scan_for_patterns()
         # Should detect negative preference signals
 
     def test_scan_corrections(self):
@@ -156,10 +156,7 @@ class TestPatternDetector:
 
     def test_scan_temporal_patterns(self):
         # Create memories at the same hour to trigger temporal detection
-        memories = [
-            _make_memory(f"morning task {i}", f"m{i}", hour=8)
-            for i in range(5)
-        ]
+        memories = [_make_memory(f"morning task {i}", f"m{i}", hour=8) for i in range(5)]
         det = self._make_detector(memories, min_occ=3, min_conf=0.3)
         result = det.scan_for_patterns()
         temp_patterns = [p for p in result if p.pattern_type == PatternType.TEMPORAL]
@@ -171,19 +168,19 @@ class TestPatternDetector:
 
         # Morning
         memories = [_make_memory("task", f"m{i}", hour=8) for i in range(3)]
-        signals = det._detect_temporal_patterns(memories)
+        det._detect_temporal_patterns(memories)
 
         # Afternoon
         memories = [_make_memory("task", f"m{i}", hour=14) for i in range(3)]
-        signals = det._detect_temporal_patterns(memories)
+        det._detect_temporal_patterns(memories)
 
         # Evening
         memories = [_make_memory("task", f"m{i}", hour=19) for i in range(3)]
-        signals = det._detect_temporal_patterns(memories)
+        det._detect_temporal_patterns(memories)
 
         # Night
         memories = [_make_memory("task", f"m{i}", hour=23) for i in range(3)]
-        signals = det._detect_temporal_patterns(memories)
+        det._detect_temporal_patterns(memories)
 
     def test_suggest_learning_all_types(self):
         det = self._make_detector()

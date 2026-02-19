@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from textwrap import dedent
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -152,9 +152,7 @@ class TestGatesEdgeCases:
         assert "not found" in reason
 
     def test_numeric_non_numeric_value(self):
-        passed, reason = evaluate_gate(
-            self._gate("val >= 5"), {"val": "not_a_number"}
-        )
+        passed, reason = evaluate_gate(self._gate("val >= 5"), {"val": "not_a_number"})
         assert passed is False
         assert "not numeric" in reason
 
@@ -183,9 +181,7 @@ class TestEngineEdgeCases:
         from animus.cognitive import CognitiveLayer, ModelConfig
         from animus.forge.engine import ForgeEngine
 
-        cognitive = CognitiveLayer(
-            ModelConfig.mock(default_response="## brief\nDone.")
-        )
+        cognitive = CognitiveLayer(ModelConfig.mock(default_response="## brief\nDone."))
         config = WorkflowConfig(
             name="revise-test",
             agents=[
@@ -210,9 +206,7 @@ class TestEngineEdgeCases:
         from animus.forge.agent import ForgeAgent
         from animus.forge.engine import ForgeEngine
 
-        cognitive = CognitiveLayer(
-            ModelConfig.mock(default_response="## brief\nDone.")
-        )
+        cognitive = CognitiveLayer(ModelConfig.mock(default_response="## brief\nDone."))
         config = WorkflowConfig(
             name="error-test",
             agents=[
@@ -222,9 +216,7 @@ class TestEngineEdgeCases:
         engine = ForgeEngine(cognitive, checkpoint_dir=tmp_path)
 
         # Force an unexpected error by patching ForgeAgent.run to raise TypeError
-        with patch.object(
-            ForgeAgent, "run", side_effect=TypeError("unexpected")
-        ):
+        with patch.object(ForgeAgent, "run", side_effect=TypeError("unexpected")):
             with pytest.raises(ForgeError, match="Unexpected error"):
                 engine.run(config)
 
@@ -232,9 +224,7 @@ class TestEngineEdgeCases:
         from animus.cognitive import CognitiveLayer, ModelConfig
         from animus.forge.engine import ForgeEngine
 
-        cognitive = CognitiveLayer(
-            ModelConfig.mock(default_response="## brief\nDone.")
-        )
+        cognitive = CognitiveLayer(ModelConfig.mock(default_response="## brief\nDone."))
         config = WorkflowConfig(
             name="input-warn",
             agents=[
@@ -259,9 +249,7 @@ class TestForgeAgentEdgeCases:
         from animus.forge.agent import ForgeAgent
         from animus.tools import ToolRegistry
 
-        cognitive = CognitiveLayer(
-            ModelConfig.mock(default_response="Tool result.")
-        )
+        cognitive = CognitiveLayer(ModelConfig.mock(default_response="Tool result."))
         config = AgentConfig(
             name="tool-agent",
             archetype="researcher",

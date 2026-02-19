@@ -8,15 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import json
-import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
-
-from animus.memory import MemoryType
-
 
 # ===================================================================
 # Learning Layer
@@ -44,23 +38,27 @@ class TestLearningLayer:
         assert layer._learned_items == {}
 
     def test_load_learned_items_from_file(self, tmp_path: Path):
-        from animus.learning.categories import LearningCategory
-
         items_dir = tmp_path / "learning"
         items_dir.mkdir(parents=True, exist_ok=True)
         items_file = items_dir / "learned_items.json"
-        items_file.write_text(json.dumps([{
-            "id": "item-1",
-            "category": "preference",
-            "content": "User prefers dark mode",
-            "confidence": 0.9,
-            "evidence": ["m1"],
-            "source_pattern_id": "p1",
-            "applied": False,
-            "applied_at": None,
-            "created_at": "2025-01-01T00:00:00",
-            "updated_at": "2025-01-01T00:00:00",
-        }]))
+        items_file.write_text(
+            json.dumps(
+                [
+                    {
+                        "id": "item-1",
+                        "category": "preference",
+                        "content": "User prefers dark mode",
+                        "confidence": 0.9,
+                        "evidence": ["m1"],
+                        "source_pattern_id": "p1",
+                        "applied": False,
+                        "applied_at": None,
+                        "created_at": "2025-01-01T00:00:00",
+                        "updated_at": "2025-01-01T00:00:00",
+                    }
+                ]
+            )
+        )
 
         layer = self._make_layer(tmp_path)
         assert len(layer._learned_items) == 1
@@ -100,8 +98,8 @@ class TestLearningLayer:
         assert patterns == []
 
     def test_scan_and_learn_with_pattern(self, tmp_path: Path):
-        from animus.learning.patterns import DetectedPattern, PatternType
         from animus.learning.categories import LearningCategory
+        from animus.learning.patterns import DetectedPattern, PatternType
 
         layer = self._make_layer(tmp_path)
         pattern = DetectedPattern.create(
@@ -123,8 +121,8 @@ class TestLearningLayer:
         assert len(layer._learned_items) >= 1
 
     def test_process_pattern_blocked_by_guardrail(self, tmp_path: Path):
-        from animus.learning.patterns import DetectedPattern, PatternType
         from animus.learning.categories import LearningCategory
+        from animus.learning.patterns import DetectedPattern, PatternType
 
         layer = self._make_layer(tmp_path)
         layer.guardrails.check_learning = MagicMock(
@@ -188,8 +186,8 @@ class TestLearningLayer:
         assert item.applied is True
 
     def test_get_pattern_found(self, tmp_path: Path):
-        from animus.learning.patterns import DetectedPattern, PatternType
         from animus.learning.categories import LearningCategory
+        from animus.learning.patterns import DetectedPattern, PatternType
 
         layer = self._make_layer(tmp_path)
         pattern = DetectedPattern.create(
@@ -336,9 +334,7 @@ class TestLearningLayer:
 
     def test_add_user_guardrail(self, tmp_path: Path):
         layer = self._make_layer(tmp_path)
-        guardrail = layer.add_user_guardrail(
-            "no swearing", "Block profanity"
-        )
+        guardrail = layer.add_user_guardrail("no swearing", "Block profanity")
         assert guardrail is not None
 
     def test_get_statistics(self, tmp_path: Path):
@@ -507,7 +503,7 @@ class TestBuiltinTools:
         assert result.output == "hello world"
 
     def test_read_file_blocked_path(self, tmp_path: Path):
-        from animus.tools import _tool_read_file, _set_security_config
+        from animus.tools import _set_security_config, _tool_read_file
 
         mock_config = MagicMock()
         mock_config.blocked_paths = [str(tmp_path)]
@@ -571,7 +567,7 @@ class TestBuiltinTools:
         assert "timed out" in result.error
 
     def test_run_command_with_security_config(self):
-        from animus.tools import _tool_run_command, _set_security_config
+        from animus.tools import _set_security_config, _tool_run_command
 
         mock_config = MagicMock()
         mock_config.command_enabled = True
@@ -585,7 +581,7 @@ class TestBuiltinTools:
             _set_security_config(None)
 
     def test_run_command_disabled(self):
-        from animus.tools import _tool_run_command, _set_security_config
+        from animus.tools import _set_security_config, _tool_run_command
 
         mock_config = MagicMock()
         mock_config.command_enabled = False
@@ -624,11 +620,13 @@ class TestBuiltinTools:
         mock_response = MagicMock()
         mock_response.__enter__ = MagicMock(return_value=mock_response)
         mock_response.__exit__ = MagicMock(return_value=False)
-        mock_response.read.return_value = json.dumps({
-            "Abstract": "Test abstract",
-            "AbstractSource": "Wikipedia",
-            "RelatedTopics": [{"Text": "Related topic 1"}],
-        }).encode()
+        mock_response.read.return_value = json.dumps(
+            {
+                "Abstract": "Test abstract",
+                "AbstractSource": "Wikipedia",
+                "RelatedTopics": [{"Text": "Related topic 1"}],
+            }
+        ).encode()
 
         with patch("urllib.request.urlopen", return_value=mock_response):
             result = _tool_web_search({"query": "test"})
@@ -641,10 +639,12 @@ class TestBuiltinTools:
         mock_response = MagicMock()
         mock_response.__enter__ = MagicMock(return_value=mock_response)
         mock_response.__exit__ = MagicMock(return_value=False)
-        mock_response.read.return_value = json.dumps({
-            "Abstract": "",
-            "RelatedTopics": [],
-        }).encode()
+        mock_response.read.return_value = json.dumps(
+            {
+                "Abstract": "",
+                "RelatedTopics": [],
+            }
+        ).encode()
 
         with patch("urllib.request.urlopen", return_value=mock_response):
             result = _tool_web_search({"query": "gibberish123"})
@@ -683,11 +683,13 @@ class TestBuiltinTools:
         mock_response.headers = {}
 
         with patch("urllib.request.urlopen", return_value=mock_response):
-            result = _tool_http_request({
-                "url": "https://api.example.com",
-                "auth_type": "basic",
-                "auth_value": "user:pass",
-            })
+            result = _tool_http_request(
+                {
+                    "url": "https://api.example.com",
+                    "auth_type": "basic",
+                    "auth_value": "user:pass",
+                }
+            )
         assert result.success is True
 
     def test_http_request_api_key_auth(self):
@@ -701,11 +703,13 @@ class TestBuiltinTools:
         mock_response.headers = {}
 
         with patch("urllib.request.urlopen", return_value=mock_response):
-            result = _tool_http_request({
-                "url": "https://api.example.com",
-                "auth_type": "api_key",
-                "auth_value": "my-key",
-            })
+            result = _tool_http_request(
+                {
+                    "url": "https://api.example.com",
+                    "auth_type": "api_key",
+                    "auth_value": "my-key",
+                }
+            )
         assert result.success is True
 
     def test_http_request_http_error(self):
@@ -739,6 +743,7 @@ class TestCreateDefaultRegistry:
         assert len(registry.list_tools()) >= 6
         # Clean up
         from animus.tools import _set_security_config
+
         _set_security_config(None)
 
 
@@ -807,7 +812,9 @@ class TestMemoryTools:
         mock_memory.remember.return_value = mock_mem
         tools = create_memory_tools(mock_memory)
         save_tool = [t for t in tools if t.name == "save_memory"][0]
-        result = save_tool.handler({"content": "Remember this", "tags": "tag1,tag2", "type": "semantic"})
+        result = save_tool.handler(
+            {"content": "Remember this", "tags": "tag1,tag2", "type": "semantic"}
+        )
         assert result.success is True
         assert "mem-1234" in result.output
 
@@ -844,22 +851,26 @@ class TestProactiveEngine:
         )
 
     def test_load_nudges_from_file(self, tmp_path: Path):
-        from animus.proactive import Nudge, NudgePriority, NudgeType
-
         nudges_file = tmp_path / "nudges.json"
-        nudges_file.write_text(json.dumps([{
-            "id": "n1",
-            "nudge_type": "morning_brief",
-            "priority": "medium",
-            "title": "Test",
-            "content": "Content",
-            "created_at": "2025-01-01T00:00:00",
-            "expires_at": None,
-            "dismissed": False,
-            "acted_on": False,
-            "source_memory_ids": [],
-            "metadata": {},
-        }]))
+        nudges_file.write_text(
+            json.dumps(
+                [
+                    {
+                        "id": "n1",
+                        "nudge_type": "morning_brief",
+                        "priority": "medium",
+                        "title": "Test",
+                        "content": "Content",
+                        "created_at": "2025-01-01T00:00:00",
+                        "expires_at": None,
+                        "dismissed": False,
+                        "acted_on": False,
+                        "source_memory_ids": [],
+                        "metadata": {},
+                    }
+                ]
+            )
+        )
 
         engine = self._make_engine(tmp_path)
         assert len(engine._nudges) == 1
@@ -1162,14 +1173,16 @@ class TestProactiveEngine:
 
         engine = self._make_engine(tmp_path)
         for i in range(3):
-            engine._nudges.append(Nudge(
-                id=f"n{i}",
-                nudge_type=NudgeType.PATTERN_INSIGHT,
-                priority=NudgePriority.LOW,
-                title=f"Nudge {i}",
-                content="Content",
-                created_at=datetime.now(),
-            ))
+            engine._nudges.append(
+                Nudge(
+                    id=f"n{i}",
+                    nudge_type=NudgeType.PATTERN_INSIGHT,
+                    priority=NudgePriority.LOW,
+                    title=f"Nudge {i}",
+                    content="Content",
+                    created_at=datetime.now(),
+                )
+            )
         count = engine.dismiss_all()
         assert count == 3
 
@@ -1177,14 +1190,16 @@ class TestProactiveEngine:
         from animus.proactive import Nudge, NudgePriority, NudgeType
 
         engine = self._make_engine(tmp_path)
-        engine._nudges.append(Nudge(
-            id="n1",
-            nudge_type=NudgeType.FOLLOW_UP,
-            priority=NudgePriority.MEDIUM,
-            title="Follow up",
-            content="Content",
-            created_at=datetime.now(),
-        ))
+        engine._nudges.append(
+            Nudge(
+                id="n1",
+                nudge_type=NudgeType.FOLLOW_UP,
+                priority=NudgePriority.MEDIUM,
+                title="Follow up",
+                content="Content",
+                created_at=datetime.now(),
+            )
+        )
         results = engine.get_nudges_by_type(NudgeType.FOLLOW_UP)
         assert len(results) == 1
 
@@ -1192,22 +1207,26 @@ class TestProactiveEngine:
         from animus.proactive import Nudge, NudgePriority, NudgeType
 
         engine = self._make_engine(tmp_path)
-        engine._nudges.append(Nudge(
-            id="n1",
-            nudge_type=NudgeType.DEADLINE_WARNING,
-            priority=NudgePriority.URGENT,
-            title="Urgent",
-            content="Content",
-            created_at=datetime.now(),
-        ))
-        engine._nudges.append(Nudge(
-            id="n2",
-            nudge_type=NudgeType.PATTERN_INSIGHT,
-            priority=NudgePriority.LOW,
-            title="Low",
-            content="Content",
-            created_at=datetime.now(),
-        ))
+        engine._nudges.append(
+            Nudge(
+                id="n1",
+                nudge_type=NudgeType.DEADLINE_WARNING,
+                priority=NudgePriority.URGENT,
+                title="Urgent",
+                content="Content",
+                created_at=datetime.now(),
+            )
+        )
+        engine._nudges.append(
+            Nudge(
+                id="n2",
+                nudge_type=NudgeType.PATTERN_INSIGHT,
+                priority=NudgePriority.LOW,
+                title="Low",
+                content="Content",
+                created_at=datetime.now(),
+            )
+        )
         results = engine.get_nudges_by_priority(NudgePriority.HIGH)
         assert len(results) == 1  # Only urgent
 

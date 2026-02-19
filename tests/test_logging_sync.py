@@ -13,13 +13,10 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from animus.logging import get_logger, setup_logging
 from animus.sync.discovery import DeviceDiscovery, DiscoveredDevice, MockDeviceDiscovery
 from animus.sync.protocol import MessageType, SyncMessage
 from animus.sync.state import StateDelta, StateSnapshot, SyncableState
-
 
 # ===================================================================
 # Logging
@@ -46,9 +43,7 @@ class TestSetupLogging:
         logger.handlers.clear()
 
     def test_setup_log_to_file_false(self, tmp_path: Path):
-        logger = setup_logging(
-            log_file=tmp_path / "test.log", level="WARNING", log_to_file=False
-        )
+        logger = setup_logging(log_file=tmp_path / "test.log", level="WARNING", log_to_file=False)
         assert logger.level == logging.WARNING
         assert len(logger.handlers) == 1  # Only console
         logger.handlers.clear()
@@ -281,9 +276,7 @@ class TestSyncClient:
         client = SyncClient(state, "secret123")
         client._connected = True
         mock_ws = AsyncMock()
-        pong = SyncMessage(
-            type=MessageType.PONG, device_id="server", payload={}
-        )
+        pong = SyncMessage(type=MessageType.PONG, device_id="server", payload={})
         mock_ws.recv = AsyncMock(return_value=pong.to_json())
         client._websocket = mock_ws
 
@@ -433,7 +426,7 @@ class TestSyncServer:
         assert server.peer_count == 0
 
     def test_get_peers(self, tmp_path: Path):
-        from animus.sync.server import ConnectedPeer, SyncServer
+        from animus.sync.server import SyncServer
 
         state = self._make_state(tmp_path)
         server = SyncServer(state)
@@ -446,7 +439,7 @@ class TestSyncServer:
         state = self._make_state(tmp_path)
         server = SyncServer(state, shared_secret="test-secret")
 
-        auth_hash = hashlib.sha256("test-secret".encode()).hexdigest()
+        auth_hash = hashlib.sha256(b"test-secret").hexdigest()
         auth_msg = SyncMessage(
             type=MessageType.AUTH,
             device_id="client-device",
@@ -485,9 +478,7 @@ class TestSyncServer:
         state = self._make_state(tmp_path)
         server = SyncServer(state)
 
-        ping_msg = SyncMessage(
-            type=MessageType.PING, device_id="client", payload={}
-        )
+        ping_msg = SyncMessage(type=MessageType.PING, device_id="client", payload={})
         mock_ws = AsyncMock()
         mock_ws.recv = AsyncMock(return_value=ping_msg.to_json())
 
@@ -571,9 +562,7 @@ class TestSyncServer:
         server = SyncServer(state)
         mock_ws = AsyncMock()
         peer = ConnectedPeer(device_id="p1", device_name="test", websocket=mock_ws)
-        msg = SyncMessage(
-            type=MessageType.STATUS, device_id="p1", payload={"status": "idle"}
-        )
+        msg = SyncMessage(type=MessageType.STATUS, device_id="p1", payload={"status": "idle"})
 
         asyncio.run(server._handle_status(peer, msg))
 
@@ -584,9 +573,7 @@ class TestSyncServer:
         server = SyncServer(state)
         mock_ws = AsyncMock()
         peer = ConnectedPeer(device_id="p1", device_name="test", websocket=mock_ws)
-        raw_msg = SyncMessage(
-            type=MessageType.AUTH, device_id="p1", payload={}
-        ).to_json()
+        raw_msg = SyncMessage(type=MessageType.AUTH, device_id="p1", payload={}).to_json()
 
         asyncio.run(server._handle_message(peer, raw_msg))
 
@@ -616,12 +603,8 @@ class TestSyncServer:
         server = SyncServer(state)
         mock_ws1 = AsyncMock()
         mock_ws2 = AsyncMock()
-        server._peers["p1"] = ConnectedPeer(
-            device_id="p1", device_name="a", websocket=mock_ws1
-        )
-        server._peers["p2"] = ConnectedPeer(
-            device_id="p2", device_name="b", websocket=mock_ws2
-        )
+        server._peers["p1"] = ConnectedPeer(device_id="p1", device_name="a", websocket=mock_ws1)
+        server._peers["p2"] = ConnectedPeer(device_id="p2", device_name="b", websocket=mock_ws2)
         delta = StateDelta.compute("s", "t", {}, {"k": "v"}, 0)
         count = asyncio.run(server.broadcast_delta(delta))
         assert count == 2
@@ -633,9 +616,7 @@ class TestSyncServer:
         server = SyncServer(state)
         mock_ws = AsyncMock()
         mock_ws.send = AsyncMock(side_effect=Exception("send fail"))
-        server._peers["p1"] = ConnectedPeer(
-            device_id="p1", device_name="a", websocket=mock_ws
-        )
+        server._peers["p1"] = ConnectedPeer(device_id="p1", device_name="a", websocket=mock_ws)
         delta = StateDelta.compute("s", "t", {}, {"k": "v"}, 0)
         count = asyncio.run(server.broadcast_delta(delta))
         assert count == 0
@@ -923,9 +904,7 @@ class TestSyncableStateAdditional:
 
     def test_export_import_snapshot(self, tmp_path: Path):
         state = SyncableState(tmp_path, device_id="dev-1")
-        (tmp_path / "memories.json").write_text(
-            json.dumps([{"id": "m1", "content": "test"}])
-        )
+        (tmp_path / "memories.json").write_text(json.dumps([{"id": "m1", "content": "test"}]))
 
         export_path = tmp_path / "export.json"
         state.export_snapshot(export_path)
@@ -935,7 +914,7 @@ class TestSyncableStateAdditional:
         other_dir = tmp_path / "other"
         other_dir.mkdir()
         other = SyncableState(other_dir, device_id="dev-2")
-        result = other.import_snapshot(export_path)
+        other.import_snapshot(export_path)
         # May or may not apply depending on if there are actual changes
 
     def test_import_snapshot_no_changes(self, tmp_path: Path):
