@@ -647,6 +647,85 @@ class TestCognitiveLayerDelegation:
 
         asyncio.run(_run())
 
+    def test_delegate_workflow_execute(self):
+        config = ModelConfig.mock()
+        mock_client = AsyncMock()
+        mock_client.execute_workflow.return_value = {
+            "execution_id": "exec-1",
+            "status": "running",
+        }
+
+        cognitive = CognitiveLayer(primary_config=config, gorgon_client=mock_client)
+
+        async def _run():
+            result = await cognitive.delegate_to_gorgon(
+                "run pipeline", workflow_id="wf-1", variables={"env": "staging"}
+            )
+            assert result["execution_id"] == "exec-1"
+            mock_client.execute_workflow.assert_awaited_once_with(
+                "wf-1", variables={"env": "staging"}
+            )
+            mock_client.submit_task.assert_not_awaited()
+
+        asyncio.run(_run())
+
+    def test_delegate_workflow_execute_and_wait(self):
+        config = ModelConfig.mock()
+        mock_client = AsyncMock()
+        mock_client.execute_and_wait.return_value = {
+            "execution_id": "exec-1",
+            "status": "completed",
+        }
+
+        cognitive = CognitiveLayer(primary_config=config, gorgon_client=mock_client)
+
+        async def _run():
+            result = await cognitive.delegate_to_gorgon(
+                "run pipeline", workflow_id="wf-1", wait=True
+            )
+            assert result["status"] == "completed"
+            mock_client.execute_and_wait.assert_awaited_once_with(
+                "wf-1", variables=None, on_approval=None
+            )
+
+        asyncio.run(_run())
+
+    def test_delegate_workflow_with_approval_callback(self):
+        config = ModelConfig.mock()
+        mock_client = AsyncMock()
+        mock_client.execute_and_wait.return_value = {
+            "execution_id": "exec-1",
+            "status": "completed",
+        }
+
+        callback = AsyncMock(return_value={"approve": True, "reason": "LGTM"})
+        cognitive = CognitiveLayer(primary_config=config, gorgon_client=mock_client)
+
+        async def _run():
+            result = await cognitive.delegate_to_gorgon(
+                "deploy", workflow_id="wf-1", wait=True, on_approval=callback
+            )
+            assert result["status"] == "completed"
+            mock_client.execute_and_wait.assert_awaited_once_with(
+                "wf-1", variables=None, on_approval=callback
+            )
+
+        asyncio.run(_run())
+
+    def test_delegate_workflow_error_falls_back(self):
+        config = ModelConfig.mock(default_response="fallback")
+        mock_client = AsyncMock()
+        mock_client.execute_workflow.side_effect = ConnectionError("refused")
+
+        cognitive = CognitiveLayer(primary_config=config, gorgon_client=mock_client)
+
+        async def _run():
+            result = await cognitive.delegate_to_gorgon("deploy", workflow_id="wf-1")
+            assert result["fallback"] is True
+            assert result["response"] == "fallback"
+
+        asyncio.run(_run())
+
 
 # =============================================================================
 # Config Tests

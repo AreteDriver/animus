@@ -9,7 +9,7 @@ import json
 import os
 import re
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -701,21 +701,41 @@ Provide a clear, structured briefing."""
         prompt: str,
         priority: int = 5,
         wait: bool = False,
+        workflow_id: str | None = None,
+        variables: dict[str, Any] | None = None,
+        on_approval: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
     ) -> dict[str, Any]:
         """Delegate a complex task to Gorgon's agent pipeline.
+
+        When *workflow_id* is provided, uses the execution API
+        (``/v1/workflows/{id}/execute``) instead of the legacy task queue.
+        If *on_approval* is supplied, approval gates are handled
+        automatically via the callback.
 
         Falls back to ``self.think()`` on any error or if the client is
         not configured.
 
         Returns:
-            Task result dict from Gorgon, or a synthetic dict with the
-            local ``think()`` response as fallback.
+            Task/execution result dict from Gorgon, or a synthetic dict
+            with the local ``think()`` response as fallback.
         """
         if not self.gorgon_client:
             logger.debug("No Gorgon client, falling back to local think")
             return {"fallback": True, "response": self.think(prompt)}
 
         try:
+            if workflow_id:
+                if wait:
+                    return await self.gorgon_client.execute_and_wait(
+                        workflow_id,
+                        variables=variables,
+                        on_approval=on_approval,
+                    )
+                return await self.gorgon_client.execute_workflow(
+                    workflow_id,
+                    variables=variables,
+                )
+
             title = prompt[:80]
             if wait:
                 return await self.gorgon_client.submit_and_wait(
