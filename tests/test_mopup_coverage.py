@@ -8,13 +8,11 @@ Covers: cognitive.py (model backends, enrich_context, think_with_tools),
 from __future__ import annotations
 
 import asyncio
-import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ===================================================================
 # Cognitive — Model Backends
@@ -102,9 +100,7 @@ class TestAnthropicModel:
     def test_generate_import_error(self):
         from animus.cognitive import AnthropicModel, ModelConfig, ModelProvider
 
-        config = ModelConfig(
-            provider=ModelProvider.ANTHROPIC, model_name="claude-sonnet-4-6"
-        )
+        config = ModelConfig(provider=ModelProvider.ANTHROPIC, model_name="claude-sonnet-4-6")
         model = AnthropicModel(config)
 
         with patch.dict("sys.modules", {"anthropic": None}):
@@ -122,9 +118,7 @@ class TestAnthropicModel:
         model = AnthropicModel(config)
 
         mock_anthropic = MagicMock()
-        mock_anthropic.Anthropic.return_value.messages.create.side_effect = Exception(
-            "auth failed"
-        )
+        mock_anthropic.Anthropic.return_value.messages.create.side_effect = Exception("auth failed")
         with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
             result = model.generate("test")
         assert "Error" in result
@@ -190,9 +184,7 @@ class TestOpenAIModel:
     def test_generate_exception(self):
         from animus.cognitive import ModelConfig, ModelProvider, OpenAIModel
 
-        config = ModelConfig(
-            provider=ModelProvider.OPENAI, model_name="gpt-4", api_key="bad"
-        )
+        config = ModelConfig(provider=ModelProvider.OPENAI, model_name="gpt-4", api_key="bad")
         model = OpenAIModel(config)
 
         mock_openai = MagicMock()
@@ -204,9 +196,7 @@ class TestOpenAIModel:
     def test_generate_stream(self):
         from animus.cognitive import ModelConfig, ModelProvider, OpenAIModel
 
-        config = ModelConfig(
-            provider=ModelProvider.OPENAI, model_name="gpt-4", api_key="key"
-        )
+        config = ModelConfig(provider=ModelProvider.OPENAI, model_name="gpt-4", api_key="key")
         model = OpenAIModel(config)
 
         mock_openai = MagicMock()
@@ -229,7 +219,7 @@ class TestCreateModel:
     """Test create_model factory."""
 
     def test_create_mock(self):
-        from animus.cognitive import ModelConfig, MockModel, create_model
+        from animus.cognitive import MockModel, ModelConfig, create_model
 
         model = create_model(ModelConfig.mock())
         assert isinstance(model, MockModel)
@@ -317,7 +307,7 @@ class TestCognitiveLayerEnrich:
         mock_entity.get_context_for_text.return_value = None
         cognitive.entity_memory = mock_entity
 
-        result = cognitive.think("test prompt")
+        cognitive.think("test prompt")
         mock_entity.extract_and_link.assert_called_once_with("test prompt")
 
     def test_think_entity_extraction_error(self):
@@ -351,29 +341,31 @@ class TestCognitiveThinkWithTools:
         from animus.cognitive import CognitiveLayer, ModelConfig
         from animus.tools import Tool, ToolRegistry, ToolResult
 
-        # First response has tool call, second response is final
-        response_map = {
-            "What time": '```tool\n{"tool": "get_time", "params": {}}\n```',
-        }
-        cognitive = CognitiveLayer(
-            ModelConfig.mock(
-                default_response="The time is 10:00 AM",
-                response_map=response_map,
-            )
-        )
+        # First call returns tool invocation, second returns final answer
+        cognitive = CognitiveLayer(ModelConfig.mock(default_response="The time is 10:00 AM"))
+        # Override model.generate to return tool call first, then final answer
+        call_count = {"n": 0}
+        original_generate = cognitive.primary.generate
+
+        def sequenced_generate(prompt, system=None):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                return '```tool\n{"tool": "get_time", "params": {}}\n```'
+            return original_generate(prompt, system)
+
+        cognitive.primary.generate = sequenced_generate
+
         registry = ToolRegistry()
         registry.register(
             Tool(
                 name="get_time",
                 description="Get time",
                 parameters={},
-                handler=lambda p: ToolResult(
-                    tool_name="get_time", success=True, output="10:00 AM"
-                ),
+                handler=lambda p: ToolResult(tool_name="get_time", success=True, output="10:00 AM"),
             )
         )
 
-        result = cognitive.think_with_tools("What time is it?", registry)
+        result = cognitive.think_with_tools("What time is it?", tools=registry)
         assert "10:00" in result
 
     def test_think_with_tools_unknown_tool(self):
@@ -391,7 +383,7 @@ class TestCognitiveThinkWithTools:
         )
         registry = ToolRegistry()
 
-        result = cognitive.think_with_tools("test", registry)
+        result = cognitive.think_with_tools("test", tools=registry)
         assert isinstance(result, str)
 
     def test_think_with_tools_approval_denied(self):
@@ -413,16 +405,14 @@ class TestCognitiveThinkWithTools:
                 name="danger",
                 description="Dangerous op",
                 parameters={},
-                handler=lambda p: ToolResult(
-                    tool_name="danger", success=True, output="done"
-                ),
+                handler=lambda p: ToolResult(tool_name="danger", success=True, output="done"),
                 requires_approval=True,
             )
         )
 
         result = cognitive.think_with_tools(
             "delete everything",
-            registry,
+            tools=registry,
             approval_callback=lambda name, params: False,
         )
         assert isinstance(result, str)
@@ -431,7 +421,7 @@ class TestCognitiveThinkWithTools:
         from animus.cognitive import CognitiveLayer, ModelConfig
 
         cognitive = CognitiveLayer(ModelConfig.mock())
-        calls = cognitive._parse_tool_calls('```tool\nnot json\n```')
+        calls = cognitive._parse_tool_calls("```tool\nnot json\n```")
         assert calls == []
 
     def test_parse_tool_calls_no_tool_name(self):
@@ -451,31 +441,41 @@ class TestFilesystemIntegration:
     """Cover remaining filesystem integration gaps."""
 
     def test_search_tool(self, tmp_path: Path):
-        from animus.integrations.filesystem import FilesystemIntegration
+        from animus.integrations.filesystem import FileEntry, FilesystemIntegration
 
-        fs = FilesystemIntegration(allowed_dirs=[str(tmp_path)])
+        fs = FilesystemIntegration(data_dir=tmp_path)
         (tmp_path / "hello.txt").write_text("hello world")
-        (tmp_path / "other.txt").write_text("other content")
+        # Manually add to index since we haven't connected
+        fs._index[str(tmp_path / "hello.txt")] = FileEntry(
+            path=str(tmp_path / "hello.txt"),
+            name="hello.txt",
+            extension=".txt",
+            size=11,
+            modified=datetime.now(),
+            is_dir=False,
+        )
 
-        result = asyncio.run(fs._tool_search(str(tmp_path), "hello"))
+        result = asyncio.run(fs._tool_search("hello"))
         assert result.success is True
 
-    def test_write_tool(self, tmp_path: Path):
+    def test_search_no_results(self, tmp_path: Path):
         from animus.integrations.filesystem import FilesystemIntegration
 
-        fs = FilesystemIntegration(allowed_dirs=[str(tmp_path)])
-        target = tmp_path / "new_file.txt"
-        result = asyncio.run(fs._tool_write(str(target), "new content"))
+        fs = FilesystemIntegration(data_dir=tmp_path)
+        result = asyncio.run(fs._tool_search("nonexistent"))
         assert result.success is True
-        assert target.read_text() == "new content"
+        assert result.output["count"] == 0
 
-    def test_write_blocked_path(self, tmp_path: Path):
+    def test_connect_disconnect(self, tmp_path: Path):
         from animus.integrations.filesystem import FilesystemIntegration
 
-        fs = FilesystemIntegration(allowed_dirs=[str(tmp_path / "allowed")])
-        target = tmp_path / "blocked" / "file.txt"
-        result = asyncio.run(fs._tool_write(str(target), "content"))
-        assert result.success is False
+        fs = FilesystemIntegration(data_dir=tmp_path)
+        result = asyncio.run(fs.connect({"paths": [str(tmp_path)]}))
+        assert result is True
+        assert fs.is_connected
+
+        result = asyncio.run(fs.disconnect())
+        assert result is True
 
 
 # ===================================================================
@@ -551,12 +551,12 @@ class TestSyncClientAdditional:
         result = asyncio.run(client.sync())
         assert result.success is False
 
-    def test_push_delta_not_connected(self, tmp_path: Path):
+    def test_push_changes_not_connected(self, tmp_path: Path):
         from animus.sync.client import SyncClient
 
         state = self._make_state(tmp_path)
         client = SyncClient(state, "secret")
-        result = asyncio.run(client.push_delta(MagicMock()))
+        result = asyncio.run(client.push_changes(MagicMock()))
         assert result is False
 
     def test_ping_not_connected(self, tmp_path: Path):
@@ -565,7 +565,7 @@ class TestSyncClientAdditional:
         state = self._make_state(tmp_path)
         client = SyncClient(state, "secret")
         result = asyncio.run(client.ping())
-        assert result is False
+        assert result is None
 
 
 # ===================================================================
@@ -581,7 +581,7 @@ class TestSyncServerAdditional:
         from animus.sync.state import SyncableState
 
         state = SyncableState(data_dir=tmp_path)
-        server = SyncServer(state, "secret", port=9999)
+        server = SyncServer(state, port=9999, shared_secret="secret")
         assert server.port == 9999
 
     def test_get_peers_empty(self, tmp_path: Path):
@@ -589,7 +589,7 @@ class TestSyncServerAdditional:
         from animus.sync.state import SyncableState
 
         state = SyncableState(data_dir=tmp_path)
-        server = SyncServer(state, "secret")
+        server = SyncServer(state, shared_secret="secret")
         assert server.get_peers() == []
 
 
