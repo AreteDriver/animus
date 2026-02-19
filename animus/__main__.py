@@ -184,6 +184,13 @@ def show_help():
   /sync now               - Trigger manual sync with peer
   /sync pair              - Show pairing code (shared secret)
 
+[bold]Forge (Multi-Agent Workflows):[/bold]
+  /forge run <path>        - Run a workflow YAML file
+  /forge resume <name>     - Resume a paused/failed workflow
+  /forge status [name]     - Show workflow status (or list all)
+  /forge list              - List all workflows with checkpoints
+  /forge pause <name>      - Pause a running workflow
+
 [bold]Otherwise:[/bold]
   Just type naturally. Animus will respond.
 """
@@ -1924,6 +1931,208 @@ def main():
 
             # =========================================================
             # End Phase 6 commands
+            # =========================================================
+
+            # =========================================================
+            # Forge: Multi-agent workflow commands
+            # =========================================================
+
+            if user_input.startswith("/forge ") or user_input == "/forge":
+                from animus.forge import ForgeEngine
+                from animus.forge.loader import load_workflow
+                from animus.forge.models import (
+                    BudgetExhaustedError,
+                    ForgeError,
+                    GateFailedError,
+                )
+
+                forge_cmd = user_input[6:].strip() if len(user_input) > 6 else ""
+
+                # Initialize checkpoint dir
+                checkpoint_dir = config.data_dir / "forge_checkpoints"
+
+                if forge_cmd.startswith("run "):
+                    yaml_path = Path(forge_cmd[4:].strip()).expanduser()
+                    if not yaml_path.exists():
+                        console.print(f"[red]File not found: {yaml_path}[/red]")
+                        continue
+
+                    try:
+                        wf_config = load_workflow(yaml_path)
+                    except ForgeError as e:
+                        console.print(f"[red]Invalid workflow: {e}[/red]")
+                        continue
+
+                    console.print(
+                        f"\n[bold]Running workflow:[/bold] {wf_config.name}\n"
+                        f"  Agents: {len(wf_config.agents)} | "
+                        f"Gates: {len(wf_config.gates)} | "
+                        f"Budget: ${wf_config.max_cost_usd:.2f}\n"
+                    )
+
+                    engine = ForgeEngine(
+                        cognitive=cognitive,
+                        checkpoint_dir=checkpoint_dir,
+                        tools=tools,
+                    )
+
+                    try:
+                        state = engine.run(wf_config)
+                        console.print(f"[green]Workflow complete:[/green] {state.status}")
+                        console.print(
+                            f"  Steps: {len(state.results)} | "
+                            f"Tokens: {state.total_tokens:,} | "
+                            f"Cost: ${state.total_cost:.4f}"
+                        )
+                        for result in state.results:
+                            status = "[green]OK[/green]" if result.success else "[red]FAIL[/red]"
+                            console.print(
+                                f"  {status} {result.agent_name} ({result.tokens_used:,} tokens)"
+                            )
+                    except GateFailedError as e:
+                        console.print(f"[yellow]Gate failed:[/yellow] {e}")
+                    except BudgetExhaustedError as e:
+                        console.print(f"[yellow]Budget exhausted:[/yellow] {e}")
+                    except ForgeError as e:
+                        console.print(f"[red]Forge error:[/red] {e}")
+                    continue
+
+                if forge_cmd.startswith("resume "):
+                    wf_name = forge_cmd[7:].strip()
+                    if not wf_name:
+                        console.print("[red]Usage: /forge resume <workflow-name>[/red]")
+                        continue
+
+                    engine = ForgeEngine(
+                        cognitive=cognitive,
+                        checkpoint_dir=checkpoint_dir,
+                        tools=tools,
+                    )
+
+                    # Check if checkpoint exists
+                    existing = engine.status(wf_name)
+                    if not existing:
+                        console.print(f"[red]No checkpoint found for: {wf_name}[/red]")
+                        continue
+
+                    console.print(
+                        f"[dim]Resuming workflow '{wf_name}' "
+                        f"from step {existing.current_step}...[/dim]"
+                    )
+
+                    # Need the original config to resume — load from checkpoint data
+                    # For now, user must provide the YAML path
+                    console.print(
+                        "[yellow]Resume requires the original YAML file.[/yellow]\n"
+                        "  Usage: /forge run <path>  (will auto-resume if checkpoint exists)"
+                    )
+                    continue
+
+                if forge_cmd.startswith("status"):
+                    wf_name = forge_cmd[6:].strip() if len(forge_cmd) > 6 else ""
+
+                    engine = ForgeEngine(
+                        cognitive=cognitive,
+                        checkpoint_dir=checkpoint_dir,
+                    )
+
+                    if wf_name:
+                        state = engine.status(wf_name)
+                        if not state:
+                            console.print(f"[dim]No workflow found: {wf_name}[/dim]")
+                            continue
+
+                        table = Table(title=f"Workflow: {state.workflow_name}")
+                        table.add_column("Field", style="cyan")
+                        table.add_column("Value", style="green")
+                        table.add_row("Status", state.status)
+                        table.add_row("Current Step", str(state.current_step))
+                        table.add_row("Total Tokens", f"{state.total_tokens:,}")
+                        table.add_row("Total Cost", f"${state.total_cost:.4f}")
+                        table.add_row("Steps Completed", str(len(state.results)))
+                        console.print(table)
+
+                        if state.results:
+                            steps = Table(title="Step Results")
+                            steps.add_column("Agent", style="cyan")
+                            steps.add_column("Status")
+                            steps.add_column("Tokens", justify="right")
+                            for r in state.results:
+                                status = "[green]OK[/green]" if r.success else "[red]FAIL[/red]"
+                                steps.add_row(r.agent_name, status, f"{r.tokens_used:,}")
+                            console.print(steps)
+                    else:
+                        # List all workflows
+                        workflows = engine.list_workflows()
+                        if not workflows:
+                            console.print("[dim]No workflows found[/dim]")
+                            continue
+
+                        table = Table(title="Forge Workflows")
+                        table.add_column("Name", style="cyan")
+                        table.add_column("Status")
+                        table.add_column("Step", justify="right")
+                        for name, status, step in workflows:
+                            style = (
+                                "green"
+                                if status == "completed"
+                                else "yellow"
+                                if status == "running"
+                                else "dim"
+                            )
+                            table.add_row(name, f"[{style}]{status}[/{style}]", str(step))
+                        console.print(table)
+                    continue
+
+                if forge_cmd == "list":
+                    engine = ForgeEngine(
+                        cognitive=cognitive,
+                        checkpoint_dir=checkpoint_dir,
+                    )
+                    workflows = engine.list_workflows()
+                    if not workflows:
+                        console.print("[dim]No workflows with checkpoints[/dim]")
+                        continue
+
+                    table = Table(title="Forge Workflows")
+                    table.add_column("Name", style="cyan")
+                    table.add_column("Status")
+                    table.add_column("Step", justify="right")
+                    for name, status, step in workflows:
+                        style = (
+                            "green"
+                            if status == "completed"
+                            else "yellow"
+                            if status == "running"
+                            else "dim"
+                        )
+                        table.add_row(name, f"[{style}]{status}[/{style}]", str(step))
+                    console.print(table)
+                    continue
+
+                if forge_cmd.startswith("pause "):
+                    wf_name = forge_cmd[6:].strip()
+                    if not wf_name:
+                        console.print("[red]Usage: /forge pause <workflow-name>[/red]")
+                        continue
+
+                    engine = ForgeEngine(
+                        cognitive=cognitive,
+                        checkpoint_dir=checkpoint_dir,
+                    )
+                    engine.pause(wf_name)
+                    console.print(f"[yellow]Paused workflow: {wf_name}[/yellow]")
+                    continue
+
+                # No subcommand or unknown
+                console.print(
+                    "[red]Usage: /forge run <path> | resume <name> | "
+                    "status [name] | list | pause <name>[/red]"
+                )
+                continue
+
+            # =========================================================
+            # End Forge commands
             # =========================================================
 
             # Reasoning mode with auto-detection

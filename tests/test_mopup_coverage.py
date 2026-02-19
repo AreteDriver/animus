@@ -306,7 +306,7 @@ class TestCognitiveLayerEnrich:
 
         from animus.cognitive import ReasoningMode
 
-        prompt = cognitive._build_system_prompt(None, ReasoningMode.DEFAULT)
+        prompt = cognitive._build_system_prompt(None, ReasoningMode.QUICK)
         assert "concise" in prompt
 
     def test_think_with_entity_extraction(self):
@@ -344,7 +344,7 @@ class TestCognitiveThinkWithTools:
         cognitive = CognitiveLayer(ModelConfig.mock(default_response="No tools needed."))
         registry = ToolRegistry()
 
-        result = cognitive.think_with_tools("What time is it?", registry)
+        result = cognitive.think_with_tools("What time is it?", tools=registry)
         assert result == "No tools needed."
 
     def test_think_with_tools_with_tool_call(self):
