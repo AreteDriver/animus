@@ -110,7 +110,7 @@ branch = true
 omit = ["animus/__main__.py"]
 
 [tool.coverage.report]
-fail_under = 80
+fail_under = 95
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

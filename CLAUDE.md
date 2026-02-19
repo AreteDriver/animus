@@ -7,7 +7,7 @@
 - **Version**: 0.7.0
 - **Python**: >=3.10
 - **Package layout**: `animus/` (setuptools, flat layout with `forge/` subpackage)
-- **Tests**: `tests/` (pytest, 1663 tests, 95% coverage, fail_under=80)
+- **Tests**: `tests/` (pytest, 1703 tests, 96% coverage, fail_under=80)
 - **License**: MIT
 
 ## Build & Run

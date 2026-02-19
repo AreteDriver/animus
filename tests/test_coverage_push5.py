@@ -233,19 +233,7 @@ class TestLearningRollback:
         ll = _make_learning_layer(tmp_path)
 
         # Add some items and create a rollback point
-        from animus.learning.categories import LearnedItem
-
-        item1 = LearnedItem.create(
-            category=LearnedItem.__dataclass_fields__["category"].type.__args__[0]
-            if hasattr(LearnedItem.__dataclass_fields__["category"].type, "__args__")
-            else __import__(
-                "animus.learning.categories", fromlist=["LearningCategory"]
-            ).LearningCategory.STYLE,
-            content="test item",
-            confidence=0.9,
-            evidence=["m1"],
-        )
-        from animus.learning.categories import LearningCategory
+        from animus.learning.categories import LearnedItem, LearningCategory
 
         item1 = LearnedItem.create(
             category=LearningCategory.STYLE,
@@ -669,13 +657,10 @@ class TestDashboardRoutes:
         """Lines 482-509: routes registered and callable."""
         from animus.dashboard import add_dashboard_routes
 
-        try:
-            from fastapi import FastAPI
-            from fastapi.testclient import TestClient
-        except ImportError:
-            pytest.skip("fastapi not installed")
+        fastapi = pytest.importorskip("fastapi")
+        fastapi_testclient = pytest.importorskip("fastapi.testclient")
 
-        app = FastAPI()
+        app = fastapi.FastAPI()
         mock_memory = MagicMock()
         mock_memory.get_statistics.return_value = {"total": 0}
         mock_memory.store.list_all.return_value = []
@@ -691,7 +676,7 @@ class TestDashboardRoutes:
 
         add_dashboard_routes(app, lambda: state, lambda: True)
 
-        client = TestClient(app)
+        client = fastapi_testclient.TestClient(app)
 
         # Test /dashboard endpoint
         resp = client.get("/dashboard")

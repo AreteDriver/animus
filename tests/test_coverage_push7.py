@@ -477,9 +477,6 @@ class TestSyncClientListen:
         client = _make_sync_client()
         client._connected = True
 
-        async def raise_error():
-            raise ConnectionError("gone")
-
         ws = AsyncMock()
 
         async def error_iter():

@@ -15,10 +15,8 @@ import pytest
 try:
     from fastapi.testclient import TestClient
 
-    import animus.api as api_module
-
-    AppState = api_module.AppState
-    create_app = api_module.create_app
+    from animus import api as api_module
+    from animus.api import AppState, create_app
 
     FASTAPI_AVAILABLE = True
 except ImportError:
