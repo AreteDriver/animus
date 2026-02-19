@@ -6,7 +6,7 @@ Calendar access via Google Calendar API.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -264,7 +264,7 @@ class GoogleCalendarIntegration(BaseIntegration):
             )
 
         try:
-            now = datetime.now(UTC)
+            now = datetime.now(timezone.utc)
             time_min = now.isoformat() + "Z"
             time_max = (now + timedelta(days=days)).isoformat() + "Z"
 
