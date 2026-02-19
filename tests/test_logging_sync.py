@@ -118,8 +118,9 @@ class TestSyncClient:
         state = self._make_state(tmp_path)
         client = SyncClient(state, "secret123")
         client._connected = True
-        result = asyncio.run(client.connect("ws://localhost:8422"))
-        assert result is True
+        with patch.dict("sys.modules", {"websockets": MagicMock()}):
+            result = asyncio.run(client.connect("ws://localhost:8422"))
+            assert result is True
 
     def test_connect_auth_ok(self, tmp_path: Path):
         from animus.sync.client import SyncClient
@@ -393,8 +394,9 @@ class TestSyncServer:
         state = self._make_state(tmp_path)
         server = SyncServer(state)
         server._running = True
-        result = asyncio.run(server.start())
-        assert result is True
+        with patch.dict("sys.modules", {"websockets": MagicMock()}):
+            result = asyncio.run(server.start())
+            assert result is True
 
     def test_stop_not_running(self, tmp_path: Path):
         from animus.sync.server import SyncServer
