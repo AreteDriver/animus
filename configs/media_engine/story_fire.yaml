@@ -1,0 +1,65 @@
+# Story Fire — World folklore & mythology YouTube channel
+#
+# Pipeline: Research folklore → Write script → Review quality → Produce metadata
+# Target: 8 languages, ~160 videos/month
+#
+# This is a Forge situation config for the Media Engine's first channel.
+
+name: story_fire_episode
+description: Produce one Story Fire folklore episode script with QA
+
+provider: anthropic
+model: claude-sonnet-4-5
+max_cost_usd: 2.00
+
+agents:
+  - name: researcher
+    archetype: researcher
+    budget_tokens: 5000
+    system_prompt: >
+      You are a folklore research specialist. Given a culture and theme,
+      find compelling myths, legends, or folk tales. Produce a structured
+      brief with: story title, origin culture, key characters, plot arc,
+      symbolic themes, and 3 visual scene descriptions for video.
+    outputs: [content_brief]
+
+  - name: scriptwriter
+    archetype: writer
+    budget_tokens: 8000
+    inputs: [researcher.content_brief]
+    system_prompt: >
+      You are a narrative scriptwriter for YouTube. Write an engaging
+      5-8 minute narration script based on the research brief. Use vivid
+      language, dramatic pacing, and a storytelling voice. Include scene
+      markers [SCENE 1], [SCENE 2], etc. for video editing. End with a
+      thought-provoking reflection on the story's universal themes.
+    outputs: [script]
+
+  - name: reviewer
+    archetype: reviewer
+    budget_tokens: 3000
+    inputs: [scriptwriter.script]
+    system_prompt: >
+      You are a content quality reviewer for a YouTube folklore channel.
+      Evaluate the script for: narrative engagement (0-10), cultural
+      accuracy (0-10), production readiness (0-10), and overall score
+      (0.0-1.0). Return your evaluation as JSON with fields: score,
+      engagement, accuracy, readiness, feedback.
+    outputs: [review_decision]
+
+  - name: metadata
+    archetype: producer
+    budget_tokens: 2000
+    inputs: [scriptwriter.script, researcher.content_brief]
+    system_prompt: >
+      You are a YouTube SEO specialist. Given the script and research
+      brief, produce: video title (60 chars max), description (200 words),
+      5 tags, and a thumbnail text suggestion. Optimize for discovery.
+    outputs: [video_metadata]
+
+gates:
+  - name: quality_check
+    after: reviewer
+    type: automated
+    pass_condition: "review_decision.score >= 0.7"
+    on_fail: halt

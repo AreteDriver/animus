@@ -1,0 +1,36 @@
+# Simple two-agent workflow: research a topic and write a report.
+#
+# Usage:
+#   from animus.forge.loader import load_workflow
+#   from animus.forge.engine import ForgeEngine
+#   from animus.cognitive import CognitiveLayer, ModelConfig
+#
+#   config = load_workflow(Path("configs/examples/research_report.yaml"))
+#   engine = ForgeEngine(CognitiveLayer(ModelConfig.ollama()))
+#   state = engine.run(config)
+
+name: research_report
+description: Research a topic and produce a structured report
+
+provider: ollama
+model: llama3:8b
+max_cost_usd: 0.50
+
+agents:
+  - name: researcher
+    archetype: researcher
+    budget_tokens: 5000
+    outputs: [findings]
+
+  - name: writer
+    archetype: writer
+    budget_tokens: 8000
+    inputs: [researcher.findings]
+    outputs: [report]
+
+gates:
+  - name: quality_check
+    after: writer
+    type: automated
+    pass_condition: "report.length >= 100"
+    on_fail: halt

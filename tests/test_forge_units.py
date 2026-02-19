@@ -545,3 +545,36 @@ class TestCheckpoint:
         assert r.success is False
         assert r.error == "LLM timeout"
         store.close()
+
+
+class TestSampleConfigs:
+    """Verify that bundled YAML configs load without errors."""
+
+    _configs_dir = Path(__file__).parent.parent / "configs"
+
+    def test_research_report_loads(self) -> None:
+        from animus.forge.loader import load_workflow
+
+        config = load_workflow(self._configs_dir / "examples" / "research_report.yaml")
+        assert config.name == "research_report"
+        assert len(config.agents) == 2
+        assert len(config.gates) == 1
+        assert config.agents[1].inputs == ["researcher.findings"]
+
+    def test_story_fire_loads(self) -> None:
+        from animus.forge.loader import load_workflow
+
+        config = load_workflow(self._configs_dir / "media_engine" / "story_fire.yaml")
+        assert config.name == "story_fire_episode"
+        assert len(config.agents) == 4
+        assert len(config.gates) == 1
+        assert config.gates[0].pass_condition == "review_decision.score >= 0.7"
+        assert config.provider == "anthropic"
+
+    def test_all_agent_names_unique(self) -> None:
+        from animus.forge.loader import load_workflow
+
+        for yaml_path in self._configs_dir.rglob("*.yaml"):
+            config = load_workflow(yaml_path)
+            names = [a.name for a in config.agents]
+            assert len(names) == len(set(names)), f"Duplicate names in {yaml_path}"
