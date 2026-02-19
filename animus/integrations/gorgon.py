@@ -419,6 +419,105 @@ class GorgonIntegration(BaseIntegration):
                 handler=self._tool_cancel,
                 category="orchestration",
             ),
+            # --- Workflow execution + approval tools ---
+            Tool(
+                name="gorgon_execute",
+                description=(
+                    "Execute a workflow on Gorgon's orchestration engine. "
+                    "Returns the execution ID for tracking."
+                ),
+                parameters={
+                    "workflow_id": {
+                        "type": "string",
+                        "description": "Workflow ID to execute",
+                        "required": True,
+                    },
+                    "variables": {
+                        "type": "object",
+                        "description": "Input variables (optional)",
+                        "required": False,
+                    },
+                    "wait": {
+                        "type": "boolean",
+                        "description": "Wait for completion (default false)",
+                        "required": False,
+                    },
+                },
+                handler=self._tool_execute,
+                category="orchestration",
+            ),
+            Tool(
+                name="gorgon_execution_status",
+                description="Get the status of a Gorgon workflow execution.",
+                parameters={
+                    "execution_id": {
+                        "type": "string",
+                        "description": "Execution ID",
+                        "required": True,
+                    },
+                },
+                handler=self._tool_execution_status,
+                category="orchestration",
+            ),
+            Tool(
+                name="gorgon_executions",
+                description="List recent Gorgon workflow executions.",
+                parameters={
+                    "status": {
+                        "type": "string",
+                        "description": "Filter by status (optional)",
+                        "required": False,
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Page size (default 10)",
+                        "required": False,
+                    },
+                },
+                handler=self._tool_executions,
+                category="orchestration",
+            ),
+            Tool(
+                name="gorgon_approvals",
+                description="Check pending approval gates for a Gorgon execution.",
+                parameters={
+                    "execution_id": {
+                        "type": "string",
+                        "description": "Execution ID",
+                        "required": True,
+                    },
+                },
+                handler=self._tool_approvals,
+                category="orchestration",
+            ),
+            Tool(
+                name="gorgon_approve",
+                description="Approve or reject a pending approval gate.",
+                parameters={
+                    "execution_id": {
+                        "type": "string",
+                        "description": "Execution ID",
+                        "required": True,
+                    },
+                    "token": {
+                        "type": "string",
+                        "description": "Approval token",
+                        "required": True,
+                    },
+                    "approve": {
+                        "type": "boolean",
+                        "description": "True to approve, False to reject",
+                        "required": True,
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Reason for decision (optional)",
+                        "required": False,
+                    },
+                },
+                handler=self._tool_approve,
+                category="orchestration",
+            ),
         ]
 
     # ------------------------------------------------------------------
@@ -493,3 +592,89 @@ class GorgonIntegration(BaseIntegration):
             return ToolResult("gorgon_cancel", True, result)
         except Exception as e:
             return ToolResult("gorgon_cancel", False, None, f"Failed to cancel task: {e}")
+
+    # ------------------------------------------------------------------
+    # Execution + approval tool handlers
+    # ------------------------------------------------------------------
+
+    async def _tool_execute(
+        self,
+        workflow_id: str,
+        variables: dict[str, Any] | None = None,
+        wait: bool = False,
+        **kwargs: Any,
+    ) -> ToolResult:
+        """Execute a workflow on Gorgon."""
+        if not self._client:
+            return ToolResult("gorgon_execute", False, None, "Not connected to Gorgon")
+
+        try:
+            if wait:
+                result = await self._client.execute_and_wait(
+                    workflow_id, variables, poll_interval=5.0
+                )
+            else:
+                result = await self._client.execute_workflow(workflow_id, variables)
+            return ToolResult("gorgon_execute", True, result)
+        except Exception as e:
+            return ToolResult("gorgon_execute", False, None, f"Execution failed: {e}")
+
+    async def _tool_execution_status(self, execution_id: str, **kwargs: Any) -> ToolResult:
+        """Get execution status."""
+        if not self._client:
+            return ToolResult("gorgon_execution_status", False, None, "Not connected to Gorgon")
+
+        try:
+            result = await self._client.get_execution(execution_id)
+            return ToolResult("gorgon_execution_status", True, result)
+        except Exception as e:
+            return ToolResult("gorgon_execution_status", False, None, f"Failed: {e}")
+
+    async def _tool_executions(
+        self, status: str | None = None, limit: int = 10, **kwargs: Any
+    ) -> ToolResult:
+        """List recent executions."""
+        if not self._client:
+            return ToolResult("gorgon_executions", False, None, "Not connected to Gorgon")
+
+        try:
+            result = await self._client.list_executions(page_size=limit, status=status)
+            return ToolResult("gorgon_executions", True, result)
+        except Exception as e:
+            return ToolResult("gorgon_executions", False, None, f"Failed: {e}")
+
+    async def _tool_approvals(self, execution_id: str, **kwargs: Any) -> ToolResult:
+        """Get pending approval gates."""
+        if not self._client:
+            return ToolResult("gorgon_approvals", False, None, "Not connected to Gorgon")
+
+        try:
+            result = await self._client.get_approval_status(execution_id)
+            return ToolResult("gorgon_approvals", True, result)
+        except Exception as e:
+            return ToolResult("gorgon_approvals", False, None, f"Failed: {e}")
+
+    async def _tool_approve(
+        self,
+        execution_id: str,
+        token: str,
+        approve: bool = True,
+        reason: str = "",
+        **kwargs: Any,
+    ) -> ToolResult:
+        """Approve or reject an approval gate."""
+        if not self._client:
+            return ToolResult("gorgon_approve", False, None, "Not connected to Gorgon")
+
+        try:
+            result = await self._client.resume_execution(
+                execution_id,
+                token=token,
+                approve=approve,
+                approved_by="animus",
+                reason=reason,
+            )
+            action = "Approved" if approve else "Rejected"
+            return ToolResult("gorgon_approve", True, result, f"{action} gate")
+        except Exception as e:
+            return ToolResult("gorgon_approve", False, None, f"Failed: {e}")

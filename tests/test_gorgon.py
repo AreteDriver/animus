@@ -355,6 +355,11 @@ class TestGorgonIntegration:
             "gorgon_check",
             "gorgon_list",
             "gorgon_cancel",
+            "gorgon_execute",
+            "gorgon_execution_status",
+            "gorgon_executions",
+            "gorgon_approvals",
+            "gorgon_approve",
         }
 
     def test_connect_success(self):
@@ -966,3 +971,184 @@ class TestGorgonClientExecutions:
             assert result["status"] == "awaiting_approval"
 
         asyncio.run(_run())
+
+
+# =============================================================================
+# GorgonIntegration Execution Tool Tests
+# =============================================================================
+
+
+class TestGorgonIntegrationExecutionTools:
+    """Tests for execution and approval tools on GorgonIntegration."""
+
+    def _make_integration(self):
+        from animus.integrations.gorgon import GorgonIntegration
+
+        integration = GorgonIntegration()
+        mock_client = AsyncMock()
+        integration._client = mock_client
+        integration._connected = True
+        return integration, mock_client
+
+    def test_tool_execute_not_connected(self):
+        from animus.integrations.gorgon import GorgonIntegration
+
+        integration = GorgonIntegration()
+
+        async def _run():
+            result = await integration._tool_execute(workflow_id="wf-1")
+            assert result.success is False
+            assert "Not connected" in result.error
+
+        asyncio.run(_run())
+
+    def test_tool_execute_success(self):
+        integration, mock_client = self._make_integration()
+        mock_client.execute_workflow.return_value = {"execution_id": "exec-1"}
+
+        async def _run():
+            result = await integration._tool_execute(workflow_id="wf-1", variables={"k": "v"})
+            assert result.success is True
+            assert result.output["execution_id"] == "exec-1"
+            mock_client.execute_workflow.assert_awaited_once_with("wf-1", {"k": "v"})
+
+        asyncio.run(_run())
+
+    def test_tool_execute_with_wait(self):
+        integration, mock_client = self._make_integration()
+        mock_client.execute_and_wait.return_value = {"status": "completed"}
+
+        async def _run():
+            result = await integration._tool_execute(workflow_id="wf-1", wait=True)
+            assert result.success is True
+            mock_client.execute_and_wait.assert_awaited_once()
+
+        asyncio.run(_run())
+
+    def test_tool_execute_error(self):
+        integration, mock_client = self._make_integration()
+        mock_client.execute_workflow.side_effect = RuntimeError("Connection refused")
+
+        async def _run():
+            result = await integration._tool_execute(workflow_id="wf-1")
+            assert result.success is False
+            assert "Connection refused" in result.error
+
+        asyncio.run(_run())
+
+    def test_tool_execution_status_success(self):
+        integration, mock_client = self._make_integration()
+        mock_client.get_execution.return_value = {"id": "exec-1", "status": "running"}
+
+        async def _run():
+            result = await integration._tool_execution_status(execution_id="exec-1")
+            assert result.success is True
+            assert result.output["status"] == "running"
+
+        asyncio.run(_run())
+
+    def test_tool_execution_status_not_connected(self):
+        from animus.integrations.gorgon import GorgonIntegration
+
+        integration = GorgonIntegration()
+
+        async def _run():
+            result = await integration._tool_execution_status(execution_id="exec-1")
+            assert result.success is False
+
+        asyncio.run(_run())
+
+    def test_tool_executions_success(self):
+        integration, mock_client = self._make_integration()
+        mock_client.list_executions.return_value = {"data": [{"id": "e1"}], "total": 1}
+
+        async def _run():
+            result = await integration._tool_executions(status="running", limit=5)
+            assert result.success is True
+            assert result.output["total"] == 1
+            mock_client.list_executions.assert_awaited_once_with(page_size=5, status="running")
+
+        asyncio.run(_run())
+
+    def test_tool_approvals_success(self):
+        integration, mock_client = self._make_integration()
+        mock_client.get_approval_status.return_value = {
+            "pending_approvals": [{"token": "abc", "prompt": "Deploy?"}],
+            "total_tokens": 1,
+        }
+
+        async def _run():
+            result = await integration._tool_approvals(execution_id="exec-1")
+            assert result.success is True
+            assert len(result.output["pending_approvals"]) == 1
+
+        asyncio.run(_run())
+
+    def test_tool_approvals_not_connected(self):
+        from animus.integrations.gorgon import GorgonIntegration
+
+        integration = GorgonIntegration()
+
+        async def _run():
+            result = await integration._tool_approvals(execution_id="exec-1")
+            assert result.success is False
+
+        asyncio.run(_run())
+
+    def test_tool_approve_success(self):
+        integration, mock_client = self._make_integration()
+        mock_client.resume_execution.return_value = {"status": "approved"}
+
+        async def _run():
+            result = await integration._tool_approve(
+                execution_id="exec-1", token="tok-1", approve=True
+            )
+            assert result.success is True
+            assert "Approved" in result.error  # ToolResult uses error field for messages
+            mock_client.resume_execution.assert_awaited_once_with(
+                "exec-1", token="tok-1", approve=True, approved_by="animus", reason=""
+            )
+
+        asyncio.run(_run())
+
+    def test_tool_approve_reject(self):
+        integration, mock_client = self._make_integration()
+        mock_client.resume_execution.return_value = {"status": "rejected"}
+
+        async def _run():
+            result = await integration._tool_approve(
+                execution_id="exec-1", token="tok-1", approve=False, reason="Not ready"
+            )
+            assert result.success is True
+            assert "Rejected" in result.error
+
+        asyncio.run(_run())
+
+    def test_tool_approve_not_connected(self):
+        from animus.integrations.gorgon import GorgonIntegration
+
+        integration = GorgonIntegration()
+
+        async def _run():
+            result = await integration._tool_approve(
+                execution_id="exec-1", token="tok-1", approve=True
+            )
+            assert result.success is False
+
+        asyncio.run(_run())
+
+    def test_get_tools_includes_execution_tools(self):
+        from animus.integrations.gorgon import GorgonIntegration
+
+        integration = GorgonIntegration()
+        tools = integration.get_tools()
+        tool_names = {t.name for t in tools}
+        assert "gorgon_execute" in tool_names
+        assert "gorgon_execution_status" in tool_names
+        assert "gorgon_executions" in tool_names
+        assert "gorgon_approvals" in tool_names
+        assert "gorgon_approve" in tool_names
+        # Legacy tools still present
+        assert "gorgon_delegate" in tool_names
+        assert "gorgon_status" in tool_names
+        assert len(tools) == 10  # 5 legacy + 5 new
