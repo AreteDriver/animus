@@ -16,7 +16,9 @@ try:
     from fastapi.testclient import TestClient
 
     import animus.api as api_module
-    from animus.api import AppState, create_app
+
+    AppState = api_module.AppState
+    create_app = api_module.create_app
 
     FASTAPI_AVAILABLE = True
 except ImportError:
@@ -869,7 +871,8 @@ class TestLocalMemoryStoreCoverage:
         from animus.memory import LocalMemoryStore
 
         store = LocalMemoryStore(tmp_path)
-        assert store.delete("nonexistent") is False
+        deleted = store.delete("nonexistent")
+        assert deleted is False
 
     def test_search_with_type_filter(self, tmp_path):
         from animus.memory import LocalMemoryStore, Memory, MemoryType
