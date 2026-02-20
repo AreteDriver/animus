@@ -1,0 +1,7 @@
+[extend]
+# Use default gitleaks rules
+
+[allowlist]
+paths = [
+    '''tests/''',
+]

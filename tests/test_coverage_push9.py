@@ -507,7 +507,7 @@ class TestOAuthNoBrowser:
         if not GOOGLE_AUTH_AVAILABLE:
             pytest.skip("google-auth not installed")
 
-        from animus.integrations.oauth import OAuth2Flow
+        from animus.integrations.oauth import OAuth2CallbackHandler, OAuth2Flow
 
         flow = OAuth2Flow(
             client_id="test_id",
@@ -515,24 +515,42 @@ class TestOAuthNoBrowser:
             scopes=["email"],
         )
 
-        # Mock the flow internals to avoid actual server
-        mock_flow = MagicMock()
-        mock_flow.authorization_url.return_value = ("https://auth.example.com", "state")
+        # Mock the Google OAuth Flow object
+        mock_google_flow = MagicMock()
+        mock_google_flow.authorization_url.return_value = (
+            "https://auth.example.com",
+            "state",
+        )
+        mock_creds = MagicMock()
+        mock_creds.token = "access_token"
+        mock_creds.refresh_token = "refresh_token"
+        mock_creds.expiry = None
+        mock_creds.scopes = ["email"]
+        mock_google_flow.credentials = mock_creds
 
         with (
-            patch.object(flow, "_create_flow", return_value=mock_flow),
+            patch(
+                "animus.integrations.oauth.Flow.from_client_config",
+                return_value=mock_google_flow,
+            ),
             patch("animus.integrations.oauth.HTTPServer") as mock_server_cls,
             patch("animus.integrations.oauth.webbrowser") as mock_wb,
-            patch("threading.Thread"),
+            patch("threading.Thread") as mock_thread_cls,
         ):
             mock_server = MagicMock()
             mock_server_cls.return_value = mock_server
+            mock_thread = MagicMock()
+            mock_thread_cls.return_value = mock_thread
 
-            # Simulate the callback setting credentials
-            flow._credentials = MagicMock()
-            flow._credentials.token = "access_token"
+            # Simulate the callback handler receiving an auth code
+            OAuth2CallbackHandler.authorization_code = "test_code"
+            OAuth2CallbackHandler.error = None
 
-            flow.run_local_server(open_browser=False)
+            result = flow.run_local_server(open_browser=False)
 
             # webbrowser.open should NOT be called
             mock_wb.open.assert_not_called()
+            # Flow should have fetched token
+            mock_google_flow.fetch_token.assert_called_once_with(code="test_code")
+            assert result is not None
+            assert result.access_token == "access_token"

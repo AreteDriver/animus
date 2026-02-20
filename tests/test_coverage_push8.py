@@ -193,6 +193,7 @@ class TestSwarmEngineGateRevise:
             type="automated",
             pass_condition="false",
             on_fail="revise",
+            revise_target="a1",
         )
 
         config = WorkflowConfig(
@@ -203,7 +204,7 @@ class TestSwarmEngineGateRevise:
             gates=[gate],
         )
 
-        with pytest.raises(GateFailedError, match="revise"):
+        with pytest.raises(GateFailedError, match="Max revisions"):
             engine.run(config)
 
 

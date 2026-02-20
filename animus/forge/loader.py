@@ -76,6 +76,20 @@ def load_workflow_str(yaml_str: str) -> WorkflowConfig:
 
     gates = _parse_gates(data.get("gates", []), agent_names)
 
+    # Validate revise_target ordering in sequential mode
+    if execution_mode == "sequential":
+        agent_order = {a.name: i for i, a in enumerate(agents)}
+        for gate in gates:
+            if gate.on_fail == "revise" and gate.revise_target:
+                after_idx = agent_order[gate.after]
+                target_idx = agent_order[gate.revise_target]
+                if target_idx > after_idx:
+                    raise ForgeError(
+                        f"Gate {gate.name!r}: revise_target {gate.revise_target!r} "
+                        f"must come before or at gate's 'after' agent "
+                        f"{gate.after!r} in sequential mode"
+                    )
+
     return WorkflowConfig(
         name=name,
         description=data.get("description", ""),
@@ -179,6 +193,7 @@ def _parse_gates(raw: list[dict], agent_names: set[str]) -> list[GateConfig]:
                 pass_condition=entry.get("pass_condition", ""),
                 on_fail=on_fail,
                 revise_target=revise_target,
+                max_revisions=int(entry.get("max_revisions", 3)),
             )
         )
 

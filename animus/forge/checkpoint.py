@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS workflows (
     current_step INTEGER NOT NULL,
     total_tokens INTEGER DEFAULT 0,
     total_cost REAL DEFAULT 0.0,
+    revision_counts_json TEXT DEFAULT '{}',
     updated_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS step_results (
@@ -55,14 +56,16 @@ class CheckpointStore:
         with self._conn:
             self._conn.execute(
                 "INSERT OR REPLACE INTO workflows "
-                "(name, status, current_step, total_tokens, total_cost, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "(name, status, current_step, total_tokens, total_cost, "
+                "revision_counts_json, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     state.workflow_name,
                     state.status,
                     state.current_step,
                     state.total_tokens,
                     state.total_cost,
+                    json.dumps(state.revision_counts),
                     now,
                 ),
             )
@@ -99,7 +102,8 @@ class CheckpointStore:
         Returns None if no checkpoint exists for this workflow.
         """
         row = self._conn.execute(
-            "SELECT name, status, current_step, total_tokens, total_cost "
+            "SELECT name, status, current_step, total_tokens, total_cost, "
+            "revision_counts_json "
             "FROM workflows WHERE name = ?",
             (workflow_name,),
         ).fetchone()
@@ -113,6 +117,7 @@ class CheckpointStore:
             current_step=row[2],
             total_tokens=row[3],
             total_cost=row[4],
+            revision_counts=json.loads(row[5]) if row[5] else {},
         )
 
         step_rows = self._conn.execute(

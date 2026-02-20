@@ -13,6 +13,7 @@ from animus.forge.models import (
     BudgetExhaustedError,
     ForgeError,
     GateFailedError,
+    ReviseRequestedError,
     StepResult,
     WorkflowConfig,
     WorkflowState,
@@ -109,11 +110,14 @@ class SwarmEngine:
         agent_configs = {a.name: a for a in config.agents}
 
         try:
-            for stage in stages[start_stage:]:
+            stage_idx = start_stage
+            while stage_idx < len(stages):
+                stage = stages[stage_idx]
                 agents_to_run = [name for name in stage.agent_names if name not in completed_agents]
 
                 if not agents_to_run:
                     logger.info(f"Stage {stage.index}: all agents already complete")
+                    stage_idx += 1
                     continue
 
                 # Pre-check budget for all agents in stage
@@ -158,15 +162,33 @@ class SwarmEngine:
                 state.current_step = sum(len(s.agent_names) for s in stages[: stage.index + 1])
                 self._save_checkpoint(state)
 
-                # Evaluate gates for each completed agent in this stage
+                # Evaluate gates — may raise ReviseRequestedError
+                revise_restart = None
                 for agent_name in agents_to_run:
-                    self._evaluate_gates(config, agent_name, all_outputs, state)
+                    try:
+                        self._evaluate_gates(config, agent_name, all_outputs, state)
+                    except ReviseRequestedError as req:
+                        revise_restart = self._handle_revise(
+                            req,
+                            config,
+                            state,
+                            stages,
+                            all_outputs,
+                            completed_agents,
+                        )
+                        break
+
+                if revise_restart is not None:
+                    stage_idx = revise_restart
+                    continue
 
                 logger.info(
                     f"Stage {stage.index} complete: "
                     f"{len(agents_to_run)} agents, "
                     f"{sum(r.tokens_used for r in results)} tokens"
                 )
+
+                stage_idx += 1
 
         except (BudgetExhaustedError, GateFailedError):
             state.status = "failed"
@@ -233,6 +255,9 @@ class SwarmEngine:
         if len(agent_names) == 1:
             ac = agent_configs[agent_names[0]]
             inputs = self._resolve_inputs(ac.inputs, all_outputs)
+            feedback_key = f"_gate_feedback.{agent_names[0]}"
+            if feedback_key in all_outputs:
+                inputs["_gate_feedback"] = all_outputs.pop(feedback_key)
             agent = ForgeAgent(ac, self.cognitive, self.tools)
             return [agent.run(inputs)]
 
@@ -245,6 +270,9 @@ class SwarmEngine:
             for name in agent_names:
                 ac = agent_configs[name]
                 inputs = self._resolve_inputs(ac.inputs, all_outputs)
+                feedback_key = f"_gate_feedback.{name}"
+                if feedback_key in all_outputs:
+                    inputs["_gate_feedback"] = all_outputs.pop(feedback_key)
                 agent = ForgeAgent(ac, self.cognitive, self.tools)
                 future = executor.submit(agent.run, inputs)
                 futures[future] = name
@@ -339,7 +367,71 @@ class SwarmEngine:
             elif gate.on_fail == "halt":
                 raise GateFailedError(reason)
             elif gate.on_fail == "revise":
-                raise GateFailedError(f"{reason} (revise requested but not yet implemented)")
+                raise ReviseRequestedError(
+                    target=gate.revise_target,
+                    gate_name=gate.name,
+                    reason=reason,
+                    max_revisions=gate.max_revisions,
+                )
+
+    def _handle_revise(
+        self,
+        req: ReviseRequestedError,
+        config: WorkflowConfig,
+        state: WorkflowState,
+        stages: list[SwarmStage],
+        all_outputs: dict[str, str],
+        completed_agents: set[str],
+    ) -> int:
+        """Handle a revise request by looping back to the target agent's stage.
+
+        Returns the stage index to resume from.
+
+        Raises:
+            GateFailedError: If max revisions exceeded.
+        """
+        gate_key = req.gate_name
+        count = state.revision_counts.get(gate_key, 0) + 1
+
+        if count > req.max_revisions:
+            raise GateFailedError(
+                f"Max revisions ({req.max_revisions}) exceeded for gate {gate_key!r}: {req.reason}"
+            )
+
+        state.revision_counts[gate_key] = count
+
+        # Find the stage containing the revise target
+        target_stage_idx = next(s.index for s in stages if req.target in s.agent_names)
+
+        # Clear results for agents in target stage and later stages
+        agents_to_clear = set()
+        for s in stages[target_stage_idx:]:
+            agents_to_clear.update(s.agent_names)
+
+        state.results = [r for r in state.results if r.agent_name not in agents_to_clear]
+        completed_agents -= agents_to_clear
+
+        # Rebuild outputs from remaining results
+        all_outputs.clear()
+        all_outputs.update(self._collect_outputs(state.results))
+
+        # Inject gate feedback for the target agent
+        all_outputs[f"_gate_feedback.{req.target}"] = (
+            f"Gate {req.gate_name!r} failed: {req.reason}. "
+            f"Please revise your output. (attempt {count}/{req.max_revisions})"
+        )
+
+        # Reset step counter
+        state.current_step = sum(len(s.agent_names) for s in stages[:target_stage_idx])
+        self._save_checkpoint(state)
+
+        logger.info(
+            f"Revise loop: gate {req.gate_name!r} -> re-running from stage "
+            f"{target_stage_idx} ({req.target!r}) "
+            f"(attempt {count}/{req.max_revisions})"
+        )
+
+        return target_stage_idx
 
     # --- Parity with ForgeEngine ---
 

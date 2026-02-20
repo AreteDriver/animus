@@ -15,6 +15,17 @@ class GateFailedError(ForgeError):
     """Raised when a quality gate fails with on_fail='halt'."""
 
 
+class ReviseRequestedError(ForgeError):
+    """Internal signal to trigger revision loop-back."""
+
+    def __init__(self, target: str, gate_name: str, reason: str, max_revisions: int):
+        self.target = target
+        self.gate_name = gate_name
+        self.reason = reason
+        self.max_revisions = max_revisions
+        super().__init__(f"Revise: {gate_name} -> {target}")
+
+
 @dataclass
 class AgentConfig:
     """Configuration for a single agent in a workflow."""
@@ -40,6 +51,7 @@ class GateConfig:
     pass_condition: str = ""
     on_fail: str = "halt"
     revise_target: str | None = None
+    max_revisions: int = 3
 
 
 @dataclass
@@ -78,3 +90,4 @@ class WorkflowState:
     results: list[StepResult] = field(default_factory=list)
     total_tokens: int = 0
     total_cost: float = 0.0
+    revision_counts: dict[str, int] = field(default_factory=dict)

@@ -198,6 +198,57 @@ class RegisterTranslator:
             return base_prompt
         return f"{base_prompt}\n\nCommunication style: {modifier}"
 
+    def translate_response(
+        self,
+        text: str,
+        cognitive,
+        target: Register | None = None,
+    ) -> str:
+        """
+        Translate a response into the target register using the LLM.
+
+        Skips translation when:
+        - Target is NEUTRAL (no specific style needed)
+        - Text is too short (< 20 chars) to meaningfully translate
+        - Text appears to be code (starts with common code patterns)
+
+        Args:
+            text: Response text to translate
+            cognitive: CognitiveLayer instance for LLM translation
+            target: Target register. Defaults to active_register.
+
+        Returns:
+            Translated text, or original if no translation needed
+        """
+        target_reg = target or self.active_register
+
+        if target_reg == Register.NEUTRAL:
+            return text
+
+        if len(text) < 20:
+            return text
+
+        # Skip code-like text
+        code_prefixes = ("```", "def ", "class ", "import ", "from ", "{", "[")
+        stripped = text.lstrip()
+        if any(stripped.startswith(p) for p in code_prefixes):
+            return text
+
+        prompt = (
+            f"Rewrite the following text in a {target_reg.value} register. "
+            f"Keep the same meaning and information. "
+            f"Return only the rewritten text, nothing else.\n\n{text}"
+        )
+
+        try:
+            result = cognitive.think(prompt)
+            if result and result.strip():
+                return result.strip()
+        except Exception:
+            logger.debug("Register translation failed, returning original")
+
+        return text
+
     def get_register_context(self) -> dict:
         """
         Get register information as a context dict.

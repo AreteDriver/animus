@@ -198,7 +198,7 @@ class TestEngineEdgeCases:
             ],
         )
         engine = ForgeEngine(cognitive, checkpoint_dir=tmp_path)
-        with pytest.raises(GateFailedError, match="revise requested"):
+        with pytest.raises(GateFailedError, match="Max revisions"):
             engine.run(config)
 
     def test_unexpected_error_wraps(self, tmp_path: Path):

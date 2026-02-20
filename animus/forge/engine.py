@@ -11,6 +11,7 @@ from animus.forge.models import (
     BudgetExhaustedError,
     ForgeError,
     GateFailedError,
+    ReviseRequestedError,
     StepResult,
     WorkflowConfig,
     WorkflowState,
@@ -84,8 +85,9 @@ class ForgeEngine:
         all_outputs = self._collect_outputs(state.results)
 
         try:
-            for i in range(state.current_step, len(config.agents)):
-                agent_config = config.agents[i]
+            step_idx = state.current_step
+            while step_idx < len(config.agents):
+                agent_config = config.agents[step_idx]
 
                 # Check budget before running
                 if not budget.check(agent_config.name):
@@ -96,6 +98,11 @@ class ForgeEngine:
                 # Resolve inputs from prior results
                 inputs = self._resolve_inputs(agent_config.inputs, all_outputs)
 
+                # Inject gate feedback if present
+                feedback_key = f"_gate_feedback.{agent_config.name}"
+                if feedback_key in all_outputs:
+                    inputs["_gate_feedback"] = all_outputs.pop(feedback_key)
+
                 # Execute agent
                 agent = ForgeAgent(agent_config, self.cognitive, self.tools)
                 result = agent.run(inputs)
@@ -103,7 +110,7 @@ class ForgeEngine:
                 if not result.success:
                     state.status = "failed"
                     state.results.append(result)
-                    state.current_step = i + 1
+                    state.current_step = step_idx + 1
                     self._save_checkpoint(state)
                     raise ForgeError(f"Agent {agent_config.name!r} failed: {result.error}")
 
@@ -114,7 +121,7 @@ class ForgeEngine:
                 state.results.append(result)
                 state.total_tokens += result.tokens_used
                 state.total_cost += result.cost_usd
-                state.current_step = i + 1
+                state.current_step = step_idx + 1
 
                 # Update outputs
                 for key, val in result.outputs.items():
@@ -123,14 +130,25 @@ class ForgeEngine:
 
                 self._save_checkpoint(state)
 
-                # Evaluate gates after this agent
-                self._evaluate_gates(config, agent_config.name, all_outputs, state)
+                # Evaluate gates — may raise ReviseRequestedError
+                try:
+                    self._evaluate_gates(config, agent_config.name, all_outputs, state)
+                except ReviseRequestedError as req:
+                    step_idx = self._handle_revise(
+                        req,
+                        config,
+                        state,
+                        all_outputs,
+                    )
+                    continue
 
                 logger.info(
-                    f"Step {i + 1}/{len(config.agents)}: "
+                    f"Step {step_idx}/{len(config.agents)}: "
                     f"{agent_config.name} complete "
                     f"({result.tokens_used} tokens)"
                 )
+
+                step_idx += 1
 
         except (BudgetExhaustedError, GateFailedError):
             state.status = "failed"
@@ -253,7 +271,61 @@ class ForgeEngine:
             elif gate.on_fail == "halt":
                 raise GateFailedError(reason)
             elif gate.on_fail == "revise":
-                # For MVP, revise is treated as halt with feedback.
-                # Full loop-back requires re-running from revise_target,
-                # which is a Phase 2 enhancement.
-                raise GateFailedError(f"{reason} (revise requested but not yet implemented)")
+                raise ReviseRequestedError(
+                    target=gate.revise_target,
+                    gate_name=gate.name,
+                    reason=reason,
+                    max_revisions=gate.max_revisions,
+                )
+
+    def _handle_revise(
+        self,
+        req: ReviseRequestedError,
+        config: WorkflowConfig,
+        state: WorkflowState,
+        all_outputs: dict[str, str],
+    ) -> int:
+        """Handle a revise request by looping back to the target agent.
+
+        Returns the step index to resume from.
+
+        Raises:
+            GateFailedError: If max revisions exceeded.
+        """
+        gate_key = req.gate_name
+        count = state.revision_counts.get(gate_key, 0) + 1
+
+        if count > req.max_revisions:
+            raise GateFailedError(
+                f"Max revisions ({req.max_revisions}) exceeded for gate {gate_key!r}: {req.reason}"
+            )
+
+        state.revision_counts[gate_key] = count
+
+        # Find target index
+        target_idx = next(i for i, a in enumerate(config.agents) if a.name == req.target)
+
+        # Clear downstream results (keep only agents before target)
+        keep_agents = {config.agents[j].name for j in range(target_idx)}
+        state.results = [r for r in state.results if r.agent_name in keep_agents]
+
+        # Rebuild outputs from remaining results
+        all_outputs.clear()
+        all_outputs.update(self._collect_outputs(state.results))
+
+        # Inject gate feedback for the target agent
+        all_outputs[f"_gate_feedback.{req.target}"] = (
+            f"Gate {req.gate_name!r} failed: {req.reason}. "
+            f"Please revise your output. (attempt {count}/{req.max_revisions})"
+        )
+
+        # Reset step pointer
+        state.current_step = target_idx
+        self._save_checkpoint(state)
+
+        logger.info(
+            f"Revise loop: gate {req.gate_name!r} -> re-running from "
+            f"{req.target!r} (attempt {count}/{req.max_revisions})"
+        )
+
+        return target_idx

@@ -4,10 +4,10 @@
 
 ## Quick Reference
 
-- **Version**: 0.7.0
+- **Version**: 1.0.0
 - **Python**: >=3.10
 - **Package layout**: `animus/` (setuptools, flat layout with `forge/` subpackage)
-- **Tests**: `tests/` (pytest, 1703 tests, 96% coverage, fail_under=80)
+- **Tests**: `tests/` (pytest, 1734 tests, 96% coverage, fail_under=95)
 - **License**: MIT
 
 ## Build & Run
@@ -84,9 +84,9 @@ animus/
 
 **Core** (`animus/`) — User-facing exocortex. Identity, memory, CLI, voice, integrations.
 
-**Forge** (`animus/forge/`) — Multi-agent orchestration. Declarative YAML workflows, token budgets, quality gates, SQLite checkpoint/resume. Sequential execution MVP. Provider-agnostic via CognitiveLayer.
+**Forge** (`animus/forge/`) — Multi-agent orchestration. Declarative YAML workflows, token budgets, quality gates with revise loop-back, SQLite checkpoint/resume. Sequential execution. Provider-agnostic via CognitiveLayer.
 
-**Swarm** (`animus/swarm/`) — Parallel agent orchestration. DAG-based stage derivation, ThreadPoolExecutor parallel execution, stigmergic intent graph for conflict detection. Extends Forge (reuses ForgeAgent, BudgetTracker, CheckpointStore, gates). YAML `execution_mode: parallel` triggers Swarm engine.
+**Swarm** (`animus/swarm/`) — Parallel agent orchestration. DAG-based stage derivation, ThreadPoolExecutor parallel execution, stigmergic intent graph for conflict detection, revise loop-back at stage level. Extends Forge (reuses ForgeAgent, BudgetTracker, CheckpointStore, gates). YAML `execution_mode: parallel` triggers Swarm engine.
 
 ## Key Patterns
 
@@ -101,6 +101,8 @@ animus/
 - **Forge checkpoints**: SQLite WAL, `workflows` + `step_results` tables. `ForgeEngine(checkpoint_dir=path)` enables persistence.
 - **Budget tracking**: `BudgetTracker.from_config(workflow)`. Per-agent token limits + workflow cost ceiling. Raises `BudgetExhaustedError`.
 - **Archetype prompts**: 6 built-in (researcher, writer, reviewer, producer, editor, analyst). Custom via `system_prompt` field.
+- **Revise gates**: `on_fail: revise` loops back to `revise_target` agent, clears downstream results, injects `_gate_feedback` input. `max_revisions` (default 3) prevents infinite loops. `ReviseRequestedError` signal caught by engine loop.
+- **Register translation**: `RegisterTranslator.translate_response()` translates response text to target register via `cognitive.think()`. Skips neutral, short (<20 char), and code-like text.
 
 ## Forge YAML Schema
 
