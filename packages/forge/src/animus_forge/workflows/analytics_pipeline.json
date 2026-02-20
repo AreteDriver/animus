@@ -1,0 +1,53 @@
+{
+  "id": "analytics_pipeline",
+  "name": "Analytics Pipeline: Ingest → Analyze → Visualize → Report",
+  "description": "Multi-agent analytics workflow that processes data through collection, analysis, visualization, and reporting phases using specialized Claude agents.",
+  "steps": [
+    {
+      "id": "ingest",
+      "type": "claude_code",
+      "action": "execute_agent",
+      "params": {
+        "role": "data_engineer",
+        "task": "{{data_task}}"
+      },
+      "next_step": "analyze"
+    },
+    {
+      "id": "analyze",
+      "type": "claude_code",
+      "action": "execute_agent",
+      "params": {
+        "role": "analyst",
+        "task": "Analyze the data and find insights for: {{data_task}}",
+        "context": "{{ingest_output}}"
+      },
+      "next_step": "visualize"
+    },
+    {
+      "id": "visualize",
+      "type": "claude_code",
+      "action": "execute_agent",
+      "params": {
+        "role": "visualizer",
+        "task": "Create visualizations for: {{data_task}}",
+        "context": "{{analyze_output}}"
+      },
+      "next_step": "report"
+    },
+    {
+      "id": "report",
+      "type": "claude_code",
+      "action": "execute_agent",
+      "params": {
+        "role": "reporter",
+        "task": "Generate executive report for: {{data_task}}",
+        "context": "Analysis:\n{{analyze_output}}\n\nVisualizations:\n{{visualize_output}}"
+      },
+      "next_step": null
+    }
+  ],
+  "variables": {
+    "data_task": "Describe the data analysis task"
+  }
+}

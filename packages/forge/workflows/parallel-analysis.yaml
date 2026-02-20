@@ -1,0 +1,209 @@
+name: Parallel Code Analysis
+version: "1.0"
+description: Multi-agent parallel analysis workflow demonstrating concurrent execution with dependencies
+
+token_budget: 80000
+timeout_seconds: 1800
+
+inputs:
+  codebase_path:
+    type: string
+    required: true
+    description: Path to the codebase to analyze
+  focus_areas:
+    type: string
+    required: false
+    default: "all"
+    description: Comma-separated areas to focus on (security,performance,maintainability)
+
+outputs:
+  - security_report
+  - performance_report
+  - maintainability_report
+  - final_summary
+
+steps:
+  # First, gather context about the codebase
+  - id: gather_context
+    type: claude_code
+    params:
+      role: analyst
+      prompt: |
+        Analyze the structure of the codebase at: ${codebase_path}
+
+        Provide:
+        1. Key directories and their purposes
+        2. Main entry points
+        3. Dependencies and their versions
+        4. File count and language breakdown
+      estimated_tokens: 3000
+    outputs:
+      - codebase_context
+      - file_list
+    on_failure: abort
+
+  # Parallel analysis phase - security, performance, and maintainability run concurrently
+  - id: parallel_analysis
+    type: parallel
+    params:
+      strategy: threading
+      max_workers: 3
+      fail_fast: false
+      steps:
+        # Security analysis - runs independently
+        - id: security
+          type: claude_code
+          params:
+            role: reviewer
+            prompt: |
+              Perform a security analysis of the codebase.
+
+              Context: ${codebase_context}
+              Files: ${file_list}
+
+              Check for:
+              1. Hardcoded secrets or credentials
+              2. SQL injection vulnerabilities
+              3. XSS vulnerabilities
+              4. Insecure dependencies
+              5. Authentication/authorization issues
+              6. Input validation gaps
+
+              Provide severity ratings (critical/high/medium/low) for each finding.
+            estimated_tokens: 8000
+          outputs:
+            - security_report
+            - security_score
+
+        # Performance analysis - runs independently
+        - id: performance
+          type: claude_code
+          params:
+            role: analyst
+            prompt: |
+              Perform a performance analysis of the codebase.
+
+              Context: ${codebase_context}
+              Files: ${file_list}
+
+              Analyze:
+              1. Algorithm complexity (O notation where applicable)
+              2. Database query patterns (N+1, missing indexes)
+              3. Memory usage patterns
+              4. Caching opportunities
+              5. Async/concurrency patterns
+              6. Resource leaks
+
+              Estimate performance impact (high/medium/low) for each finding.
+            estimated_tokens: 8000
+          outputs:
+            - performance_report
+            - performance_score
+
+        # Maintainability analysis - runs independently
+        - id: maintainability
+          type: claude_code
+          params:
+            role: reviewer
+            prompt: |
+              Perform a maintainability analysis of the codebase.
+
+              Context: ${codebase_context}
+              Files: ${file_list}
+
+              Evaluate:
+              1. Code organization and modularity
+              2. Naming conventions and consistency
+              3. Documentation coverage
+              4. Test coverage (if tests exist)
+              5. Cyclomatic complexity hotspots
+              6. Code duplication
+
+              Rate maintainability (A/B/C/D/F) with justification.
+            estimated_tokens: 8000
+          outputs:
+            - maintainability_report
+            - maintainability_grade
+
+        # Summary depends on all three analyses completing
+        - id: summary
+          type: claude_code
+          depends_on:
+            - security
+            - performance
+            - maintainability
+          params:
+            role: reporter
+            prompt: |
+              Create an executive summary combining all analysis results.
+
+              Security Analysis:
+              ${security_report}
+
+              Performance Analysis:
+              ${performance_report}
+
+              Maintainability Analysis:
+              ${maintainability_report}
+
+              Provide:
+              1. Overall health score (0-100)
+              2. Top 5 priority issues to address
+              3. Quick wins (easy fixes with high impact)
+              4. Recommended roadmap for improvements
+              5. Risk assessment for production readiness
+            estimated_tokens: 5000
+          outputs:
+            - final_summary
+            - health_score
+            - priority_issues
+
+  # Checkpoint after parallel analysis
+  - id: checkpoint_analysis_complete
+    type: checkpoint
+    params:
+      message: "Parallel analysis phase complete"
+
+  # Optional: Generate actionable tickets from findings
+  - id: generate_tickets
+    type: claude_code
+    params:
+      role: planner
+      prompt: |
+        Based on the analysis summary, generate actionable work items:
+
+        Summary: ${final_summary}
+        Priority Issues: ${priority_issues}
+
+        For each issue, create a ticket with:
+        - Title
+        - Description
+        - Acceptance criteria
+        - Estimated effort (hours)
+        - Priority (P0/P1/P2/P3)
+      estimated_tokens: 4000
+    condition:
+      field: health_score
+      operator: less_than
+      value: 80
+    outputs:
+      - tickets
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: analysis
+  tags:
+    - parallel
+    - security
+    - performance
+    - code-quality
+  examples:
+    - description: Analyze a Python project
+      inputs:
+        codebase_path: /path/to/python/project
+        focus_areas: security,performance
+    - description: Full analysis with all areas
+      inputs:
+        codebase_path: ./src
+        focus_areas: all

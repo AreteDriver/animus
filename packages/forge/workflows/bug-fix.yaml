@@ -1,0 +1,142 @@
+name: Bug Fix
+version: "1.0"
+description: Workflow for diagnosing and fixing bugs with test verification
+
+token_budget: 80000
+timeout_seconds: 1800
+
+inputs:
+  bug_description:
+    type: string
+    required: true
+    description: Description of the bug to fix
+  reproduction_steps:
+    type: string
+    required: false
+    default: ""
+    description: Steps to reproduce the bug
+  codebase_path:
+    type: string
+    required: true
+    description: Path to the codebase
+  test_command:
+    type: string
+    required: false
+    default: "pytest"
+    description: Command to run tests
+
+outputs:
+  - diagnosis
+  - fix
+  - test_results
+  - verification
+
+steps:
+  - id: diagnose
+    type: claude_code
+    params:
+      role: planner
+      prompt: |
+        Diagnose the following bug:
+
+        Bug: ${bug_description}
+        Reproduction: ${reproduction_steps}
+        Codebase: ${codebase_path}
+
+        Analyze:
+        1. Root cause
+        2. Affected code paths
+        3. Potential fixes
+        4. Risk of regression
+      estimated_tokens: 5000
+    outputs:
+      - diagnosis
+      - root_cause
+      - affected_files
+    on_failure: abort
+
+  - id: write_failing_test
+    type: claude_code
+    params:
+      role: tester
+      prompt: |
+        Write a test that reproduces the bug:
+
+        Diagnosis: ${diagnosis}
+        Root cause: ${root_cause}
+
+        The test should:
+        - Clearly demonstrate the bug
+        - Be easy to understand
+        - Fail until the fix is applied
+      estimated_tokens: 3000
+    outputs:
+      - regression_test
+    on_failure: retry
+    max_retries: 1
+
+  - id: fix
+    type: claude_code
+    params:
+      role: builder
+      prompt: |
+        Fix the bug based on this diagnosis:
+
+        Diagnosis: ${diagnosis}
+        Root cause: ${root_cause}
+        Affected files: ${affected_files}
+
+        Requirements:
+        - Minimal change to fix the issue
+        - No breaking changes
+        - Add defensive checks where appropriate
+      estimated_tokens: 10000
+    outputs:
+      - fix
+      - files_modified
+    on_failure: retry
+    max_retries: 2
+
+  - id: checkpoint_after_fix
+    type: checkpoint
+    params:
+      message: "Fix applied"
+
+  - id: run_tests
+    type: shell
+    params:
+      command: "cd ${codebase_path} && ${test_command}"
+      allow_failure: false
+    outputs:
+      - test_results
+    on_failure: abort
+    timeout_seconds: 300
+
+  - id: verify
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Verify the bug fix:
+
+        Original bug: ${bug_description}
+        Fix applied: ${fix}
+        Test results: ${test_results}
+
+        Confirm:
+        - Bug is fixed
+        - No regressions introduced
+        - Fix is appropriate for the root cause
+      estimated_tokens: 3000
+    outputs:
+      - verification
+      - approved
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: maintenance
+  tags:
+    - bug
+    - fix
+    - debugging

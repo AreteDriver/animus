@@ -1,0 +1,253 @@
+name: Three.js Scene Builder
+version: "1.0"
+description: Create interactive 3D web scenes with Three.js - models, lighting, controls, and effects
+
+token_budget: 100000
+timeout_seconds: 2400
+
+inputs:
+  scene_name:
+    type: string
+    required: true
+    description: Name of the scene/project
+  scene_type:
+    type: string
+    required: true
+    description: Type of scene (product-viewer, game, visualization, art, configurator)
+  models:
+    type: array
+    required: false
+    description: 3D models to include (GLTF/GLB paths or descriptions)
+  interactions:
+    type: array
+    required: false
+    default: ["orbit-controls", "click-select"]
+    description: Required interactions (orbit-controls, first-person, drag, click-select, hover)
+  effects:
+    type: array
+    required: false
+    description: Visual effects (shadows, post-processing, particles, reflections)
+  responsive:
+    type: boolean
+    required: false
+    default: true
+    description: Should the scene be responsive to window size
+  framework:
+    type: string
+    required: false
+    default: "vanilla"
+    description: JavaScript framework (vanilla, react, vue, svelte)
+
+outputs:
+  - scene_code
+  - loader_code
+  - controls_code
+  - effects_code
+  - html_template
+
+steps:
+  - id: plan
+    type: claude_code
+    params:
+      role: planner
+      prompt: |
+        Plan a Three.js web 3D scene:
+
+        Scene: ${scene_name}
+        Type: ${scene_type}
+        Models: ${models}
+        Interactions: ${interactions}
+        Effects: ${effects}
+        Framework: ${framework}
+        Responsive: ${responsive}
+
+        Create a technical plan:
+        1. Scene architecture (renderer, camera, scene setup)
+        2. Asset loading strategy (loaders, progress, error handling)
+        3. Control system design
+        4. Performance considerations (LOD, instancing, culling)
+        5. Required dependencies (npm packages)
+        6. File structure
+      estimated_tokens: 3000
+    outputs:
+      - plan
+    on_failure: abort
+
+  - id: scene_code
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Create the main Three.js scene setup:
+
+        Plan: ${plan}
+        Scene: ${scene_name}
+        Framework: ${framework}
+        Responsive: ${responsive}
+
+        Generate:
+        1. Scene initialization (renderer, camera, scene)
+        2. Lighting setup appropriate for scene type
+        3. Render loop with proper timing (clock-based)
+        4. Resize handling
+        5. Cleanup/dispose functions
+        6. Debug helpers (stats, GUI) with easy toggle
+
+        If using React: Use @react-three/fiber patterns
+        If using Vue: Use TroisJS or vue-three patterns
+        If vanilla: Use ES modules with clean class structure
+      estimated_tokens: 10000
+    outputs:
+      - scene_code
+    on_failure: retry
+    max_retries: 2
+
+  - id: loader_code
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Create the asset loading system:
+
+        Plan: ${plan}
+        Models: ${models}
+        Framework: ${framework}
+
+        Generate:
+        1. GLTF/GLB loader with Draco support
+        2. Texture loader with proper color space handling
+        3. Loading manager with progress callbacks
+        4. Error handling and fallbacks
+        5. Asset caching strategy
+        6. Preload vs lazy load options
+
+        Include:
+        - Loading UI/progress indicator
+        - Proper disposal of loaded assets
+        - Support for loading from URLs or imported files
+      estimated_tokens: 6000
+    outputs:
+      - loader_code
+    on_failure: retry
+    max_retries: 2
+
+  - id: controls_code
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Create the interaction/controls system:
+
+        Plan: ${plan}
+        Interactions: ${interactions}
+        Scene Type: ${scene_type}
+        Framework: ${framework}
+
+        Generate controls for:
+        1. Camera controls (orbit, first-person, etc.)
+        2. Object interaction (raycasting, selection, hover)
+        3. Touch support for mobile
+        4. Keyboard shortcuts
+        5. Animation playback controls (if models have animations)
+
+        Include:
+        - Smooth damping and transitions
+        - Bounds/limits where appropriate
+        - Event system for interaction callbacks
+        - Accessibility considerations
+      estimated_tokens: 8000
+    outputs:
+      - controls_code
+    on_failure: retry
+    max_retries: 2
+
+  - id: effects_code
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Create visual effects and post-processing:
+
+        Plan: ${plan}
+        Effects: ${effects}
+        Scene Type: ${scene_type}
+
+        Generate (based on requested effects):
+        1. Shadow configuration (shadow maps, soft shadows)
+        2. Post-processing pipeline (EffectComposer)
+        3. Environment maps / reflections
+        4. Particle systems
+        5. Custom shaders
+
+        Include:
+        - Performance-conscious defaults
+        - Quality presets (low/medium/high)
+        - Mobile fallbacks
+      estimated_tokens: 8000
+    outputs:
+      - effects_code
+    on_failure: retry
+    max_retries: 2
+
+  - id: html_template
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Create the HTML template and entry point:
+
+        Scene: ${scene_name}
+        Framework: ${framework}
+        Scene Code: ${scene_code}
+        Loader: ${loader_code}
+        Controls: ${controls_code}
+        Effects: ${effects_code}
+
+        Generate:
+        1. HTML5 template with proper meta tags
+        2. CSS for fullscreen canvas and loading UI
+        3. Entry point JavaScript that ties everything together
+        4. Package.json with dependencies
+        5. Basic Vite/webpack config (if not using framework CLI)
+        6. README with setup instructions
+      estimated_tokens: 5000
+    outputs:
+      - html_template
+      - package_json
+      - readme
+    on_failure: retry
+    max_retries: 2
+
+  - id: review
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Review the Three.js scene implementation:
+
+        Scene Code: ${scene_code}
+        Loader: ${loader_code}
+        Controls: ${controls_code}
+        Effects: ${effects_code}
+
+        Evaluate:
+        1. Performance (draw calls, memory, frame budget)
+        2. Browser compatibility
+        3. Mobile support
+        4. Memory leaks (disposal patterns)
+        5. Accessibility
+        6. Code organization and maintainability
+      estimated_tokens: 3000
+    outputs:
+      - review
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: web-development
+  tags:
+    - threejs
+    - webgl
+    - 3d
+    - interactive
+    - web

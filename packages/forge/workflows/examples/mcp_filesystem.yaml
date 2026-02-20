@@ -1,0 +1,64 @@
+# MCP Filesystem Tool Example
+# Reads files via MCP filesystem server, then analyzes content with AI.
+#
+# Requires: A registered MCP server named "filesystem" (stdio type)
+# Run: npx -y @modelcontextprotocol/server-filesystem /path/to/dir
+
+name: mcp_filesystem_analysis
+description: Read project files via MCP and analyze with AI
+
+inputs:
+  - name: project_path
+    type: string
+    description: Path to the project directory
+  - name: analysis_focus
+    type: string
+    default: "architecture and code quality"
+    description: What to focus the analysis on
+
+steps:
+  # Step 1: Read README via MCP filesystem server
+  - id: read_readme
+    type: mcp_tool
+    params:
+      server: "filesystem"
+      tool: "read_file"
+      arguments:
+        path: "${project_path}/README.md"
+    outputs: [readme_content]
+
+  # Step 2: List project structure
+  - id: list_structure
+    type: mcp_tool
+    params:
+      server: "filesystem"
+      tool: "list_directory"
+      arguments:
+        path: "${project_path}"
+    outputs: [dir_listing]
+
+  # Step 3: Analyze with AI
+  - id: analyze
+    type: claude_code
+    depends_on: [read_readme, list_structure]
+    params:
+      role: analyst
+      prompt: |
+        Analyze this project focusing on: ${analysis_focus}
+
+        README:
+        ${readme_content}
+
+        Directory structure:
+        ${dir_listing}
+
+        Provide:
+        1. Project overview
+        2. Architecture assessment
+        3. Strengths and weaknesses
+        4. Recommendations
+    outputs: [analysis_report]
+
+outputs:
+  - name: analysis_report
+    description: AI-generated project analysis

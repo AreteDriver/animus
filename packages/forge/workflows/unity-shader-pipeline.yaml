@@ -1,0 +1,190 @@
+name: Unity Shader Pipeline
+version: "1.0"
+description: Create, optimize, and document Unity shaders (ShaderLab, HLSL, Shader Graph)
+
+token_budget: 100000
+timeout_seconds: 2400
+
+inputs:
+  shader_description:
+    type: string
+    required: true
+    description: Description of the desired shader effect
+  shader_type:
+    type: string
+    required: false
+    default: "surface"
+    description: Type of shader (surface, unlit, post-process, compute, particle)
+  render_pipeline:
+    type: string
+    required: false
+    default: "urp"
+    description: Target render pipeline (builtin, urp, hdrp)
+  shader_name:
+    type: string
+    required: true
+    description: Name for the shader
+  performance_target:
+    type: string
+    required: false
+    default: "balanced"
+    description: Performance target (mobile, balanced, high-end)
+  project_path:
+    type: string
+    required: false
+    description: Unity project path for validation
+
+outputs:
+  - plan
+  - shader_code
+  - material_setup
+  - review
+  - documentation
+
+steps:
+  - id: plan
+    type: claude_code
+    params:
+      role: planner
+      prompt: |
+        Plan a Unity shader with these requirements:
+
+        Description: ${shader_description}
+        Shader Type: ${shader_type}
+        Render Pipeline: ${render_pipeline}
+        Performance Target: ${performance_target}
+
+        Create a detailed plan including:
+        1. Shader approach (ShaderLab vs HLSL vs Shader Graph)
+        2. Required passes (Forward, Shadow, Depth, etc.)
+        3. Properties and uniforms needed
+        4. Texture slots and samplers
+        5. Lighting model considerations
+        6. Performance optimizations for ${performance_target}
+        7. Fallback shaders for lower-end hardware
+      estimated_tokens: 3500
+    outputs:
+      - plan
+      - approach
+    on_failure: abort
+
+  - id: generate_shader
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Generate a Unity shader based on this plan:
+
+        ${plan}
+
+        Shader Name: ${shader_name}
+        Render Pipeline: ${render_pipeline}
+        Performance Target: ${performance_target}
+
+        Requirements:
+        1. Use correct syntax for ${render_pipeline} pipeline
+        2. Include all necessary passes
+        3. Add proper fallback shaders
+        4. Include material property attributes ([Header], [Space], etc.)
+        5. Optimize for ${performance_target} performance
+        6. Add comments explaining key shader operations
+
+        For URP/HDRP, use the correct include paths and lighting functions.
+        For built-in, use standard Unity CG includes.
+      estimated_tokens: 15000
+    outputs:
+      - shader_code
+      - properties
+      - instructions
+    on_failure: retry
+    max_retries: 2
+
+  - id: generate_material_setup
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Create a C# editor script for setting up materials with this shader:
+
+        Shader: ${shader_name}
+        Properties: ${properties}
+
+        Generate:
+        1. MaterialSetup.cs - Editor script to create and configure materials
+        2. Default property values
+        3. Instructions for material setup in Unity Inspector
+
+        Include proper #if UNITY_EDITOR guards and menu items.
+      estimated_tokens: 5000
+    outputs:
+      - material_setup
+      - setup_instructions
+    on_failure: skip
+
+  - id: review
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Review this Unity shader implementation:
+
+        Plan: ${plan}
+        Shader Code: ${shader_code}
+        Material Setup: ${material_setup}
+
+        Evaluate:
+        1. Shader syntax correctness for ${render_pipeline}
+        2. Performance implications
+           - Texture sampling efficiency
+           - Math operation count
+           - Branching/conditionals
+        3. Visual quality vs performance tradeoffs
+        4. SRP Batcher compatibility (for URP/HDRP)
+        5. Mobile compatibility (if applicable)
+        6. Proper use of shader keywords and variants
+
+        Identify any issues and suggest optimizations.
+      estimated_tokens: 4000
+    outputs:
+      - review
+      - optimizations
+      - approved
+    on_failure: skip
+
+  - id: generate_docs
+    type: claude_code
+    params:
+      role: builder
+      prompt: |
+        Create documentation for this shader:
+
+        Shader Name: ${shader_name}
+        Description: ${shader_description}
+        Shader Code: ${shader_code}
+        Properties: ${properties}
+
+        Generate markdown documentation including:
+        1. Overview and visual examples description
+        2. Property reference table
+        3. Usage instructions
+        4. Performance notes
+        5. Compatibility information
+        6. Troubleshooting common issues
+      estimated_tokens: 3000
+    condition:
+      field: approved
+      operator: equals
+      value: true
+    outputs:
+      - documentation
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: development
+  tags:
+    - unity
+    - shader
+    - hlsl
+    - graphics
+    - rendering

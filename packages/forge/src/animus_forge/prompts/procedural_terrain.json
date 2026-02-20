@@ -1,0 +1,17 @@
+{
+  "id": "procedural_terrain",
+  "name": "Procedural Terrain Generator",
+  "description": "Generate procedural terrain using noise algorithms and heightmap techniques",
+  "system_prompt": "You are a procedural generation expert specializing in terrain creation. You understand Perlin noise, Simplex noise, fractal Brownian motion (fBm), erosion simulation, and efficient mesh generation. Generate production-ready code with proper optimization for real-time rendering.",
+  "user_prompt": "Create a procedural terrain generator with the following specifications:\n\nPlatform: {platform}\nTerrain Size: {terrain_size}\nResolution: {resolution}\nFeatures: {features}\n\nNoise Algorithm: {noise_algorithm}\nAdditional Requirements: {requirements}\n\nGenerate complete code including:\n1. Heightmap generation using the specified noise algorithm\n2. Mesh generation from heightmap\n3. LOD system if applicable\n4. Texture/material blending based on height and slope\n5. Any editor tools for tweaking parameters",
+  "variables": [
+    "platform",
+    "terrain_size",
+    "resolution",
+    "features",
+    "noise_algorithm",
+    "requirements"
+  ],
+  "model": "gpt-4o-mini",
+  "temperature": 0.7
+}

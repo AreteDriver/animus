@@ -1,0 +1,159 @@
+name: Documentation Generator
+version: "1.0"
+description: Generate comprehensive documentation for code modules
+
+token_budget: 80000
+timeout_seconds: 2400
+
+inputs:
+  source_path:
+    type: string
+    required: true
+    description: Path to source code file or directory
+  doc_type:
+    type: string
+    required: false
+    default: "api"
+    description: Documentation type (api, tutorial, readme, all)
+  output_format:
+    type: string
+    required: false
+    default: "markdown"
+    description: Output format (markdown, rst, html)
+
+outputs:
+  - api_docs
+  - tutorial
+  - readme
+  - examples
+
+steps:
+  - id: analyze_code
+    type: claude_code
+    params:
+      role: analyst
+      prompt: |
+        Analyze this code and extract:
+        1. Public API (classes, functions, methods)
+        2. Dependencies and imports
+        3. Configuration options
+        4. Error types raised
+        5. Usage patterns
+
+        Source: ${source_path}
+
+        Provide structured analysis in JSON format.
+      estimated_tokens: 10000
+    outputs:
+      - code_analysis
+
+  - id: generate_api_docs
+    type: claude_code
+    params:
+      role: documenter
+      prompt: |
+        Generate API documentation based on this analysis:
+
+        ${code_analysis}
+
+        Include for each public API:
+        - Description
+        - Parameters with types
+        - Return values
+        - Exceptions
+        - Example usage
+
+        Format: ${output_format}
+      estimated_tokens: 15000
+    condition:
+      field: doc_type
+      operator: in
+      value: ["all", "api"]
+    outputs:
+      - api_docs
+
+  - id: generate_tutorial
+    type: claude_code
+    params:
+      role: documenter
+      prompt: |
+        Generate a tutorial based on this code analysis:
+
+        ${code_analysis}
+
+        Structure:
+        1. Introduction and purpose
+        2. Prerequisites
+        3. Installation/setup
+        4. Basic usage walkthrough
+        5. Common patterns
+        6. Troubleshooting
+        7. Next steps
+
+        Make it beginner-friendly with clear examples.
+        Format: ${output_format}
+      estimated_tokens: 12000
+    condition:
+      field: doc_type
+      operator: in
+      value: ["all", "tutorial"]
+    outputs:
+      - tutorial
+
+  - id: generate_readme
+    type: claude_code
+    params:
+      role: documenter
+      prompt: |
+        Generate a README based on this code analysis:
+
+        ${code_analysis}
+
+        Include:
+        - Project title and badges
+        - Brief description
+        - Features list
+        - Quick start guide
+        - Installation instructions
+        - Basic usage example
+        - Configuration options
+        - Contributing section
+        - License
+
+        Format: ${output_format}
+      estimated_tokens: 8000
+    condition:
+      field: doc_type
+      operator: in
+      value: ["all", "readme"]
+    outputs:
+      - readme
+
+  - id: generate_examples
+    type: claude_code
+    params:
+      role: builder
+      prompt: |
+        Generate practical code examples based on this analysis:
+
+        ${code_analysis}
+
+        Create examples for:
+        1. Basic usage
+        2. Common use cases
+        3. Advanced patterns
+        4. Integration scenarios
+        5. Error handling
+
+        Each example should be complete and runnable.
+      estimated_tokens: 10000
+    outputs:
+      - examples
+
+metadata:
+  author: gorgon
+  category: documentation
+  tags:
+    - docs
+    - api
+    - tutorial

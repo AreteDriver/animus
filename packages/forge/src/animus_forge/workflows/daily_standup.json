@@ -1,0 +1,71 @@
+{
+  "id": "daily_standup",
+  "name": "Daily Standup Generator",
+  "description": "Query Notion tasks database and generate a daily standup summary",
+  "steps": [
+    {
+      "id": "get_in_progress",
+      "type": "notion",
+      "action": "query_database",
+      "params": {
+        "database_id": "{{tasks_database_id}}",
+        "filter": {
+          "property": "Status",
+          "select": {
+            "equals": "In Progress"
+          }
+        },
+        "page_size": 20
+      },
+      "next_step": "get_completed_yesterday"
+    },
+    {
+      "id": "get_completed_yesterday",
+      "type": "notion",
+      "action": "query_database",
+      "params": {
+        "database_id": "{{tasks_database_id}}",
+        "filter": {
+          "property": "Status",
+          "select": {
+            "equals": "Done"
+          }
+        },
+        "sorts": [
+          {
+            "property": "Last edited time",
+            "direction": "descending"
+          }
+        ],
+        "page_size": 10
+      },
+      "next_step": "generate_standup"
+    },
+    {
+      "id": "generate_standup",
+      "type": "openai",
+      "action": "generate_completion",
+      "params": {
+        "prompt": "Generate a concise daily standup update based on this data:\n\nCurrently Working On:\n{{get_in_progress_output}}\n\nRecently Completed:\n{{get_completed_yesterday_output}}\n\nFormat as:\n**Yesterday:** [completed items]\n**Today:** [in progress items]\n**Blockers:** [any blockers or none]",
+        "max_tokens": 500
+      },
+      "next_step": "save_standup"
+    },
+    {
+      "id": "save_standup",
+      "type": "notion",
+      "action": "create_page",
+      "params": {
+        "parent_id": "{{standups_database_id}}",
+        "title": "Standup - {{date}}",
+        "content": "{{generate_standup_output}}"
+      },
+      "next_step": null
+    }
+  ],
+  "variables": {
+    "tasks_database_id": "your-tasks-database-id",
+    "standups_database_id": "your-standups-database-id",
+    "date": "{{current_date}}"
+  }
+}

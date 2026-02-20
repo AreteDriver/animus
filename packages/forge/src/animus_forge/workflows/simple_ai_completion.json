@@ -1,0 +1,21 @@
+{
+  "id": "simple_ai_completion",
+  "name": "Simple AI Completion",
+  "description": "Generate a simple AI completion using OpenAI",
+  "steps": [
+    {
+      "id": "generate",
+      "type": "openai",
+      "action": "generate_completion",
+      "params": {
+        "prompt": "{{prompt}}",
+        "model": "gpt-4o-mini",
+        "temperature": 0.7
+      },
+      "next_step": null
+    }
+  ],
+  "variables": {
+    "prompt": "Write a short poem about AI"
+  }
+}

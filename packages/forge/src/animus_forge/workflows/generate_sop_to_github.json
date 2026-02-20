@@ -1,0 +1,34 @@
+{
+  "id": "generate_sop_to_github",
+  "name": "Generate SOP and Commit to GitHub",
+  "description": "Generate a Standard Operating Procedure using AI and commit it to a GitHub repository",
+  "steps": [
+    {
+      "id": "generate_sop",
+      "type": "openai",
+      "action": "generate_sop",
+      "params": {
+        "task_description": "{{task_description}}"
+      },
+      "next_step": "commit_to_github"
+    },
+    {
+      "id": "commit_to_github",
+      "type": "github",
+      "action": "commit_file",
+      "params": {
+        "repo_name": "{{repo_name}}",
+        "file_path": "{{file_path}}",
+        "content": "{{generate_sop_output}}",
+        "message": "Add SOP: {{task_description}}",
+        "branch": "main"
+      },
+      "next_step": null
+    }
+  ],
+  "variables": {
+    "task_description": "How to deploy a web application",
+    "repo_name": "your-username/your-repo",
+    "file_path": "docs/sops/deployment.md"
+  }
+}

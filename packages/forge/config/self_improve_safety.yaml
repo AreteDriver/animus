@@ -1,0 +1,78 @@
+# Self-Improvement Safety Configuration
+# This file defines what Gorgon is allowed to modify in its own codebase
+
+# Files that CANNOT be modified under any circumstances
+protected_files:
+  critical:
+    # Security and authentication
+    - "src/animus_forge/auth/**"
+    - "src/animus_forge/security/**"
+    # Self-improvement module itself (no recursive self-modification)
+    - "src/animus_forge/self_improve/**"
+    # Configuration
+    - ".env*"
+    - "config/self_improve_safety.yaml"
+    # Credentials and secrets
+    - "**/credentials*"
+    - "**/secrets*"
+    - "**/*.key"
+    - "**/*.pem"
+
+  # Files that require extra review but can be modified
+  sensitive:
+    - "src/animus_forge/api.py"
+    - "src/animus_forge/config.py"
+    - "pyproject.toml"
+    - "Dockerfile"
+    - "docker-compose*.yml"
+    - ".github/workflows/**"
+
+# Change limits per PR
+limits:
+  max_files_per_pr: 10
+  max_lines_changed: 500
+  max_deleted_files: 0
+  max_new_files: 5
+
+# Requirements that must pass
+requirements:
+  # All tests must pass before applying changes
+  tests_must_pass: true
+  # Human approval required at these stages
+  human_approval:
+    plan: true      # Before starting work
+    apply: true     # Before applying changes to working tree
+    merge: true     # Before merging PR
+
+# Allowed improvement categories
+allowed_categories:
+  - refactoring
+  - bug_fixes
+  - documentation
+  - test_coverage
+  - performance
+  - code_quality
+
+# Denied improvement categories (even if requested)
+denied_categories:
+  - security_changes
+  - auth_changes
+  - config_schema_changes
+  - database_migrations
+
+# Sandbox configuration
+sandbox:
+  # Create changes in a separate branch
+  use_branch: true
+  branch_prefix: "gorgon-self-improve/"
+  # Run changes in isolated environment
+  isolated_execution: true
+  # Timeout for sandbox operations (seconds)
+  timeout: 300
+
+# Rollback configuration
+rollback:
+  # Keep snapshots for this many PRs
+  max_snapshots: 10
+  # Auto-rollback on test failures
+  auto_rollback_on_test_failure: true

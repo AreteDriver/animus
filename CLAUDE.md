@@ -1,180 +1,119 @@
-# CLAUDE.md — Animus
+# CLAUDE.md — Animus Monorepo
 
-> Personal AI exocortex with multi-agent orchestration.
+> Personal AI exocortex with multi-agent orchestration and coordination protocol.
 
 ## Quick Reference
 
-- **Version**: 1.0.0
-- **Python**: >=3.10
-- **Package layout**: `animus/` (setuptools, flat layout with `forge/` subpackage)
-- **Tests**: `tests/` (pytest, 1734 tests, 96% coverage, fail_under=95)
+- **Version**: 2.0.0
+- **Python**: >=3.10 (Core), >=3.12 (Forge)
+- **Layout**: Multi-package monorepo under `packages/`
+- **Tests**: ~9,300 across 3 packages
 - **License**: MIT
 
-## Build & Run
+## Monorepo Structure
+
+```
+animus/
+├── packages/
+│   ├── core/                    # Animus Core — exocortex, identity, memory, CLI
+│   │   ├── animus/              # Python package: import animus
+│   │   ├── tests/               # 1736 tests, 95% coverage
+│   │   └── pyproject.toml
+│   ├── forge/                   # Animus Forge — multi-agent orchestration (was: Gorgon)
+│   │   ├── src/animus_forge/    # Python package: import animus_forge
+│   │   ├── tests/               # 6706 tests, 85% coverage
+│   │   ├── migrations/          # 14 SQL migrations
+│   │   ├── workflows/           # YAML workflow definitions
+│   │   └── pyproject.toml
+│   └── quorum/                  # Animus Quorum — coordination protocol (was: Convergent)
+│       ├── python/convergent/   # Python package: import convergent
+│       ├── src/                 # Rust PyO3 (optional)
+│       ├── tests/               # 906 tests, 97% coverage
+│       └── pyproject.toml
+├── docs/
+│   └── whitepapers/             # Architecture whitepapers (all 3 layers)
+├── .github/workflows/           # CI: lint + test-core + test-quorum + test-forge + security
+└── pyproject.toml               # Workspace root (dev scripts only)
+```
+
+## Independent Installation
+
+Each package can be installed and used separately:
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-
-# CLI
-animus                          # Interactive CLI (prompt-toolkit)
+pip install -e packages/quorum/                # Just coordination protocol
+pip install -e packages/forge/                 # Just orchestration engine
+pip install -e packages/core/                  # Just exocortex
+pip install -e "packages/quorum/[dev]" -e "packages/forge/[dev]" -e "packages/core/[dev]"  # Everything
 ```
 
 ## Testing
 
 ```bash
-pytest tests/ -v                           # Full suite
-pytest tests/test_forge_units.py -v        # Forge unit tests
-pytest tests/test_forge_integration.py -v  # Forge integration tests
-pytest tests/test_swarm.py -v              # Swarm unit + integration tests
+# Individual packages
+cd packages/core && pytest tests/ -v
+cd packages/forge && pytest tests/ -v
+cd packages/quorum && PYTHONPATH=python pytest tests/ -v
+
+# All packages from root
+pytest packages/core/tests/ packages/forge/tests/ -v
+PYTHONPATH=packages/quorum/python pytest packages/quorum/tests/ -v
 ```
 
 ## Linting
 
 ```bash
-ruff check animus/ tests/                  # Lint
-ruff format animus/ tests/                 # Format
-ruff check animus/ tests/ && ruff format --check animus/ tests/  # CI check
+ruff check packages/ && ruff format --check packages/
 ```
 
-Rules: E, F, I, N, W, UP. E501 ignored (line length handled separately). B008 not enabled.
+Each package has its own ruff config in its pyproject.toml.
 
-## Architecture
+## Package Identity
 
-```
-animus/
-├── __init__.py              # Version, public API exports
-├── __main__.py              # CLI entry point (prompt-toolkit, 40+ /commands)
-├── cognitive.py             # CognitiveLayer — LLM interface (Ollama/Anthropic/OpenAI/Mock)
-├── config.py                # AnimusConfig — dataclass + YAML + env overrides
-├── memory.py                # MemoryLayer — episodic/semantic/procedural (ChromaDB)
-├── tools.py                 # ToolRegistry, Tool, ToolResult, 6 built-in tools
-├── logging.py               # get_logger(name), rotating file handler
-├── entities.py              # Entity memory + relationship graph
-├── learning/                # Self-learning system (patterns, preferences, guardrails)
-├── proactive.py             # Context nudges, deadline scanning
-├── autonomous.py            # Action policies (observe/notify/act/execute)
-├── decision.py              # Decision framework
-├── tasks.py                 # Task tracker
-├── register.py              # Communication register detection + adaptation
-├── api.py                   # FastAPI HTTP server (optional)
-├── voice.py                 # Whisper STT + TTS (optional)
-├── integrations/            # Google, Todoist, filesystem, webhooks, Gorgon
-├── sync/                    # Multi-device sync protocol
-├── protocols/               # ABCs: intelligence, memory, safety, sync
-├── forge/                   # ★ Multi-agent orchestration engine
-│   ├── __init__.py          #   Public API (ForgeEngine, WorkflowConfig, etc.)
-│   ├── models.py            #   Dataclasses: AgentConfig, GateConfig, WorkflowConfig, StepResult, WorkflowState
-│   ├── loader.py            #   YAML workflow parser with validation
-│   ├── budget.py            #   Per-agent token + cost ceiling tracking
-│   ├── gates.py             #   Quality gate evaluator (safe condition parser, no eval)
-│   ├── checkpoint.py        #   SQLite WAL state persistence (pause/resume)
-│   ├── agent.py             #   ForgeAgent — CognitiveLayer wrapper with archetype prompts
-│   └── engine.py            #   ForgeEngine — sequential orchestration loop
-├── swarm/                   # ★ Parallel agent orchestration (stigmergic coordination)
-│   ├── __init__.py          #   Public API with lazy imports
-│   ├── models.py            #   SwarmConfig, SwarmStage, IntentEntry, SwarmError
-│   ├── graph.py             #   DAG analysis + Kahn's topological sort → parallel stages
-│   ├── intent.py            #   Thread-safe IntentGraph + IntentResolver (stability-based)
-│   └── engine.py            #   SwarmEngine — parallel execution via ThreadPoolExecutor
-└── dashboard.py             # Streamlit ops dashboard
-```
+| Package | PyPI Name | Import | Dependencies |
+|---------|-----------|--------|--------------|
+| Core | animus | `import animus` | ollama, chromadb, pyyaml, pydantic, rich |
+| Forge | animus-forge | `import animus_forge` | openai, anthropic, fastapi, convergentai, ... |
+| Quorum | convergentAI | `import convergent` | zero production deps |
+
+## Cross-Package Dependencies
+
+- **Quorum** has zero deps — pure library
+- **Forge** depends on Quorum (`convergentai ^1.1.0`)
+- **Core** optionally depends on Forge for orchestration features
 
 ## Layer Overview
 
-**Core** (`animus/`) — User-facing exocortex. Identity, memory, CLI, voice, integrations.
+**Core** (`packages/core/animus/`) — User-facing exocortex. Identity, memory, tools, CLI (40+ commands), voice, integrations (Google, Todoist, filesystem, webhooks). Lightweight embedded workflow engine (forge/swarm submodules).
 
-**Forge** (`animus/forge/`) — Multi-agent orchestration. Declarative YAML workflows, token budgets, quality gates with revise loop-back, SQLite checkpoint/resume. Sequential execution. Provider-agnostic via CognitiveLayer.
+**Forge** (`packages/forge/src/animus_forge/`) — Production orchestration engine. Workflow executor with mixins (AI, MCP, queue, graph), provider abstraction (6 providers), persistent budget management, streaming execution logs, eval framework, MCP tool execution, consensus voting, API + CLI + TUI + dashboard.
 
-**Swarm** (`animus/swarm/`) — Parallel agent orchestration. DAG-based stage derivation, ThreadPoolExecutor parallel execution, stigmergic intent graph for conflict detection, revise loop-back at stage level. Extends Forge (reuses ForgeAgent, BudgetTracker, CheckpointStore, gates). YAML `execution_mode: parallel` triggers Swarm engine.
+**Quorum** (`packages/quorum/python/convergent/`) — Coordination protocol library. Intent graph, constraints, contracts, economics, versioned graph, triumvirate voting, stigmergy, flocking, signal bus, phi-weighted scoring, GorgonBridge integration, health dashboard, cycle detection, event log. Optional Rust PyO3 for performance.
 
-## Key Patterns
+## Key Files
 
-- **Dataclasses** throughout (not Pydantic) for models — `AgentConfig`, `ToolResult`, `ModelConfig`, etc.
-- **CognitiveLayer.think()** is sync. Forge agents delegate to it. `think_with_tools()` for tool-using agents.
-- **ModelConfig.mock()** for testing — deterministic responses via `default_response` + `response_map` dict.
-- **get_logger("name")** from `animus.logging` — structured logging, rotating file handler.
-- **ToolResult(tool_name, success, output, error)** — standard tool response pattern.
-- **Config**: `AnimusConfig.load()` → YAML file + env var overrides via `__post_init__`.
-- **Forge YAML loader**: `load_workflow_str(yaml)` validates agent names unique, input refs point to prior agents, gate refs valid, revise requires target.
-- **Gate conditions**: Safe parser (no eval). Supports `field >= N`, `field contains "text"`, `field.length >= N`, `true`/`false`. JSON field access via dot notation.
-- **Forge checkpoints**: SQLite WAL, `workflows` + `step_results` tables. `ForgeEngine(checkpoint_dir=path)` enables persistence.
-- **Budget tracking**: `BudgetTracker.from_config(workflow)`. Per-agent token limits + workflow cost ceiling. Raises `BudgetExhaustedError`.
-- **Archetype prompts**: 6 built-in (researcher, writer, reviewer, producer, editor, analyst). Custom via `system_prompt` field.
-- **Revise gates**: `on_fail: revise` loops back to `revise_target` agent, clears downstream results, injects `_gate_feedback` input. `max_revisions` (default 3) prevents infinite loops. `ReviseRequestedError` signal caught by engine loop.
-- **Register translation**: `RegisterTranslator.translate_response()` translates response text to target register via `cognitive.think()`. Skips neutral, short (<20 char), and code-like text.
+### Core
+- `packages/core/animus/__main__.py` — CLI entry point (prompt-toolkit)
+- `packages/core/animus/cognitive.py` — LLM interface (Ollama/Anthropic/OpenAI/Mock)
+- `packages/core/animus/memory.py` — Episodic/semantic/procedural (ChromaDB)
+- `packages/core/animus/forge/engine.py` — Lightweight sequential orchestration
+- `packages/core/animus/swarm/engine.py` — Lightweight parallel orchestration
 
-## Forge YAML Schema
+### Forge
+- `packages/forge/src/animus_forge/api.py` — FastAPI app
+- `packages/forge/src/animus_forge/cli/main.py` — Typer CLI
+- `packages/forge/src/animus_forge/workflow/executor_core.py` — Workflow executor
+- `packages/forge/src/animus_forge/agents/supervisor.py` — SupervisorAgent
 
-```yaml
-name: my_workflow
-description: What this workflow does
-provider: ollama          # Default LLM provider
-model: llama3:8b          # Default model
-max_cost_usd: 1.0         # Workflow cost ceiling
-
-agents:
-  - name: researcher
-    archetype: researcher
-    budget_tokens: 5000
-    outputs: [brief]
-
-  - name: writer
-    archetype: writer
-    budget_tokens: 8000
-    inputs: [researcher.brief]   # agent.output reference
-    outputs: [draft]
-
-gates:
-  - name: quality_check
-    after: writer
-    type: automated             # or "human"
-    pass_condition: "true"      # safe expression
-    on_fail: halt               # halt, skip, or revise
-```
-
-## Swarm YAML Schema
-
-```yaml
-name: parallel_workflow
-execution_mode: parallel    # Enables SwarmEngine (default: sequential → ForgeEngine)
-provider: ollama
-model: llama3:8b
-max_cost_usd: 1.0
-
-agents:
-  - name: researcher
-    archetype: researcher
-    outputs: [brief]
-
-  - name: fact_checker
-    archetype: analyst
-    outputs: [facts]
-
-  - name: writer
-    archetype: writer
-    inputs: [researcher.brief, fact_checker.facts]  # Forward refs OK in parallel mode
-    outputs: [draft]
-# Stages derived from DAG: [researcher, fact_checker] → [writer]
-```
-
-## Optional Dependencies
-
-```bash
-pip install animus[anthropic]     # Claude API
-pip install animus[openai]        # OpenAI / compatible endpoints
-pip install animus[api]           # FastAPI HTTP server
-pip install animus[voice]         # Whisper + TTS
-pip install animus[integrations]  # Google, Todoist
-pip install animus[gorgon]        # Gorgon HTTP client (httpx)
-pip install animus[sync]          # Multi-device sync (websockets)
-```
+### Quorum
+- `packages/quorum/python/convergent/intent.py` — Core Intent model
+- `packages/quorum/python/convergent/triumvirate.py` — Voting engine
+- `packages/quorum/python/convergent/gorgon_bridge.py` — Integration bridge
 
 ## Conventions
 
-- Type hints throughout (mypy advisory, `ignore_missing_imports = true`)
-- Dataclasses for models, not Pydantic (despite YAML config saying otherwise)
-- `from __future__ import annotations` in test files
-- Ruff for all linting/formatting
+- Type hints throughout
 - Conventional commits
-- Tests in flat `tests/` directory (not mirrored subdirectories)
+- Ruff for linting/formatting (per-package configs)
+- pytest for testing
+- Dataclasses in Core, Pydantic in Forge, dataclasses in Quorum

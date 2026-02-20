@@ -1,0 +1,12 @@
+{
+  "id": "email_summary",
+  "name": "Email Summary",
+  "description": "Summarize email content",
+  "system_prompt": "You are a helpful assistant that creates concise email summaries.",
+  "user_prompt": "Please summarize this email:\n\n{email_content}",
+  "variables": [
+    "email_content"
+  ],
+  "model": "gpt-4o-mini",
+  "temperature": 0.7
+}

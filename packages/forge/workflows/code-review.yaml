@@ -1,0 +1,147 @@
+name: Code Review
+version: "1.0"
+description: Automated code review with security, performance, and quality checks
+
+token_budget: 50000
+timeout_seconds: 1800
+
+inputs:
+  code_path:
+    type: string
+    required: true
+    description: Path to file or directory to review
+  review_focus:
+    type: string
+    required: false
+    default: "all"
+    description: Focus area (security, performance, quality, all)
+
+outputs:
+  - security_report
+  - performance_report
+  - quality_report
+  - summary
+
+steps:
+  - id: read_code
+    type: shell
+    params:
+      command: |
+        if [ -d "${code_path}" ]; then
+          find "${code_path}" -name "*.py" -o -name "*.ts" -o -name "*.js" | head -10 | xargs cat
+        else
+          cat "${code_path}"
+        fi
+      allow_failure: false
+    outputs:
+      - code_content
+    timeout_seconds: 60
+
+  - id: security_review
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Perform a security review of this code:
+
+        ${code_content}
+
+        Check for:
+        - Injection vulnerabilities (SQL, XSS, command injection)
+        - Insecure data handling (passwords, tokens, PII)
+        - Authentication/authorization issues
+        - Input validation problems
+        - Cryptography weaknesses
+        - OWASP Top 10 vulnerabilities
+
+        Provide findings with severity (critical, high, medium, low) and remediation advice.
+      estimated_tokens: 8000
+    condition:
+      field: review_focus
+      operator: in
+      value: ["all", "security"]
+    outputs:
+      - security_report
+
+  - id: performance_review
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Perform a performance review of this code:
+
+        ${code_content}
+
+        Check for:
+        - Algorithm complexity (O(n) analysis)
+        - Memory leaks or excessive allocation
+        - N+1 query problems
+        - Blocking operations
+        - Resource cleanup
+        - Caching opportunities
+
+        Provide specific recommendations with expected impact.
+      estimated_tokens: 8000
+    condition:
+      field: review_focus
+      operator: in
+      value: ["all", "performance"]
+    outputs:
+      - performance_report
+
+  - id: quality_review
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Perform a code quality review:
+
+        ${code_content}
+
+        Check for:
+        - Readability and naming conventions
+        - DRY violations
+        - Single responsibility principle
+        - Error handling completeness
+        - Test coverage implications
+        - Documentation needs
+        - Type safety
+
+        Provide specific improvement suggestions.
+      estimated_tokens: 8000
+    condition:
+      field: review_focus
+      operator: in
+      value: ["all", "quality"]
+    outputs:
+      - quality_report
+
+  - id: summarize
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Summarize the code review findings:
+
+        Security: ${security_report}
+        Performance: ${performance_report}
+        Quality: ${quality_report}
+
+        Provide:
+        1. Overall score (1-10)
+        2. Top 3 critical issues
+        3. Recommendation (approve, needs changes, reject)
+        4. Prioritized action items
+      estimated_tokens: 3000
+    outputs:
+      - summary
+      - score
+      - recommendation
+
+metadata:
+  author: gorgon
+  category: development
+  tags:
+    - review
+    - security
+    - quality

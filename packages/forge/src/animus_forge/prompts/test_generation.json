@@ -1,0 +1,10 @@
+{
+  "id": "test_generation",
+  "name": "Test Generator",
+  "description": "Generate unit tests for code",
+  "system_prompt": "You are a QA engineer who writes comprehensive test suites. Create tests that cover happy paths, edge cases, error conditions, and boundary values. Use pytest conventions.",
+  "user_prompt": "Generate unit tests for this code:\n\n{code}\n\nTest framework: {framework}\n\nRequirements:\n- Test all public functions/methods\n- Include edge cases and error conditions\n- Use descriptive test names\n- Add docstrings explaining test purpose",
+  "variables": ["code", "framework"],
+  "model": "gpt-4o-mini",
+  "temperature": 0.3
+}

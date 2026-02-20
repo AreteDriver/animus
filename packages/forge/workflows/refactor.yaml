@@ -1,0 +1,170 @@
+name: Refactor
+version: "1.0"
+description: Safe refactoring workflow with comprehensive testing
+
+token_budget: 120000
+timeout_seconds: 2700
+
+inputs:
+  refactor_goal:
+    type: string
+    required: true
+    description: Goal of the refactoring effort
+  target_files:
+    type: string
+    required: true
+    description: Files or patterns to refactor
+  codebase_path:
+    type: string
+    required: true
+    description: Path to the codebase
+  test_command:
+    type: string
+    required: false
+    default: "pytest"
+    description: Command to run tests
+  preserve_behavior:
+    type: boolean
+    required: false
+    default: true
+    description: Whether to strictly preserve existing behavior
+
+outputs:
+  - analysis
+  - refactored_code
+  - test_results
+  - review
+
+steps:
+  - id: analyze
+    type: claude_code
+    params:
+      role: planner
+      prompt: |
+        Analyze the codebase for refactoring:
+
+        Goal: ${refactor_goal}
+        Target: ${target_files}
+        Codebase: ${codebase_path}
+
+        Provide:
+        1. Current code structure assessment
+        2. Proposed changes
+        3. Dependencies and impacts
+        4. Incremental refactoring steps
+        5. Risk assessment
+      estimated_tokens: 8000
+    outputs:
+      - analysis
+      - refactor_plan
+      - affected_components
+    on_failure: abort
+
+  - id: run_baseline_tests
+    type: shell
+    params:
+      command: "cd ${codebase_path} && ${test_command}"
+      allow_failure: true
+    outputs:
+      - baseline_test_results
+    timeout_seconds: 300
+
+  - id: checkpoint_baseline
+    type: checkpoint
+    params:
+      message: "Baseline captured"
+
+  - id: refactor
+    type: claude_code
+    params:
+      role: builder
+      prompt: |
+        Execute the refactoring plan:
+
+        Plan: ${refactor_plan}
+        Target files: ${target_files}
+        Preserve behavior: ${preserve_behavior}
+
+        Guidelines:
+        - Make incremental changes
+        - Maintain test compatibility
+        - Update imports and references
+        - Add type hints where missing
+        - Document significant changes
+      estimated_tokens: 25000
+    outputs:
+      - refactored_code
+      - files_modified
+      - changes_summary
+    on_failure: retry
+    max_retries: 2
+
+  - id: checkpoint_refactored
+    type: checkpoint
+    params:
+      message: "Refactoring complete"
+
+  - id: run_tests
+    type: shell
+    params:
+      command: "cd ${codebase_path} && ${test_command}"
+      allow_failure: false
+    outputs:
+      - test_results
+    on_failure: abort
+    timeout_seconds: 300
+
+  - id: compare_tests
+    type: claude_code
+    params:
+      role: tester
+      prompt: |
+        Compare test results before and after refactoring:
+
+        Baseline: ${baseline_test_results}
+        After refactor: ${test_results}
+
+        Check:
+        - No test regressions
+        - Same or better coverage
+        - Performance not degraded
+      estimated_tokens: 3000
+    condition:
+      field: test_results
+      operator: not_equals
+      value: ""
+    outputs:
+      - test_comparison
+    on_failure: skip
+
+  - id: review
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Review the refactoring:
+
+        Goal: ${refactor_goal}
+        Changes: ${changes_summary}
+        Files modified: ${files_modified}
+        Test comparison: ${test_comparison}
+
+        Evaluate:
+        - Goal achieved
+        - Code quality improved
+        - No behavior changes (if preserve_behavior)
+        - Maintainability improved
+      estimated_tokens: 5000
+    outputs:
+      - review
+      - quality_score
+      - approved
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: maintenance
+  tags:
+    - refactor
+    - cleanup
+    - improvement

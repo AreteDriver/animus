@@ -1,0 +1,69 @@
+# Fan-Out Code Review Example
+# Demonstrates parallel code review across multiple files
+#
+# This workflow takes a list of files and reviews each one concurrently,
+# then aggregates the results into a single summary.
+
+name: fan_out_code_review
+description: Review multiple code files in parallel using fan-out pattern
+
+# Input variables provided when running the workflow
+inputs:
+  - name: files
+    type: list
+    description: List of file paths to review
+  - name: review_criteria
+    type: string
+    default: "security, performance, maintainability"
+    description: Criteria to evaluate in the review
+
+steps:
+  # Step 1: Fan-out - Review each file concurrently
+  - id: review_files
+    type: fan_out
+    params:
+      items: "${files}"           # List of files to iterate over
+      max_concurrent: 5           # At most 5 reviews in parallel
+      fail_fast: false            # Continue even if one file review fails
+      step_template:
+        type: claude_code
+        params:
+          role: reviewer
+          prompt: |
+            Review the following code file for: ${review_criteria}
+
+            File: ${item}
+
+            Provide a structured review with:
+            1. Summary (1-2 sentences)
+            2. Issues found (severity: high/medium/low)
+            3. Recommendations
+            4. Overall score (1-10)
+    outputs: [file_reviews]
+
+  # Step 2: Fan-in - Aggregate all reviews into a summary
+  - id: summarize_reviews
+    type: fan_in
+    depends_on: [review_files]
+    params:
+      input: "${file_reviews}"    # Results from fan-out step
+      aggregation: claude_code    # Use AI to aggregate
+      aggregate_prompt: |
+        You are reviewing code review results for multiple files.
+
+        Individual reviews:
+        ${items}
+
+        Please provide:
+        1. Executive summary (2-3 sentences)
+        2. Critical issues requiring immediate attention
+        3. Common patterns across files
+        4. Overall codebase health score (1-10)
+        5. Top 3 priority recommendations
+    outputs: [review_summary]
+
+outputs:
+  - name: file_reviews
+    description: Individual review for each file
+  - name: review_summary
+    description: Aggregated summary of all reviews

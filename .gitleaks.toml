@@ -3,5 +3,6 @@
 
 [allowlist]
 paths = [
+    '''packages/.*/tests/''',
     '''tests/''',
 ]

@@ -1,0 +1,133 @@
+name: Infrastructure Setup
+version: "1.0"
+description: Create Docker, Kubernetes, or cloud infrastructure configurations
+
+token_budget: 100000
+timeout_seconds: 2400
+
+inputs:
+  infrastructure_request:
+    type: string
+    required: true
+    description: Infrastructure requirements
+  target_platform:
+    type: string
+    required: true
+    description: Target platform (aws, gcp, azure, kubernetes, docker)
+  environment:
+    type: string
+    required: false
+    default: "dev"
+    description: Environment (dev, staging, prod)
+  requirements:
+    type: object
+    required: false
+    description: Additional requirements (HA, scaling, budget)
+
+outputs:
+  - configs
+  - instructions
+  - architecture
+
+steps:
+  - id: plan_infrastructure
+    type: claude_code
+    params:
+      role: planner
+      prompt: |
+        Plan the infrastructure setup:
+
+        Request: ${infrastructure_request}
+        Platform: ${target_platform}
+        Environment: ${environment}
+        Requirements: ${requirements}
+
+        Create a plan including:
+        1. Architecture overview
+        2. Required services and resources
+        3. Networking requirements
+        4. Security considerations
+        5. Cost estimates
+      estimated_tokens: 4000
+    outputs:
+      - plan
+      - architecture
+    on_failure: abort
+
+  - id: create_configs
+    type: claude_code
+    params:
+      role: devops
+      prompt: |
+        Create the infrastructure configurations:
+
+        Plan: ${plan}
+        Platform: ${target_platform}
+        Environment: ${environment}
+        Requirements: ${requirements}
+
+        Generate:
+        1. Docker/Kubernetes manifests (if applicable)
+        2. Terraform/CloudFormation configs (if applicable)
+        3. CI/CD pipeline configurations
+        4. Environment variable templates
+        5. Setup scripts
+      estimated_tokens: 20000
+    outputs:
+      - configs
+      - scripts
+    on_failure: retry
+    max_retries: 2
+
+  - id: security_review
+    type: claude_code
+    params:
+      role: security_auditor
+      prompt: |
+        Review the infrastructure security:
+
+        Configs: ${configs}
+        Platform: ${target_platform}
+        Environment: ${environment}
+
+        Check for:
+        1. Secrets management
+        2. Network security
+        3. Access controls
+        4. Compliance issues
+      estimated_tokens: 5000
+    outputs:
+      - security_review
+      - security_recommendations
+    on_failure: skip
+
+  - id: create_instructions
+    type: claude_code
+    params:
+      role: devops
+      prompt: |
+        Create deployment instructions:
+
+        Configs: ${configs}
+        Platform: ${target_platform}
+        Security Review: ${security_review}
+
+        Generate:
+        1. Step-by-step deployment guide
+        2. Rollback procedures
+        3. Monitoring setup
+        4. Troubleshooting guide
+      estimated_tokens: 5000
+    outputs:
+      - instructions
+    on_failure: retry
+
+metadata:
+  author: gorgon
+  category: devops
+  tags:
+    - infrastructure
+    - docker
+    - kubernetes
+    - terraform
+    - cloud

@@ -1,0 +1,268 @@
+name: Decision Support Pipeline
+version: "1.0"
+description: |
+  Enterprise-grade decision support workflow.
+  Takes a decision scenario, analyzes options, and produces
+  structured recommendations with full audit trail.
+
+token_budget: 50000
+timeout_seconds: 900
+
+inputs:
+  decision_question:
+    type: string
+    required: true
+    description: The decision or question to analyze
+  context:
+    type: string
+    required: false
+    default: ""
+    description: Additional context, constraints, or background information
+  stakeholders:
+    type: string
+    required: false
+    default: "general"
+    description: Who the recommendation is for (e.g., executive, technical, team)
+  urgency:
+    type: string
+    required: false
+    default: "normal"
+    description: Decision urgency (low, normal, high, critical)
+
+outputs:
+  - situation_analysis
+  - options_matrix
+  - recommendation
+  - audit_trail
+
+steps:
+  # Phase 1: Understand the decision context
+  - id: analyze_situation
+    type: claude_code
+    params:
+      role: analyst
+      prompt: |
+        # Decision Analysis Request
+
+        ## Question/Decision
+        ${decision_question}
+
+        ## Additional Context
+        ${context}
+
+        ## Stakeholders
+        ${stakeholders}
+
+        ## Urgency
+        ${urgency}
+
+        ---
+
+        Perform a structured situation analysis:
+
+        1. **Problem Statement**: Restate the decision in clear, unambiguous terms
+        2. **Key Factors**: Identify the critical factors that will influence this decision
+        3. **Constraints**: What are the known constraints (time, budget, resources, technical)?
+        4. **Assumptions**: What assumptions are we making?
+        5. **Information Gaps**: What information is missing that would improve the decision?
+        6. **Success Criteria**: How will we know if the decision was correct?
+
+        Output as structured markdown with clear sections.
+      estimated_tokens: 4000
+    outputs:
+      - situation_analysis
+    on_failure: abort
+
+  # Phase 2: Generate and evaluate options
+  - id: generate_options
+    type: claude_code
+    params:
+      role: architect
+      prompt: |
+        # Options Analysis
+
+        ## Situation Analysis (includes key factors and constraints)
+        ${situation_analysis}
+
+        ---
+
+        Generate 3-5 distinct options for addressing this decision. For each option:
+
+        1. **Option Name**: Clear, descriptive name
+        2. **Description**: What this option entails
+        3. **Pros**: Benefits and advantages (bullet points)
+        4. **Cons**: Drawbacks and risks (bullet points)
+        5. **Effort**: Estimated effort (Low/Medium/High)
+        6. **Risk Level**: Implementation risk (Low/Medium/High)
+        7. **Reversibility**: How easily can we reverse this decision? (Easy/Moderate/Difficult/Irreversible)
+        8. **Dependencies**: What does this option depend on?
+
+        Present as a structured comparison matrix.
+      estimated_tokens: 6000
+    outputs:
+      - options_matrix
+      - option_count
+    on_failure: abort
+
+  # Checkpoint: Allow human review of options before recommendation
+  - id: checkpoint_options_review
+    type: checkpoint
+    params:
+      message: |
+        Options analysis complete. Review the options matrix before proceeding to recommendation.
+
+        Options generated: ${option_count}
+
+        Approve to continue to recommendation phase.
+
+  # Phase 3: Generate structured recommendation
+  - id: generate_recommendation
+    type: claude_code
+    params:
+      role: reporter
+      prompt: |
+        # Recommendation Synthesis
+
+        ## Original Question
+        ${decision_question}
+
+        ## Situation Analysis
+        ${situation_analysis}
+
+        ## Options Matrix
+        ${options_matrix}
+
+        ## Stakeholders
+        ${stakeholders}
+
+        ## Urgency
+        ${urgency}
+
+        ---
+
+        Generate a structured recommendation document:
+
+        ## Executive Summary
+        - One paragraph summary of the recommendation
+        - Primary recommendation (which option and why)
+        - Confidence level (High/Medium/Low with justification)
+
+        ## Recommendation Details
+        - **Recommended Option**: [Name]
+        - **Rationale**: Why this option over others
+        - **Key Benefits**: Top 3 benefits
+        - **Key Risks**: Top 3 risks and mitigations
+        - **Trade-offs**: What we're giving up
+
+        ## Implementation Considerations
+        - Immediate next steps (1-3 actions)
+        - Timeline estimate
+        - Resource requirements
+        - Success metrics
+
+        ## Alternative Recommendation
+        - If primary recommendation is blocked, what's Plan B?
+        - Under what conditions should we reconsider?
+
+        ## Dissenting View
+        - Steel-man the case against this recommendation
+        - What could go wrong?
+
+        Format as professional markdown suitable for stakeholder presentation.
+      estimated_tokens: 6000
+    outputs:
+      - recommendation
+      - confidence_level
+      - next_steps
+    on_failure: abort
+
+  # Phase 4: Generate audit trail
+  - id: create_audit_trail
+    type: claude_code
+    params:
+      role: documenter
+      prompt: |
+        # Audit Trail Generation
+
+        Create a compliance-ready audit trail for this decision support process.
+
+        ## Decision Question
+        ${decision_question}
+
+        ## Context Provided
+        ${context}
+
+        ## Analysis Performed
+        ${situation_analysis}
+
+        ## Options Considered
+        ${options_matrix}
+
+        ## Final Recommendation
+        ${recommendation}
+
+        ---
+
+        Generate an audit record with:
+
+        1. **Process Metadata**
+           - Timestamp: [current]
+           - Workflow version: 1.0
+           - Input hash: [for verification]
+
+        2. **Decision Trail**
+           - Original question (verbatim)
+           - Factors considered
+           - Options evaluated
+           - Recommendation made
+           - Confidence level
+
+        3. **Reasoning Chain**
+           - Step-by-step logic from question to recommendation
+           - Key decision points
+           - Assumptions relied upon
+
+        4. **Limitations & Caveats**
+           - Information gaps acknowledged
+           - Assumptions stated
+           - Confidence bounds
+
+        5. **Review Checkpoints**
+           - Human approval points
+           - Override opportunities
+
+        Output as structured JSON for machine parsing, followed by human-readable summary.
+      estimated_tokens: 3000
+    outputs:
+      - audit_trail
+      - audit_json
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: decision-support
+  tags:
+    - decision
+    - recommendation
+    - enterprise
+    - audit
+    - compliance
+  examples:
+    - description: Technology stack decision
+      inputs:
+        decision_question: "Should we migrate from PostgreSQL to MongoDB for our user analytics service?"
+        context: "Current system handles 10M events/day, expecting 100M in 2 years. Team has SQL expertise."
+        stakeholders: "technical"
+        urgency: "normal"
+    - description: Build vs Buy decision
+      inputs:
+        decision_question: "Should we build our own authentication system or use Auth0/Okta?"
+        context: "50-person startup, limited security expertise, need SSO and MFA"
+        stakeholders: "executive"
+        urgency: "high"
+    - description: Hiring decision
+      inputs:
+        decision_question: "Should we hire 2 senior engineers or 4 mid-level engineers with the same budget?"
+        context: "Building new product from scratch, 6-month runway to MVP"
+        stakeholders: "executive"
+        urgency: "high"

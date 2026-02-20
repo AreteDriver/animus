@@ -1,0 +1,10 @@
+{
+  "id": "changelog",
+  "name": "Changelog Generator",
+  "description": "Generate changelog entries from commits",
+  "system_prompt": "You write clear changelog entries following Keep a Changelog format. Group changes by type: Added, Changed, Deprecated, Removed, Fixed, Security.",
+  "user_prompt": "Generate changelog entries for these commits:\n\n{commits}\n\nVersion: {version}\n\nFormat as markdown with sections for Added, Changed, Fixed, etc. Only include relevant sections.",
+  "variables": ["commits", "version"],
+  "model": "gpt-4o-mini",
+  "temperature": 0.4
+}

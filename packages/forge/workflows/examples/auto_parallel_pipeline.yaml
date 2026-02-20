@@ -1,0 +1,178 @@
+# Auto-Parallel Pipeline Example
+# Demonstrates automatic parallelization based on dependency analysis
+#
+# Steps without depends_on run concurrently. The executor automatically
+# identifies independent steps and groups them for parallel execution.
+
+name: auto_parallel_pipeline
+description: Multi-stage analysis with automatic parallelization
+
+# Enable auto-parallel mode
+settings:
+  auto_parallel: true
+  auto_parallel_max_workers: 4
+
+inputs:
+  - name: codebase_path
+    type: string
+    description: Path to the codebase to analyze
+  - name: branch
+    type: string
+    default: main
+    description: Git branch to analyze
+
+steps:
+  # --- Stage 1: Independent analyses (all run in parallel) ---
+
+  - id: security_scan
+    type: claude_code
+    params:
+      role: security_analyst
+      prompt: |
+        Perform a security analysis of the codebase at: ${codebase_path}
+        Branch: ${branch}
+
+        Check for:
+        - Hardcoded secrets
+        - SQL injection vulnerabilities
+        - XSS vulnerabilities
+        - Insecure dependencies
+        - Authentication issues
+    outputs: [security_report]
+
+  - id: code_quality
+    type: claude_code
+    # No depends_on - runs parallel with security_scan
+    params:
+      role: reviewer
+      prompt: |
+        Analyze code quality for: ${codebase_path}
+        Branch: ${branch}
+
+        Evaluate:
+        - Code complexity
+        - Duplication
+        - Naming conventions
+        - Documentation coverage
+        - Test coverage
+    outputs: [quality_report]
+
+  - id: architecture_review
+    type: openai
+    # No depends_on - runs parallel with security_scan and code_quality
+    params:
+      model: gpt-4
+      prompt: |
+        Review the architecture of: ${codebase_path}
+
+        Assess:
+        - Module structure
+        - Dependency graph
+        - Design patterns used
+        - Scalability considerations
+        - Technical debt
+    outputs: [architecture_report]
+
+  - id: dependency_audit
+    type: shell
+    # No depends_on - runs parallel with all above
+    params:
+      command: |
+        cd ${codebase_path}
+        pip-audit --json 2>/dev/null || echo '{"vulnerabilities": []}'
+    outputs: [dependency_vulnerabilities]
+
+  # --- Stage 2: Depends on Stage 1 (waits for all above) ---
+
+  - id: risk_assessment
+    type: claude_code
+    depends_on: [security_scan, dependency_audit]
+    params:
+      role: security_analyst
+      prompt: |
+        Create a risk assessment combining:
+
+        Security scan results:
+        ${security_report}
+
+        Dependency vulnerabilities:
+        ${dependency_vulnerabilities}
+
+        Provide:
+        - Overall risk score (1-10)
+        - Critical vulnerabilities
+        - Remediation priorities
+    outputs: [risk_assessment]
+
+  - id: improvement_plan
+    type: claude_code
+    depends_on: [code_quality, architecture_review]
+    # Runs parallel with risk_assessment (different dependencies)
+    params:
+      role: architect
+      prompt: |
+        Create an improvement plan based on:
+
+        Code quality report:
+        ${quality_report}
+
+        Architecture review:
+        ${architecture_report}
+
+        Provide:
+        - Priority improvements (quick wins)
+        - Long-term refactoring roadmap
+        - Architecture evolution recommendations
+    outputs: [improvement_plan]
+
+  # --- Stage 3: Final synthesis (depends on Stage 2) ---
+
+  - id: executive_summary
+    type: claude_code
+    depends_on: [risk_assessment, improvement_plan]
+    params:
+      role: reporter
+      prompt: |
+        Create an executive summary combining all analyses:
+
+        Risk Assessment:
+        ${risk_assessment}
+
+        Improvement Plan:
+        ${improvement_plan}
+
+        Format as a brief (1-page) executive summary with:
+        - Overall health score
+        - Top 3 risks
+        - Top 3 opportunities
+        - Recommended next steps
+    outputs: [executive_summary]
+
+outputs:
+  - name: security_report
+    description: Security scan findings
+  - name: quality_report
+    description: Code quality metrics
+  - name: architecture_report
+    description: Architecture review
+  - name: risk_assessment
+    description: Combined risk assessment
+  - name: improvement_plan
+    description: Prioritized improvement roadmap
+  - name: executive_summary
+    description: Executive summary for stakeholders
+
+# Execution visualization:
+#
+# Stage 1 (parallel):
+#   security_scan ──────┐
+#   code_quality ───────┼─┐
+#   architecture_review ┤ │
+#   dependency_audit ───┘ │
+#                         │
+# Stage 2 (parallel):     │
+#   risk_assessment ◄─────┤
+#   improvement_plan ◄────┘
+#                    │
+# Stage 3:           │
+#   executive_summary ◄──┘

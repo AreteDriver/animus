@@ -1,0 +1,68 @@
+# MCP GitHub PR Review Example
+# Uses MCP GitHub server to fetch PR details, then reviews with AI.
+#
+# Requires: A registered MCP server named "github" (stdio type)
+# Run: npx -y @modelcontextprotocol/server-github
+# Auth: GITHUB_PERSONAL_ACCESS_TOKEN env var
+
+name: mcp_github_pr_review
+description: Fetch PR details via MCP GitHub server and review with AI
+
+inputs:
+  - name: repo
+    type: string
+    description: "Repository in owner/name format"
+  - name: pr_number
+    type: string
+    description: "Pull request number"
+
+steps:
+  # Step 1: Fetch PR details via MCP
+  - id: get_pr
+    type: mcp_tool
+    params:
+      server: "github"
+      tool: "get_pull_request"
+      arguments:
+        owner: "${repo.split('/')[0]}"
+        repo: "${repo.split('/')[1]}"
+        pull_number: "${pr_number}"
+    outputs: [pr_details]
+
+  # Step 2: Fetch PR diff
+  - id: get_diff
+    type: mcp_tool
+    params:
+      server: "github"
+      tool: "get_pull_request_diff"
+      arguments:
+        owner: "${repo.split('/')[0]}"
+        repo: "${repo.split('/')[1]}"
+        pull_number: "${pr_number}"
+    outputs: [pr_diff]
+
+  # Step 3: AI review
+  - id: review
+    type: claude_code
+    depends_on: [get_pr, get_diff]
+    params:
+      role: reviewer
+      prompt: |
+        Review this pull request:
+
+        PR Details: ${pr_details}
+
+        Diff:
+        ${pr_diff}
+
+        Provide:
+        1. Summary of changes
+        2. Code quality assessment
+        3. Security concerns
+        4. Performance implications
+        5. Approval recommendation (approve/request changes)
+    outputs: [review_result]
+
+outputs:
+  - name: review_result
+    description: AI-generated PR review

@@ -1,0 +1,10 @@
+{
+  "id": "api_design",
+  "name": "API Design",
+  "description": "Design RESTful API endpoints",
+  "system_prompt": "You are an API architect who designs clean, RESTful APIs. Follow REST best practices, use appropriate HTTP methods, and design for scalability and ease of use.",
+  "user_prompt": "Design an API for the following requirements:\n\n{requirements}\n\nInclude:\n- Endpoint paths and HTTP methods\n- Request/response schemas (JSON)\n- Authentication requirements\n- Error responses\n- Pagination strategy (if applicable)\n- Rate limiting recommendations",
+  "variables": ["requirements"],
+  "model": "gpt-4o-mini",
+  "temperature": 0.5
+}

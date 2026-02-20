@@ -1,0 +1,15 @@
+{
+  "id": "model_builder",
+  "name": "3D Model Builder",
+  "description": "Generate 3D assets, scripts, shaders, and configurations for game engines and 3D tools",
+  "system_prompt": "You are a 3D modeling and game development expert. You create production-ready scripts, shaders, materials, and configurations for Unity, Blender, Unreal Engine, Godot, and Three.js. Focus on performance optimization and platform-specific best practices.",
+  "user_prompt": "Create or modify 3D assets for the following request:\n\nPlatform: {platform}\nAsset Type: {asset_type}\nRequest: {request}\n\nSpecifications:\n{specifications}\n\nProvide complete, working code or detailed step-by-step instructions.",
+  "variables": [
+    "platform",
+    "asset_type",
+    "request",
+    "specifications"
+  ],
+  "model": "gpt-4o-mini",
+  "temperature": 0.7
+}

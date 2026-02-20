@@ -1,0 +1,53 @@
+{
+  "id": "dev_workflow_plan_build_test_review",
+  "name": "Development Workflow: Plan → Build → Test → Review",
+  "description": "Multi-agent development workflow with specialized roles. Uses Claude to plan features, implement code, write tests, and review the implementation.",
+  "steps": [
+    {
+      "id": "plan",
+      "type": "claude_code",
+      "action": "execute_agent",
+      "params": {
+        "role": "planner",
+        "task": "{{feature_request}}"
+      },
+      "next_step": "build"
+    },
+    {
+      "id": "build",
+      "type": "claude_code",
+      "action": "execute_agent",
+      "params": {
+        "role": "builder",
+        "task": "{{feature_request}}",
+        "context": "{{plan_output}}"
+      },
+      "next_step": "test"
+    },
+    {
+      "id": "test",
+      "type": "claude_code",
+      "action": "execute_agent",
+      "params": {
+        "role": "tester",
+        "task": "Write tests for: {{feature_request}}",
+        "context": "{{build_output}}"
+      },
+      "next_step": "review"
+    },
+    {
+      "id": "review",
+      "type": "claude_code",
+      "action": "execute_agent",
+      "params": {
+        "role": "reviewer",
+        "task": "Review implementation of: {{feature_request}}",
+        "context": "{{build_output}}"
+      },
+      "next_step": null
+    }
+  ],
+  "variables": {
+    "feature_request": "Describe the feature to build"
+  }
+}

@@ -1,0 +1,138 @@
+name: Feature Build
+version: "1.0"
+description: Multi-agent workflow for building new features from requirements
+
+token_budget: 150000
+timeout_seconds: 3600
+
+inputs:
+  feature_request:
+    type: string
+    required: true
+    description: Description of the feature to build
+  codebase_path:
+    type: string
+    required: true
+    description: Path to the codebase
+  test_command:
+    type: string
+    required: false
+    default: "pytest"
+    description: Command to run tests
+
+outputs:
+  - plan
+  - code
+  - test_results
+  - review
+
+steps:
+  - id: plan
+    type: claude_code
+    params:
+      role: planner
+      prompt: |
+        Analyze the following feature request and create a detailed implementation plan:
+
+        Feature: ${feature_request}
+        Codebase: ${codebase_path}
+
+        Provide:
+        1. Tasks breakdown
+        2. Affected files
+        3. Dependencies
+        4. Risks and mitigations
+      estimated_tokens: 5000
+    outputs:
+      - plan
+      - tasks
+    on_failure: abort
+
+  - id: build
+    type: claude_code
+    params:
+      role: builder
+      prompt: |
+        Implement the feature according to this plan:
+
+        ${plan}
+
+        Write production-quality code with:
+        - Type hints
+        - Error handling
+        - Documentation
+      estimated_tokens: 20000
+    outputs:
+      - code
+      - files_modified
+    on_failure: retry
+    max_retries: 2
+
+  - id: checkpoint_after_build
+    type: checkpoint
+    params:
+      message: "Build phase complete"
+
+  - id: test
+    type: claude_code
+    params:
+      role: tester
+      prompt: |
+        Write comprehensive tests for the new feature:
+
+        Code: ${code}
+        Files: ${files_modified}
+
+        Include:
+        - Unit tests
+        - Edge cases
+        - Integration tests where appropriate
+      estimated_tokens: 10000
+    outputs:
+      - tests
+    on_failure: retry
+    max_retries: 2
+
+  - id: run_tests
+    type: shell
+    params:
+      command: "cd ${codebase_path} && ${test_command}"
+      allow_failure: false
+    outputs:
+      - test_results
+    on_failure: abort
+    timeout_seconds: 300
+
+  - id: review
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Review the implementation:
+
+        Code: ${code}
+        Tests: ${tests}
+        Test Results: ${test_results}
+
+        Evaluate:
+        - Code quality
+        - Security concerns
+        - Performance implications
+        - Test coverage
+      estimated_tokens: 5000
+    condition:
+      field: test_results
+      operator: contains
+      value: "passed"
+    outputs:
+      - review
+      - approved
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: development
+  tags:
+    - feature
+    - build
+    - ci

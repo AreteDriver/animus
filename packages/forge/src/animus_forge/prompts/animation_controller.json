@@ -1,0 +1,17 @@
+{
+  "id": "animation_controller",
+  "name": "Animation Controller",
+  "description": "Create animation state machines, blend trees, and character controllers",
+  "system_prompt": "You are a game animation expert specializing in state machines, blend trees, IK systems, and procedural animation. You understand animation principles, performance optimization, and platform-specific animation systems (Unity Animator, Unreal Animation Blueprints, Godot AnimationTree).",
+  "user_prompt": "Create an animation controller with the following specifications:\n\nPlatform: {platform}\nCharacter Type: {character_type}\nAnimation States: {animation_states}\nBlend Requirements: {blend_requirements}\n\nAdditional Features: {features}\nPerformance Considerations: {performance}\n\nGenerate:\n1. State machine structure with transitions\n2. Blend tree configurations\n3. Parameter definitions and their purposes\n4. Controller script for managing states from code\n5. Any IK setup if required\n6. Instructions for connecting animations",
+  "variables": [
+    "platform",
+    "character_type",
+    "animation_states",
+    "blend_requirements",
+    "features",
+    "performance"
+  ],
+  "model": "gpt-4o-mini",
+  "temperature": 0.7
+}

@@ -1,0 +1,188 @@
+name: VFX Particle System
+version: "1.0"
+description: Create particle effects and VFX for games - explosions, magic, environmental effects
+
+token_budget: 80000
+timeout_seconds: 1800
+
+inputs:
+  effect_name:
+    type: string
+    required: true
+    description: Name of the effect (e.g., "FireballExplosion", "MagicHeal")
+  effect_type:
+    type: string
+    required: true
+    description: Type of effect (explosion, projectile, aura, environmental, ui)
+  platform:
+    type: string
+    required: true
+    description: Target platform (unity, unreal, godot)
+  style:
+    type: string
+    required: false
+    default: "stylized"
+    description: Visual style (realistic, stylized, pixel, toon)
+  color_palette:
+    type: array
+    required: false
+    description: Primary colors for the effect
+  performance_target:
+    type: string
+    required: false
+    default: "medium"
+    description: Performance tier (mobile, medium, high-end)
+  duration:
+    type: number
+    required: false
+    default: 2.0
+    description: Effect duration in seconds
+
+outputs:
+  - particle_config
+  - shader_code
+  - spawn_script
+  - review
+
+steps:
+  - id: design
+    type: claude_code
+    params:
+      role: planner
+      prompt: |
+        Design a particle effect:
+
+        Effect: ${effect_name}
+        Type: ${effect_type}
+        Platform: ${platform}
+        Style: ${style}
+        Colors: ${color_palette}
+        Performance: ${performance_target}
+        Duration: ${duration}
+
+        Plan the effect including:
+        1. Visual breakdown (what particles/elements make up the effect)
+        2. Timing and sequencing
+        3. Particle counts and performance budget
+        4. Required textures/sprites
+        5. Shader requirements (additive, soft particles, distortion)
+      estimated_tokens: 3000
+    outputs:
+      - design
+    on_failure: abort
+
+  - id: particle_config
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Create the particle system configuration:
+
+        Design: ${design}
+        Platform: ${platform}
+        Effect: ${effect_name}
+        Performance: ${performance_target}
+
+        Generate complete particle system setup:
+        1. Emitter configurations (shape, rate, lifetime, velocity)
+        2. Size, color, and rotation over lifetime curves
+        3. Sub-emitters or child systems
+        4. Collision settings (if applicable)
+        5. Render settings (material, sorting, alignment)
+
+        For Unity: Provide both inspector values AND a C# script to create programmatically
+        For Unreal: Provide Niagara module configurations
+        For Godot: Provide GPUParticles3D or CPUParticles3D setup
+      estimated_tokens: 10000
+    outputs:
+      - particle_config
+    on_failure: retry
+    max_retries: 2
+
+  - id: shader_code
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Create custom shaders for the particle effect:
+
+        Design: ${design}
+        Platform: ${platform}
+        Style: ${style}
+        Effect Type: ${effect_type}
+
+        Generate shader code for:
+        1. Main particle shader (with proper blending)
+        2. Soft particle support (depth fade)
+        3. Distortion/heat haze (if applicable)
+        4. Custom vertex animation (if needed)
+
+        Include:
+        - Platform-appropriate shader language (HLSL/ShaderLab, GLSL, Godot shader)
+        - Mobile-friendly variants if performance_target is mobile
+        - Comments explaining each effect technique
+      estimated_tokens: 8000
+    outputs:
+      - shader_code
+    on_failure: retry
+    max_retries: 2
+
+  - id: spawn_script
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Create a spawner/manager script for the effect:
+
+        Effect: ${effect_name}
+        Platform: ${platform}
+        Duration: ${duration}
+        Particle Config: ${particle_config}
+
+        Generate a script that:
+        1. Spawns the effect at a position/target
+        2. Handles object pooling for performance
+        3. Supports effect parameters (scale, color override, duration)
+        4. Auto-destroys or recycles after completion
+        5. Provides events for effect lifecycle (started, peaked, ended)
+        6. Works with both prefab instantiation and pooling systems
+      estimated_tokens: 6000
+    outputs:
+      - spawn_script
+    on_failure: retry
+    max_retries: 2
+
+  - id: review
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Review the VFX implementation:
+
+        Particle Config: ${particle_config}
+        Shaders: ${shader_code}
+        Spawner: ${spawn_script}
+        Performance Target: ${performance_target}
+
+        Evaluate:
+        1. Performance (particle count, overdraw, shader complexity)
+        2. Visual quality vs performance tradeoffs
+        3. Mobile compatibility issues
+        4. Memory usage (pooling effectiveness)
+        5. Common VFX pitfalls
+      estimated_tokens: 3000
+    outputs:
+      - review
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: game-development
+  tags:
+    - vfx
+    - particles
+    - effects
+    - shaders
+    - unity
+    - unreal
+    - godot

@@ -1,0 +1,53 @@
+/* Gorgon TUI - Main theme */
+
+Screen {
+    background: $surface;
+}
+
+#chat-container {
+    width: 1fr;
+    height: 1fr;
+}
+
+#main-content {
+    width: 1fr;
+    height: 1fr;
+    layout: vertical;
+}
+
+ChatDisplay {
+    height: 1fr;
+    border: solid $surface-lighten-2;
+    padding: 0 1;
+    scrollbar-size: 1 1;
+    background: $surface-darken-1;
+}
+
+InputBar {
+    height: auto;
+    min-height: 3;
+    max-height: 10;
+    border: solid $surface-lighten-2;
+    padding: 0 1;
+    background: $surface;
+}
+
+InputBar:focus {
+    border: solid $accent;
+}
+
+Sidebar {
+    width: 28;
+    dock: left;
+    border-right: solid $surface-lighten-2;
+    padding: 1;
+    background: $surface;
+}
+
+StatusBar {
+    dock: bottom;
+    height: 1;
+    background: $accent-darken-2;
+    color: $text;
+    padding: 0 1;
+}

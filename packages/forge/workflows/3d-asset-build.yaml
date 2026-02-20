@@ -1,0 +1,128 @@
+name: 3D Asset Build
+version: "1.0"
+description: Multi-agent workflow for creating 3D assets with planning, building, and review
+
+token_budget: 100000
+timeout_seconds: 2400
+
+inputs:
+  asset_request:
+    type: string
+    required: true
+    description: Description of the 3D asset to create
+  target_platform:
+    type: string
+    required: true
+    description: Target platform (unity, blender, unreal, godot, threejs)
+  asset_type:
+    type: string
+    required: false
+    default: "model"
+    description: Type of asset (model, scene, material, shader, animation, prefab, script)
+  project_path:
+    type: string
+    required: false
+    description: Path to the project directory
+  specifications:
+    type: object
+    required: false
+    description: Technical specifications (max_polygons, texture_resolution, etc.)
+
+outputs:
+  - plan
+  - assets
+  - review
+
+steps:
+  - id: plan
+    type: claude_code
+    params:
+      role: planner
+      prompt: |
+        Plan the creation of a 3D asset:
+
+        Request: ${asset_request}
+        Platform: ${target_platform}
+        Asset Type: ${asset_type}
+
+        Create a detailed plan including:
+        1. Required files and their purposes
+        2. Technical approach (procedural generation, manual modeling, etc.)
+        3. Dependencies (packages, plugins, assets)
+        4. Performance considerations
+        5. Success criteria
+      estimated_tokens: 3000
+    outputs:
+      - plan
+      - tasks
+    on_failure: abort
+
+  - id: build_assets
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Create the 3D assets according to this plan:
+
+        ${plan}
+
+        Platform: ${target_platform}
+        Asset Type: ${asset_type}
+        Specifications: ${specifications}
+
+        Generate:
+        1. Complete, working code (scripts, shaders, etc.)
+        2. Configuration files where applicable
+        3. Step-by-step instructions for manual tasks
+        4. Performance optimization notes
+
+        Use platform-specific best practices and conventions.
+      estimated_tokens: 15000
+    outputs:
+      - assets
+      - instructions
+      - dependencies
+    on_failure: retry
+    max_retries: 2
+
+  - id: checkpoint_after_build
+    type: checkpoint
+    params:
+      message: "Asset generation complete"
+
+  - id: review
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Review the generated 3D assets:
+
+        Platform: ${target_platform}
+        Plan: ${plan}
+        Generated Assets: ${assets}
+        Instructions: ${instructions}
+
+        Evaluate:
+        1. Code quality and platform conventions
+        2. Performance implications (polygon count, shader complexity, memory usage)
+        3. Completeness of the solution
+        4. Potential issues or improvements
+        5. Whether instructions are clear and complete
+      estimated_tokens: 4000
+    outputs:
+      - review
+      - approved
+      - optimization_suggestions
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: development
+  tags:
+    - 3d
+    - unity
+    - blender
+    - unreal
+    - godot
+    - game-dev
+    - assets

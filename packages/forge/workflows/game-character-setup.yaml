@@ -1,0 +1,182 @@
+name: Game Character Setup
+version: "1.0"
+description: Full character pipeline - prefab structure, animator controller, and character controller script
+
+token_budget: 120000
+timeout_seconds: 2400
+
+inputs:
+  character_name:
+    type: string
+    required: true
+    description: Name of the character (used for class/file naming)
+  character_type:
+    type: string
+    required: true
+    description: Type of character (player, npc, enemy, boss)
+  platform:
+    type: string
+    required: true
+    description: Target platform (unity, unreal, godot)
+  movement_style:
+    type: string
+    required: false
+    default: "humanoid"
+    description: Movement style (humanoid, quadruped, flying, swimming, vehicle)
+  features:
+    type: array
+    required: false
+    description: Additional features (combat, inventory, dialogue, stealth)
+  animation_states:
+    type: array
+    required: false
+    default: ["idle", "walk", "run", "jump"]
+    description: Required animation states
+
+outputs:
+  - plan
+  - prefab_structure
+  - animator_controller
+  - character_script
+  - review
+
+steps:
+  - id: plan
+    type: claude_code
+    params:
+      role: planner
+      prompt: |
+        Plan a complete character setup for a game:
+
+        Character: ${character_name}
+        Type: ${character_type}
+        Platform: ${platform}
+        Movement Style: ${movement_style}
+        Features: ${features}
+        Animation States: ${animation_states}
+
+        Create a detailed plan covering:
+        1. Component architecture (what scripts/components are needed)
+        2. Animation state machine structure
+        3. Input handling approach
+        4. Physics/collision setup
+        5. Integration points (how this connects to other game systems)
+      estimated_tokens: 4000
+    outputs:
+      - plan
+    on_failure: abort
+
+  - id: prefab_structure
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Create the prefab/scene structure for the character:
+
+        Plan: ${plan}
+        Platform: ${platform}
+        Character: ${character_name}
+
+        Generate:
+        1. Hierarchy structure (parent-child relationships)
+        2. Required components on each object
+        3. Layer and tag assignments
+        4. Collider configurations
+        5. Setup instructions for importing a character model
+      estimated_tokens: 5000
+    outputs:
+      - prefab_structure
+    on_failure: retry
+    max_retries: 2
+
+  - id: animator_controller
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Create the animation controller for the character:
+
+        Plan: ${plan}
+        Platform: ${platform}
+        Character: ${character_name}
+        Movement Style: ${movement_style}
+        Animation States: ${animation_states}
+
+        Generate:
+        1. State machine with all states and transitions
+        2. Parameters (bools, floats, triggers) with descriptions
+        3. Blend trees for locomotion (if applicable)
+        4. Transition conditions and durations
+        5. Layer setup (base, upper body, additive)
+        6. Code/config to create this programmatically (if supported)
+      estimated_tokens: 8000
+    outputs:
+      - animator_controller
+    on_failure: retry
+    max_retries: 2
+
+  - id: character_script
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Create the main character controller script:
+
+        Plan: ${plan}
+        Platform: ${platform}
+        Character: ${character_name}
+        Type: ${character_type}
+        Movement Style: ${movement_style}
+        Features: ${features}
+        Prefab Structure: ${prefab_structure}
+        Animator: ${animator_controller}
+
+        Generate a complete, production-ready script with:
+        1. Input handling (support both old and new input systems for Unity)
+        2. Movement and physics
+        3. Animation parameter updates
+        4. State management
+        5. Public events/callbacks for other systems
+        6. Inspector-configurable values with sensible defaults
+        7. Comprehensive comments explaining the logic
+      estimated_tokens: 15000
+    outputs:
+      - character_script
+    on_failure: retry
+    max_retries: 2
+
+  - id: review
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Review the complete character setup:
+
+        Plan: ${plan}
+        Prefab: ${prefab_structure}
+        Animator: ${animator_controller}
+        Script: ${character_script}
+
+        Evaluate:
+        1. Code quality and platform conventions
+        2. Performance (Update vs FixedUpdate usage, caching, etc.)
+        3. Extensibility (can features be added easily?)
+        4. Common pitfalls (physics in Update, animation issues)
+        5. Missing edge cases
+        6. Integration concerns
+      estimated_tokens: 4000
+    outputs:
+      - review
+      - suggestions
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: game-development
+  tags:
+    - character
+    - controller
+    - animation
+    - unity
+    - unreal
+    - godot

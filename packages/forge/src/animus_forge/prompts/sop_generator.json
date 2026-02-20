@@ -1,0 +1,12 @@
+{
+  "id": "sop_generator",
+  "name": "SOP Generator",
+  "description": "Generate Standard Operating Procedures",
+  "system_prompt": "You are an expert at creating clear, detailed Standard Operating Procedures.",
+  "user_prompt": "Create a detailed SOP for: {task_description}",
+  "variables": [
+    "task_description"
+  ],
+  "model": "gpt-4o-mini",
+  "temperature": 0.7
+}

@@ -38,20 +38,19 @@ jobs:
       - name: Install ruff
         run: pip install ruff
 
-      - name: Lint
-        run: ruff check animus/ tests/
+      - name: Lint all packages
+        run: ruff check packages/
 
       - name: Format check
-        run: ruff format --check animus/ tests/
+        run: ruff format --check packages/
 
-  test:
-    name: Test (Python ${{ matrix.python-version }})
+  test-core:
+    name: Test Core (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
-
     steps:
       - uses: actions/checkout@v6
 
@@ -64,16 +63,64 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
-          restore-keys: ${{ runner.os }}-pip-${{ matrix.python-version }}-
+          key: ${{ runner.os }}-pip-core-${{ matrix.python-version }}-${{ hashFiles('packages/core/pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-core-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: pip install -e ".[dev,api]"
+        run: pip install -e "packages/core/[dev,api]"
 
       - name: Test with coverage
-        run: pytest tests/ -v --tb=short --cov=animus --cov-report=term-missing
+        run: pytest packages/core/tests/ -v --tb=short --cov=animus --cov-report=term-missing
         env:
           ANIMUS_SKIP_INTEGRATION_TESTS: "1"
+
+  test-quorum:
+    name: Test Quorum
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-quorum-${{ hashFiles('packages/quorum/pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-quorum-
+
+      - name: Install dependencies
+        run: pip install -e "packages/quorum/[dev]"
+
+      - name: Test with coverage
+        run: PYTHONPATH=packages/quorum/python pytest packages/quorum/tests/ -v --tb=short
+
+  test-forge:
+    name: Test Forge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-forge-${{ hashFiles('packages/forge/pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-forge-
+
+      - name: Install dependencies
+        run: pip install -e "packages/forge/[dev]"
+
+      - name: Test with coverage
+        run: pytest packages/forge/tests/ -v --tb=short --cov=animus_forge --cov-report=term-missing
 
   security:
     name: Security
@@ -83,44 +130,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install -e ".[dev]"
-
-      - name: pip-audit
-        run: |
-          pip install pip-audit
-          pip-audit
-        continue-on-error: true
-
       - name: Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [lint, test]
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Build package
-        run: |
-          pip install build
-          python -m build
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: dist
-          path: dist/

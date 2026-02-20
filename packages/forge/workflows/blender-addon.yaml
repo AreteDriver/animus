@@ -1,0 +1,140 @@
+name: Blender Addon Generator
+version: "1.0"
+description: Generate and test Blender Python addons with proper structure and registration
+
+token_budget: 80000
+timeout_seconds: 1800
+
+inputs:
+  addon_description:
+    type: string
+    required: true
+    description: Description of the Blender addon functionality
+  addon_name:
+    type: string
+    required: true
+    description: Name for the addon (used in bl_info)
+  blender_version:
+    type: string
+    required: false
+    default: "4.0"
+    description: Target Blender version
+  category:
+    type: string
+    required: false
+    default: "Object"
+    description: Blender addon category (Object, Mesh, Animation, etc.)
+  output_path:
+    type: string
+    required: false
+    description: Path to save the addon files
+
+outputs:
+  - plan
+  - addon_code
+  - test_results
+  - review
+
+steps:
+  - id: plan
+    type: claude_code
+    params:
+      role: planner
+      prompt: |
+        Plan a Blender addon with the following requirements:
+
+        Name: ${addon_name}
+        Description: ${addon_description}
+        Target Blender Version: ${blender_version}
+        Category: ${category}
+
+        Create a detailed plan including:
+        1. Addon structure (single file or multi-file)
+        2. Required Blender APIs (bpy.ops, bpy.types, bmesh, etc.)
+        3. UI elements needed (panels, menus, operators)
+        4. Properties and preferences
+        5. Registration requirements
+        6. Potential challenges and solutions
+      estimated_tokens: 3000
+    outputs:
+      - plan
+      - structure
+    on_failure: abort
+
+  - id: generate_addon
+    type: claude_code
+    params:
+      role: model_builder
+      prompt: |
+        Generate a complete Blender addon based on this plan:
+
+        ${plan}
+
+        Addon Name: ${addon_name}
+        Blender Version: ${blender_version}
+        Category: ${category}
+
+        Requirements:
+        1. Include proper bl_info dictionary
+        2. Implement register() and unregister() functions
+        3. Use proper Blender naming conventions (bl_ prefix for properties)
+        4. Include docstrings and comments
+        5. Handle errors gracefully
+        6. Follow Blender addon best practices
+
+        Generate complete, working Python code that can be installed directly in Blender.
+      estimated_tokens: 12000
+    outputs:
+      - addon_code
+      - files
+      - instructions
+    on_failure: retry
+    max_retries: 2
+
+  - id: validate_syntax
+    type: shell
+    params:
+      command: |
+        python3 -m py_compile /tmp/addon_check.py 2>&1 || echo "Syntax validation skipped"
+      allow_failure: true
+    outputs:
+      - syntax_check
+    on_failure: skip
+    timeout_seconds: 30
+
+  - id: review
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Review this Blender addon code:
+
+        Plan: ${plan}
+        Generated Code: ${addon_code}
+
+        Evaluate:
+        1. Blender API usage correctness
+        2. Proper registration/unregistration
+        3. UI/UX considerations
+        4. Error handling
+        5. Performance (avoid expensive operations in draw functions)
+        6. Compatibility with target Blender version ${blender_version}
+        7. Code organization and readability
+
+        Provide specific feedback and any necessary fixes.
+      estimated_tokens: 4000
+    outputs:
+      - review
+      - fixes_needed
+      - approved
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: development
+  tags:
+    - blender
+    - python
+    - addon
+    - 3d
+    - scripting

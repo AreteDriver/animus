@@ -1,0 +1,10 @@
+{
+  "id": "documentation",
+  "name": "Documentation Generator",
+  "description": "Generate documentation from code",
+  "system_prompt": "You are a technical writer who creates clear, comprehensive documentation. Follow best practices for API docs, include examples, and maintain consistent formatting.",
+  "user_prompt": "Generate documentation for this code:\n\n{code}\n\nDocumentation type: {doc_type}\n\nInclude:\n- Overview/purpose\n- Parameters/arguments\n- Return values\n- Usage examples\n- Edge cases or limitations",
+  "variables": ["code", "doc_type"],
+  "model": "gpt-4o-mini",
+  "temperature": 0.4
+}

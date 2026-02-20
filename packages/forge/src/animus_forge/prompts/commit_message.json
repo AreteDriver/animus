@@ -1,0 +1,10 @@
+{
+  "id": "commit_message",
+  "name": "Commit Message Generator",
+  "description": "Generate conventional commit messages from diffs",
+  "system_prompt": "You write clear, conventional commit messages. Follow the format: type(scope): description. Types: feat, fix, docs, style, refactor, test, chore. Keep the first line under 72 characters.",
+  "user_prompt": "Generate a commit message for this diff:\n\n{diff}\n\nContext (if any): {context}\n\nProvide:\n1. Commit message (conventional format)\n2. Extended description (if needed)\n3. Breaking changes (if any)",
+  "variables": ["diff", "context"],
+  "model": "gpt-4o-mini",
+  "temperature": 0.4
+}

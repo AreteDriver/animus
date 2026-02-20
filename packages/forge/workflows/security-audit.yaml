@@ -1,0 +1,140 @@
+name: Security Audit
+version: "1.0"
+description: Comprehensive security audit of code, dependencies, and infrastructure
+
+token_budget: 100000
+timeout_seconds: 3600
+
+inputs:
+  target:
+    type: object
+    required: true
+    description: What to audit (code, dependencies, infrastructure)
+  audit_type:
+    type: string
+    required: false
+    default: "full_audit"
+    description: Type of audit (code_review, dependency_scan, infrastructure, full_audit)
+  compliance_frameworks:
+    type: array
+    required: false
+    description: Compliance frameworks to check against (owasp, pci_dss, hipaa, etc.)
+
+outputs:
+  - vulnerabilities
+  - compliance_report
+  - remediation_plan
+
+steps:
+  - id: code_security_review
+    type: claude_code
+    params:
+      role: security_auditor
+      prompt: |
+        Perform a security code review:
+
+        Target: ${target}
+        Audit Type: ${audit_type}
+
+        Check for:
+        1. OWASP Top 10 vulnerabilities
+        2. Injection flaws (SQL, XSS, Command)
+        3. Authentication/authorization issues
+        4. Sensitive data exposure
+        5. Security misconfigurations
+      estimated_tokens: 15000
+    outputs:
+      - code_vulnerabilities
+      - code_risk_score
+    on_failure: retry
+    max_retries: 2
+
+  - id: dependency_scan
+    type: claude_code
+    params:
+      role: security_auditor
+      prompt: |
+        Scan dependencies for vulnerabilities:
+
+        Target: ${target}
+
+        Check for:
+        1. Known CVEs in dependencies
+        2. Outdated packages
+        3. License compliance issues
+        4. Typosquatting risks
+      estimated_tokens: 10000
+    outputs:
+      - dependency_vulnerabilities
+      - dependency_report
+    on_failure: retry
+    max_retries: 2
+
+  - id: compliance_check
+    type: claude_code
+    params:
+      role: security_auditor
+      prompt: |
+        Check compliance against frameworks:
+
+        Code Vulnerabilities: ${code_vulnerabilities}
+        Dependency Vulnerabilities: ${dependency_vulnerabilities}
+        Compliance Frameworks: ${compliance_frameworks}
+
+        Evaluate compliance with each framework and identify gaps.
+      estimated_tokens: 8000
+    outputs:
+      - compliance_report
+    condition:
+      field: compliance_frameworks
+      operator: not_empty
+    on_failure: skip
+
+  - id: create_remediation_plan
+    type: claude_code
+    params:
+      role: security_auditor
+      prompt: |
+        Create a prioritized remediation plan:
+
+        Code Vulnerabilities: ${code_vulnerabilities}
+        Dependency Vulnerabilities: ${dependency_vulnerabilities}
+        Compliance Report: ${compliance_report}
+
+        Generate:
+        1. Prioritized list of fixes (by severity and effort)
+        2. Specific remediation steps for each issue
+        3. Timeline recommendations
+        4. Verification steps
+      estimated_tokens: 8000
+    outputs:
+      - remediation_plan
+      - vulnerabilities
+    on_failure: retry
+
+  - id: generate_report
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Generate executive security report:
+
+        All Findings: ${vulnerabilities}
+        Remediation Plan: ${remediation_plan}
+        Compliance: ${compliance_report}
+
+        Create a summary suitable for stakeholders.
+      estimated_tokens: 3000
+    outputs:
+      - executive_summary
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: security
+  tags:
+    - security
+    - audit
+    - compliance
+    - owasp
+    - vulnerability

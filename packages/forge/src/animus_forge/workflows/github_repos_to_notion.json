@@ -1,0 +1,58 @@
+{
+  "id": "github_repos_to_notion",
+  "name": "GitHub Repos to Notion",
+  "description": "List GitHub repositories and create a Notion database entry for tracking",
+  "steps": [
+    {
+      "id": "list_repos",
+      "type": "github",
+      "action": "list_repositories",
+      "params": {},
+      "next_step": "summarize_repos"
+    },
+    {
+      "id": "summarize_repos",
+      "type": "openai",
+      "action": "generate_completion",
+      "params": {
+        "prompt": "Summarize these GitHub repositories in a concise format suitable for a status report. Include repo name, description, and recent activity if available:\n\n{{list_repos_output}}",
+        "max_tokens": 500
+      },
+      "next_step": "save_to_notion"
+    },
+    {
+      "id": "save_to_notion",
+      "type": "notion",
+      "action": "create_database_entry",
+      "params": {
+        "database_id": "{{notion_database_id}}",
+        "properties": {
+          "Name": {
+            "title": [{"text": {"content": "GitHub Repos Status - {{date}}"}}]
+          },
+          "Status": {
+            "select": {"name": "Active"}
+          },
+          "Type": {
+            "select": {"name": "Report"}
+          }
+        }
+      },
+      "next_step": "append_content"
+    },
+    {
+      "id": "append_content",
+      "type": "notion",
+      "action": "append_to_page",
+      "params": {
+        "page_id": "{{save_to_notion_output.id}}",
+        "content": "{{summarize_repos_output}}"
+      },
+      "next_step": null
+    }
+  ],
+  "variables": {
+    "notion_database_id": "your-database-id",
+    "date": "{{current_date}}"
+  }
+}

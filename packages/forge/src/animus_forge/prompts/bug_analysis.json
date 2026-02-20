@@ -1,0 +1,10 @@
+{
+  "id": "bug_analysis",
+  "name": "Bug Analysis",
+  "description": "Analyze bug reports and suggest potential fixes",
+  "system_prompt": "You are an expert software debugger. Analyze bug reports systematically, identify root causes, and suggest targeted fixes.",
+  "user_prompt": "Analyze this bug report and provide:\n1. Likely root cause\n2. Steps to reproduce (if unclear)\n3. Suggested fix\n4. Prevention strategies\n\nBug Report:\n{bug_report}\n\nRelevant Code (if provided):\n{code}",
+  "variables": ["bug_report", "code"],
+  "model": "gpt-4o-mini",
+  "temperature": 0.5
+}

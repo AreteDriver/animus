@@ -1,0 +1,155 @@
+name: Code Migration
+version: "1.0"
+description: Migrate code between frameworks, languages, or API versions
+
+token_budget: 150000
+timeout_seconds: 3600
+
+inputs:
+  migration_type:
+    type: string
+    required: true
+    description: Type of migration (framework_upgrade, language_migration, api_migration)
+  source:
+    type: object
+    required: true
+    description: Source framework/version and code
+  target:
+    type: object
+    required: true
+    description: Target framework/version
+  scope:
+    type: string
+    required: false
+    default: "full"
+    description: Migration scope (full, partial, analysis_only)
+
+outputs:
+  - migration_plan
+  - migrated_code
+  - test_updates
+
+steps:
+  - id: analyze_migration
+    type: claude_code
+    params:
+      role: migrator
+      prompt: |
+        Analyze the migration requirements:
+
+        Migration Type: ${migration_type}
+        Source: ${source}
+        Target: ${target}
+        Scope: ${scope}
+
+        Analyze:
+        1. Breaking changes between versions
+        2. Deprecated APIs and replacements
+        3. Files and patterns that need changes
+        4. Estimated effort and risks
+      estimated_tokens: 8000
+    outputs:
+      - analysis
+      - breaking_changes
+    on_failure: abort
+
+  - id: create_migration_plan
+    type: claude_code
+    params:
+      role: migrator
+      prompt: |
+        Create a detailed migration plan:
+
+        Analysis: ${analysis}
+        Breaking Changes: ${breaking_changes}
+        Source: ${source}
+        Target: ${target}
+
+        Create:
+        1. Phased migration approach
+        2. File-by-file change list
+        3. Rollback strategy
+        4. Testing requirements
+      estimated_tokens: 10000
+    outputs:
+      - migration_plan
+    on_failure: retry
+    max_retries: 2
+
+  - id: perform_migration
+    type: claude_code
+    params:
+      role: migrator
+      prompt: |
+        Perform the code migration:
+
+        Migration Plan: ${migration_plan}
+        Source: ${source}
+        Target: ${target}
+
+        Generate:
+        1. Migrated code for each file
+        2. Before/after comparisons
+        3. Manual intervention notes
+        4. Deprecation warnings addressed
+      estimated_tokens: 30000
+    condition:
+      field: scope
+      operator: not_equals
+      value: "analysis_only"
+    outputs:
+      - migrated_code
+      - manual_steps
+    on_failure: retry
+    max_retries: 2
+
+  - id: update_tests
+    type: claude_code
+    params:
+      role: tester
+      prompt: |
+        Update tests for the migration:
+
+        Migrated Code: ${migrated_code}
+        Breaking Changes: ${breaking_changes}
+        Target: ${target}
+
+        Update:
+        1. Test imports and dependencies
+        2. Test assertions for new APIs
+        3. New test cases for changed behavior
+      estimated_tokens: 10000
+    outputs:
+      - test_updates
+    on_failure: skip
+
+  - id: review_migration
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Review the migration:
+
+        Migration Plan: ${migration_plan}
+        Migrated Code: ${migrated_code}
+        Test Updates: ${test_updates}
+
+        Verify:
+        1. All breaking changes addressed
+        2. Code quality maintained
+        3. No functionality lost
+        4. Tests comprehensive
+      estimated_tokens: 5000
+    outputs:
+      - review
+      - issues
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: migration
+  tags:
+    - migration
+    - upgrade
+    - refactoring
+    - framework

@@ -1,0 +1,151 @@
+name: Test Generator
+version: "1.0"
+description: Generate comprehensive test suites for existing code
+
+token_budget: 60000
+timeout_seconds: 1800
+
+inputs:
+  code_path:
+    type: string
+    required: true
+    description: Path to code file or module to test
+  test_framework:
+    type: string
+    required: false
+    default: "pytest"
+    description: Test framework (pytest, unittest, jest, vitest)
+  coverage_target:
+    type: number
+    required: false
+    default: 80
+    description: Target test coverage percentage
+
+outputs:
+  - unit_tests
+  - integration_tests
+  - edge_case_tests
+  - test_summary
+
+steps:
+  - id: analyze_code
+    type: claude_code
+    params:
+      role: analyst
+      prompt: |
+        Analyze this code for test generation:
+
+        Path: ${code_path}
+
+        Extract:
+        1. All functions and methods
+        2. Input parameters and types
+        3. Return values and types
+        4. Dependencies (internal and external)
+        5. Possible error conditions
+        6. State mutations
+        7. Edge cases to consider
+
+        Output as structured JSON.
+      estimated_tokens: 8000
+    outputs:
+      - code_analysis
+      - testable_units
+
+  - id: generate_unit_tests
+    type: claude_code
+    params:
+      role: tester
+      prompt: |
+        Generate unit tests based on this analysis:
+
+        ${code_analysis}
+
+        Requirements:
+        - Framework: ${test_framework}
+        - Target coverage: ${coverage_target}%
+        - One test file per module
+
+        For each function/method, generate tests for:
+        - Happy path (normal inputs)
+        - Boundary conditions
+        - Invalid inputs
+        - Error handling
+
+        Use proper assertions and clear test names.
+      estimated_tokens: 15000
+    outputs:
+      - unit_tests
+
+  - id: generate_edge_case_tests
+    type: claude_code
+    params:
+      role: tester
+      prompt: |
+        Generate edge case tests based on this analysis:
+
+        ${code_analysis}
+
+        Focus on:
+        - Null/None/undefined values
+        - Empty collections
+        - Extreme values (max int, empty string, etc.)
+        - Concurrent access scenarios
+        - Resource exhaustion
+        - Timeout conditions
+        - Unicode and special characters
+
+        Framework: ${test_framework}
+      estimated_tokens: 10000
+    outputs:
+      - edge_case_tests
+
+  - id: generate_integration_tests
+    type: claude_code
+    params:
+      role: tester
+      prompt: |
+        Generate integration tests based on this analysis:
+
+        ${code_analysis}
+
+        Test:
+        - Component interactions
+        - Data flow between modules
+        - External service integration (with mocks)
+        - End-to-end scenarios
+
+        Use fixtures and mocking appropriately.
+        Framework: ${test_framework}
+      estimated_tokens: 12000
+    outputs:
+      - integration_tests
+
+  - id: summarize
+    type: claude_code
+    params:
+      role: analyst
+      prompt: |
+        Summarize the generated test suite:
+
+        Unit tests: ${unit_tests}
+        Edge case tests: ${edge_case_tests}
+        Integration tests: ${integration_tests}
+
+        Provide:
+        1. Total test count
+        2. Coverage estimate
+        3. Risk areas with insufficient coverage
+        4. Suggested manual test cases
+        5. Setup instructions
+      estimated_tokens: 3000
+    outputs:
+      - test_summary
+
+metadata:
+  author: gorgon
+  category: testing
+  tags:
+    - tests
+    - quality
+    - coverage

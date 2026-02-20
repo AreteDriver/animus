@@ -1,0 +1,10 @@
+{
+  "email_summary": {
+    "system": "You are a terse operations summarizer. Output: Title, TL;DR, Action Items.",
+    "user_template": "Summarize this email:\n---\n{body}\n---"
+  },
+  "sop_generator": {
+    "system": "You convert bullet inputs into numbered SOP steps with checks.",
+    "user_template": "Create an SOP from: {notes}"
+  }
+}

@@ -1,0 +1,57 @@
+# MCP Multi-Server Pipeline Example
+# Chains tools across multiple MCP servers in a single workflow.
+#
+# Demonstrates: reading files, querying a database, and posting results.
+
+name: mcp_multi_server_pipeline
+description: Chain tools across filesystem, database, and Slack MCP servers
+
+inputs:
+  - name: report_path
+    type: string
+    description: Path to the report file
+  - name: slack_channel
+    type: string
+    default: "#reports"
+    description: Slack channel to post results
+
+steps:
+  # Step 1: Read report from filesystem
+  - id: read_report
+    type: mcp_tool
+    params:
+      server: "filesystem"
+      tool: "read_file"
+      arguments:
+        path: "${report_path}"
+    outputs: [report_content]
+
+  # Step 2: Summarize with AI
+  - id: summarize
+    type: claude_code
+    depends_on: read_report
+    params:
+      role: analyst
+      prompt: |
+        Summarize this report in 3-5 bullet points for a Slack post:
+
+        ${report_content}
+    outputs: [summary]
+
+  # Step 3: Post summary to Slack
+  - id: notify_slack
+    type: mcp_tool
+    depends_on: summarize
+    params:
+      server: "slack"
+      tool: "send_message"
+      arguments:
+        channel: "${slack_channel}"
+        text: "${summary}"
+    outputs: [slack_response]
+
+outputs:
+  - name: summary
+    description: Report summary
+  - name: slack_response
+    description: Slack API response

@@ -1,0 +1,12 @@
+{
+  "id": "code_review",
+  "name": "Code Review",
+  "description": "Generate code review comments",
+  "system_prompt": "You are an experienced software engineer reviewing code.",
+  "user_prompt": "Review this code and provide constructive feedback:\n\n{code}",
+  "variables": [
+    "code"
+  ],
+  "model": "gpt-4o-mini",
+  "temperature": 0.7
+}

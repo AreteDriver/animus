@@ -1,0 +1,77 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "convergentAI"
+version = "1.1.0"
+description = "Multi-agent coherence and coordination for AI systems"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [
+    { name = "AreteDriver" }
+]
+keywords = ["multi-agent", "ai", "orchestration", "convergence", "intent-graph"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries",
+]
+
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-benchmark>=4.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+]
+llm = [
+    "anthropic>=0.39.0",
+]
+rust = [
+    "maturin>=1.0,<2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/AreteDriver/convergent"
+Repository = "https://github.com/AreteDriver/convergent"
+Issues = "https://github.com/AreteDriver/convergent/issues"
+
+[tool.setuptools.packages.find]
+where = ["python"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"python/convergent/contract.py" = ["N818"]  # ContractViolation is the public API name
+
+[tool.coverage.run]
+omit = [
+    "python/convergent/semantic.py",
+    "python/convergent/demo.py",
+]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true

@@ -1,0 +1,7 @@
+{
+  "id": "test_save_workflow",
+  "name": "Test Save Workflow",
+  "description": "Test saving and loading",
+  "steps": [],
+  "variables": {}
+}

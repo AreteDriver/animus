@@ -1,0 +1,10 @@
+{
+  "id": "security_review",
+  "name": "Security Review",
+  "description": "Security-focused code review",
+  "system_prompt": "You are a security engineer performing code audits. Identify vulnerabilities, insecure patterns, and potential attack vectors. Reference OWASP guidelines where applicable.",
+  "user_prompt": "Perform a security review of this code:\n\n{code}\n\nContext: {context}\n\nCheck for:\n- Injection vulnerabilities (SQL, XSS, command)\n- Authentication/authorization issues\n- Sensitive data exposure\n- Insecure dependencies\n- Input validation gaps\n- Cryptographic weaknesses\n\nFor each finding, provide severity (Critical/High/Medium/Low) and remediation.",
+  "variables": ["code", "context"],
+  "model": "gpt-4o-mini",
+  "temperature": 0.3
+}

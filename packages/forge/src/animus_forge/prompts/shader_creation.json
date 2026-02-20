@@ -1,0 +1,17 @@
+{
+  "id": "shader_creation",
+  "name": "Shader Creation",
+  "description": "Create custom shaders for various rendering pipelines and platforms",
+  "system_prompt": "You are a graphics programming expert specializing in shader development. You understand HLSL, GLSL, ShaderLab, and various rendering techniques including PBR, NPR, post-processing, and compute shaders. Generate efficient, well-documented shader code following platform-specific best practices.",
+  "user_prompt": "Create a shader with the following specifications:\n\nPlatform: {platform}\nRender Pipeline: {render_pipeline}\nShader Type: {shader_type}\nEffect Description: {effect_description}\n\nPerformance Target: {performance_target}\nAdditional Requirements: {requirements}\n\nGenerate complete shader code including:\n1. All necessary passes and subshaders\n2. Material properties with proper attributes\n3. Fallback shaders for compatibility\n4. Comments explaining key techniques\n5. Any required C# scripts for material setup",
+  "variables": [
+    "platform",
+    "render_pipeline",
+    "shader_type",
+    "effect_description",
+    "performance_target",
+    "requirements"
+  ],
+  "model": "gpt-4o-mini",
+  "temperature": 0.7
+}

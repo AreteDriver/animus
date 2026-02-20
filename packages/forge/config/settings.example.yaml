@@ -1,0 +1,21 @@
+app:
+  name: AI Workflow Orchestrator
+  host: 127.0.0.1
+  port: 8000
+  log_dir: logs
+
+integrations:
+  openai:
+    api_key: "${OPENAI_API_KEY}"
+    model: "gpt-4o-mini"
+  notion:
+    api_key: "${NOTION_API_KEY}"
+    database_id: "REPLACE_WITH_DB_ID"
+  gmail:
+    user_id: "me"   # Gmail API uses 'me' for the authenticated user
+  github:
+    token: "${GITHUB_TOKEN}"
+    repo: "AreteDriver/AI_Workflow_Orchestrator"
+
+workflows:
+  default: "email_to_notion_to_git"

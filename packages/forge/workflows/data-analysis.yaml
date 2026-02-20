@@ -1,0 +1,104 @@
+name: Data Analysis Pipeline
+version: "1.0"
+description: Analyze data sources, generate insights, and create visualizations
+
+token_budget: 80000
+timeout_seconds: 1800
+
+inputs:
+  analysis_request:
+    type: string
+    required: true
+    description: What analysis to perform
+  data_source:
+    type: object
+    required: true
+    description: Data source information (tables, files, connection details)
+  output_format:
+    type: string
+    required: false
+    default: "all"
+    description: Output format (sql, pandas, visualization, report, all)
+
+outputs:
+  - analysis
+  - code
+  - visualizations
+
+steps:
+  - id: plan_analysis
+    type: claude_code
+    params:
+      role: planner
+      prompt: |
+        Plan a data analysis for the following request:
+
+        Request: ${analysis_request}
+        Data Source: ${data_source}
+        Output Format: ${output_format}
+
+        Create a plan including:
+        1. Data exploration steps
+        2. Analysis methodology
+        3. Expected outputs and visualizations
+        4. Data quality checks needed
+      estimated_tokens: 3000
+    outputs:
+      - plan
+    on_failure: abort
+
+  - id: analyze_data
+    type: claude_code
+    params:
+      role: data_analyst
+      prompt: |
+        Perform the data analysis:
+
+        Plan: ${plan}
+        Request: ${analysis_request}
+        Data Source: ${data_source}
+        Output Format: ${output_format}
+
+        Generate:
+        1. SQL queries (if applicable)
+        2. Python/pandas code for analysis
+        3. Visualization code (matplotlib/plotly)
+        4. Key findings and insights
+        5. Recommendations
+      estimated_tokens: 15000
+    outputs:
+      - analysis
+      - code
+      - findings
+    on_failure: retry
+    max_retries: 2
+
+  - id: review_analysis
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Review the data analysis:
+
+        Analysis: ${analysis}
+        Code: ${code}
+        Findings: ${findings}
+
+        Evaluate:
+        1. Query efficiency and correctness
+        2. Statistical validity
+        3. Visualization clarity
+        4. Insights quality
+      estimated_tokens: 3000
+    outputs:
+      - review
+    on_failure: skip
+
+metadata:
+  author: gorgon
+  category: data
+  tags:
+    - data-analysis
+    - sql
+    - pandas
+    - visualization

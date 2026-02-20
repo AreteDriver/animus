@@ -1,0 +1,89 @@
+# Map-Reduce Analysis Example
+# Demonstrates the map-reduce pattern for large-scale data analysis
+#
+# This workflow analyzes log files by mapping analysis over each file,
+# then reducing results into a comprehensive report.
+
+name: map_reduce_log_analysis
+description: Analyze multiple log files using map-reduce pattern
+
+inputs:
+  - name: log_files
+    type: list
+    description: List of log file paths to analyze
+  - name: analysis_focus
+    type: string
+    default: "errors, performance bottlenecks, security events"
+    description: What to look for in the logs
+
+steps:
+  # Map-Reduce combines fan-out and fan-in in a single step
+  - id: analyze_logs
+    type: map_reduce
+    params:
+      items: "${log_files}"
+      max_concurrent: 3
+      fail_fast: false
+
+      # Map step: runs on each item
+      map_step:
+        type: claude_code
+        params:
+          role: analyst
+          prompt: |
+            Analyze this log file for: ${analysis_focus}
+
+            File: ${item}
+
+            Extract:
+            - Error count by type
+            - Warning patterns
+            - Performance metrics (response times, throughput)
+            - Anomalies detected
+            - Time range covered
+
+            Return structured JSON with these fields.
+
+      # Reduce step: aggregates all map results
+      reduce_step:
+        type: claude_code
+        params:
+          role: reporter
+          prompt: |
+            Combine these log analysis results into a comprehensive report.
+
+            Individual analyses:
+            ${map_results}
+
+            Create a report with:
+            1. Overall system health summary
+            2. Total error breakdown (aggregated across all logs)
+            3. Performance trends
+            4. Critical issues requiring attention
+            5. Recommendations for improvement
+            6. Timeline of significant events
+    outputs: [analysis_report]
+
+  # Optional: Generate alerts for critical findings
+  - id: generate_alerts
+    type: claude_code
+    depends_on: [analyze_logs]
+    params:
+      role: analyst
+      prompt: |
+        Based on this analysis report, identify items that need immediate alerts:
+
+        ${analysis_report}
+
+        For each alert, provide:
+        - Severity (critical/high/medium)
+        - Description
+        - Recommended action
+        - Affected systems
+    outputs: [alerts]
+
+outputs:
+  - name: analysis_report
+    description: Comprehensive analysis report
+  - name: alerts
+    description: List of alerts for critical issues

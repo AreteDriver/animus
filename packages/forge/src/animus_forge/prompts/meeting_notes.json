@@ -1,0 +1,12 @@
+{
+  "id": "meeting_notes",
+  "name": "Meeting Notes",
+  "description": "Generate meeting notes from transcript",
+  "system_prompt": "You are an expert at organizing meeting notes.",
+  "user_prompt": "Create structured meeting notes from this transcript:\n\n{transcript}\n\nInclude: key points, action items, and decisions.",
+  "variables": [
+    "transcript"
+  ],
+  "model": "gpt-4o-mini",
+  "temperature": 0.7
+}

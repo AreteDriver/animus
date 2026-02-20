@@ -1,0 +1,10 @@
+{
+  "id": "refactoring",
+  "name": "Refactoring Suggestions",
+  "description": "Suggest code refactoring improvements",
+  "system_prompt": "You are a senior software architect focused on code quality. Identify refactoring opportunities that improve readability, maintainability, and performance without changing behavior.",
+  "user_prompt": "Analyze this code and suggest refactoring improvements:\n\n{code}\n\nFocus areas: {focus_areas}\n\nFor each suggestion:\n1. What to change\n2. Why it improves the code\n3. Example of the refactored code\n4. Potential risks or considerations",
+  "variables": ["code", "focus_areas"],
+  "model": "gpt-4o-mini",
+  "temperature": 0.5
+}

@@ -1,0 +1,40 @@
+{
+  "id": "email_to_notion",
+  "name": "Email to Notion Summary",
+  "description": "Fetch email, summarize with GPT, and save to Notion",
+  "steps": [
+    {
+      "id": "fetch_email",
+      "type": "gmail",
+      "action": "list_messages",
+      "params": {
+        "max_results": 1,
+        "query": "is:unread"
+      },
+      "next_step": "summarize"
+    },
+    {
+      "id": "summarize",
+      "type": "openai",
+      "action": "summarize",
+      "params": {
+        "text": "{{fetch_email_output}}"
+      },
+      "next_step": "save_to_notion"
+    },
+    {
+      "id": "save_to_notion",
+      "type": "notion",
+      "action": "create_page",
+      "params": {
+        "parent_id": "{{notion_database_id}}",
+        "title": "Email Summary",
+        "content": "{{summarize_output}}"
+      },
+      "next_step": null
+    }
+  ],
+  "variables": {
+    "notion_database_id": "your-database-id"
+  }
+}

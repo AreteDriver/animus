@@ -1,0 +1,65 @@
+{
+  "id": "knowledge_capture",
+  "name": "Knowledge Capture to Notion",
+  "description": "Analyze a topic using AI and save structured notes to a Notion database",
+  "steps": [
+    {
+      "id": "analyze_topic",
+      "type": "openai",
+      "action": "generate_completion",
+      "params": {
+        "prompt": "Analyze the following topic and provide structured notes including:\n1. Key concepts\n2. Important details\n3. Action items or next steps\n4. Related topics to explore\n\nTopic: {{topic}}",
+        "max_tokens": 1000
+      },
+      "next_step": "generate_title"
+    },
+    {
+      "id": "generate_title",
+      "type": "openai",
+      "action": "generate_completion",
+      "params": {
+        "prompt": "Generate a concise title (max 60 chars) for notes about: {{topic}}",
+        "max_tokens": 30
+      },
+      "next_step": "create_notion_entry"
+    },
+    {
+      "id": "create_notion_entry",
+      "type": "notion",
+      "action": "create_database_entry",
+      "params": {
+        "database_id": "{{notion_database_id}}",
+        "properties": {
+          "Name": {
+            "title": [{"text": {"content": "{{generate_title_output}}"}}]
+          },
+          "Type": {
+            "select": {"name": "Knowledge"}
+          },
+          "Tags": {
+            "multi_select": [{"name": "{{category}}"}]
+          },
+          "Status": {
+            "select": {"name": "New"}
+          }
+        }
+      },
+      "next_step": "add_content"
+    },
+    {
+      "id": "add_content",
+      "type": "notion",
+      "action": "append_to_page",
+      "params": {
+        "page_id": "{{create_notion_entry_output.id}}",
+        "content": "{{analyze_topic_output}}"
+      },
+      "next_step": null
+    }
+  ],
+  "variables": {
+    "notion_database_id": "your-database-id",
+    "topic": "",
+    "category": "General"
+  }
+}
