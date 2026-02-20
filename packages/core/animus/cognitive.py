@@ -285,6 +285,46 @@ class AnthropicModel(ModelInterface):
             logger.error(f"Anthropic error: {e}")
             return f"[Error communicating with Anthropic: {e}]"
 
+    def generate_with_tools(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        tools: list[dict] | None = None,
+        max_tokens: int = 4096,
+    ) -> Any:
+        """Generate a response using Anthropic native tool_use.
+
+        Args:
+            messages: Conversation messages in Anthropic format.
+            system: System prompt.
+            tools: Tool definitions in Anthropic format (input_schema).
+            max_tokens: Maximum tokens to generate.
+
+        Returns:
+            Raw ``anthropic.types.Message`` object.
+        """
+        try:
+            import anthropic
+
+            client = anthropic.Anthropic(api_key=self.config.api_key)
+
+            kwargs: dict[str, Any] = {
+                "model": self.config.model_name,
+                "max_tokens": max_tokens,
+                "system": system or "You are a helpful assistant.",
+                "messages": messages,
+            }
+            if tools:
+                kwargs["tools"] = tools
+
+            return client.messages.create(**kwargs)
+
+        except ImportError:
+            logger.error("anthropic package not installed")
+            raise
+        except Exception:
+            raise
+
     async def generate_stream(self, prompt: str, system: str | None = None) -> AsyncIterator[str]:
         """Streaming generation - to be implemented."""
         yield self.generate(prompt, system)
@@ -536,11 +576,8 @@ When you have gathered enough information, provide your final answer."""
         """
         Generate a response with tool use capability.
 
-        This implements an agentic loop that:
-        1. Generates a response (possibly with tool calls)
-        2. Parses and executes tool calls
-        3. Feeds results back to the model
-        4. Repeats until no more tool calls or max iterations
+        Dispatches to native Anthropic tool_use when the primary model is
+        AnthropicModel, otherwise falls back to the markdown-based agentic loop.
 
         Args:
             prompt: User's input
@@ -555,9 +592,112 @@ When you have gathered enough information, provide your final answer."""
             Final response after tool execution
         """
         if not tools or not tools.list_tools():
-            # No tools available, fall back to regular think
             return self.think(prompt, context, mode)
 
+        if isinstance(self.primary, AnthropicModel):
+            return self._think_with_tools_anthropic(
+                prompt, context, mode, tools, max_iterations, approval_callback
+            )
+        return self._think_with_tools_markdown(
+            prompt, context, mode, tools, max_iterations, approval_callback
+        )
+
+    def _think_with_tools_anthropic(
+        self,
+        prompt: str,
+        context: str | None = None,
+        mode: ReasoningMode = ReasoningMode.QUICK,
+        tools: "ToolRegistry | None" = None,
+        max_iterations: int = 5,
+        approval_callback: "callable | None" = None,
+    ) -> str:
+        """Agentic loop using Anthropic native tool_use.
+
+        Uses structured tool_use content blocks instead of markdown parsing.
+        """
+        from animus.tools import tools_to_anthropic_format
+
+        system = self._build_system_prompt(context, mode)
+        anthropic_tools = tools_to_anthropic_format(tools)
+        messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
+
+        for _ in range(max_iterations):
+            response = self.primary.generate_with_tools(
+                messages=messages,
+                system=system,
+                tools=anthropic_tools,
+            )
+
+            # Collect text and tool_use blocks from the response
+            text_parts: list[str] = []
+            tool_use_blocks: list[Any] = []
+            for block in response.content:
+                if block.type == "text":
+                    text_parts.append(block.text)
+                elif block.type == "tool_use":
+                    tool_use_blocks.append(block)
+
+            if not tool_use_blocks:
+                # No tool calls — return final text
+                return "\n".join(text_parts) if text_parts else ""
+
+            # Build assistant message with ALL content blocks (text + tool_use)
+            messages.append({"role": "assistant", "content": response.content})
+
+            # Execute each tool and build tool_result messages
+            tool_results: list[dict[str, Any]] = []
+            for block in tool_use_blocks:
+                tool = tools.get(block.name)
+                if not tool:
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": f"Error: Unknown tool '{block.name}'",
+                            "is_error": True,
+                        }
+                    )
+                    continue
+
+                if tool.requires_approval and approval_callback:
+                    if not approval_callback(block.name, block.input):
+                        tool_results.append(
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": block.id,
+                                "content": f"Tool '{block.name}' was not approved",
+                                "is_error": True,
+                            }
+                        )
+                        continue
+
+                result = tools.execute(block.name, block.input)
+                tool_results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result.to_context(),
+                        "is_error": not result.success,
+                    }
+                )
+                logger.debug(f"Tool {block.name} result: success={result.success}")
+
+            messages.append({"role": "user", "content": tool_results})
+
+        # Max iterations reached — return whatever text we have
+        logger.warning(f"Max tool iterations ({max_iterations}) reached")
+        return "\n".join(text_parts) if text_parts else ""
+
+    def _think_with_tools_markdown(
+        self,
+        prompt: str,
+        context: str | None = None,
+        mode: ReasoningMode = ReasoningMode.QUICK,
+        tools: "ToolRegistry | None" = None,
+        max_iterations: int = 5,
+        approval_callback: "callable | None" = None,
+    ) -> str:
+        """Agentic loop using markdown ```tool blocks (Ollama/Mock/OpenAI)."""
         tools_schema = tools.get_schema_text()
         system = self._build_system_prompt(context, mode, tools_schema)
 

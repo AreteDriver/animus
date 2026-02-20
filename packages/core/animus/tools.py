@@ -911,6 +911,24 @@ BUILTIN_TOOLS = [
 ]
 
 
+def tools_to_anthropic_format(registry: ToolRegistry) -> list[dict]:
+    """Convert ToolRegistry to Anthropic tool_use format.
+
+    Anthropic expects ``input_schema`` instead of ``parameters``.
+    Tool.parameters is already JSON Schema, so this is a key rename.
+    """
+    result = []
+    for tool in registry.list_tools():
+        result.append(
+            {
+                "name": tool.name,
+                "description": tool.description,
+                "input_schema": tool.parameters,
+            }
+        )
+    return result
+
+
 def create_default_registry(security_config=None) -> ToolRegistry:
     """Create a ToolRegistry with all built-in tools registered.
 

@@ -12,8 +12,8 @@
 |-------|-------------|--------|
 | 1. Validate | Venvs, imports, Ollama, deps | DONE |
 | 2. Code Quality | Lint, CodeQL, empty-except, `__all__` | DONE |
-| 3. Test Suite | 9,267 tests across 3 packages | DONE |
-| 4. Deploy | Systemd services, health checks | **TODO** |
+| 3. Test Suite | 9,260 tests across 3 packages | DONE |
+| 4. Deploy | Systemd services, health checks | DONE |
 | 5. Harden | Exception narrowing, type hints, dep audit | **TODO** |
 | 6. Self-Improve | Review loop, test generation, coverage push | **TODO** |
 
@@ -97,9 +97,9 @@ You are an autonomous agent running via Ollama on this machine. Animus is a pers
 | Package | Tests | Coverage | Threshold | Status |
 |---------|-------|----------|-----------|--------|
 | Quorum  | 906   | 97%      | fail_under=97 | ALL PASSING |
-| Core    | 1,630 | 95%      | fail_under=95 | ALL PASSING (106 skips = optional deps) |
-| Forge   | 6,731 | 86%      | fail_under=85 | ALL PASSING |
-| **Total** | **9,267** | | | |
+| Core    | 1,648 | 95%      | fail_under=95 | ALL PASSING (106 skips = optional deps) |
+| Forge   | 6,706 | 86%      | fail_under=85 | ALL PASSING |
+| **Total** | **9,260** | | | |
 
 **Infrastructure:**
 - Virtual environments: all 3 created and verified (`packages/{core,forge,quorum}/.venv/`)
@@ -183,8 +183,8 @@ animus-forge validate workflows/code-review.yaml
 ```bash
 cd ~/projects/animus/packages/core && source .venv/bin/activate
 python3 -c "
-from animus.cognitive import CognitiveLayer, ModelProvider
-layer = CognitiveLayer(provider=ModelProvider.OLLAMA)
+from animus.cognitive import CognitiveLayer, ModelConfig
+layer = CognitiveLayer(primary_config=ModelConfig.ollama('llama3.1:8b'))
 import asyncio
 result = asyncio.run(layer.think('What is 2+2? Reply with just the number.'))
 print(f'Ollama response: {result}')
@@ -454,7 +454,7 @@ The system has three layers:
 - Forge: Multi-agent orchestration, workflow execution, budget management
 - Quorum: Coordination protocol, intent graphs, voting, stigmergy
 
-9,267 tests across 3 packages. All passing. Deployed locally.
+9,260 tests across 3 packages. All passing. Deployed locally.
 
 Answer the following question about the system: <question>
 ```
@@ -586,12 +586,12 @@ python3 ~/projects/animus/scripts/review.py <filepath>
 **Phase 4 (Deploy) -- done when:**
 - [x] All 3 packages import cleanly
 - [x] Ollama responds to prompts
-- [x] 9,267 tests pass (906 + 1,630 + 6,731)
+- [x] 9,260 tests pass (906 + 1,630 + 6,731)
 - [x] Lint clean
 - [x] 0 CodeQL alerts
-- [ ] Forge API runs as systemd service (`curl localhost:8000/health`)
-- [ ] Core can reach Forge via HTTP
-- [ ] Service survives logout (`loginctl enable-linger`)
+- [x] Forge API runs as systemd service (`curl localhost:8000/health`)
+- [x] Core can reach Forge via HTTP
+- [x] Service survives logout (`loginctl enable-linger`)
 
 **Phase 5 (Harden) -- done when:**
 - [ ] No broad `except Exception` without justification (outside API routes/CLI)

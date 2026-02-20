@@ -57,13 +57,13 @@ core/
 # test
 pytest tests/ -v
 # lint
-ruff check src/ tests/
+ruff check animus/ tests/
 # format
-ruff format src/ tests/
+ruff format animus/ tests/
 # type check
-mypy src/
+mypy animus/
 # coverage
-pytest --cov=src/ tests/
+pytest --cov=animus/ tests/
 # animus
 animus.__main__:main
 ```

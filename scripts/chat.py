@@ -9,15 +9,20 @@ import sys
 # Ensure animus package is importable from monorepo
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "packages", "core"))
 
+from pathlib import Path
+
 from animus.cognitive import (
     CognitiveLayer,
     ModelConfig,
     detect_mode,
 )
 from animus.config import AnimusConfig
+from animus.forge import ForgeEngine
+from animus.forge.loader import load_workflow
+from animus.forge.models import ForgeError
 from animus.logging import setup_logging
 from animus.memory import Conversation, MemoryLayer
-from animus.tools import create_default_registry, create_memory_tools
+from animus.tools import ToolRegistry, create_default_registry, create_memory_tools
 
 # ANSI colors
 CYAN = "\033[0;36m"
@@ -115,11 +120,74 @@ def approval_callback(tool_name: str, params: dict) -> bool:
         return False
 
 
+WORKFLOW_DIRS = [
+    Path(ANIMUS_ROOT) / "packages" / "core" / "configs" / "examples",
+    Path(ANIMUS_ROOT) / "packages" / "core" / "configs" / "media_engine",
+    Path(ANIMUS_ROOT) / "packages" / "forge" / "workflows",
+]
+
+
+def _list_workflows() -> list[Path]:
+    """Discover all YAML workflow files in known directories."""
+    workflows: list[Path] = []
+    for d in WORKFLOW_DIRS:
+        if d.is_dir():
+            workflows.extend(sorted(d.glob("*.yaml")))
+            workflows.extend(sorted(d.glob("*.yml")))
+    return workflows
+
+
+def _run_workflow(
+    yaml_path: str,
+    cognitive: CognitiveLayer,
+    tools: ToolRegistry | None = None,
+) -> None:
+    """Load and execute a Forge YAML workflow, printing results."""
+    path = Path(yaml_path).expanduser()
+    if not path.is_absolute():
+        path = Path(ANIMUS_ROOT) / path
+
+    if not path.exists():
+        print(f"{YELLOW}Workflow not found: {path}{NC}")
+        return
+
+    try:
+        config = load_workflow(path)
+    except ForgeError as e:
+        print(f"{YELLOW}Failed to load workflow: {e}{NC}")
+        return
+
+    checkpoint_dir = Path(ANIMUS_ROOT) / ".checkpoints"
+    checkpoint_dir.mkdir(exist_ok=True)
+    engine = ForgeEngine(cognitive=cognitive, checkpoint_dir=checkpoint_dir, tools=tools)
+
+    print(f"{CYAN}Running workflow: {config.name}{NC}")
+    print(f"  Steps: {len(config.agents)}  |  File: {path.name}")
+    print()
+
+    try:
+        state = engine.run(config)
+    except Exception as e:
+        print(f"{YELLOW}Workflow failed: {e}{NC}")
+        return
+
+    # Print results summary
+    print(f"\n{GREEN}Workflow {state.status}: {config.name}{NC}")
+    for result in state.results:
+        status = f"{GREEN}OK{NC}" if result.success else f"{YELLOW}FAIL{NC}"
+        cost = f"${result.cost_usd:.4f}"
+        print(f"  [{status}] {result.agent_name}  ({result.tokens_used} tokens, {cost})")
+        if result.error:
+            print(f"        {YELLOW}{result.error}{NC}")
+    print(f"\n  Total: {state.total_tokens} tokens, ${state.total_cost:.4f}")
+
+
 def handle_slash(
     cmd: str,
     memory: MemoryLayer,
     cognitive: CognitiveLayer,
     conversation: Conversation,
+    tools: ToolRegistry | None = None,
 ) -> str | None:
     """Handle slash commands. Returns 'quit', 'clear', or None if not handled."""
     parts = cmd.strip().split(None, 1)
@@ -155,6 +223,20 @@ def handle_slash(
             print(f"{YELLOW}  Tools will execute without confirmation.{NC}")
         return ""
 
+    if command == "/workflow":
+        arg = parts[1].strip() if len(parts) > 1 else ""
+        if not arg or arg == "list":
+            workflows = _list_workflows()
+            if not workflows:
+                print(f"{DIM}No workflow files found.{NC}")
+            else:
+                print(f"{BOLD}Available workflows:{NC}")
+                for wf in workflows:
+                    print(f"  {CYAN}{wf.relative_to(Path(ANIMUS_ROOT))}{NC}")
+        else:
+            _run_workflow(arg, cognitive, tools)
+        return ""
+
     if command in ("/help", "/?"):
         print(f"""
 {BOLD}Talk naturally. Animus acts as an agent with tools.{NC}
@@ -168,11 +250,17 @@ def handle_slash(
   {CYAN}add type hints to packages/core/animus/memory.py{NC}
 
 {BOLD}Slash commands:{NC}
-  {CYAN}/status{NC}   Provider, model, and memory info
-  {CYAN}/auto{NC}     Toggle auto-approve for tool execution
-  {CYAN}/clear{NC}    Save and reset conversation
-  {CYAN}/help{NC}     This message
-  {CYAN}/quit{NC}     Save and exit
+  {CYAN}/status{NC}     Provider, model, and memory info
+  {CYAN}/auto{NC}       Toggle auto-approve for tool execution
+  {CYAN}/workflow{NC}   List or run Forge YAML workflows
+  {CYAN}/clear{NC}      Save and reset conversation
+  {CYAN}/help{NC}       This message
+  {CYAN}/quit{NC}       Save and exit
+
+{BOLD}Workflow usage:{NC}
+  {CYAN}/workflow{NC}        List available workflows
+  {CYAN}/workflow list{NC}   List available workflows
+  {CYAN}/workflow <path>{NC} Run a workflow YAML file
 """)
         return ""
 
@@ -232,7 +320,7 @@ def main() -> None:
 
         # Slash commands
         if user_input.startswith("/"):
-            result = handle_slash(user_input, memory, cognitive, conversation)
+            result = handle_slash(user_input, memory, cognitive, conversation, tools)
             if result == "quit":
                 save_conversation(memory, conversation)
                 print(f"\n{DIM}Goodbye.{NC}")

@@ -154,7 +154,7 @@ animus_forge.cli:app
 - `ANALYZE`
 
 ### Outstanding Items
-- **TODO**: fix this bug\n") (`tests/test_self_improve_coverage.py`)
+- **TODO**: Fix self-improve coverage test artifact (`tests/test_self_improve_coverage.py`)
 
 ## Git Conventions
 

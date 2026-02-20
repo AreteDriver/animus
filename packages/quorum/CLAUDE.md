@@ -49,15 +49,15 @@ quorum/
 
 ```bash
 # test
-pytest tests/ -v
+PYTHONPATH=python pytest tests/ -v
 # lint
-ruff check src/ tests/
+ruff check python/convergent/ tests/
 # format
-ruff format src/ tests/
+ruff format python/convergent/ tests/
 # type check
-mypy src/
+mypy python/convergent/
 # coverage
-pytest --cov=src/ tests/
+PYTHONPATH=python pytest --cov=convergent tests/
 ```
 
 ## Anti-Patterns (Do NOT Do)

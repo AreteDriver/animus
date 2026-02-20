@@ -384,3 +384,225 @@ class TestConfigProviderWiring:
         cfg = CfgModelConfig()
         assert cfg.provider == "ollama"
         assert cfg.name == "llama3:8b"
+
+
+# ---------------------------------------------------------------------------
+# Anthropic native tool_use tests
+# ---------------------------------------------------------------------------
+
+
+class TestToolsToAnthropicFormat:
+    """Test tools_to_anthropic_format conversion."""
+
+    def test_basic_conversion(self):
+        from animus.tools import Tool, ToolRegistry, tools_to_anthropic_format
+
+        registry = ToolRegistry()
+        registry.register(
+            Tool(
+                name="my_tool",
+                description="A test tool",
+                parameters={"type": "object", "properties": {"x": {"type": "string"}}},
+                handler=lambda p: None,
+            )
+        )
+        result = tools_to_anthropic_format(registry)
+        assert len(result) == 1
+        assert result[0]["name"] == "my_tool"
+        assert result[0]["description"] == "A test tool"
+        assert "input_schema" in result[0]
+        assert "parameters" not in result[0]
+        assert result[0]["input_schema"]["properties"]["x"]["type"] == "string"
+
+
+class TestThinkWithToolsAnthropicPath:
+    """Test _think_with_tools_anthropic using mocked AnthropicModel."""
+
+    def _make_anthropic_cognitive(self):
+        """Create a CognitiveLayer with a real AnthropicModel (mocked calls)."""
+        from animus.cognitive import AnthropicModel
+
+        config = ModelConfig.anthropic("claude-sonnet-4-20250514")
+        cog = CognitiveLayer(primary_config=config)
+        assert isinstance(cog.primary, AnthropicModel)
+        return cog
+
+    def _make_tool_registry(self):
+        from animus.tools import Tool, ToolRegistry, ToolResult
+
+        registry = ToolRegistry()
+        registry.register(
+            Tool(
+                name="get_time",
+                description="Get current time",
+                parameters={
+                    "type": "object",
+                    "properties": {"tz": {"type": "string"}},
+                    "required": [],
+                },
+                handler=lambda p: ToolResult(tool_name="get_time", success=True, output="12:00 PM"),
+            )
+        )
+        registry.register(
+            Tool(
+                name="dangerous_tool",
+                description="Needs approval",
+                parameters={"type": "object", "properties": {}, "required": []},
+                handler=lambda p: ToolResult(
+                    tool_name="dangerous_tool", success=True, output="executed"
+                ),
+                requires_approval=True,
+            )
+        )
+        return registry
+
+    def _mock_text_response(self, text):
+        """Build a mock Anthropic Message with only text content."""
+        block = MagicMock()
+        block.type = "text"
+        block.text = text
+        msg = MagicMock()
+        msg.content = [block]
+        return msg
+
+    def _mock_tool_use_response(self, tool_name, tool_input, tool_use_id="tu_123"):
+        """Build a mock Anthropic Message with a tool_use block."""
+        text_block = MagicMock()
+        text_block.type = "text"
+        text_block.text = "Let me check."
+
+        tool_block = MagicMock()
+        tool_block.type = "tool_use"
+        tool_block.name = tool_name
+        tool_block.input = tool_input
+        tool_block.id = tool_use_id
+
+        msg = MagicMock()
+        msg.content = [text_block, tool_block]
+        return msg
+
+    def test_no_tool_call_returns_text(self):
+        """Text-only response from Anthropic — no tool calls."""
+        cog = self._make_anthropic_cognitive()
+        tools = self._make_tool_registry()
+
+        cog.primary.generate_with_tools = MagicMock(
+            return_value=self._mock_text_response("Just a simple answer.")
+        )
+
+        result = cog.think_with_tools("What is 2+2?", tools=tools)
+        assert result == "Just a simple answer."
+
+    def test_with_tool_call(self):
+        """Model calls a tool, then returns final text."""
+        cog = self._make_anthropic_cognitive()
+        tools = self._make_tool_registry()
+
+        # First call: tool_use, second call: text-only
+        cog.primary.generate_with_tools = MagicMock(
+            side_effect=[
+                self._mock_tool_use_response("get_time", {"tz": "UTC"}),
+                self._mock_text_response("It's 12:00 PM UTC."),
+            ]
+        )
+
+        result = cog.think_with_tools("What time is it?", tools=tools)
+        assert result == "It's 12:00 PM UTC."
+        assert cog.primary.generate_with_tools.call_count == 2
+
+    def test_approval_denied(self):
+        """Tool requiring approval is denied by callback."""
+        cog = self._make_anthropic_cognitive()
+        tools = self._make_tool_registry()
+
+        cog.primary.generate_with_tools = MagicMock(
+            side_effect=[
+                self._mock_tool_use_response("dangerous_tool", {}, "tu_456"),
+                self._mock_text_response("OK, I won't do that."),
+            ]
+        )
+
+        result = cog.think_with_tools(
+            "Do the dangerous thing",
+            tools=tools,
+            approval_callback=lambda name, params: False,
+        )
+        assert result == "OK, I won't do that."
+
+    def test_multi_tool(self):
+        """Multiple tool_use blocks in one response."""
+        cog = self._make_anthropic_cognitive()
+        tools = self._make_tool_registry()
+
+        text_block = MagicMock()
+        text_block.type = "text"
+        text_block.text = "Checking both."
+
+        tool1 = MagicMock()
+        tool1.type = "tool_use"
+        tool1.name = "get_time"
+        tool1.input = {"tz": "UTC"}
+        tool1.id = "tu_1"
+
+        tool2 = MagicMock()
+        tool2.type = "tool_use"
+        tool2.name = "get_time"
+        tool2.input = {"tz": "EST"}
+        tool2.id = "tu_2"
+
+        multi_msg = MagicMock()
+        multi_msg.content = [text_block, tool1, tool2]
+
+        cog.primary.generate_with_tools = MagicMock(
+            side_effect=[
+                multi_msg,
+                self._mock_text_response("UTC is 12:00 PM, EST is 7:00 AM."),
+            ]
+        )
+
+        result = cog.think_with_tools("Times in UTC and EST?", tools=tools)
+        assert "12:00 PM" in result
+        assert cog.primary.generate_with_tools.call_count == 2
+
+    def test_unknown_tool(self):
+        """Model calls a tool that doesn't exist in registry."""
+        cog = self._make_anthropic_cognitive()
+        tools = self._make_tool_registry()
+
+        cog.primary.generate_with_tools = MagicMock(
+            side_effect=[
+                self._mock_tool_use_response("nonexistent", {}, "tu_bad"),
+                self._mock_text_response("Sorry, that tool failed."),
+            ]
+        )
+
+        result = cog.think_with_tools("Use the missing tool", tools=tools)
+        assert result == "Sorry, that tool failed."
+
+    def test_markdown_path_still_works(self):
+        """Regression: Ollama/Mock still use the markdown path."""
+        tool_response = (
+            'Let me check.\n```tool\n{"tool": "test_tool", "params": {"key": "val"}}\n```'
+        )
+        config = ModelConfig.mock(
+            default_response=tool_response,
+            response_map={"Tool results:": "Final answer from markdown path."},
+        )
+        cog = CognitiveLayer(primary_config=config)
+
+        mock_registry = MagicMock()
+        mock_registry.list_tools.return_value = ["test_tool"]
+        mock_registry.get_schema_text.return_value = "Available tools: test_tool"
+
+        mock_tool = MagicMock()
+        mock_tool.requires_approval = False
+        mock_registry.get.return_value = mock_tool
+
+        mock_result = MagicMock()
+        mock_result.success = True
+        mock_result.to_context.return_value = "Tool result: done"
+        mock_registry.execute.return_value = mock_result
+
+        result = cog.think_with_tools("Hello", tools=mock_registry, max_iterations=3)
+        assert result == "Final answer from markdown path."
+        mock_registry.execute.assert_called_once_with("test_tool", {"key": "val"})
