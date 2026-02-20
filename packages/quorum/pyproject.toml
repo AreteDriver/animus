@@ -45,9 +45,9 @@ rust = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/AreteDriver/convergent"
-Repository = "https://github.com/AreteDriver/convergent"
-Issues = "https://github.com/AreteDriver/convergent/issues"
+Homepage = "https://github.com/AreteDriver/animus"
+Repository = "https://github.com/AreteDriver/animus"
+Issues = "https://github.com/AreteDriver/animus/issues"
 
 [tool.setuptools.packages.find]
 where = ["python"]
