@@ -122,7 +122,7 @@ class PreferenceEngine:
                     pref = Preference.from_dict(item)
                     self._preferences[pref.id] = pref
                 logger.info(f"Loaded {len(data)} preferences")
-            except Exception as e:
+            except (json.JSONDecodeError, ValueError, OSError) as e:
                 logger.error(f"Failed to load preferences: {e}")
 
     def _save_preferences(self) -> None:

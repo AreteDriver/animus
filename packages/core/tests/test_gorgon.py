@@ -636,7 +636,7 @@ class TestCognitiveLayerDelegation:
     def test_delegate_error_falls_back(self):
         config = ModelConfig.mock(default_response="fallback reply")
         mock_client = AsyncMock()
-        mock_client.submit_task.side_effect = Exception("connection refused")
+        mock_client.submit_task.side_effect = ConnectionError("connection refused")
 
         cognitive = CognitiveLayer(primary_config=config, gorgon_client=mock_client)
 

@@ -165,7 +165,7 @@ class ApprovalManager:
                 for item in data.get("history", []):
                     self._history.append(ApprovalRequest.from_dict(item))
                 logger.info(f"Loaded {len(self._pending_requests)} pending requests")
-            except Exception as e:
+            except (json.JSONDecodeError, ValueError, OSError) as e:
                 logger.error(f"Failed to load approval requests: {e}")
 
     def _save_requests(self) -> None:

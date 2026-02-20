@@ -152,7 +152,7 @@ class RollbackManager:
                         )
                     )
                 logger.info(f"Loaded {len(self._rollback_points)} rollback points")
-            except Exception as e:
+            except (json.JSONDecodeError, ValueError, OSError) as e:
                 logger.error(f"Failed to load rollback data: {e}")
 
     def _save_data(self) -> None:

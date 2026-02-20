@@ -116,7 +116,7 @@ class LearningLayer:
         try:
             logger.info("Running scheduled auto-scan")
             self.scan_and_learn()
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError, OSError, RuntimeError) as e:
             logger.error(f"Scheduled scan failed: {e}")
         finally:
             self._schedule_next_scan()
@@ -137,7 +137,7 @@ class LearningLayer:
                     item = LearnedItem.from_dict(item_data)
                     self._learned_items[item.id] = item
                 logger.info(f"Loaded {len(self._learned_items)} learned items")
-            except Exception as e:
+            except (json.JSONDecodeError, ValueError, OSError) as e:
                 logger.error(f"Failed to load learned items: {e}")
 
     def _save_learned_items(self) -> None:

@@ -125,7 +125,7 @@ class LearningTransparency:
                 for item in data:
                     self._events.append(LearningEvent.from_dict(item))
                 logger.info(f"Loaded {len(self._events)} learning events")
-            except Exception as e:
+            except (json.JSONDecodeError, ValueError, OSError) as e:
                 logger.error(f"Failed to load learning events: {e}")
 
     def _save_events(self) -> None:

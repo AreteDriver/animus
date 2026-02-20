@@ -219,7 +219,7 @@ class GuardrailManager:
                     guardrail = Guardrail.from_dict(item)
                     self._guardrails[guardrail.id] = guardrail
                 logger.info(f"Loaded {len(data)} user guardrails")
-            except Exception as e:
+            except (json.JSONDecodeError, ValueError, OSError) as e:
                 logger.error(f"Failed to load user guardrails: {e}")
 
     def _save_user_guardrails(self) -> None:

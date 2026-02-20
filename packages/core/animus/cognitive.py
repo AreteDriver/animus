@@ -242,7 +242,7 @@ class OllamaModel(ModelInterface):
         except ImportError:
             logger.error("ollama package not installed")
             return "[Error: ollama package not installed]"
-        except Exception as e:
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
             logger.error(f"Ollama error: {e}")
             return f"[Error communicating with Ollama: {e}]"
 
@@ -281,7 +281,7 @@ class AnthropicModel(ModelInterface):
         except ImportError:
             logger.error("anthropic package not installed")
             return "[Error: anthropic package not installed]"
-        except Exception as e:
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
             logger.error(f"Anthropic error: {e}")
             return f"[Error communicating with Anthropic: {e}]"
 
@@ -374,7 +374,7 @@ class OpenAIModel(ModelInterface):
         except ImportError:
             logger.error("openai package not installed")
             return "[Error: openai package not installed. Install with: pip install openai]"
-        except Exception as e:
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
             logger.error(f"OpenAI error: {e}")
             return f"[Error communicating with OpenAI: {e}]"
 
@@ -464,7 +464,7 @@ class CognitiveLayer:
         # Try primary model
         try:
             response = self.primary.generate(prompt, system)
-        except Exception as e:
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
             logger.warning(f"Primary model failed: {e}")
             # Fall back if available
             if self.fallback:
@@ -888,6 +888,6 @@ Provide a clear, structured briefing."""
                 description=prompt,
                 priority=priority,
             )
-        except Exception as e:
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError, OSError) as e:
             logger.warning(f"Gorgon delegation failed, falling back: {e}")
             return {"fallback": True, "response": self.think(prompt)}

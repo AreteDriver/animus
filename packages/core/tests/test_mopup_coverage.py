@@ -118,7 +118,7 @@ class TestAnthropicModel:
         model = AnthropicModel(config)
 
         mock_anthropic = MagicMock()
-        mock_anthropic.Anthropic.return_value.messages.create.side_effect = Exception("auth failed")
+        mock_anthropic.Anthropic.return_value.messages.create.side_effect = RuntimeError("auth failed")
         with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
             result = model.generate("test")
         assert "Error" in result
@@ -188,7 +188,7 @@ class TestOpenAIModel:
         model = OpenAIModel(config)
 
         mock_openai = MagicMock()
-        mock_openai.OpenAI.return_value.chat.completions.create.side_effect = Exception("fail")
+        mock_openai.OpenAI.return_value.chat.completions.create.side_effect = RuntimeError("fail")
         with patch.dict("sys.modules", {"openai": mock_openai}):
             result = model.generate("test")
         assert "Error" in result
