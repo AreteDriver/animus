@@ -7,7 +7,7 @@
 - **Version**: 2.0.0
 - **Python**: >=3.10 (Core), >=3.12 (Forge)
 - **Layout**: Multi-package monorepo under `packages/`
-- **Tests**: ~9,300 across 3 packages
+- **Tests**: 9,373 across 3 packages
 - **License**: MIT
 
 ## Monorepo Structure
@@ -21,7 +21,8 @@ animus/
 │   │   └── pyproject.toml
 │   ├── forge/                   # Animus Forge — multi-agent orchestration (was: Gorgon)
 │   │   ├── src/animus_forge/    # Python package: import animus_forge
-│   │   ├── tests/               # 6706 tests, 85% coverage
+│   │   ├── tests/               # 6731 tests, 85% coverage
+│   │   ├── skills/              # Skill definitions (YAML + docs)
 │   │   ├── migrations/          # 14 SQL migrations
 │   │   ├── workflows/           # YAML workflow definitions
 │   │   └── pyproject.toml
@@ -52,11 +53,11 @@ pip install -e "packages/quorum/[dev]" -e "packages/forge/[dev]" -e "packages/co
 ```bash
 # Individual packages
 cd packages/core && pytest tests/ -v
-cd packages/forge && pytest tests/ -v
+cd packages/forge && pytest tests/ -v  # MUST run from forge dir (skills/workflows use relative paths)
 cd packages/quorum && PYTHONPATH=python pytest tests/ -v
 
-# All packages from root
-pytest packages/core/tests/ packages/forge/tests/ -v
+# From root (core + quorum work from root, forge needs working-directory)
+pytest packages/core/tests/ -v
 PYTHONPATH=packages/quorum/python pytest packages/quorum/tests/ -v
 ```
 
