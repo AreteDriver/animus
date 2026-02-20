@@ -86,13 +86,16 @@ CREATE TABLE IF NOT EXISTS outcome_records (
     tokens_used INTEGER NOT NULL,
     latency_ms REAL NOT NULL,
     metadata TEXT NOT NULL DEFAULT '{}',
-    timestamp TEXT NOT NULL
+    timestamp TEXT NOT NULL,
+    skill_name TEXT DEFAULT '',
+    skill_version TEXT DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_outcome_agent_role ON outcome_records(agent_role);
 CREATE INDEX IF NOT EXISTS idx_outcome_provider ON outcome_records(provider);
 CREATE INDEX IF NOT EXISTS idx_outcome_workflow ON outcome_records(workflow_id);
 CREATE INDEX IF NOT EXISTS idx_outcome_timestamp ON outcome_records(timestamp);
+CREATE INDEX IF NOT EXISTS idx_outcome_skill_name ON outcome_records(skill_name);
 """
 
 
