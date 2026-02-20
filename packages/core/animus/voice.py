@@ -40,7 +40,7 @@ class VoiceInput:
         self._listen_thread: threading.Thread | None = None
         logger.debug(f"VoiceInput initialized with model: {model}")
 
-    def _load_model(self):
+    def _load_model(self) -> None:
         """Lazy-load Whisper model."""
         if self._model is None:
             try:

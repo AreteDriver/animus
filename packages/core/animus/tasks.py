@@ -94,7 +94,7 @@ class TaskTracker:
         self._load()
         logger.debug(f"TaskTracker initialized at {data_dir}")
 
-    def _load(self):
+    def _load(self) -> None:
         """Load tasks from disk."""
         if self.tasks_file.exists():
             with open(self.tasks_file) as f:
@@ -102,7 +102,7 @@ class TaskTracker:
                 self._tasks = {k: Task.from_dict(v) for k, v in data.items()}
             logger.info(f"Loaded {len(self._tasks)} tasks")
 
-    def _save(self):
+    def _save(self) -> None:
         """Save tasks to disk."""
         self.data_dir.mkdir(parents=True, exist_ok=True)
         with open(self.tasks_file, "w") as f:

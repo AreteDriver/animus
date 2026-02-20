@@ -571,7 +571,7 @@ When you have gathered enough information, provide your final answer."""
         mode: ReasoningMode = ReasoningMode.QUICK,
         tools: "ToolRegistry | None" = None,
         max_iterations: int = 5,
-        approval_callback: "callable | None" = None,
+        approval_callback: Callable | None = None,
     ) -> str:
         """
         Generate a response with tool use capability.
@@ -609,7 +609,7 @@ When you have gathered enough information, provide your final answer."""
         mode: ReasoningMode = ReasoningMode.QUICK,
         tools: "ToolRegistry | None" = None,
         max_iterations: int = 5,
-        approval_callback: "callable | None" = None,
+        approval_callback: Callable | None = None,
     ) -> str:
         """Agentic loop using Anthropic native tool_use.
 
@@ -695,7 +695,7 @@ When you have gathered enough information, provide your final answer."""
         mode: ReasoningMode = ReasoningMode.QUICK,
         tools: "ToolRegistry | None" = None,
         max_iterations: int = 5,
-        approval_callback: "callable | None" = None,
+        approval_callback: Callable | None = None,
     ) -> str:
         """Agentic loop using markdown ```tool blocks (Ollama/Mock/OpenAI)."""
         tools_schema = tools.get_schema_text()

@@ -472,7 +472,7 @@ class ChromaMemoryStore(MemoryStore):
 
         self._load_metadata()
 
-    def _load_metadata(self):
+    def _load_metadata(self) -> None:
         """Load memory metadata from ChromaDB."""
         try:
             results = self.collection.get(include=["metadatas", "documents"])

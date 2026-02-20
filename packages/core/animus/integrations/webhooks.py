@@ -132,7 +132,7 @@ class WebhookHandler(BaseHTTPRequestHandler):
 
         return hmac.compare_digest(signature, expected)
 
-    def log_message(self, format, *args):
+    def log_message(self, format: str, *args: object) -> None:
         """Custom logging."""
         logger.debug(f"Webhook request: {format % args}")
 

@@ -108,7 +108,7 @@ class OAuth2CallbackHandler(BaseHTTPRequestHandler):
             self.send_response(400)
             self.end_headers()
 
-    def log_message(self, format, *args):
+    def log_message(self, format: str, *args: object) -> None:
         """Suppress default logging."""
         pass
 
