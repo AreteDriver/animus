@@ -270,7 +270,7 @@ class AnthropicModel(ModelInterface):
             )
             message = client.messages.create(
                 model=self.config.model_name,
-                max_tokens=1024,
+                max_tokens=4096,
                 system=system or "You are a helpful assistant.",
                 messages=[{"role": "user", "content": prompt}],
             )

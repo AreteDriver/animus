@@ -593,6 +593,140 @@ class TestBuiltinTools:
         finally:
             _set_security_config(None)
 
+    # --- write_file tests ---
+
+    def test_write_file_success(self, tmp_path: Path):
+        from animus.tools import _tool_write_file
+
+        target = tmp_path / "output.txt"
+        result = _tool_write_file({"path": str(target), "content": "hello\nworld"})
+        assert result.success is True
+        assert "2 lines" in result.output
+        assert target.read_text() == "hello\nworld"
+
+    def test_write_file_creates_parent_dirs(self, tmp_path: Path):
+        from animus.tools import _tool_write_file
+
+        target = tmp_path / "sub" / "dir" / "file.txt"
+        result = _tool_write_file({"path": str(target), "content": "nested"})
+        assert result.success is True
+        assert target.read_text() == "nested"
+
+    def test_write_file_missing_path(self):
+        from animus.tools import _tool_write_file
+
+        result = _tool_write_file({"content": "data"})
+        assert result.success is False
+        assert "path" in result.error.lower()
+
+    def test_write_file_missing_content(self, tmp_path: Path):
+        from animus.tools import _tool_write_file
+
+        result = _tool_write_file({"path": str(tmp_path / "f.txt")})
+        assert result.success is False
+        assert "content" in result.error.lower()
+
+    def test_write_file_blocked_path(self, tmp_path: Path):
+        from animus.tools import _set_security_config, _tool_write_file
+
+        mock_config = MagicMock()
+        mock_config.blocked_paths = [str(tmp_path)]
+        mock_config.allowed_paths = ["/tmp"]
+        _set_security_config(mock_config)
+        try:
+            result = _tool_write_file({"path": str(tmp_path / "blocked.txt"), "content": "x"})
+            assert result.success is False
+            assert "denied" in result.error.lower() or "blocked" in result.error.lower()
+        finally:
+            _set_security_config(None)
+
+    # --- edit_file tests ---
+
+    def test_edit_file_success(self, tmp_path: Path):
+        from animus.tools import _tool_edit_file
+
+        target = tmp_path / "code.py"
+        target.write_text("def hello():\n    return 'world'\n")
+        result = _tool_edit_file(
+            {
+                "path": str(target),
+                "old_text": "return 'world'",
+                "new_text": "return 'universe'",
+            }
+        )
+        assert result.success is True
+        assert "universe" in target.read_text()
+
+    def test_edit_file_text_not_found(self, tmp_path: Path):
+        from animus.tools import _tool_edit_file
+
+        target = tmp_path / "code.py"
+        target.write_text("hello world")
+        result = _tool_edit_file(
+            {
+                "path": str(target),
+                "old_text": "missing text",
+                "new_text": "replacement",
+            }
+        )
+        assert result.success is False
+        assert "Could not find" in result.error
+
+    def test_edit_file_multiple_matches(self, tmp_path: Path):
+        from animus.tools import _tool_edit_file
+
+        target = tmp_path / "code.py"
+        target.write_text("foo\nfoo\nbar")
+        result = _tool_edit_file(
+            {
+                "path": str(target),
+                "old_text": "foo",
+                "new_text": "baz",
+            }
+        )
+        assert result.success is False
+        assert "2 locations" in result.error
+
+    def test_edit_file_not_found(self, tmp_path: Path):
+        from animus.tools import _tool_edit_file
+
+        result = _tool_edit_file(
+            {
+                "path": str(tmp_path / "missing.py"),
+                "old_text": "a",
+                "new_text": "b",
+            }
+        )
+        assert result.success is False
+        assert "not found" in result.error.lower()
+
+    def test_edit_file_missing_params(self):
+        from animus.tools import _tool_edit_file
+
+        result = _tool_edit_file({"path": "/tmp/x.py"})
+        assert result.success is False
+        assert "old_text" in result.error.lower()
+
+    def test_edit_file_blocked_path(self, tmp_path: Path):
+        from animus.tools import _set_security_config, _tool_edit_file
+
+        mock_config = MagicMock()
+        mock_config.blocked_paths = [str(tmp_path)]
+        mock_config.allowed_paths = ["/tmp"]
+        _set_security_config(mock_config)
+        try:
+            result = _tool_edit_file(
+                {
+                    "path": str(tmp_path / "blocked.py"),
+                    "old_text": "a",
+                    "new_text": "b",
+                }
+            )
+            assert result.success is False
+            assert "denied" in result.error.lower() or "blocked" in result.error.lower()
+        finally:
+            _set_security_config(None)
+
     def test_web_search_missing_query(self):
         from animus.tools import _tool_web_search
 

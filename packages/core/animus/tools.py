@@ -443,6 +443,113 @@ def _tool_run_command(params: dict) -> ToolResult:
         )
 
 
+def _tool_write_file(params: dict) -> ToolResult:
+    """Write content to a file (creates or overwrites). Requires approval."""
+    path = params.get("path")
+    content = params.get("content")
+    if not path:
+        return ToolResult(
+            tool_name="write_file",
+            success=False,
+            output=None,
+            error="Missing required parameter: path",
+        )
+    if content is None:
+        return ToolResult(
+            tool_name="write_file",
+            success=False,
+            output=None,
+            error="Missing required parameter: content",
+        )
+
+    is_valid, error = _validate_path(path)
+    if not is_valid:
+        return ToolResult(tool_name="write_file", success=False, output=None, error=error)
+
+    try:
+        file_path = Path(path).expanduser().resolve()
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(content)
+        lines = len(content.splitlines())
+        return ToolResult(
+            tool_name="write_file",
+            success=True,
+            output=f"Wrote {lines} lines to {path}",
+        )
+    except PermissionError:
+        return ToolResult(
+            tool_name="write_file",
+            success=False,
+            output=None,
+            error=f"Permission denied: {path}",
+        )
+    except OSError as e:
+        return ToolResult(tool_name="write_file", success=False, output=None, error=str(e))
+
+
+def _tool_edit_file(params: dict) -> ToolResult:
+    """Replace specific text in a file (find and replace). Requires approval."""
+    path = params.get("path")
+    old_text = params.get("old_text")
+    new_text = params.get("new_text")
+    if not path:
+        return ToolResult(
+            tool_name="edit_file",
+            success=False,
+            output=None,
+            error="Missing required parameter: path",
+        )
+    if old_text is None or new_text is None:
+        return ToolResult(
+            tool_name="edit_file",
+            success=False,
+            output=None,
+            error="Missing required parameters: old_text and new_text",
+        )
+
+    is_valid, error = _validate_path(path)
+    if not is_valid:
+        return ToolResult(tool_name="edit_file", success=False, output=None, error=error)
+
+    try:
+        file_path = Path(path).expanduser().resolve()
+        if not file_path.exists():
+            return ToolResult(
+                tool_name="edit_file",
+                success=False,
+                output=None,
+                error=f"File not found: {path}",
+            )
+        content = file_path.read_text()
+        if old_text not in content:
+            return ToolResult(
+                tool_name="edit_file",
+                success=False,
+                output=None,
+                error=f"Could not find the specified text in {path}",
+            )
+        count = content.count(old_text)
+        if count > 1:
+            return ToolResult(
+                tool_name="edit_file",
+                success=False,
+                output=None,
+                error=f"Text matches {count} locations in {path}. Provide more context to make it unique.",
+            )
+        content = content.replace(old_text, new_text, 1)
+        file_path.write_text(content)
+        return ToolResult(tool_name="edit_file", success=True, output=f"Edited {path}")
+    except PermissionError:
+        return ToolResult(
+            tool_name="edit_file",
+            success=False,
+            output=None,
+            error=f"Permission denied: {path}",
+        )
+    except OSError as e:
+        return ToolResult(tool_name="edit_file", success=False, output=None, error=str(e))
+
+
 def _tool_http_request(params: dict) -> ToolResult:
     """Make an HTTP request to a REST API endpoint."""
     url = params.get("url")
@@ -697,6 +804,52 @@ BUILTIN_TOOLS = [
         handler=_tool_run_command,
         requires_approval=True,
         category="system",
+    ),
+    Tool(
+        name="write_file",
+        description="Write content to a file (creates or overwrites)",
+        parameters={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Path to the file to write",
+                },
+                "content": {
+                    "type": "string",
+                    "description": "Full file content to write",
+                },
+            },
+            "required": ["path", "content"],
+        },
+        handler=_tool_write_file,
+        requires_approval=True,
+        category="filesystem",
+    ),
+    Tool(
+        name="edit_file",
+        description="Replace specific text in a file (find and replace)",
+        parameters={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Path to the file to edit",
+                },
+                "old_text": {
+                    "type": "string",
+                    "description": "Exact text to find (must be unique in the file)",
+                },
+                "new_text": {
+                    "type": "string",
+                    "description": "Replacement text",
+                },
+            },
+            "required": ["path", "old_text", "new_text"],
+        },
+        handler=_tool_edit_file,
+        requires_approval=True,
+        category="filesystem",
     ),
     Tool(
         name="web_search",
