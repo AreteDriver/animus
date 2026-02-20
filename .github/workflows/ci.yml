@@ -120,7 +120,8 @@ jobs:
         run: pip install -e "packages/forge/[dev]"
 
       - name: Test with coverage
-        run: pytest packages/forge/tests/ -v --tb=short --cov=animus_forge --cov-report=term-missing
+        working-directory: packages/forge
+        run: pytest tests/ -v --tb=short --cov=animus_forge --cov-report=term-missing
 
   security:
     name: Security

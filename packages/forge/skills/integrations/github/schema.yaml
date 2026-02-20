@@ -1,0 +1,263 @@
+skill_name: github_operations
+version: 1.0.0
+agent: system
+author: Gorgon Project
+license: MIT
+
+description: |
+  Interact with GitHub repositories. Clone, pull, push, create issues, 
+  manage PRs, and automate repository workflows.
+
+dependencies:
+  required:
+    - git
+    - python3
+    - requests
+  optional:
+    - gh          # GitHub CLI
+
+config_required:
+  - github_token
+  - github_username
+
+capabilities:
+  clone_repo:
+    description: Clone a GitHub repository
+    inputs:
+      owner:
+        type: string
+        required: true
+      repo:
+        type: string
+        required: true
+      workspace:
+        type: string
+        required: false
+        default: "~/gorgon-repos"
+      shallow:
+        type: boolean
+        required: false
+        default: false
+      branch:
+        type: string
+        required: false
+    outputs:
+      success: boolean
+      path: string
+      url: string
+    risk_level: low
+    consensus_required: any
+
+  pull_repo:
+    description: Pull latest changes from remote
+    inputs:
+      repo_path:
+        type: string
+        required: true
+    outputs:
+      success: boolean
+      branch: string
+      output: string
+    risk_level: low
+    consensus_required: any
+
+  create_branch:
+    description: Create and checkout a new branch
+    inputs:
+      repo_path:
+        type: string
+        required: true
+      branch_name:
+        type: string
+        required: true
+        pattern: "^[a-zA-Z0-9/_-]+$"
+      from_branch:
+        type: string
+        required: false
+    outputs:
+      success: boolean
+      branch: string
+    risk_level: low
+    consensus_required: any
+
+  commit_changes:
+    description: Stage and commit changes
+    inputs:
+      repo_path:
+        type: string
+        required: true
+      message:
+        type: string
+        required: true
+        description: Commit message (follow conventional commits)
+      files:
+        type: array[string]
+        required: false
+        description: Specific files to stage
+      all_changes:
+        type: boolean
+        required: false
+        default: false
+    outputs:
+      success: boolean
+      commit_hash: string
+      changes: string
+    risk_level: medium
+    consensus_required: majority
+
+  push_branch:
+    description: Push branch to remote
+    inputs:
+      repo_path:
+        type: string
+        required: true
+      branch:
+        type: string
+        required: false
+      set_upstream:
+        type: boolean
+        required: false
+        default: true
+    outputs:
+      success: boolean
+      branch: string
+    risk_level: high
+    consensus_required: unanimous
+    warnings:
+      - "Cannot push to protected branches (main, master, production)"
+
+  create_issue:
+    description: Create a GitHub issue
+    inputs:
+      owner:
+        type: string
+        required: true
+      repo:
+        type: string
+        required: true
+      title:
+        type: string
+        required: true
+        max_length: 256
+      body:
+        type: string
+        required: true
+      labels:
+        type: array[string]
+        required: false
+      assignees:
+        type: array[string]
+        required: false
+    outputs:
+      success: boolean
+      issue_number: integer
+      url: string
+    risk_level: low
+    consensus_required: any
+
+  create_pull_request:
+    description: Create a pull request
+    inputs:
+      owner:
+        type: string
+        required: true
+      repo:
+        type: string
+        required: true
+      title:
+        type: string
+        required: true
+      body:
+        type: string
+        required: true
+      head_branch:
+        type: string
+        required: true
+      base_branch:
+        type: string
+        required: false
+        default: "main"
+      draft:
+        type: boolean
+        required: false
+        default: false
+    outputs:
+      success: boolean
+      pr_number: integer
+      url: string
+    risk_level: medium
+    consensus_required: majority
+
+  merge_pull_request:
+    description: Merge a pull request
+    inputs:
+      owner:
+        type: string
+        required: true
+      repo:
+        type: string
+        required: true
+      pr_number:
+        type: integer
+        required: true
+      merge_method:
+        type: string
+        required: false
+        enum: ["merge", "squash", "rebase"]
+        default: "squash"
+    outputs:
+      success: boolean
+      sha: string
+    risk_level: critical
+    consensus_required: unanimous
+
+  list_repos:
+    description: List repositories for a user or organization
+    inputs:
+      owner:
+        type: string
+        required: true
+      repo_type:
+        type: string
+        required: false
+        enum: ["all", "owner", "member"]
+        default: "all"
+    outputs:
+      success: boolean
+      count: integer
+      repos: array[object]
+    risk_level: low
+    consensus_required: any
+
+  get_diff:
+    description: Show uncommitted changes
+    inputs:
+      repo_path:
+        type: string
+        required: true
+      staged:
+        type: boolean
+        required: false
+        default: false
+      branch:
+        type: string
+        required: false
+    outputs:
+      success: boolean
+      diff: string
+      has_changes: boolean
+    risk_level: low
+    consensus_required: any
+
+# Protected branches that cannot be pushed to directly
+protected_branches:
+  - main
+  - master
+  - production
+  - release
+  - develop
+
+# API rate limiting
+rate_limits:
+  api_requests_per_hour: 5000
+  search_requests_per_minute: 30

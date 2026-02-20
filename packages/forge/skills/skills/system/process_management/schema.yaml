@@ -1,0 +1,270 @@
+skill_name: process_management
+version: 1.0.0
+agent: system
+author: Gorgon Project
+license: MIT
+
+description: |
+  Monitor, control, and manage system processes. Includes starting, 
+  stopping, and monitoring services, background jobs, and system health metrics.
+
+dependencies:
+  required:
+    - procps      # ps, pgrep, pkill, top
+    - coreutils   # kill, timeout
+    - util-linux  # setsid
+  optional:
+    - psutil      # Python library for metrics
+    - lsof        # List open files
+    - sysstat     # sar, iostat, mpstat
+    - systemd     # Service management
+
+capabilities:
+  list_processes:
+    description: List running processes with optional filtering
+    inputs:
+      filter_user:
+        type: string
+        required: false
+        description: Filter by username
+      filter_name:
+        type: string
+        required: false
+        description: Filter by process name pattern
+      sort_by:
+        type: string
+        required: false
+        enum: ["cpu", "memory", "pid", "time"]
+        default: "cpu"
+      limit:
+        type: integer
+        required: false
+        default: 50
+    outputs:
+      success: boolean
+      processes: array[object]
+      count: integer
+    risk_level: low
+    consensus_required: any
+
+  get_process_info:
+    description: Get detailed information about a specific process
+    inputs:
+      pid:
+        type: integer
+        required: true
+        description: Process ID
+      include_files:
+        type: boolean
+        required: false
+        default: false
+        description: Include open file descriptors
+      include_network:
+        type: boolean
+        required: false
+        default: false
+        description: Include network connections
+      include_memory_map:
+        type: boolean
+        required: false
+        default: false
+    outputs:
+      success: boolean
+      process: object
+      open_files: array[string] | null
+      network_connections: array[object] | null
+    risk_level: low
+    consensus_required: any
+
+  monitor_resources:
+    description: Get current system resource utilization
+    inputs:
+      duration_seconds:
+        type: integer
+        required: false
+        default: 1
+        description: Sampling duration
+      include_per_core:
+        type: boolean
+        required: false
+        default: false
+    outputs:
+      success: boolean
+      cpu_percent: number
+      memory_percent: number
+      memory_available_gb: number
+      disk_percent: number
+      load_average: array[number]
+      process_count: integer
+    risk_level: low
+    consensus_required: any
+
+  start_process:
+    description: Launch a new process
+    inputs:
+      command:
+        type: string
+        required: true
+        description: Command to execute
+      args:
+        type: array[string]
+        required: false
+        description: Command arguments
+      working_directory:
+        type: string
+        required: false
+        description: Working directory for process
+      environment:
+        type: object
+        required: false
+        description: Environment variables
+      background:
+        type: boolean
+        required: false
+        default: false
+      log_output:
+        type: string
+        required: false
+        description: Path to log file for stdout/stderr
+      resource_limits:
+        type: object
+        required: false
+        properties:
+          memory_max_mb:
+            type: integer
+          cpu_quota_percent:
+            type: integer
+    outputs:
+      success: boolean
+      pid: integer
+      log_path: string | null
+    risk_level: medium
+    consensus_required: majority
+    side_effects:
+      - spawns_process
+      - may_consume_resources
+
+  stop_process:
+    description: Gracefully stop a process with SIGTERM
+    inputs:
+      pid:
+        type: integer
+        required: false
+        description: Process ID (provide either pid or name)
+      name:
+        type: string
+        required: false
+        description: Process name pattern (will list matches first)
+      timeout_seconds:
+        type: integer
+        required: false
+        default: 30
+    outputs:
+      success: boolean
+      pid: integer
+      signal: string
+      clean_shutdown: boolean
+    risk_level: medium
+    consensus_required: majority
+    side_effects:
+      - terminates_process
+
+  kill_process:
+    description: Force kill a process with SIGKILL
+    inputs:
+      pid:
+        type: integer
+        required: true
+        description: Process ID
+      include_children:
+        type: boolean
+        required: false
+        default: false
+        description: Also kill child processes
+    outputs:
+      success: boolean
+      pid: integer
+      children_killed: array[integer] | null
+    risk_level: high
+    consensus_required: unanimous
+    warnings:
+      - "SIGKILL cannot be caught - may cause data loss"
+      - "Only use after graceful stop fails"
+
+  manage_service:
+    description: Control systemd services
+    inputs:
+      service:
+        type: string
+        required: true
+        description: Service name
+      action:
+        type: string
+        required: true
+        enum: ["start", "stop", "restart", "status", "enable", "disable"]
+      user_service:
+        type: boolean
+        required: false
+        default: true
+        description: User service (--user) vs system service
+    outputs:
+      success: boolean
+      service: string
+      action: string
+      status: object
+    risk_level: high
+    consensus_required: unanimous
+    side_effects:
+      - modifies_service_state
+
+  set_priority:
+    description: Change process CPU or I/O priority
+    inputs:
+      pid:
+        type: integer
+        required: true
+      nice:
+        type: integer
+        required: false
+        minimum: -20
+        maximum: 19
+        description: CPU priority (-20 highest, 19 lowest)
+      ionice_class:
+        type: integer
+        required: false
+        enum: [1, 2, 3]
+        description: I/O class (1=realtime, 2=best-effort, 3=idle)
+      ionice_level:
+        type: integer
+        required: false
+        minimum: 0
+        maximum: 7
+    outputs:
+      success: boolean
+      previous_nice: integer
+      new_nice: integer
+    risk_level: medium
+    consensus_required: majority
+    warnings:
+      - "Negative nice values require unanimous consensus"
+
+# Processes that should never be killed
+protected_processes:
+  by_pid:
+    - 1  # init/systemd
+  by_name:
+    - "init"
+    - "systemd"
+    - "sshd"
+    - "gorgon-supervisor"
+    - "gorgon-triumvirate"
+  by_pattern:
+    - "^\\[.*\\]$"  # Kernel threads
+
+# Services that should never be stopped
+protected_services:
+  - sshd
+  - systemd-*
+  - networking
+  - NetworkManager
+  - dbus

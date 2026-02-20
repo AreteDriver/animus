@@ -1,0 +1,169 @@
+skill_name: web_search
+version: 1.0.0
+agent: browser
+author: Gorgon Project
+license: MIT
+
+description: |
+  Search the web for information using search engines. Retrieve, parse, 
+  and synthesize search results. Supports multiple search engines and 
+  result filtering.
+
+dependencies:
+  required:
+    - python3
+    - requests
+    - beautifulsoup4
+  optional:
+    - playwright     # For JS-heavy sites
+    - feedparser     # For RSS feeds
+    - lxml           # Faster HTML parsing
+
+capabilities:
+  web_search:
+    description: Perform a general web search
+    inputs:
+      query:
+        type: string
+        required: true
+        description: Search query terms
+        max_length: 500
+      num_results:
+        type: integer
+        required: false
+        default: 10
+        minimum: 1
+        maximum: 50
+      search_engine:
+        type: string
+        required: false
+        default: "duckduckgo"
+        enum: ["duckduckgo", "google", "bing"]
+      safe_search:
+        type: boolean
+        required: false
+        default: true
+      time_range:
+        type: string
+        required: false
+        enum: ["day", "week", "month", "year", "all"]
+        default: "all"
+    outputs:
+      success: boolean
+      results: array[object]
+      result_count: integer
+      cached: boolean
+    risk_level: low
+    consensus_required: any
+
+  news_search:
+    description: Search for recent news articles
+    inputs:
+      query:
+        type: string
+        required: true
+        max_length: 500
+      num_results:
+        type: integer
+        required: false
+        default: 10
+      time_range:
+        type: string
+        required: false
+        enum: ["day", "week", "month"]
+        default: "week"
+    outputs:
+      success: boolean
+      results: array[object]
+      result_count: integer
+    risk_level: low
+    consensus_required: any
+
+  image_search:
+    description: Search for images
+    inputs:
+      query:
+        type: string
+        required: true
+        max_length: 500
+      num_results:
+        type: integer
+        required: false
+        default: 10
+      size:
+        type: string
+        required: false
+        enum: ["small", "medium", "large", "any"]
+        default: "any"
+      type:
+        type: string
+        required: false
+        enum: ["photo", "clipart", "gif", "any"]
+        default: "any"
+    outputs:
+      success: boolean
+      results: array[object]
+      result_count: integer
+    risk_level: low
+    consensus_required: any
+
+  site_search:
+    description: Search within a specific website
+    inputs:
+      query:
+        type: string
+        required: true
+        max_length: 500
+      site:
+        type: string
+        required: true
+        description: Domain to search within (e.g., "docs.python.org")
+      num_results:
+        type: integer
+        required: false
+        default: 10
+    outputs:
+      success: boolean
+      results: array[object]
+      result_count: integer
+    risk_level: low
+    consensus_required: any
+
+  search_and_summarize:
+    description: Search and provide a synthesized summary
+    inputs:
+      query:
+        type: string
+        required: true
+        max_length: 500
+      num_sources:
+        type: integer
+        required: false
+        default: 5
+    outputs:
+      success: boolean
+      query: string
+      top_results: array[object]
+      sources: array[string]
+      key_snippets: array[string]
+    risk_level: low
+    consensus_required: any
+
+# Rate limiting configuration
+rate_limits:
+  requests_per_minute: 10
+  requests_per_hour: 100
+  cooldown_on_429_seconds: 60
+
+# Cache configuration
+cache:
+  enabled: true
+  ttl_hours: 1
+  max_entries: 1000
+  directory: "~/.gorgon/cache/web_search"
+
+# Blocked query patterns (safety)
+blocked_patterns:
+  - patterns for finding personal information for harassment
+  - how to make weapons
+  - illegal content queries

@@ -1,0 +1,341 @@
+skill_name: file_operations
+version: 1.0.0
+agent: system
+author: Gorgon Project
+license: MIT
+
+description: |
+  Safe file system operations including create, read, update, delete, 
+  move, copy, search, and permission management.
+
+dependencies:
+  required:
+    - coreutils  # cat, cp, mv, rm, chmod, chown
+    - findutils  # find
+    - grep
+    - sed
+  optional:
+    - xxd        # hex dumps
+    - tar        # backups
+
+capabilities:
+  read_file:
+    description: Read contents of a text or binary file
+    inputs:
+      path:
+        type: string
+        required: true
+        description: Absolute path to the file
+        validation: must_be_absolute_path
+      encoding:
+        type: string
+        required: false
+        default: "utf-8"
+        enum: ["utf-8", "ascii", "binary", "hex"]
+      lines:
+        type: object
+        required: false
+        description: Optional line range to read
+        properties:
+          start:
+            type: integer
+            minimum: 1
+          end:
+            type: integer
+    outputs:
+      success: boolean
+      content: string
+      bytes_read: integer
+      encoding: string
+    risk_level: low
+    consensus_required: any
+    examples:
+      - input: "Read /home/gorgon/config.yaml"
+        command: "cat /home/gorgon/config.yaml"
+
+  create_file:
+    description: Create a new file with specified content
+    inputs:
+      path:
+        type: string
+        required: true
+        description: Absolute path for the new file
+        validation: must_be_absolute_path
+      content:
+        type: string
+        required: true
+        description: Content to write to the file
+      permissions:
+        type: string
+        required: false
+        default: "644"
+        pattern: "^[0-7]{3,4}$"
+      overwrite:
+        type: boolean
+        required: false
+        default: false
+        description: If true and file exists, overwrite (requires majority consensus)
+    outputs:
+      success: boolean
+      path: string
+      bytes_written: integer
+      backup_path: string | null
+    risk_level: low  # elevated to medium if overwrite=true
+    consensus_required: any  # majority if overwrite=true
+    side_effects:
+      - creates_file
+      - may_overwrite_existing
+
+  update_file:
+    description: Modify existing file content using sed or append
+    inputs:
+      path:
+        type: string
+        required: true
+        validation: must_be_absolute_path
+      operation:
+        type: string
+        required: true
+        enum: ["replace", "append", "prepend", "insert_after", "delete_line"]
+      pattern:
+        type: string
+        required: false
+        description: Pattern to match (for replace, insert_after, delete_line)
+      content:
+        type: string
+        required: false
+        description: New content (for replace, append, prepend, insert_after)
+      create_backup:
+        type: boolean
+        required: false
+        default: true
+    outputs:
+      success: boolean
+      lines_modified: integer
+      backup_path: string | null
+    risk_level: medium
+    consensus_required: majority
+    side_effects:
+      - modifies_file
+      - creates_backup
+
+  delete_file:
+    description: Permanently remove a file
+    inputs:
+      path:
+        type: string
+        required: true
+        validation: must_be_absolute_path
+      create_backup:
+        type: boolean
+        required: false
+        default: true
+      force:
+        type: boolean
+        required: false
+        default: false
+        description: Skip backup (requires explicit approval)
+    outputs:
+      success: boolean
+      backup_path: string | null
+      bytes_freed: integer
+    risk_level: high
+    consensus_required: unanimous
+    side_effects:
+      - deletes_file
+      - creates_backup_unless_force
+    warnings:
+      - "This operation is irreversible if force=true"
+
+  delete_directory:
+    description: Remove a directory and all its contents
+    inputs:
+      path:
+        type: string
+        required: true
+        validation: must_be_absolute_path
+      create_backup:
+        type: boolean
+        required: false
+        default: true
+      max_files:
+        type: integer
+        required: false
+        default: 1000
+        description: Refuse if directory contains more than this many files
+    outputs:
+      success: boolean
+      backup_path: string | null
+      files_deleted: integer
+      bytes_freed: integer
+    risk_level: critical
+    consensus_required: unanimous
+    requires_user_confirmation: true
+    side_effects:
+      - deletes_directory_recursively
+      - creates_backup_archive
+
+  move_file:
+    description: Move or rename a file
+    inputs:
+      source:
+        type: string
+        required: true
+        validation: must_be_absolute_path
+      destination:
+        type: string
+        required: true
+        validation: must_be_absolute_path
+      backup_destination:
+        type: boolean
+        required: false
+        default: true
+        description: Backup destination file if it exists
+    outputs:
+      success: boolean
+      source: string
+      destination: string
+      destination_backup: string | null
+    risk_level: medium
+    consensus_required: majority
+
+  copy_file:
+    description: Duplicate a file or directory
+    inputs:
+      source:
+        type: string
+        required: true
+        validation: must_be_absolute_path
+      destination:
+        type: string
+        required: true
+        validation: must_be_absolute_path
+      recursive:
+        type: boolean
+        required: false
+        default: false
+        description: Copy directories recursively
+      preserve_attributes:
+        type: boolean
+        required: false
+        default: true
+    outputs:
+      success: boolean
+      source: string
+      destination: string
+      bytes_copied: integer
+    risk_level: low
+    consensus_required: any
+
+  search_files:
+    description: Find files matching criteria
+    inputs:
+      path:
+        type: string
+        required: true
+        default: "/home/gorgon"
+        validation: must_be_absolute_path
+      pattern:
+        type: string
+        required: false
+        description: Glob pattern for filename (e.g., "*.log")
+      content_match:
+        type: string
+        required: false
+        description: Search for files containing this text
+      modified_within:
+        type: string
+        required: false
+        description: Time expression (e.g., "24h", "7d", "30m")
+      size_min:
+        type: string
+        required: false
+        description: Minimum file size (e.g., "1k", "100M")
+      size_max:
+        type: string
+        required: false
+        description: Maximum file size
+      max_depth:
+        type: integer
+        required: false
+        default: 10
+        description: Maximum directory depth to search
+      file_type:
+        type: string
+        required: false
+        enum: ["file", "directory", "symlink", "any"]
+        default: "file"
+    outputs:
+      success: boolean
+      files: array[string]
+      count: integer
+    risk_level: low
+    consensus_required: any
+
+  set_permissions:
+    description: Change file permissions or ownership
+    inputs:
+      path:
+        type: string
+        required: true
+        validation: must_be_absolute_path
+      permissions:
+        type: string
+        required: false
+        pattern: "^[0-7]{3,4}$"
+        description: Octal permission string (e.g., "755")
+      owner:
+        type: string
+        required: false
+        description: New owner username
+      group:
+        type: string
+        required: false
+        description: New group name
+      recursive:
+        type: boolean
+        required: false
+        default: false
+    outputs:
+      success: boolean
+      previous_permissions: string
+      new_permissions: string
+      previous_owner: string
+      new_owner: string
+    risk_level: high
+    consensus_required: unanimous
+    warnings:
+      - "Never set 777 permissions"
+      - "Recursive changes can be dangerous"
+
+# Protected paths that should never be modified
+protected_paths:
+  - /boot
+  - /etc/fstab
+  - /etc/passwd
+  - /etc/shadow
+  - /etc/sudoers
+  - /etc/sudoers.d
+  - /usr/bin
+  - /usr/lib
+  - /usr/sbin
+  - /lib
+  - /lib64
+  - /sbin
+  - /bin
+  - /proc
+  - /sys
+  - /dev
+  - ~/.ssh/id_*
+  - ~/.ssh/authorized_keys
+
+# Dangerous command patterns to block
+blocked_patterns:
+  - 'rm\s+-rf\s+/'
+  - 'rm\s+-rf\s+\*'
+  - 'mkfs\.'
+  - 'dd\s+if=.*of=/dev/'
+  - ':(){:|:&};:'
+  - 'chmod\s+-R\s+777\s+/'
+  - '>\s*/dev/sd'
+  - 'mv\s+/\s'

@@ -1,0 +1,222 @@
+# Gorgon Skill Registry
+# This file indexes all available skills for the Gorgon multi-agent system
+
+version: 1.0.0
+last_updated: 2026-01-27
+maintainer: Gorgon Project
+
+# Skill categories
+categories:
+  system: "Skills for system-level operations (files, processes, etc.)"
+  browser: "Skills for web interaction (search, scrape, automate)"
+  email: "Skills for email operations (compose, send, read)"
+  integrations: "Skills for third-party service integration"
+
+# Available skills indexed by agent type
+skills:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SYSTEM AGENT SKILLS
+  # ═══════════════════════════════════════════════════════════════════════════
+  
+  - name: file_operations
+    path: system/file_operations
+    agent: system
+    version: 1.0.0
+    status: active
+    description: |
+      Safe file system operations including create, read, update, delete, 
+      move, copy, search, and permission management.
+    capabilities:
+      - read_file
+      - create_file
+      - update_file
+      - delete_file
+      - delete_directory
+      - move_file
+      - copy_file
+      - search_files
+      - set_permissions
+    dependencies:
+      required: [coreutils, findutils, grep, sed]
+      optional: [xxd, tar]
+
+  - name: process_management
+    path: system/process_management
+    agent: system
+    version: 1.0.0
+    status: active
+    description: |
+      Monitor, control, and manage system processes including services,
+      background jobs, and system health metrics.
+    capabilities:
+      - list_processes
+      - get_process_info
+      - monitor_resources
+      - start_process
+      - stop_process
+      - kill_process
+      - manage_service
+      - set_priority
+    dependencies:
+      required: [procps, coreutils, util-linux]
+      optional: [psutil, lsof, sysstat, systemd]
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # BROWSER AGENT SKILLS
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - name: web_search
+    path: browser/web_search
+    agent: browser
+    version: 1.0.0
+    status: active
+    description: |
+      Search the web for information using search engines. Retrieve, parse, 
+      and synthesize search results.
+    capabilities:
+      - web_search
+      - news_search
+      - image_search
+      - site_search
+      - search_and_summarize
+    dependencies:
+      required: [python3, requests, beautifulsoup4]
+      optional: [playwright, feedparser, lxml]
+
+  - name: web_scrape
+    path: browser/web_scrape
+    agent: browser
+    version: 1.0.0
+    status: active
+    description: |
+      Fetch and extract content from web pages. Parse HTML, extract text, 
+      tables, and structured data.
+    capabilities:
+      - fetch_page
+      - extract_text
+      - extract_article
+      - extract_tables
+      - extract_links
+      - extract_metadata
+      - screenshot
+      - check_robots
+    dependencies:
+      required: [python3, requests, beautifulsoup4]
+      optional: [playwright, pandas, lxml]
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # EMAIL AGENT SKILLS
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - name: email_compose
+    path: email/compose
+    agent: email
+    version: 1.0.0
+    status: active
+    description: |
+      Compose and send emails via SMTP. Support for plain text, HTML, 
+      attachments, templates, and mail merge.
+    capabilities:
+      - create_draft
+      - review_draft
+      - approve_draft
+      - send_email
+      - add_attachment
+      - use_template
+      - list_drafts
+      - cancel_draft
+    dependencies:
+      required: [python3, pyyaml]
+      optional: [jinja2]
+    config_required:
+      - smtp_host
+      - smtp_port
+      - smtp_username
+      - smtp_password
+      - from_address
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # INTEGRATION SKILLS
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - name: github_operations
+    path: integrations/github
+    agent: system
+    version: 1.0.0
+    status: active
+    description: |
+      Interact with GitHub repositories. Clone, pull, push, create issues, 
+      manage PRs, and automate repository workflows.
+    capabilities:
+      - clone_repo
+      - pull_repo
+      - create_branch
+      - commit_changes
+      - push_branch
+      - create_issue
+      - create_pull_request
+      - merge_pull_request
+      - list_repos
+      - get_diff
+    dependencies:
+      required: [git, python3, requests]
+      optional: [gh]
+    config_required:
+      - github_token
+      - github_username
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PLANNED SKILLS (not yet implemented)
+# ═══════════════════════════════════════════════════════════════════════════
+
+planned_skills:
+  - name: email_read
+    agent: email
+    description: "Read and search email via IMAP"
+    status: planned
+
+  - name: browser_automation
+    agent: browser
+    description: "Full browser automation with Playwright"
+    status: planned
+
+  - name: slack_integration
+    agent: integration
+    description: "Send messages and interact with Slack"
+    status: planned
+
+  - name: calendar_management
+    agent: integration
+    description: "Manage Google/Outlook calendar"
+    status: planned
+
+  - name: database_operations
+    agent: system
+    description: "Query and manage databases (SQLite, PostgreSQL)"
+    status: planned
+
+  - name: docker_management
+    agent: system
+    description: "Manage Docker containers and images"
+    status: planned
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CONSENSUS LEVEL REFERENCE
+# ═══════════════════════════════════════════════════════════════════════════
+
+consensus_levels:
+  any:
+    description: "Any single Zorya can approve"
+    use_case: "Low-risk, read-only operations"
+    
+  majority:
+    description: "2 of 3 Zorya must agree"
+    use_case: "Medium-risk operations with recoverable consequences"
+    
+  unanimous:
+    description: "All 3 Zorya must agree"
+    use_case: "High-risk operations, especially irreversible ones"
+    
+  unanimous_plus_user:
+    description: "Unanimous + explicit user confirmation"
+    use_case: "Critical operations like sending email, deleting data"

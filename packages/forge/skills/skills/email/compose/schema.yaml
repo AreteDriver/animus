@@ -1,0 +1,196 @@
+skill_name: email_compose
+version: 1.0.0
+agent: email
+author: Gorgon Project
+license: MIT
+
+description: |
+  Compose and send emails via SMTP. Support for plain text, HTML, 
+  attachments, templates, and mail merge. Includes draft review 
+  before sending.
+
+dependencies:
+  required:
+    - python3
+    - pyyaml
+  optional:
+    - jinja2      # Advanced templates
+
+config_required:
+  - smtp_host
+  - smtp_port
+  - smtp_username
+  - smtp_password
+  - from_address
+
+capabilities:
+  create_draft:
+    description: Create an email draft for review before sending
+    inputs:
+      to:
+        type: array[string]
+        required: true
+        description: List of recipient email addresses
+        min_items: 1
+      subject:
+        type: string
+        required: true
+        max_length: 998
+      body:
+        type: string
+        required: true
+        description: Plain text email body
+      cc:
+        type: array[string]
+        required: false
+        description: CC recipients
+      bcc:
+        type: array[string]
+        required: false
+        description: BCC recipients
+      html_body:
+        type: string
+        required: false
+        description: HTML version of email body
+    outputs:
+      success: boolean
+      draft_id: string
+      draft_path: string
+      preview: object
+    risk_level: low
+    consensus_required: any
+
+  review_draft:
+    description: Display draft for review and approval
+    inputs:
+      draft_id:
+        type: string
+        required: true
+    outputs:
+      success: boolean
+      draft_id: string
+      status: string
+      review_text: string
+      draft_data: object
+    risk_level: low
+    consensus_required: any
+
+  approve_draft:
+    description: Mark a draft as approved for sending
+    inputs:
+      draft_id:
+        type: string
+        required: true
+    outputs:
+      success: boolean
+      draft_id: string
+      status: string
+    risk_level: high
+    consensus_required: unanimous
+
+  send_email:
+    description: Send an approved email draft
+    inputs:
+      draft_id:
+        type: string
+        required: true
+      confirm:
+        type: boolean
+        required: true
+        description: Must be true to actually send
+    outputs:
+      success: boolean
+      draft_id: string
+      status: string
+      recipients: array[string]
+      sent_at: string
+    risk_level: critical
+    consensus_required: unanimous
+    requires_user_confirmation: true
+    warnings:
+      - "Email sending is IRREVERSIBLE"
+      - "Verify recipients before confirming"
+
+  add_attachment:
+    description: Add an attachment to a draft
+    inputs:
+      draft_id:
+        type: string
+        required: true
+      file_path:
+        type: string
+        required: true
+        description: Absolute path to file
+    outputs:
+      success: boolean
+      draft_id: string
+      attachment_added: string
+      total_attachments: integer
+    risk_level: medium
+    consensus_required: majority
+    constraints:
+      max_attachment_size_mb: 25
+
+  use_template:
+    description: Create a draft from a template with variable substitution
+    inputs:
+      template_name:
+        type: string
+        required: true
+      to:
+        type: array[string]
+        required: true
+      variables:
+        type: object
+        required: true
+        description: Key-value pairs for template substitution
+      cc:
+        type: array[string]
+        required: false
+    outputs:
+      success: boolean
+      draft_id: string
+      draft_path: string
+    risk_level: low
+    consensus_required: any
+
+  list_drafts:
+    description: List all email drafts
+    inputs:
+      status_filter:
+        type: string
+        required: false
+        enum: ["draft", "approved", "sent", "cancelled", "all"]
+        default: "all"
+    outputs:
+      success: boolean
+      drafts: array[object]
+      count: integer
+    risk_level: low
+    consensus_required: any
+
+  cancel_draft:
+    description: Cancel a draft (prevent sending)
+    inputs:
+      draft_id:
+        type: string
+        required: true
+    outputs:
+      success: boolean
+      draft_id: string
+      status: string
+    risk_level: low
+    consensus_required: any
+
+# Rate limiting for outbound email
+rate_limits:
+  max_emails_per_hour: 50
+  max_emails_per_day: 200
+  max_recipients_per_email: 50
+  cooldown_between_sends_seconds: 10
+
+# Storage paths
+storage:
+  drafts_dir: "~/.gorgon/email_drafts"
+  templates_dir: "~/.gorgon/email_templates"
+  sent_archive_dir: "~/.gorgon/email_sent"
