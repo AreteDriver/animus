@@ -31,7 +31,7 @@ try:
 
     GOOGLE_API_AVAILABLE = True
 except ImportError:
-    pass
+    pass  # Optional dependency: google-api-python-client not installed
 
 CALENDAR_SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly",

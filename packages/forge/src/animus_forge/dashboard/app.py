@@ -27,11 +27,6 @@ try:
     from animus_forge.dashboard.cost_dashboard import (
         render_cost_dashboard,
         render_cost_widget,
-    )  # noqa: F401
-    from animus_forge.dashboard.workflow_visualizer import (  # noqa: F401
-        render_agent_activity,
-        render_workflow_summary,
-        render_workflow_visualizer,
     )
 
     NEW_COMPONENTS_AVAILABLE = True

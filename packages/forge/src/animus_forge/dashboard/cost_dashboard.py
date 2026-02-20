@@ -6,10 +6,9 @@ from pathlib import Path
 import streamlit as st
 
 try:
-    from animus_forge.metrics.cost_tracker import CostTracker, Provider, get_cost_tracker
+    from animus_forge.metrics.cost_tracker import CostTracker, get_cost_tracker
 except ImportError:
     CostTracker = None
-    Provider = None
     get_cost_tracker = None
 
 

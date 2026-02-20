@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import animus_forge.monitoring.tracker as tracker_module
 from animus_forge.monitoring.tracker import (
     AgentTracker,
     ExecutionTracker,
@@ -47,8 +48,6 @@ def agent_tracker():
 @pytest.fixture(autouse=True)
 def reset_global_tracker():
     """Reset global tracker before each test."""
-    import animus_forge.monitoring.tracker as tracker_module
-
     tracker_module._tracker = None
     yield
     tracker_module._tracker = None

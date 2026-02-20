@@ -168,12 +168,12 @@ class DeviceDiscovery:
                 try:
                     self._zeroconf.unregister_service(self._service_info)
                 except Exception:
-                    pass
+                    pass  # Best-effort cleanup: service may already be unregistered
 
             try:
                 self._zeroconf.close()
             except Exception:
-                pass
+                pass  # Best-effort cleanup: zeroconf may already be closed
 
         self._zeroconf = None
         self._service_info = None

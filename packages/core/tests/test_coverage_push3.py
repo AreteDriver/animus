@@ -660,7 +660,7 @@ class TestVoiceCoveragePush:
             try:
                 asyncio.run(vo._speak_edge_tts("Hello"))
             except (ImportError, Exception):
-                pass
+                pass  # Expected: edge_tts blocked via sys.modules
 
     def test_speak_edge_tts_success(self):
         """Lines 271-298: _speak_edge_tts success path."""

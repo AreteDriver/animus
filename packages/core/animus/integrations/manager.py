@@ -256,8 +256,8 @@ class IntegrationManager:
             # Verify it actually works by creating a key
             Fernet(Fernet.generate_key())
             return True
-        except BaseException:
-            # Catch BaseException to handle pyo3 panics and other low-level failures
+        except Exception:
+            # Handles ImportError, RuntimeError, and other failures from cryptography
             return False
 
     def _save_credentials(self, name: str, credentials: dict[str, Any]) -> None:

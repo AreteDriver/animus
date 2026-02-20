@@ -133,7 +133,7 @@ class SyncClient:
             try:
                 await self._websocket.close()
             except Exception:
-                pass
+                pass  # Best-effort cleanup: websocket may already be closed
 
         self._websocket = None
         self._connected = False

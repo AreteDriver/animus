@@ -128,37 +128,37 @@ class TestContractSerialization:
 
     def test_all_interface_kinds_in_contract(self):
         d = DEFAULT_CONTRACT.to_dict()
-        for kind in InterfaceKind:
+        for kind in list(InterfaceKind):
             assert kind.value in d["node_types"]
 
     def test_all_edge_types_in_contract(self):
         d = DEFAULT_CONTRACT.to_dict()
-        for edge in EdgeType:
+        for edge in list(EdgeType):
             assert edge.value in d["edge_types"]
 
     def test_all_invariants_in_contract(self):
         d = DEFAULT_CONTRACT.to_dict()
-        for inv in GraphInvariant:
+        for inv in list(GraphInvariant):
             assert inv.value in d["invariants"]
 
     def test_all_mutation_types_in_contract(self):
         d = DEFAULT_CONTRACT.to_dict()
-        for mut in MutationType:
+        for mut in list(MutationType):
             assert mut.value in d["allowed_mutations"]
 
     def test_all_evidence_kinds_in_contract(self):
         d = DEFAULT_CONTRACT.to_dict()
-        for ek in EvidenceKind:
+        for ek in list(EvidenceKind):
             assert ek.value in d["evidence_kinds"]
 
     def test_all_constraint_severities_in_contract(self):
         d = DEFAULT_CONTRACT.to_dict()
-        for cs in ConstraintSeverity:
+        for cs in list(ConstraintSeverity):
             assert cs.value in d["constraint_severities"]
 
     def test_all_conflict_classes_in_contract(self):
         d = DEFAULT_CONTRACT.to_dict()
-        for cc in ConflictClass:
+        for cc in list(ConflictClass):
             assert cc.value in d["conflict_classes"]
 
     def test_stability_weights_in_contract(self):

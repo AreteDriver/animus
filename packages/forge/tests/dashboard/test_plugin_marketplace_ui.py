@@ -27,7 +27,7 @@ class TestCategoryConfig:
 
     def test_all_categories_have_config(self):
         """All plugin categories should have config."""
-        for category in PluginCategory:
+        for category in list(PluginCategory):
             assert category in CATEGORY_CONFIG, f"Missing config for {category}"
 
     def test_config_has_required_fields(self):

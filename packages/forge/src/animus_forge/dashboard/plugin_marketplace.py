@@ -644,7 +644,7 @@ def _render_category_sidebar() -> None:
         cat = plugin["category"].value
         category_counts[cat] = category_counts.get(cat, 0) + 1
 
-    for category in PluginCategory:
+    for category in list(PluginCategory):
         count = category_counts.get(category.value, 0)
         if count == 0:
             continue

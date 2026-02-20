@@ -57,8 +57,10 @@ class TestMemoryCache:
         cache.set_sync("key", "value")
 
         async def _test():
-            assert await cache.delete("key") is True
-            assert await cache.delete("key") is False
+            result1 = await cache.delete("key")
+            assert result1 is True
+            result2 = await cache.delete("key")
+            assert result2 is False
 
         asyncio.run(_test())
 

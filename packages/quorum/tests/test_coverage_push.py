@@ -1463,7 +1463,7 @@ class TestEvidenceToDict:
         assert d["description"] == "all tests pass"
 
     def test_to_dict_roundtrip(self) -> None:
-        for kind in EvidenceKind:
+        for kind in list(EvidenceKind):
             e = Evidence(kind=kind, description=f"test {kind.value}")
             d = e.to_dict()
             assert d["kind"] == kind.value

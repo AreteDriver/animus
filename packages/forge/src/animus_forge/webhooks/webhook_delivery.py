@@ -641,7 +641,7 @@ class WebhookDeliveryManager:
         stats = {}
 
         # Count by status
-        for status in DeliveryStatus:
+        for status in list(DeliveryStatus):
             row = self.backend.fetchone(
                 "SELECT COUNT(*) as count FROM webhook_deliveries WHERE status = ?",
                 (status.value,),

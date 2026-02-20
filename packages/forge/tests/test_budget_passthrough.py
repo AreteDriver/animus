@@ -221,7 +221,8 @@ class TestExecutorPromptInjection:
         from animus_forge.workflow.loader import StepConfig
 
         obj = FakeExecutor()
-        AIHandlersMixin._execute_claude_code = AIHandlersMixin._execute_claude_code
+        # Ensure AIHandlersMixin._execute_claude_code is accessible (no-op reference check)
+        assert hasattr(AIHandlersMixin, "_execute_claude_code")
 
         step = StepConfig(
             id="s1",

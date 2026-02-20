@@ -139,6 +139,6 @@ def _resolve_ref(ref: str, outputs: dict[str, str]) -> str | None:
         if isinstance(parsed, dict) and field_name in parsed:
             return str(parsed[field_name])
     except (json.JSONDecodeError, TypeError):
-        pass
+        pass  # Not valid JSON or wrong type — fall through to return None
 
     return None

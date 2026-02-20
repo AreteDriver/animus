@@ -144,6 +144,30 @@ app.command()(logs)
 # Backward-compatible re-exports (tests import from animus_forge.cli.main)
 # =============================================================================
 
+__all__ = [
+    "app",
+    "_display_workflow_preview",
+    "_load_workflow_from_source",
+    "_output_run_results",
+    "_output_validation_results",
+    "_validate_cli_next_step_refs",
+    "_validate_cli_required_fields",
+    "_validate_cli_steps",
+    "list_workflows_table",
+    "_detect_js_framework",
+    "_detect_language_and_framework",
+    "_detect_python_framework",
+    "_get_key_structure",
+    "_get_readme_content",
+    "detect_codebase_context",
+    "format_context_for_prompt",
+    "_parse_cli_variables",
+    "get_claude_client",
+    "get_tracker",
+    "get_workflow_engine",
+    "get_workflow_executor",
+]
+
 from .commands.workflow import (  # noqa: E402, F401
     _display_workflow_preview,
     _load_workflow_from_source,

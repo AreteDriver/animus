@@ -503,7 +503,7 @@ class TestThreadSafety:
                     with lock:
                         success_count += 1
                 except CircuitBreakerError:
-                    pass
+                    pass  # Expected under load: circuit may open transiently
 
         threads = [threading.Thread(target=worker) for _ in range(10)]
         for t in threads:

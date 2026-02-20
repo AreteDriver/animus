@@ -135,7 +135,7 @@ class TestBotUser:
         assert user.identifier == "telegram:99"
 
     def test_identifier_each_platform(self):
-        for p in MessagePlatform:
+        for p in list(MessagePlatform):
             user = _make_user(id="x", platform=p)
             assert user.identifier == f"{p.value}:x"
 

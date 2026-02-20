@@ -1442,6 +1442,6 @@ def create_app() -> FastAPI:
 
         add_dashboard_routes(app, get_state, verify_api_key)
     except ImportError:
-        pass
+        pass  # Optional dependency: dashboard module not installed
 
     return app

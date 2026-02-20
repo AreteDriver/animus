@@ -2,6 +2,7 @@
 
 import pytest
 
+import animus_forge.cli.rich_output as rich_output_mod
 from animus_forge.cli.rich_output import (
     OutputStyle,
     RichOutput,
@@ -221,7 +222,7 @@ class TestGetOutput:
     """Tests for get_output and convenience functions."""
 
     def test_get_output_singleton(self):
-        import animus_forge.cli.rich_output as mod
+        mod = rich_output_mod
 
         mod._output = None
         out1 = get_output(force_plain=True)
@@ -230,7 +231,7 @@ class TestGetOutput:
         mod._output = None  # cleanup
 
     def test_get_output_force_plain_resets(self):
-        import animus_forge.cli.rich_output as mod
+        mod = rich_output_mod
 
         mod._output = None
         get_output()
@@ -239,7 +240,7 @@ class TestGetOutput:
         mod._output = None
 
     def test_convenience_functions(self, capsys):
-        import animus_forge.cli.rich_output as mod
+        mod = rich_output_mod
 
         mod._output = None
         mod._output = RichOutput(force_plain=True)

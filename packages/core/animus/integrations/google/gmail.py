@@ -32,7 +32,7 @@ try:
 
     GOOGLE_API_AVAILABLE = True
 except ImportError:
-    pass
+    pass  # Optional dependency: google-api-python-client not installed
 
 GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
