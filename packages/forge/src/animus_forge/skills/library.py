@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 from .consensus import consensus_level_order
 from .loader import load_registry
@@ -26,9 +27,10 @@ def _tokenize(text: str) -> set[str]:
 class SkillLibrary:
     """Load and query skill definitions at runtime."""
 
-    def __init__(self, skills_dir: Path | None = None) -> None:
+    def __init__(self, skills_dir: Path | None = None, ab_manager: Any = None) -> None:
         self._skills_dir = skills_dir or _DEFAULT_SKILLS_DIR
         self._registry: SkillRegistry = load_registry(self._skills_dir)
+        self._ab_manager = ab_manager  # Optional ABTestManager for A/B routing
 
     @property
     def registry(self) -> SkillRegistry:

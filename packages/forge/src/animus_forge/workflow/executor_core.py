@@ -241,6 +241,8 @@ class WorkflowExecutor(
                     step_result=step_result,
                     cost_usd=0.0,  # Cost tracked separately via cost_tracker
                     tokens_used=step_result.tokens_used,
+                    skill_name=step.params.get("skill_name", ""),
+                    skill_version=step.params.get("skill_version", ""),
                 )
             except Exception as fb_err:
                 logger.debug(f"Feedback engine error (non-fatal): {fb_err}")

@@ -1,4 +1,4 @@
-"""Performance benchmarks for Gorgon core operations.
+"""Performance benchmarks for Forge core operations.
 
 Run: pytest tests/test_benchmarks.py --benchmark-only
 """
@@ -7,8 +7,11 @@ import asyncio
 
 import pytest
 
+from animus_forge.budget import BudgetConfig, BudgetManager
 from animus_forge.cache.backends import MemoryCache
 from animus_forge.db import TaskStore
+from animus_forge.skills import SkillLibrary
+from animus_forge.state import CheckpointManager
 from animus_forge.state.backends import SQLiteBackend
 from animus_forge.workflow.loader import (
     ConditionConfig,
@@ -229,3 +232,63 @@ class TestTaskStoreBenchmark:
             task_store_db.get_summary()
 
         benchmark(record_and_query)
+
+
+class TestBudgetBenchmark:
+    """BudgetManager token tracking throughput."""
+
+    def test_budget_record_usage_500(self, benchmark):
+        """Benchmark: BudgetManager record_usage x500 + stats."""
+        config = BudgetConfig(total_budget=1_000_000, per_agent_limit=200_000)
+        manager = BudgetManager(config=config)
+
+        def budget_ops():
+            for i in range(500):
+                agent = f"agent_{i % 5}"
+                manager.record_usage(agent_id=agent, tokens=100 + i, operation=f"op_{i}")
+            for agent_id in [f"agent_{j}" for j in range(5)]:
+                manager.can_allocate(1000, agent_id=agent_id)
+            manager.get_stats()
+
+        benchmark(budget_ops)
+
+
+class TestCheckpointBenchmark:
+    """CheckpointManager lifecycle throughput."""
+
+    def test_checkpoint_lifecycle_20(self, benchmark, tmp_path):
+        """Benchmark: Checkpoint create/complete 20 stages."""
+
+        def lifecycle():
+            cm = CheckpointManager(db_path=str(tmp_path / "bench_cp.db"))
+            wf_id = cm.start_workflow("benchmark-workflow")
+            for i in range(20):
+                with cm.stage(f"stage_{i}", input_data={"step": i}, workflow_id=wf_id) as ctx:
+                    ctx.output_data = {"result": f"output_{i}"}
+                    ctx.tokens_used = 100 + i
+            cm.complete_workflow(workflow_id=wf_id)
+
+        benchmark(lifecycle)
+
+
+class TestSkillLookupBenchmark:
+    """SkillLibrary query throughput."""
+
+    def test_skill_lookup_100(self, benchmark):
+        """Benchmark: SkillLibrary queries x100 (real skills dir)."""
+        lib = SkillLibrary()
+
+        # Get some real skill/agent names for queries
+        all_skills = lib.registry.skills
+        skill_names = [s.name for s in all_skills[:5]] if all_skills else ["file-ops"]
+        agent_names = ["system", "builder", "researcher", "reviewer", "unknown"]
+
+        def lookup_ops():
+            for _ in range(20):
+                for name in skill_names:
+                    lib.get_skill(name)
+                    lib.get_capabilities(name)
+                for agent in agent_names:
+                    lib.get_skills_for_agent(agent)
+
+        benchmark(lookup_ops)

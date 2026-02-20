@@ -45,6 +45,8 @@ class OutcomeRecord:
     cost_usd: float
     tokens_used: int
     latency_ms: float
+    skill_name: str = ""
+    skill_version: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
     timestamp: str = ""
 
@@ -148,8 +150,9 @@ class OutcomeTracker:
         query = (
             "INSERT INTO outcome_records "
             "(step_id, workflow_id, agent_role, provider, model, success, "
-            "quality_score, cost_usd, tokens_used, latency_ms, metadata, timestamp) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "quality_score, cost_usd, tokens_used, latency_ms, metadata, timestamp, "
+            "skill_name, skill_version) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         params = (
             step_id,
@@ -164,6 +167,8 @@ class OutcomeTracker:
             outcome.latency_ms,
             meta_json,
             outcome.timestamp,
+            outcome.skill_name,
+            outcome.skill_version,
         )
 
         with self._lock:
@@ -182,8 +187,9 @@ class OutcomeTracker:
         query = (
             "INSERT INTO outcome_records "
             "(step_id, workflow_id, agent_role, provider, model, success, "
-            "quality_score, cost_usd, tokens_used, latency_ms, metadata, timestamp) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "quality_score, cost_usd, tokens_used, latency_ms, metadata, timestamp, "
+            "skill_name, skill_version) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
 
         rows: list[tuple[Any, ...]] = []
@@ -202,6 +208,8 @@ class OutcomeTracker:
                     o.latency_ms,
                     json.dumps(o.metadata) if o.metadata else "{}",
                     o.timestamp,
+                    o.skill_name,
+                    o.skill_version,
                 )
             )
 
@@ -366,6 +374,8 @@ class OutcomeTracker:
             cost_usd=float(row["cost_usd"]),
             tokens_used=int(row["tokens_used"]),
             latency_ms=float(row["latency_ms"]),
+            skill_name=str(row.get("skill_name", "")),
+            skill_version=str(row.get("skill_version", "")),
             metadata=meta,
             timestamp=str(row["timestamp"]),
         )

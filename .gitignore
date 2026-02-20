@@ -76,6 +76,9 @@ logs/
 secrets.yaml
 config/local.yaml
 
+# Benchmarks
+.benchmarks/
+
 # User data (never commit)
 user_data/
 personal/

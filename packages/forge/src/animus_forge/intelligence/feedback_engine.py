@@ -193,6 +193,8 @@ class FeedbackEngine:
         step_result: dict[str, Any],
         cost_usd: float,
         tokens_used: int,
+        skill_name: str = "",
+        skill_version: str = "",
     ) -> FeedbackResult:
         """Process the result of a single workflow step execution.
 
@@ -231,6 +233,8 @@ class FeedbackEngine:
             cost_usd=cost_usd,
             tokens_used=tokens_used,
             latency_ms=latency_ms,
+            skill_name=skill_name,
+            skill_version=skill_version,
             metadata=metadata,
         )
         outcome_recorded = False

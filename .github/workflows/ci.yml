@@ -135,3 +135,90 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  benchmarks:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test-core, test-quorum, test-forge, security]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-bench-${{ hashFiles('packages/*/pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-bench-
+
+      - name: Install all packages
+        run: |
+          pip install -e "packages/quorum/[dev]"
+          pip install -e "packages/forge/[dev]"
+          pip install -e "packages/core/[dev,api]"
+
+      - name: Run Core benchmarks
+        run: >
+          pytest packages/core/tests/test_benchmarks.py
+          --benchmark-only --benchmark-disable-gc --benchmark-warmup=on
+          --benchmark-json=.benchmarks/core.json -q
+
+      - name: Run Forge benchmarks
+        working-directory: packages/forge
+        run: >
+          pytest tests/test_benchmarks.py
+          --benchmark-only --benchmark-disable-gc --benchmark-warmup=on
+          --benchmark-json=../../.benchmarks/forge.json -q
+
+      - name: Run Quorum benchmarks
+        run: >
+          PYTHONPATH=packages/quorum/python pytest packages/quorum/tests/test_benchmarks.py
+          --benchmark-only --benchmark-disable-gc --benchmark-warmup=on
+          --benchmark-json=.benchmarks/quorum.json -q
+        env:
+          PYTHONPATH: packages/quorum/python
+
+      - name: Merge benchmark results
+        run: |
+          python3 -c "
+          import json, glob
+          merged = {'benchmarks': []}
+          for f in sorted(glob.glob('.benchmarks/*.json')):
+              data = json.load(open(f))
+              pkg = f.split('/')[-1].replace('.json', '')
+              for b in data.get('benchmarks', []):
+                  b['group'] = pkg
+                  merged['benchmarks'].append(b)
+          merged['machine_info'] = data.get('machine_info', {})
+          merged['commit_info'] = data.get('commit_info', {})
+          merged['datetime'] = data.get('datetime', '')
+          json.dump(merged, open('.benchmarks/merged.json', 'w'), indent=2)
+          print(f'Merged {len(merged[\"benchmarks\"])} benchmarks')
+          "
+
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: pytest
+          output-file-path: .benchmarks/merged.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          alert-threshold: '150%'
+          fail-on-alert: false
+          comment-on-alert: true
+          benchmark-data-dir-path: dev/bench
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results
+          path: .benchmarks/
+          retention-days: 90
