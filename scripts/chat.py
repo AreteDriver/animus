@@ -12,7 +12,7 @@ import sys
 import urllib.request
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
 ANIMUS_ROOT = os.path.expanduser("~/projects/animus")
 AUTO_APPROVE = False  # When True, executes tool calls without asking
 
@@ -325,6 +325,30 @@ def extract_and_execute_tools(response: str) -> str | None:
     return None
 
 
+VALID_TOOL_NAMES = {"read_file", "run_command", "write_file", "edit_file"}
+
+# Matches JSON objects with "name" and "arguments" keys embedded in text
+RE_INLINE_JSON = re.compile(
+    r'\{\s*"name"\s*:\s*"(\w+)"\s*,\s*"arguments"\s*:\s*(\{[^}]+\})\s*\}',
+)
+
+
+def extract_inline_json_tool_calls(response: str) -> list[dict] | None:
+    """Parse tool calls written as JSON in text (models that understand
+    the schema but output calls as text instead of native tool_calls)."""
+    calls = []
+    for match in RE_INLINE_JSON.finditer(response):
+        name = match.group(1)
+        if name not in VALID_TOOL_NAMES:
+            continue
+        try:
+            args = json.loads(match.group(2))
+        except json.JSONDecodeError:
+            continue
+        calls.append({"function": {"name": name, "arguments": args}})
+    return calls or None
+
+
 def execute_native_tool_calls(tool_calls: list[dict]) -> str | None:
     """Execute native Ollama tool calls, return combined results."""
     results = []
@@ -435,6 +459,16 @@ WAFFLE_PHRASES = [
     "first, you need to",
     "let me outline",
     "i'll walk you through",
+    # Models that describe tool calls instead of making them
+    "this could involve",
+    "we would need to",
+    "we can break down",
+    "here's an example workflow",
+    "each of these steps",
+    "implement a script that",
+    "set up monitoring",
+    "develop a mechanism",
+    "given these steps",
 ]
 
 
@@ -467,8 +501,13 @@ def agent_loop(user_message: str) -> None:
         if response.get("tool_calls"):
             tool_results = execute_native_tool_calls(response["tool_calls"])
         else:
-            # Fall back to XML parsing for models that don't support native tools
-            tool_results = extract_and_execute_tools(response["content"])
+            # Try inline JSON (models that output tool calls as text)
+            inline = extract_inline_json_tool_calls(response["content"])
+            if inline:
+                tool_results = execute_native_tool_calls(inline)
+            else:
+                # Fall back to XML parsing
+                tool_results = extract_and_execute_tools(response["content"])
 
         if tool_results is None:
             break  # No tool calls — agent is done
