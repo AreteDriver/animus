@@ -1,21 +1,29 @@
 # Ollama Agent Handoff — Animus
 
-**Purpose:** Complete instructions and prompts for a local Ollama agent to finish, test, harden, and deploy the Animus exocortex as a persistent local service.
+**Purpose:** Instructions and prompts for a local Ollama agent to deploy, harden, and self-improve the Animus exocortex.
 **Last Updated:** 2026-02-20
-**Status:** Built and tested. Needs production hardening, CodeQL cleanup, and deployment.
+**Version:** v2.0.0
+
+---
+
+## Phase Tracker
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 1. Validate | Venvs, imports, Ollama, deps | DONE |
+| 2. Code Quality | Lint, CodeQL, empty-except, `__all__` | DONE |
+| 3. Test Suite | 9,267 tests across 3 packages | DONE |
+| 4. Deploy | Systemd services, health checks | **TODO** |
+| 5. Harden | Exception narrowing, type hints, dep audit | **TODO** |
+| 6. Self-Improve | Review loop, test generation, coverage push | **TODO** |
+
+**Start at Phase 4.** Phases 1-3 were completed on 2026-02-20 by Claude Code.
 
 ---
 
 ## What You Are
 
-You are an autonomous agent running via Ollama on this machine. Animus is a personal AI exocortex — three packages, 9,373 tests, deployed locally. Your job:
-
-1. Validate the installation (Phase 1)
-2. Fix remaining code quality issues (Phase 2)
-3. Run the full test suite and fix failures (Phase 3)
-4. Deploy as persistent systemd services (Phase 4)
-5. Production hardening (Phase 5)
-6. Enter self-improvement loop (Phase 6)
+You are an autonomous agent running via Ollama on this machine. Animus is a personal AI exocortex — a monorepo with three independently installable Python packages. Your job is to deploy it as a persistent local service, harden it for production, and then continuously improve code quality.
 
 **You do NOT need to rebuild or restructure anything. The architecture is final.**
 
@@ -24,268 +32,107 @@ You are an autonomous agent running via Ollama on this machine. Animus is a pers
 ## Architecture
 
 ```
-~/projects/animus/                    ← Monorepo root
-├── packages/core/                    ← Animus Core v1.0.0
-│   └── animus/                       ← import animus
-│       ├── cognitive.py              ← LLM interface (Ollama/Anthropic/OpenAI/Mock)
-│       ├── memory.py                 ← ChromaDB episodic/semantic/procedural
-│       ├── proactive.py              ← Nudges, briefings, deadline awareness
-│       ├── autonomous.py             ← Autonomous executor
-│       ├── api.py                    ← Optional FastAPI server
-│       ├── integrations/             ← Google, Todoist, filesystem, webhooks
-│       │   └── gorgon.py            ← HTTP client to Forge API
-│       ├── forge/                    ← Lightweight sequential orchestration
-│       ├── swarm/                    ← Lightweight parallel DAG orchestration
-│       ├── protocols/                ← Abstract interfaces (memory, intelligence, sync, safety)
-│       └── sync/                     ← Peer discovery + sync
-│
-├── packages/forge/                   ← Animus Forge v1.2.0 (was: Gorgon)
-│   └── src/animus_forge/             ← import animus_forge
-│       ├── api.py                    ← FastAPI server (127.0.0.1:8000)
-│       ├── cli/                      ← Typer CLI (60+ commands)
-│       ├── workflow/                 ← YAML workflow executor (sequential + parallel)
-│       ├── agents/supervisor.py      ← Multi-agent delegation + consensus
-│       ├── providers/                ← 6 LLM providers (Ollama, Anthropic, OpenAI, etc)
-│       ├── budget/                   ← Token/cost management (persistent SQLite)
-│       ├── state/                    ← SQLite WAL + 14 migrations
-│       ├── skills/                   ← Skill definitions (YAML + docs)
-│       ├── mcp/                      ← MCP tool execution
-│       ├── dashboard/                ← Streamlit dashboard
-│       └── webhooks/                 ← Webhook delivery + circuit breaker
-│
-├── packages/quorum/                  ← Animus Quorum v1.1.0 (was: Convergent)
-│   └── python/convergent/            ← import convergent (PyPI: convergentAI)
-│       ├── intent.py                 ← Intent graph
-│       ├── triumvirate.py            ← Voting engine
-│       ├── stigmergy.py              ← Agent coordination signals
-│       ├── gorgon_bridge.py          ← Integration bridge to Forge
-│       └── ...                       ← 36 modules total
-│
-├── .env                              ← Ollama config (gitignored)
-├── .github/workflows/                ← CI: lint + test + security
-└── docs/                             ← Whitepapers
+~/projects/animus/                    <- Monorepo root (v2.0.0)
+|-- packages/core/                    <- Animus Core v1.0.0
+|   |-- animus/                       <- import animus
+|   |   |-- cognitive.py              <- LLM interface (Ollama/Anthropic/OpenAI/Mock)
+|   |   |-- memory.py                 <- ChromaDB episodic/semantic/procedural
+|   |   |-- proactive.py              <- Nudges, briefings, deadline awareness
+|   |   |-- autonomous.py             <- Autonomous executor
+|   |   |-- api.py                    <- Optional FastAPI server
+|   |   |-- integrations/             <- Google, Todoist, filesystem, webhooks
+|   |   |   `-- gorgon.py             <- HTTP client to Forge API
+|   |   |-- forge/                    <- Lightweight sequential orchestration
+|   |   |-- swarm/                    <- Lightweight parallel DAG orchestration
+|   |   |-- protocols/                <- Abstract interfaces
+|   |   `-- sync/                     <- Peer discovery + sync
+|   |-- tests/                        <- 1,630 pass, 106 skip (optional deps)
+|   `-- pyproject.toml
+|
+|-- packages/forge/                   <- Animus Forge v1.2.0 (was: Gorgon)
+|   |-- src/animus_forge/             <- import animus_forge
+|   |   |-- api.py                    <- FastAPI server (127.0.0.1:8000)
+|   |   |-- cli/                      <- Typer CLI (60+ commands)
+|   |   |-- workflow/                 <- YAML workflow executor
+|   |   |-- agents/supervisor.py      <- Multi-agent delegation + consensus
+|   |   |-- providers/                <- 6 LLM providers
+|   |   |-- budget/                   <- Token/cost management (persistent SQLite)
+|   |   |-- state/                    <- SQLite WAL + 14 migrations
+|   |   |-- skills/                   <- Skill definitions (YAML)
+|   |   |-- mcp/                      <- MCP tool execution
+|   |   |-- dashboard/                <- Streamlit dashboard
+|   |   `-- webhooks/                 <- Webhook delivery + circuit breaker
+|   |-- tests/                        <- 6,731 pass
+|   |-- skills/                       <- Skill definitions
+|   |-- migrations/                   <- 14 SQL migrations
+|   |-- workflows/                    <- YAML workflow definitions
+|   `-- pyproject.toml
+|
+|-- packages/quorum/                  <- Animus Quorum v1.1.0 (was: Convergent)
+|   |-- python/convergent/            <- import convergent (PyPI: convergentAI)
+|   |   |-- intent.py                 <- Intent graph
+|   |   |-- triumvirate.py            <- Voting engine
+|   |   |-- stigmergy.py              <- Agent coordination signals
+|   |   |-- gorgon_bridge.py          <- Integration bridge to Forge
+|   |   `-- ...                       <- 36 modules total
+|   |-- tests/                        <- 906 pass
+|   `-- pyproject.toml
+|
+|-- .env                              <- Ollama config (gitignored)
+|-- .github/workflows/                <- CI: lint + test + security + CodeQL
+`-- docs/whitepapers/                 <- Architecture docs
 ```
 
-**Dependency flow:** Quorum is standalone (zero deps) → Forge depends on Quorum (`convergentai` PyPI) → Core depends on Forge (via HTTP API)
+**Dependency flow:** Quorum (zero deps) -> Forge (depends on Quorum via `convergentai` PyPI) -> Core (connects to Forge via HTTP API)
 
 **Entry points:**
-- `animus` — Interactive CLI (prompt-toolkit)
-- `animus-forge --help` — Orchestration CLI (Typer, 60+ commands)
-- `uvicorn animus_forge.api:app` — Forge REST API
+- `animus` -- Interactive CLI (prompt-toolkit)
+- `animus-forge --help` -- Orchestration CLI (Typer, 60+ commands)
+- `uvicorn animus_forge.api:app` -- Forge REST API
 
 ---
 
-## Current State (verified 2026-02-20)
+## Verified State (2026-02-20)
 
-| Package | Tests | Coverage | Status |
-|---------|-------|----------|--------|
-| Quorum  | 906   | 97%      | All passing |
-| Core    | 1,736 | 95%      | 1,630 pass, 106 skip (optional deps) |
-| Forge   | 6,731 | 86%      | Running validation |
+| Package | Tests | Coverage | Threshold | Status |
+|---------|-------|----------|-----------|--------|
+| Quorum  | 906   | 97%      | fail_under=97 | ALL PASSING |
+| Core    | 1,630 | 95%      | fail_under=95 | ALL PASSING (106 skips = optional deps) |
+| Forge   | 6,731 | 86%      | fail_under=85 | ALL PASSING |
+| **Total** | **9,267** | | | |
 
-- Virtual environments: all 3 created and verified
+**Infrastructure:**
+- Virtual environments: all 3 created and verified (`packages/{core,forge,quorum}/.venv/`)
 - Ollama models: `deepseek-coder-v2` (8.9GB), `codellama` (3.8GB), `llama3.1:8b` (4.9GB)
-- `.env` created with Ollama defaults
+- `.env` created with Ollama defaults (gitignored)
 - `~/.animus/{data,logs,memory}` directories exist
-- CI: all green on GitHub
+- CI: all green on GitHub (lint + test + security + CodeQL)
+- CodeQL: 0 open alerts (24 fixed in code, 136 false positives dismissed)
+- Lint: `ruff check packages/ && ruff format --check packages/` = clean
 
-**Known issues to fix:**
-- 85 CodeQL alerts (mostly false positives, ~15 need code fixes)
-- `pytest-timeout` not installed in any venv (use plain `pytest`)
-- Forge tests MUST run from `packages/forge/` directory (relative path deps)
+**NOT yet done:**
+- Forge API not deployed as systemd service
+- `scripts/review.py` not yet created on disk
+- No `BLOCKERS.md` exists yet (nothing blocked)
 
----
-
-## Phase 1 — Validate Installation
-
-**Do NOT skip this.** Run every check. If anything fails, fix it before proceeding.
-
-```bash
-cd ~/projects/animus
-
-# 1. Git status
-git status && git log --oneline -3
-
-# 2. Virtual environments
-for pkg in core forge quorum; do
-  ls "packages/$pkg/.venv/bin/activate" 2>/dev/null && echo "$pkg venv: OK" || echo "$pkg venv: MISSING"
-done
-
-# 3. Import checks
-cd packages/quorum && source .venv/bin/activate
-python3 -c "import convergent; print(f'Quorum: {convergent.__version__}')"
-
-cd ~/projects/animus/packages/core && source .venv/bin/activate
-python3 -c "import animus; print(f'Core: {animus.__version__}')"
-python3 -c "from animus.cognitive import CognitiveLayer; print('CognitiveLayer: OK')"
-python3 -c "from animus.memory import MemoryLayer; print('MemoryLayer: OK')"
-
-cd ~/projects/animus/packages/forge && source .venv/bin/activate
-python3 -c "import animus_forge; print('Forge: OK')"
-python3 -c "from animus_forge.agents.supervisor import SupervisorAgent; print('Supervisor: OK')"
-
-# 4. Ollama connectivity
-ollama list
-curl -s http://localhost:11434/api/generate \
-  -d '{"model": "deepseek-coder-v2", "prompt": "respond with only: OK", "stream": false}' \
-  | python3 -c "import sys,json; print(json.load(sys.stdin).get('response','FAIL').strip())"
-
-# 5. Dependency health
-cd ~/projects/animus/packages/core && source .venv/bin/activate && pip check
-cd ~/projects/animus/packages/forge && source .venv/bin/activate && pip check
-```
-
-**Expected output:** All "OK", no broken deps. If venvs are missing, create them:
-```bash
-cd packages/<pkg> && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
-```
+**Gotchas:**
+- `pytest-timeout` is NOT installed in any venv -- use plain `pytest`
+- Forge tests MUST run from `packages/forge/` directory (skills/workflows use relative paths)
+- `pip list --outdated` may show false matches for local packages (e.g., `agent-audit` matching an unrelated PyPI package)
+- `pandas` 2->3 upgrade is blocked by Streamlit compatibility
 
 ---
 
-## Phase 2 — Code Quality Fixes
+## Phase 4 -- Deploy as Local Services
 
-### 2.1 — Lint all packages
-
-```bash
-cd ~/projects/animus
-ruff check packages/ && ruff format --check packages/
-```
-
-If issues found, fix them:
-```bash
-ruff check packages/ --fix
-ruff format packages/
-```
-
-### 2.2 — Fix empty-except blocks
-
-Use this Ollama prompt to find and fix empty except blocks:
-
-> **PROMPT — empty-except audit:**
-> ```
-> You are reviewing Python code for the Animus project. Find all `except` blocks
-> that contain only `pass` without an explanatory comment. For each one:
-> 1. Read the surrounding code to understand WHY the exception is caught and ignored
-> 2. Add a comment on the `pass` line explaining the reason
-> 3. If the except clause is too broad (catches Exception or BaseException), narrow
->    it to the specific exception types that can actually occur
->
-> Format: `pass  # Reason why this exception is safely ignored`
->
-> Example fixes:
->   except (ValueError, TypeError):
->       pass  # Invalid date format — treat as no timeout
->   except json.JSONDecodeError:
->       pass  # Keep raw string if not valid JSON
->   except ImportError:
->       pass  # Optional dependency not installed — feature disabled
-> ```
-
-Files to check:
-- `packages/core/animus/api.py:1444`
-- `packages/core/animus/forge/gates.py:141`
-- `packages/core/animus/sync/discovery.py:170,175`
-- `packages/core/animus/sync/client.py:135`
-- `packages/core/animus/integrations/google/calendar.py:33`
-- `packages/core/animus/integrations/google/gmail.py:34`
-- `packages/core/tests/test_coverage_push3.py:662`
-- `packages/forge/tests/test_circuit_breaker.py:505`
-
-### 2.3 — Fix side-effect-in-assert
-
-> **PROMPT — assert side effects:**
-> ```
-> Find assert statements that call functions with side effects. Extract the call
-> into a variable, then assert the variable. Example:
->   # Bad:  assert cache.pop("key") == value
->   # Good: result = cache.pop("key"); assert result == value
-> ```
-
-File: `packages/forge/tests/test_cache_coverage.py:60-61`
-
-### 2.4 — Fix redundant self-assignment
-
-File: `packages/forge/tests/test_budget_passthrough.py:224`
-Look for `x = x` and either remove or replace with the intended assignment.
-
-### 2.5 — Fix catch-base-exception
-
-File: `packages/core/animus/integrations/manager.py:259`
-Narrow `except BaseException` to `except Exception` (unless it intentionally catches KeyboardInterrupt/SystemExit).
-
-### 2.6 — Add `__all__` for re-export modules
-
-> **PROMPT — unused import fix:**
-> ```
-> This file re-exports symbols for convenience. Add an `__all__` list at the top
-> of the module listing all intentionally re-exported names. This tells linters
-> and CodeQL the imports are intentional.
->
-> Example:
->   __all__ = ["Layout", "Live", "Style", "Text"]
-> ```
-
-Files:
-- `packages/forge/src/animus_forge/cli/rich_output.py` (Layout, Live, Style, Text)
-- `packages/forge/src/animus_forge/cli/main.py` (workflow commands, codebase commands, dev commands)
-- `packages/forge/src/animus_forge/dashboard/app.py` (render functions)
-
----
-
-## Phase 3 — Full Test Suite
-
-Run each package separately. Forge MUST run from its own directory.
-
-```bash
-# Quorum (fastest — ~11 seconds)
-cd ~/projects/animus/packages/quorum
-source .venv/bin/activate
-pytest tests/ -q --no-header
-# Expected: 906 passed
-
-# Core (~7 seconds)
-cd ~/projects/animus/packages/core
-source .venv/bin/activate
-pytest tests/ -q --no-header
-# Expected: ~1630 passed, ~106 skipped
-
-# Forge (largest — may take several minutes)
-cd ~/projects/animus/packages/forge
-source .venv/bin/activate
-pytest tests/ -q --no-header
-# Expected: ~6731 passed
-```
-
-**If tests fail:**
-1. Read the error message carefully
-2. Check if it's a missing dependency (install it)
-3. Check if it's a flaky test (run again with `-x` to isolate)
-4. Fix the issue, run again
-5. If stuck after 3 attempts, log a BLOCKER and move on
-
-**Coverage check:**
-```bash
-cd ~/projects/animus/packages/core && source .venv/bin/activate
-pytest tests/ --cov=animus --cov-report=term-missing -q 2>&1 | tail -5
-# Must be >= 95%
-
-cd ~/projects/animus/packages/forge && source .venv/bin/activate
-pytest tests/ --cov=animus_forge --cov-report=term-missing -q 2>&1 | tail -5
-# Must be >= 85%
-```
-
----
-
-## Phase 4 — Deploy as Local Services
-
-### 4.1 — Forge API (orchestration backend)
+### 4.1 -- Create the Forge systemd service
 
 ```bash
 mkdir -p ~/.config/systemd/user
 
 cat > ~/.config/systemd/user/animus-forge.service << 'EOF'
 [Unit]
-Description=Animus Forge — Orchestration API
+Description=Animus Forge -- Orchestration API
 After=network.target
 
 [Service]
@@ -305,10 +152,10 @@ systemctl --user daemon-reload
 systemctl --user enable animus-forge
 systemctl --user start animus-forge
 sleep 3
-curl -s http://localhost:8000/health && echo " — Forge API running"
+curl -s http://localhost:8000/health && echo " -- Forge API running"
 ```
 
-### 4.2 — Verify Core → Forge connectivity
+### 4.2 -- Verify Core -> Forge connectivity
 
 ```bash
 cd ~/projects/animus/packages/core && source .venv/bin/activate
@@ -318,20 +165,20 @@ import asyncio
 async def check():
     c = GorgonClient('http://localhost:8000')
     h = await c.check_health()
-    print(f'Core → Forge: {h}')
+    print(f'Core -> Forge: {h}')
 asyncio.run(check())
 "
 ```
 
-### 4.3 — Test a workflow execution
+### 4.3 -- Verify workflows
 
 ```bash
 cd ~/projects/animus/packages/forge && source .venv/bin/activate
-animus-forge workflow list
-animus-forge workflow validate workflows/code-review.yaml
+animus-forge list
+animus-forge validate workflows/code-review.yaml
 ```
 
-### 4.4 — Verify Ollama is the active provider
+### 4.4 -- Verify Ollama is the active LLM provider
 
 ```bash
 cd ~/projects/animus/packages/core && source .venv/bin/activate
@@ -344,13 +191,30 @@ print(f'Ollama response: {result}')
 "
 ```
 
+### 4.5 -- Enable lingering (survive logout)
+
+```bash
+# Allows user services to run even when not logged in
+loginctl enable-linger arete
+```
+
+### 4.6 -- Deployment verification checklist
+
+Run all of these. Every line must succeed:
+
+```bash
+systemctl --user is-active animus-forge            # "active"
+curl -sf http://localhost:8000/health               # 200 OK
+journalctl --user -u animus-forge --no-pager -n 5   # No errors in logs
+```
+
 ---
 
-## Phase 5 — Production Hardening
+## Phase 5 -- Production Hardening
 
-### 5.1 — Narrow exception types
+### 5.1 -- Narrow exception types
 
-> **PROMPT — exception narrowing:**
+> **PROMPT (use deepseek-coder-v2):**
 > ```
 > You are hardening Python code for production. Find `except Exception` blocks
 > and narrow them to specific exception types. Read the try block to determine
@@ -364,13 +228,13 @@ print(f'Ollama response: {result}')
 > - Type conversion: ValueError, TypeError, KeyError
 > - Import: ImportError, ModuleNotFoundError
 >
-> Do NOT narrow exceptions in test files — those are intentionally broad.
+> Do NOT narrow exceptions in test files -- those are intentionally broad.
 > Do NOT change `except Exception` in top-level error handlers (API routes, CLI commands).
 > ```
 
-### 5.2 — Add missing type hints
+### 5.2 -- Add missing type hints
 
-> **PROMPT — type hints:**
+> **PROMPT (use deepseek-coder-v2):**
 > ```
 > Add type hints to all public functions (not starting with _) that are missing them.
 > Use Python 3.10+ syntax: list[str] not List[str], str | None not Optional[str].
@@ -379,19 +243,18 @@ print(f'Ollama response: {result}')
 > - If a class has a method named `list`, `set`, or `dict`, add
 >   `from __future__ import annotations` at the top of the file
 > - Return types are required
-> - Use `Any` sparingly — prefer specific types
+> - Use `Any` sparingly -- prefer specific types
 > - For callbacks, use `Callable[[arg_types], return_type]`
 > ```
 
-### 5.3 — Dependency audit
+### 5.3 -- Dependency audit
 
 ```bash
-# Check for outdated packages
 cd ~/projects/animus/packages/core && source .venv/bin/activate
-pip list --outdated
+pip list --outdated --format=columns
 
 cd ~/projects/animus/packages/forge && source .venv/bin/activate
-pip list --outdated
+pip list --outdated --format=columns
 ```
 
 **Update ONE at a time. Test after each.**
@@ -401,32 +264,47 @@ pytest tests/ -x -q
 ```
 
 **Do NOT update:**
-- `pandas` — major version (2→3) blocked by Streamlit
+- `pandas` -- major version (2->3) blocked by Streamlit
+- `bcrypt` -- major version (4->5) needs testing
 - Any package that requires Python version changes
+
+### 5.4 -- Security scan
+
+```bash
+cd ~/projects/animus/packages/core && source .venv/bin/activate
+pip-audit --skip-editable
+
+cd ~/projects/animus/packages/forge && source .venv/bin/activate
+pip-audit --skip-editable
+```
 
 ---
 
-## Phase 6 — Self-Improvement Loop
+## Phase 6 -- Self-Improvement Loop
 
 Once deployed and healthy, cycle through improvements. **One change at a time. Test after each.**
 
-### 6.1 — Review files with Ollama
+### 6.1 -- Create the review script
+
+Save this as `~/projects/animus/scripts/review.py`:
 
 ```python
 #!/usr/bin/env python3
 """Review a single file using local Ollama model."""
-import os, sys, requests
+import json
+import os
+import sys
+import urllib.request
+
 
 def review_file(filepath: str) -> str:
     with open(filepath) as f:
         code = f.read()
 
-    response = requests.post(
-        "http://localhost:11434/api/generate",
-        json={
-            "model": os.getenv("OLLAMA_MODEL", "deepseek-coder-v2"),
-            "prompt": f"""Senior Python engineer code review.
-Project: Animus — personal AI exocortex.
+    data = json.dumps({
+        "model": os.getenv("OLLAMA_MODEL", "deepseek-coder-v2"),
+        "prompt": f"""Senior Python engineer code review.
+Project: Animus -- personal AI exocortex.
 Three layers: Core (identity/memory), Forge (orchestration), Quorum (coordination).
 
 Review this file. For each issue found, provide:
@@ -444,10 +322,17 @@ File: {filepath}
 ```python
 {code}
 ```""",
-            "stream": False,
-        },
+        "stream": False,
+    }).encode()
+
+    req = urllib.request.Request(
+        "http://localhost:11434/api/generate",
+        data=data,
+        headers={"Content-Type": "application/json"},
     )
-    return response.json()["response"]
+    with urllib.request.urlopen(req) as resp:
+        return json.loads(resp.read())["response"]
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -456,36 +341,37 @@ if __name__ == "__main__":
     print(review_file(sys.argv[1]))
 ```
 
-Save as `~/projects/animus/scripts/review.py` and run:
+Then run:
 ```bash
-python3 scripts/review.py packages/core/animus/cognitive.py
+chmod +x ~/projects/animus/scripts/review.py
+python3 ~/projects/animus/scripts/review.py packages/core/animus/cognitive.py
 ```
 
-### 6.2 — Batch review priority files
+### 6.2 -- Priority review queue
 
-Review these files first (highest impact):
+Review these files first (highest impact, most complex logic):
 
 ```bash
-# Core — brain
+# Core -- brain
 python3 scripts/review.py packages/core/animus/cognitive.py
 python3 scripts/review.py packages/core/animus/memory.py
 python3 scripts/review.py packages/core/animus/proactive.py
 python3 scripts/review.py packages/core/animus/autonomous.py
 
-# Forge — orchestration
+# Forge -- orchestration
 python3 scripts/review.py packages/forge/src/animus_forge/workflow/executor_core.py
 python3 scripts/review.py packages/forge/src/animus_forge/agents/supervisor.py
 python3 scripts/review.py packages/forge/src/animus_forge/api.py
 python3 scripts/review.py packages/forge/src/animus_forge/budget/persistent.py
 
-# Quorum — coordination
+# Quorum -- coordination
 python3 scripts/review.py packages/quorum/python/convergent/intent.py
 python3 scripts/review.py packages/quorum/python/convergent/triumvirate.py
 ```
 
-### 6.3 — Test generation
+### 6.3 -- Test generation
 
-> **PROMPT — write tests:**
+> **PROMPT (use deepseek-coder-v2):**
 > ```
 > Write pytest tests for this module. Requirements:
 > - Test all public functions
@@ -493,7 +379,7 @@ python3 scripts/review.py packages/quorum/python/convergent/triumvirate.py
 > - Mock external dependencies (LLM calls, HTTP, filesystem)
 > - Use pytest fixtures for setup/teardown
 > - Use parametrize for similar test cases
-> - No pytest-asyncio — use asyncio.run() wrapper for async tests
+> - No pytest-asyncio -- use asyncio.run() wrapper for async tests
 > - Target 95%+ coverage for the module
 >
 > Project conventions:
@@ -502,10 +388,24 @@ python3 scripts/review.py packages/quorum/python/convergent/triumvirate.py
 > - Name: test_<module_name>.py
 > ```
 
-### 6.4 — Commit protocol
+### 6.4 -- Coverage push targets
+
+Modules with the most room for improvement:
 
 ```bash
-# After EVERY improvement:
+# Find modules under 90% coverage
+cd ~/projects/animus/packages/forge && source .venv/bin/activate
+pytest tests/ --cov=animus_forge --cov-report=term-missing -q 2>&1 | grep -E "^\S.*\s[0-9]{1,2}%"
+
+cd ~/projects/animus/packages/core && source .venv/bin/activate
+pytest tests/ --cov=animus --cov-report=term-missing -q 2>&1 | grep -E "^\S.*\s[0-9]{1,2}%"
+```
+
+### 6.5 -- Commit protocol
+
+After EVERY improvement:
+
+```bash
 cd ~/projects/animus
 
 # 1. Lint
@@ -517,13 +417,30 @@ cd packages/<affected_package>
 source .venv/bin/activate
 pytest tests/ -x -q
 
-# 3. Commit (specific files only)
+# 3. Commit (specific files only, never `git add .`)
 cd ~/projects/animus
 git add <changed files>
 git commit -m "improve(<package>): <what and why>"
 
-# Do NOT push — human reviews before push
+# Do NOT push -- human reviews before push
 ```
+
+### 6.6 -- Improvement cycle order
+
+Repeat this loop:
+
+1. Pick the next file from the priority queue (6.2)
+2. Run `review.py` on it
+3. Apply fixes (one at a time)
+4. Lint
+5. Test the affected package
+6. Commit
+7. Move to next file
+
+When the priority queue is exhausted:
+- Run coverage push (6.4) to find low-coverage modules
+- Write tests for them (6.3)
+- Commit each test file individually
 
 ---
 
@@ -537,12 +454,14 @@ The system has three layers:
 - Forge: Multi-agent orchestration, workflow execution, budget management
 - Quorum: Coordination protocol, intent graphs, voting, stigmergy
 
+9,267 tests across 3 packages. All passing. Deployed locally.
+
 Answer the following question about the system: <question>
 ```
 
 ### Code review (use deepseek-coder-v2)
 ```
-Senior Python engineer review. Project: Animus AI exocortex (3 packages, 9300+ tests).
+Senior Python engineer review. Project: Animus AI exocortex (3 packages, 9267 tests, v2.0.0).
 Review this code for: correctness, error handling, typing, performance, security.
 List specific issues with line numbers and fixes. No style opinions.
 
@@ -579,29 +498,41 @@ Do not modify any code logic.
 <code>
 ```
 
+### Exception narrowing (use deepseek-coder-v2)
+```
+Narrow broad exception handlers in this Python file.
+Replace `except Exception` with specific types based on what the try block does.
+Do NOT change exceptions in: test files, top-level API routes, CLI commands.
+Show each change as: file:line, before, after, reason.
+
+<code>
+```
+
 ---
 
 ## What NOT to Do
 
 - **Do NOT delete any files or directories**
-- **Do NOT bulk-upgrade dependencies** — one at a time, test after each
-- **Do NOT restructure the monorepo** — the package layout is final
-- **Do NOT push to GitHub** — stage commits locally, human pushes
-- **Do NOT modify .env with real API keys** — managed by human
-- **Do NOT run `pip freeze > requirements.txt`** — packages use pyproject.toml
+- **Do NOT bulk-upgrade dependencies** -- one at a time, test after each
+- **Do NOT restructure the monorepo** -- the package layout is final
+- **Do NOT push to GitHub** -- stage commits locally, human pushes
+- **Do NOT modify .env with real API keys** -- managed by human
+- **Do NOT run `pip freeze > requirements.txt`** -- packages use pyproject.toml
 - **Do NOT install new packages** without checking pyproject.toml first
-- **Do NOT change public API signatures** — existing code depends on them
+- **Do NOT change public API signatures** -- existing code depends on them
+- **Do NOT use `git add .` or `git add -A`** -- add specific files only
 
 ---
 
-## Blockers — When to Stop
+## Blockers -- When to Stop
 
 Stop and write a report when you hit:
 
-- **Credentials needed** — API keys, SSH auth, cloud services
-- **Test failures after 3 attempts** — log it, move on
-- **Architecture questions** — "should this be in Core or Forge?" → ask human
-- **Breaking changes** — anything that would change public API or CLI
+- **Credentials needed** -- API keys, SSH auth, cloud services
+- **Test failures after 3 attempts** -- log it, move on
+- **Architecture questions** -- "should this be in Core or Forge?" -> ask human
+- **Breaking changes** -- anything that would change public API or CLI
+- **Systemd issues** -- if the service won't start after 3 restarts
 
 **Report format:**
 ```
@@ -624,6 +555,7 @@ Write blocker reports to `~/projects/animus/BLOCKERS.md` (append, don't overwrit
 systemctl --user start animus-forge     # Start Forge API
 systemctl --user stop animus-forge      # Stop Forge API
 systemctl --user status animus-forge    # Check status
+systemctl --user restart animus-forge   # Restart after changes
 journalctl --user -u animus-forge -f    # Tail logs
 
 # CLI
@@ -651,16 +583,24 @@ python3 ~/projects/animus/scripts/review.py <filepath>
 
 ## Success Criteria
 
-You're done when:
-- [ ] All 3 packages import cleanly
-- [ ] Ollama responds to prompts
-- [ ] Quorum: 906 tests pass
-- [ ] Core: 1630+ tests pass (skips OK for optional deps)
-- [ ] Forge: 6700+ tests pass
-- [ ] `ruff check packages/` returns 0 errors
-- [ ] `ruff format --check packages/` returns 0 changes needed
+**Phase 4 (Deploy) -- done when:**
+- [x] All 3 packages import cleanly
+- [x] Ollama responds to prompts
+- [x] 9,267 tests pass (906 + 1,630 + 6,731)
+- [x] Lint clean
+- [x] 0 CodeQL alerts
 - [ ] Forge API runs as systemd service (`curl localhost:8000/health`)
 - [ ] Core can reach Forge via HTTP
-- [ ] No `except Exception: pass` without comments
+- [ ] Service survives logout (`loginctl enable-linger`)
+
+**Phase 5 (Harden) -- done when:**
+- [ ] No broad `except Exception` without justification (outside API routes/CLI)
 - [ ] All public functions have type hints
-- [ ] Coverage: Core >= 95%, Forge >= 85%, Quorum >= 97%
+- [ ] `pip-audit --skip-editable` clean on all packages
+- [ ] Dependencies at latest compatible versions
+
+**Phase 6 (Self-Improve) -- done when:**
+- [ ] All 10 priority files reviewed
+- [ ] Coverage: Core >= 96%, Forge >= 88%, Quorum >= 98%
+- [ ] `scripts/review.py` exists and works
+- [ ] At least 5 improvement commits made
