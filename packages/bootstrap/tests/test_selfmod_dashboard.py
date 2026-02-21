@@ -229,6 +229,37 @@ class TestForgePage:
         resp = client.get("/forge")
         assert "Forge Orchestration" in resp.text
 
+    def test_forge_page_no_invoke_form_when_disabled(
+        self, client: TestClient
+    ) -> None:
+        """GET /forge hides invoke form when Forge is disabled."""
+        resp = client.get("/forge")
+        body = resp.text
+        # Invoke form is gated behind forge_enabled
+        assert "Invoke Endpoint" not in body
+
+    def test_forge_page_has_invoke_form_when_enabled(
+        self, client: TestClient
+    ) -> None:
+        """GET /forge shows invoke form when Forge is enabled."""
+        from unittest.mock import MagicMock, patch
+
+        mock_runtime = MagicMock()
+        mock_runtime.config.forge.enabled = True
+        mock_runtime.config.forge.host = "127.0.0.1"
+        mock_runtime.config.forge.port = 8000
+
+        with patch.object(client.app.state, "runtime", mock_runtime, create=True):
+            # httpx will fail to connect — forge_status will be "stopped"
+            resp = client.get("/forge")
+
+        body = resp.text
+        assert "Invoke Endpoint" in body
+        assert "forge-endpoint" in body
+        assert "forge-method" in body
+        assert "forge-body" in body
+        assert "forge_invoke" in body
+
 
 # ------------------------------------------------------------------
 # Timers page — GET /timers

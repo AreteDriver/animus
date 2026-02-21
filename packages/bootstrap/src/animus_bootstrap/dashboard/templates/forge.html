@@ -83,6 +83,54 @@
         </div>
         <div id="forge-result"></div>
     </div>
+
+    <!-- Invoke Endpoint -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mt-8">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Invoke Endpoint</h3>
+        <form hx-post="/tools/execute" hx-target="#forge-invoke-result" hx-swap="innerHTML"
+              class="space-y-4" id="forge-invoke-form">
+            <input type="hidden" name="tool_name" value="forge_invoke">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-animus-muted text-xs mb-1">Endpoint</label>
+                    <input type="text" id="forge-endpoint" placeholder="e.g. /api/v1/workflows"
+                        required
+                        class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-animus-muted text-xs mb-1">Method</label>
+                    <select id="forge-method"
+                        class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                        <option value="GET">GET</option>
+                        <option value="POST" selected>POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-animus-muted text-xs mb-1">Request Body (JSON, optional)</label>
+                <textarea id="forge-body" rows="4" placeholder='{"key": "value"}'
+                    class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none font-mono"></textarea>
+            </div>
+            <input type="hidden" name="arguments_json" id="forge-invoke-args" value="{}">
+            <button type="submit"
+                class="px-4 py-2 bg-animus-green text-animus-bg rounded text-sm font-bold hover:opacity-80 transition-opacity">
+                Invoke
+            </button>
+        </form>
+        <script>
+            document.getElementById('forge-invoke-form').addEventListener('htmx:configRequest', function(evt) {
+                var args = {
+                    endpoint: document.getElementById('forge-endpoint').value,
+                    method: document.getElementById('forge-method').value,
+                    body: document.getElementById('forge-body').value || '{}'
+                };
+                evt.detail.parameters.arguments_json = JSON.stringify(args);
+            });
+        </script>
+        <div id="forge-invoke-result" class="mt-4"></div>
+    </div>
     {% endif %}
 </div>
 {% endblock %}
