@@ -24,6 +24,8 @@ class AnimusRuntime:
         self._started = False
 
         # Component references (populated by start())
+        self.identity_manager: Any = None
+        self.feedback_store: Any = None
         self.session_manager: Any = None
         self.memory_manager: Any = None
         self.tool_executor: Any = None
@@ -53,7 +55,14 @@ class AnimusRuntime:
         data_dir = self._config.get_data_path()
         data_dir.mkdir(parents=True, exist_ok=True)
 
-        # 1. Session manager
+        # 1. Identity file manager
+        from animus_bootstrap.identity.manager import IdentityFileManager
+
+        identity_dir = Path(self._config.identity.identity_dir).expanduser()
+        self.identity_manager = IdentityFileManager(identity_dir)
+        logger.info("Identity manager initialized: %s", identity_dir)
+
+        # 2. Session manager
         from animus_bootstrap.gateway.session import SessionManager
 
         session_db = data_dir / "sessions.db"
@@ -112,6 +121,17 @@ class AnimusRuntime:
             set_improvement_store(self._improvement_store)
             logger.info("Improvement store initialized: %s", improvements_db)
 
+            # Wire identity tools to live identity manager
+            if self.identity_manager is not None:
+                from animus_bootstrap.intelligence.tools.builtin.identity_tools import (
+                    set_identity_improvement_store,
+                    set_identity_manager,
+                )
+
+                set_identity_manager(self.identity_manager)
+                set_identity_improvement_store(self._improvement_store)
+                logger.info("Identity tools wired to live identity manager")
+
             # Wire memory tools to live memory manager
             if self.memory_manager is not None:
                 from animus_bootstrap.intelligence.tools.builtin.memory_tools import (
@@ -156,6 +176,21 @@ class AnimusRuntime:
             self.proactive_engine = await self._create_proactive_engine()
             logger.info("Proactive engine started")
 
+        # 8b. Wire reflection dependencies
+        if self._config.self_improvement.reflection_enabled:
+            from animus_bootstrap.intelligence.proactive.checks.reflection import (
+                set_reflection_deps,
+            )
+
+            set_reflection_deps(
+                identity_manager=self.identity_manager,
+                feedback_store=getattr(self, "feedback_store", None),
+                memory_manager=self.memory_manager,
+                cognitive_backend=self.cognitive_backend,
+                config=self._config,
+            )
+            logger.info("Reflection loop dependencies wired")
+
         # 9. Persistent timer store + restore saved timers
         if self._config.intelligence.enabled:
             from animus_bootstrap.intelligence.tools.builtin.timer_ctl import (
@@ -172,6 +207,13 @@ class AnimusRuntime:
             restored = restore_timers()
             if restored:
                 logger.info("Restored %d timers from persistent store", restored)
+
+        # 10. Feedback store
+        from animus_bootstrap.intelligence.feedback import FeedbackStore
+
+        feedback_db = data_dir / "feedback.db"
+        self.feedback_store = FeedbackStore(feedback_db)
+        logger.info("Feedback store initialized: %s", feedback_db)
 
         self._started = True
         logger.info("Animus runtime started successfully")
@@ -208,6 +250,10 @@ class AnimusRuntime:
             self._tool_history_store.close()
             logger.info("Tool history store closed")
 
+        if self.feedback_store is not None:
+            self.feedback_store.close()
+            logger.info("Feedback store closed")
+
         if self.memory_manager is not None:
             self.memory_manager.close()
             logger.info("Memory manager closed")
@@ -232,7 +278,11 @@ class AnimusRuntime:
         if backend_type == "ollama":
             from animus_bootstrap.gateway.cognitive import OllamaBackend
 
-            return OllamaBackend()
+            ollama_cfg = self._config.ollama
+            return OllamaBackend(
+                model=ollama_cfg.model,
+                host=f"http://{ollama_cfg.host}:{ollama_cfg.port}",
+            )
 
         if backend_type == "forge" and self._config.forge.enabled:
             from animus_bootstrap.gateway.cognitive import ForgeBackend
@@ -250,7 +300,11 @@ class AnimusRuntime:
             "Backend '%s' not configured, falling back to Ollama",
             backend_type,
         )
-        return OllamaBackend()
+        ollama_cfg = self._config.ollama
+        return OllamaBackend(
+            model=ollama_cfg.model,
+            host=f"http://{ollama_cfg.host}:{ollama_cfg.port}",
+        )
 
     def _create_memory_manager(self) -> Any:
         """Create memory manager based on config."""
@@ -269,12 +323,22 @@ class AnimusRuntime:
             return MemoryManager(backend)
 
         if backend_type == "chromadb":
-            from animus_bootstrap.intelligence.memory_backends.chromadb_backend import (
-                ChromaDBMemoryBackend,
-            )
+            try:
+                from animus_bootstrap.intelligence.memory_backends.chromadb_backend import (
+                    ChromaDBMemoryBackend,
+                )
 
-            backend = ChromaDBMemoryBackend()
-            return MemoryManager(backend)
+                persist_dir = str(self._config.get_data_path() / "chromadb")
+                backend = ChromaDBMemoryBackend(persist_directory=persist_dir)
+                return MemoryManager(backend)
+            except (RuntimeError, ImportError):
+                logger.warning("ChromaDB not available, falling back to SQLite")
+                from animus_bootstrap.intelligence.memory_backends.sqlite_backend import (
+                    SQLiteMemoryBackend,
+                )
+
+                backend = SQLiteMemoryBackend(db_path)
+                return MemoryManager(backend)
 
         if backend_type == "animus":
             from animus_bootstrap.intelligence.memory_backends.animus_backend import (
@@ -359,6 +423,7 @@ class AnimusRuntime:
                 system_prompt=self._config.gateway.system_prompt,
                 persona_engine=self.persona_engine,
                 context_adapter=self.context_adapter,
+                identity_manager=self.identity_manager,
             )
 
         from animus_bootstrap.gateway.router import MessageRouter

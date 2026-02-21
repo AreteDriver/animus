@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Identity{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Identity Files</h2>
+
+    {% if not files %}
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-8 text-center text-animus-muted">
+        No identity files found. Run <code>animus setup</code> to generate them.
+    </div>
+    {% else %}
+
+    <!-- CORE_VALUES.md — full width at top -->
+    {% for f in files if f.locked %}
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-4 mb-6">
+        <div id="card-{{ f.filename | replace('.', '-') }}">
+            <div class="flex items-center justify-between mb-2">
+                <h4 class="text-sm font-bold text-animus-text">
+                    {{ f.filename }} <span title="Immutable — human-edit only">&#128274;</span>
+                </h4>
+                <span class="text-xs text-animus-yellow">Immutable — human-edit only</span>
+            </div>
+            <pre class="text-xs text-animus-muted whitespace-pre-wrap">{{ f.content[:1000] if f.content else 'Empty' }}</pre>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Editable files — 2-column grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% for f in files if not f.locked %}
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <div id="card-{{ f.filename | replace('.', '-') }}">
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-sm font-bold text-animus-text">{{ f.filename }}</h4>
+                    {% if f.filename != 'LEARNED.md' %}
+                    <button hx-get="/identity/edit/{{ f.filename }}"
+                            hx-target="#card-{{ f.filename | replace('.', '-') }}"
+                            hx-swap="innerHTML"
+                            class="text-xs text-animus-green hover:underline">Edit</button>
+                    {% else %}
+                    <span class="text-xs text-animus-muted">Auto-managed</span>
+                    {% endif %}
+                </div>
+                <pre class="text-xs text-animus-muted whitespace-pre-wrap max-h-48 overflow-y-auto">{{ f.content[:500] if f.content else 'Empty' }}</pre>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}

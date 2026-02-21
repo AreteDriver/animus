@@ -285,6 +285,8 @@ class TestNestedSections:
             "intelligence",
             "proactive",
             "personas",
+            "ollama",
+            "self_improvement",
         }
         assert isinstance(data["animus"], dict)
         assert isinstance(data["forge"], dict)

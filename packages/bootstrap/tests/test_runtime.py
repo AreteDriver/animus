@@ -411,13 +411,19 @@ class TestMemoryManagerCreation:
         assert isinstance(result, MemoryManager)
         result.close()
 
-    def test_chromadb_backend_raises_not_implemented(self) -> None:
-        """ChromaDB backend raises NotImplementedError (stub)."""
-        cfg = _make_config(memory_backend="chromadb")
+    def test_chromadb_backend_falls_back_to_sqlite(self, tmp_path: Path) -> None:
+        """ChromaDB backend falls back to SQLite when chromadb not available."""
+        from animus_bootstrap.intelligence.memory import MemoryManager
+
+        cfg = _make_config(
+            memory_backend="chromadb",
+            memory_db_path=str(tmp_path / "mem.db"),
+        )
         rt = AnimusRuntime(config=cfg)
-        # ChromaDB stub raises NotImplementedError (or RuntimeError if not installed)
-        with pytest.raises((NotImplementedError, RuntimeError)):
-            rt._create_memory_manager()
+        # ChromaDB either works or falls back to SQLite gracefully
+        result = rt._create_memory_manager()
+        assert isinstance(result, MemoryManager)
+        result.close()
 
     def test_animus_backend_raises_not_implemented(self) -> None:
         """Animus backend raises (not implemented or import error)."""

@@ -591,9 +591,9 @@ class TestBuiltinChecks:
     def test_get_builtin_checks_returns_list(self) -> None:
         checks = get_builtin_checks()
         assert isinstance(checks, list)
-        assert len(checks) == 3
+        assert len(checks) == 4
         names = {c.name for c in checks}
-        assert names == {"morning_brief", "task_nudge", "calendar_reminder"}
+        assert names == {"morning_brief", "task_nudge", "calendar_reminder", "reflection"}
 
     def test_get_builtin_checks_all_are_proactive_checks(self) -> None:
         checks = get_builtin_checks()

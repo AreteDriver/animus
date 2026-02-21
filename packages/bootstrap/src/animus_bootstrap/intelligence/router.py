@@ -46,6 +46,7 @@ class IntelligentRouter(MessageRouter):
         max_tool_iterations: int = 5,
         persona_engine: PersonaEngine | None = None,
         context_adapter: ContextAdapter | None = None,
+        identity_manager: Any | None = None,
     ) -> None:
         super().__init__(cognitive, session_manager)
         self._memory = memory
@@ -55,9 +56,12 @@ class IntelligentRouter(MessageRouter):
         self._max_tool_iterations = max_tool_iterations
         self._persona_engine = persona_engine
         self._context_adapter = context_adapter
+        self._identity_manager = identity_manager
+        self._interaction_count: int = 0
 
     async def handle_message(self, message: GatewayMessage) -> GatewayResponse:
         """Enhanced message handling with memory + tools + automations."""
+        self._interaction_count += 1
 
         # 1. Check automations first (may short-circuit)
         if self._automations:
@@ -128,10 +132,19 @@ class IntelligentRouter(MessageRouter):
         message: GatewayMessage | None = None,
         session_history: list[dict] | None = None,
     ) -> str:
-        """Build system prompt enriched with memory context and persona."""
+        """Build system prompt enriched with identity, memory context, and persona."""
         parts: list[str] = []
 
-        # Determine base prompt from persona or fallback to system_prompt
+        # 1. Identity files (prepended first — foundational context)
+        if self._identity_manager:
+            try:
+                identity_prompt = self._identity_manager.get_identity_prompt()
+                if identity_prompt:
+                    parts.append(identity_prompt)
+            except Exception:
+                logger.exception("Failed to load identity prompt")
+
+        # 2. Determine base prompt from persona or fallback to system_prompt
         if persona and self._context_adapter and message:
             base = self._context_adapter.adapt_prompt(persona, message, session_history)
         elif persona:

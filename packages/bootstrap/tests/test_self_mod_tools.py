@@ -938,7 +938,7 @@ class TestNewToolsInBuiltinRegistry:
     def test_total_tool_count(self) -> None:
         tools = get_all_builtin_tools()
         # 9 original (added recall_memory) + 18 new = 27
-        assert len(tools) == 27
+        assert len(tools) == 31
 
     def test_all_have_handlers(self) -> None:
         tools = get_all_builtin_tools()

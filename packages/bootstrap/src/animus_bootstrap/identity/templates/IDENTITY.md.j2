@@ -1,0 +1,8 @@
+# Identity
+
+**Name**: {{ name | default('') }}
+**Timezone**: {{ timezone | default('UTC') }}
+{% if about %}
+## About
+{{ about }}
+{% endif %}

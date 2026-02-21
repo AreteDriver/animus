@@ -205,10 +205,11 @@ class TestIdentityStep:
 
 
 class TestApiKeysValidFirstTry:
-    """Key is valid on the first attempt."""
+    """Key is valid on the first attempt (skip Ollama, add Anthropic)."""
 
     def test_valid_key_returned(self) -> None:
         console = _make_console()
+        # Confirm.ask calls: Ollama? No, Anthropic? Yes, OpenAI? No
         with (
             patch(
                 "animus_bootstrap.setup.steps.api_keys.Prompt.ask",
@@ -216,7 +217,7 @@ class TestApiKeysValidFirstTry:
             ),
             patch(
                 "animus_bootstrap.setup.steps.api_keys.Confirm.ask",
-                return_value=False,
+                side_effect=[False, True, False],
             ),
             patch(
                 "animus_bootstrap.setup.steps.api_keys.test_anthropic_key",
@@ -234,6 +235,7 @@ class TestApiKeysRetryThenSucceed:
 
     def test_retry_logic(self) -> None:
         console = _make_console()
+        # Confirm: Ollama? No, Anthropic? Yes, OpenAI? No
         with (
             patch(
                 "animus_bootstrap.setup.steps.api_keys.Prompt.ask",
@@ -241,7 +243,7 @@ class TestApiKeysRetryThenSucceed:
             ),
             patch(
                 "animus_bootstrap.setup.steps.api_keys.Confirm.ask",
-                return_value=False,
+                side_effect=[False, True, False],
             ),
             patch(
                 "animus_bootstrap.setup.steps.api_keys.test_anthropic_key",
@@ -254,14 +256,21 @@ class TestApiKeysRetryThenSucceed:
 
 
 class TestApiKeysExhaustedRetries:
-    """All 3 retries fail — raises SystemExit."""
+    """All 3 retries fail with no Ollama — raises SystemExit."""
 
     def test_raises_system_exit(self) -> None:
         console = _make_console()
+        # Confirm: Ollama? No, Anthropic? Yes, OpenAI? No
+        # _collect_anthropic_key returns "" after 3 failures
+        # Then: no ollama + no anthropic key → SystemExit
         with (
             patch(
                 "animus_bootstrap.setup.steps.api_keys.Prompt.ask",
                 return_value="bad-key",
+            ),
+            patch(
+                "animus_bootstrap.setup.steps.api_keys.Confirm.ask",
+                side_effect=[False, True, False],
             ),
             patch(
                 "animus_bootstrap.setup.steps.api_keys.test_anthropic_key",
@@ -277,6 +286,7 @@ class TestApiKeysWithOpenAI:
 
     def test_collects_openai_key(self) -> None:
         console = _make_console()
+        # Confirm: Ollama? No, Anthropic? Yes, OpenAI? Yes
         with (
             patch(
                 "animus_bootstrap.setup.steps.api_keys.Prompt.ask",
@@ -284,7 +294,7 @@ class TestApiKeysWithOpenAI:
             ),
             patch(
                 "animus_bootstrap.setup.steps.api_keys.Confirm.ask",
-                return_value=True,
+                side_effect=[False, True, True],
             ),
             patch(
                 "animus_bootstrap.setup.steps.api_keys.test_anthropic_key",
@@ -617,6 +627,10 @@ class TestWizardFullRun:
                 return_value={"name": "Arete", "timezone": "US/Eastern", "locale": "en_US"},
             ),
             patch(
+                "animus_bootstrap.setup.wizard.run_identity_files",
+                return_value={"about": "", "generate_identity_files": False},
+            ),
+            patch(
                 "animus_bootstrap.setup.wizard.run_api_keys",
                 return_value={"anthropic_key": "sk-ant-xxx", "openai_key": ""},
             ),
@@ -673,6 +687,10 @@ class TestWizardFullRun:
             patch(
                 "animus_bootstrap.setup.wizard.run_identity",
                 return_value={"name": "Arete", "timezone": "UTC", "locale": "en_US"},
+            ),
+            patch(
+                "animus_bootstrap.setup.wizard.run_identity_files",
+                return_value={"about": "", "generate_identity_files": False},
             ),
             patch(
                 "animus_bootstrap.setup.wizard.run_api_keys",

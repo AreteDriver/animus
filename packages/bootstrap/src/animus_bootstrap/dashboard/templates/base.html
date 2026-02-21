@@ -125,6 +125,20 @@
                 </a>
             </li>
             <li>
+                <a href="/identity"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/identity' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Identity
+                </a>
+            </li>
+            <li>
+                <a href="/proposals"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/proposals' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Proposals
+                </a>
+            </li>
+            <li>
                 <a href="/self-mod"
                    class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
                           {% if '/self-mod' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
@@ -143,6 +157,13 @@
                    class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
                           {% if '/timers' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
                     Timers
+                </a>
+            </li>
+            <li>
+                <a href="/feedback"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/feedback' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Feedback
                 </a>
             </li>
         </ul>

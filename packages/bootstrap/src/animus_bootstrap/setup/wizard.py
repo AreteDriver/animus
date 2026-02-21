@@ -13,17 +13,19 @@ from animus_bootstrap.config.schema import (
     ForgeSection,
     IdentitySection,
     MemorySection,
+    OllamaSection,
 )
 from animus_bootstrap.setup.steps.api_keys import run_api_keys
 from animus_bootstrap.setup.steps.channels import run_channels_step
 from animus_bootstrap.setup.steps.device import run_device
 from animus_bootstrap.setup.steps.forge import run_forge
 from animus_bootstrap.setup.steps.identity import run_identity
+from animus_bootstrap.setup.steps.identity_files import run_identity_files
 from animus_bootstrap.setup.steps.memory import run_memory
 from animus_bootstrap.setup.steps.sovereignty import run_sovereignty
 from animus_bootstrap.setup.steps.welcome import run_welcome
 
-_TOTAL_STEPS = 8
+_TOTAL_STEPS = 9
 
 
 class AnimusWizard:
@@ -71,23 +73,28 @@ class AnimusWizard:
         # Step 2: Identity
         identity_data = self._run_step(2, "Identity", run_identity, skippable=True)
 
-        # Step 3: API Keys (required — not skippable)
-        api_data = self._run_step(3, "API Keys", run_api_keys, skippable=False)
+        # Step 3: Identity Files
+        identity_files_data = self._run_step(
+            3, "Identity Files", run_identity_files, skippable=True
+        )
 
-        # Step 4: Forge
-        forge_data = self._run_step(4, "Forge", run_forge, skippable=True)
+        # Step 4: API Keys (required — not skippable)
+        api_data = self._run_step(4, "API Keys", run_api_keys, skippable=False)
 
-        # Step 5: Memory
-        memory_data = self._run_step(5, "Memory", run_memory, skippable=True)
+        # Step 5: Forge
+        forge_data = self._run_step(5, "Forge", run_forge, skippable=True)
 
-        # Step 6: Device
-        device_data = self._run_step(6, "Device", run_device, skippable=True)
+        # Step 6: Memory
+        memory_data = self._run_step(6, "Memory", run_memory, skippable=True)
 
-        # Step 7: Sovereignty
-        sovereignty_data = self._run_step(7, "Sovereignty", run_sovereignty, skippable=True)
+        # Step 7: Device
+        device_data = self._run_step(7, "Device", run_device, skippable=True)
 
-        # Step 8: Channels
-        channels_data = self._run_step(8, "Channels", run_channels_step, skippable=True)
+        # Step 8: Sovereignty
+        sovereignty_data = self._run_step(8, "Sovereignty", run_sovereignty, skippable=True)
+
+        # Step 9: Channels
+        channels_data = self._run_step(9, "Channels", run_channels_step, skippable=True)
 
         # Assemble config
         config = self._build_config(
@@ -99,6 +106,10 @@ class AnimusWizard:
             sovereignty_data=sovereignty_data,
             channels_data=channels_data,
         )
+
+        # Generate identity files
+        if identity_files_data.get("generate_identity_files"):
+            self._generate_identity_files(config, identity_files_data)
 
         # Write config
         with Progress(
@@ -200,6 +211,16 @@ class AnimusWizard:
                 anthropic_key=str(api_data.get("anthropic_key", "")),
                 openai_key=str(api_data.get("openai_key", "")),
             )
+            # Ollama config from provider step
+            if api_data.get("ollama_enabled"):
+                config.ollama = OllamaSection(
+                    enabled=True,
+                    host=str(api_data.get("ollama_host", "localhost")),
+                    port=int(api_data.get("ollama_port", 11434)),  # type: ignore[arg-type]
+                    model=str(api_data.get("ollama_model", "llama3.2")),
+                )
+            if api_data.get("default_backend"):
+                config.gateway.default_backend = str(api_data["default_backend"])
 
         # Forge
         if forge_data:
@@ -237,6 +258,29 @@ class AnimusWizard:
                                 setattr(channel_model, field, value)
 
         return config
+
+    def _generate_identity_files(
+        self,
+        config: AnimusConfig,
+        identity_files_data: dict[str, object],
+    ) -> None:
+        """Generate identity files using templates and collected data."""
+        from datetime import UTC, datetime
+        from pathlib import Path
+
+        from animus_bootstrap.identity.manager import IdentityFileManager
+
+        identity_dir = Path(config.identity.identity_dir).expanduser()
+        mgr = IdentityFileManager(identity_dir)
+
+        context = {
+            "name": config.identity.name,
+            "timezone": config.identity.timezone,
+            "about": identity_files_data.get("about", ""),
+            "timestamp": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
+        }
+        mgr.generate_from_templates(context)
+        self._console.print("  [green]Identity files generated.[/green]")
 
     def _show_summary(self, config: AnimusConfig) -> None:
         """Display a final summary panel of the configuration."""

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Feedback{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Feedback</h2>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <p class="text-animus-muted text-xs uppercase tracking-wide">Total</p>
+            <p class="text-2xl font-bold text-animus-text mt-1">{{ stats.total }}</p>
+        </div>
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <p class="text-animus-muted text-xs uppercase tracking-wide">Positive</p>
+            <p class="text-2xl font-bold text-animus-green mt-1">{{ stats.positive_pct }}%</p>
+            <p class="text-xs text-animus-muted">{{ stats.positive }} entries</p>
+        </div>
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <p class="text-animus-muted text-xs uppercase tracking-wide">Negative</p>
+            <p class="text-2xl font-bold text-animus-red mt-1">{{ stats.negative_pct }}%</p>
+            <p class="text-xs text-animus-muted">{{ stats.negative }} entries</p>
+        </div>
+    </div>
+
+    <!-- Recent Feedback -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg">
+        <div class="px-4 py-3 border-b border-animus-border">
+            <h3 class="text-sm text-animus-muted uppercase tracking-wide">Recent Feedback</h3>
+        </div>
+
+        {% if recent %}
+        <div class="divide-y divide-animus-border">
+            {% for entry in recent %}
+            <div class="px-4 py-3">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-lg">
+                        {% if entry.rating > 0 %}&#128077;{% else %}&#128078;{% endif %}
+                    </span>
+                    <span class="text-xs text-animus-muted">{{ entry.channel }}</span>
+                    <span class="text-xs text-animus-muted ml-auto">{{ entry.timestamp[:19] }}</span>
+                </div>
+                <p class="text-xs text-animus-muted truncate">Q: {{ entry.message_text[:100] }}</p>
+                <p class="text-xs text-animus-text truncate">A: {{ entry.response_text[:100] }}</p>
+                {% if entry.comment %}
+                <p class="text-xs text-animus-yellow mt-1">{{ entry.comment }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-8 text-center text-animus-muted text-sm">
+            No feedback recorded yet. Use the thumbs up/down buttons in conversations.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -52,6 +52,27 @@ class IdentitySection(BaseModel):
     name: str = ""
     timezone: str = ""
     locale: str = ""
+    identity_dir: str = "~/.config/animus/identity"
+
+
+class OllamaSection(BaseModel):
+    """Ollama configuration."""
+
+    enabled: bool = True
+    host: str = "localhost"
+    port: int = 11434
+    model: str = "llama3.2"
+    autoinstall: bool = True
+
+
+class SelfImprovementSection(BaseModel):
+    """Self-improvement loop configuration."""
+
+    reflection_enabled: bool = True
+    reflection_interval_hours: int = 24
+    reflection_min_interactions: int = 10
+    approval_required: bool = True
+    proposals_dir: str = "~/.config/animus/proposals"
 
 
 class ServicesSection(BaseModel):
@@ -241,6 +262,8 @@ class AnimusConfig(BaseSettings):
     intelligence: IntelligenceSection = Field(default_factory=IntelligenceSection)
     proactive: ProactiveSection = Field(default_factory=ProactiveSection)
     personas: PersonasSection = Field(default_factory=PersonasSection)
+    ollama: OllamaSection = Field(default_factory=OllamaSection)
+    self_improvement: SelfImprovementSection = Field(default_factory=SelfImprovementSection)
 
     def get_data_path(self) -> Path:
         """Return the resolved data directory path."""
