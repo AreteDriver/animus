@@ -85,6 +85,14 @@ class AnimusRuntime:
 
             set_self_improve_deps(self.tool_executor, self.cognitive_backend)
 
+            # Wire memory tools to live memory manager
+            if self.memory_manager is not None:
+                from animus_bootstrap.intelligence.tools.builtin.memory_tools import (
+                    set_memory_manager,
+                )
+
+                set_memory_manager(self.memory_manager)
+
         # 5. Automation engine (if intelligence enabled)
         if self._config.intelligence.enabled:
             from animus_bootstrap.intelligence.automations.engine import AutomationEngine
@@ -107,6 +115,14 @@ class AnimusRuntime:
         # 7. Router (intelligent if components available, basic otherwise)
         self.router = self._create_router()
         logger.info("Message router initialized")
+
+        # Wire gateway tools to live router
+        if self.tool_executor is not None:
+            from animus_bootstrap.intelligence.tools.builtin.gateway_tools import (
+                set_gateway_router,
+            )
+
+            set_gateway_router(self.router)
 
         # 8. Proactive engine
         if self._config.proactive.enabled and self._config.intelligence.enabled:

@@ -53,12 +53,16 @@ class ToolExecutor:
         max_calls_per_turn: int = 5,
         timeout_seconds: float = 30.0,
         permission_manager: ToolPermissionManager | None = None,
+        approval_callback: (
+            Callable[[str, dict[str, Any]], Coroutine[Any, Any, bool]] | None
+        ) = None,
     ) -> None:
         self._tools: dict[str, ToolDefinition] = {}
         self._history: list[ToolResult] = []
         self._max_calls = max_calls_per_turn
         self._timeout = timeout_seconds
         self._permissions = permission_manager or ToolPermissionManager()
+        self._approval_callback = approval_callback
 
     def register(self, tool: ToolDefinition) -> None:
         """Register a tool. Raises ValueError if name already taken."""
@@ -68,6 +72,13 @@ class ToolExecutor:
         # Sync permission from tool definition
         if tool.permission != "auto":
             self._permissions.set_permission(tool.name, PermissionLevel(tool.permission))
+
+    def set_approval_callback(
+        self,
+        callback: Callable[[str, dict[str, Any]], Coroutine[Any, Any, bool]] | None,
+    ) -> None:
+        """Set or clear the approval callback for APPROVE-level tools."""
+        self._approval_callback = callback
 
     def unregister(self, name: str) -> None:
         """Remove a tool by name. No-op if not found."""
@@ -113,15 +124,33 @@ class ToolExecutor:
         try:
             allowed = self._permissions.check(name)
         except ToolApprovalRequired:
-            return ToolResult(
-                id=str(uuid.uuid4()),
-                tool_name=name,
-                success=False,
-                output=f"Tool '{name}' requires user approval",
-                duration_ms=0.0,
-                timestamp=datetime.now(UTC),
-                arguments=arguments,
-            )
+            if self._approval_callback is not None:
+                try:
+                    approved = await self._approval_callback(name, arguments)
+                except Exception:
+                    logger.exception("Approval callback failed for tool '%s'", name)
+                    approved = False
+                if not approved:
+                    return ToolResult(
+                        id=str(uuid.uuid4()),
+                        tool_name=name,
+                        success=False,
+                        output=f"Tool '{name}' was denied by user",
+                        duration_ms=0.0,
+                        timestamp=datetime.now(UTC),
+                        arguments=arguments,
+                    )
+                allowed = True
+            else:
+                return ToolResult(
+                    id=str(uuid.uuid4()),
+                    tool_name=name,
+                    success=False,
+                    output=f"Tool '{name}' requires user approval",
+                    duration_ms=0.0,
+                    timestamp=datetime.now(UTC),
+                    arguments=arguments,
+                )
 
         if not allowed:
             return ToolResult(

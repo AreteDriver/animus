@@ -22,14 +22,17 @@ from animus_bootstrap.intelligence.tools.builtin.gateway_tools import (
     clear_sent_messages,
     get_gateway_tools,
     get_sent_messages,
+    set_gateway_router,
 )
 from animus_bootstrap.intelligence.tools.builtin.memory_tools import (
+    _recall_memory,
     _set_reminder,
     _store_memory,
     clear_memory_stores,
     get_memory_tools,
     get_pending_reminders,
     get_stored_memories,
+    set_memory_manager,
 )
 from animus_bootstrap.intelligence.tools.builtin.system import get_system_tools
 from animus_bootstrap.intelligence.tools.builtin.web import get_web_tools
@@ -266,6 +269,54 @@ class TestToolExecutor:
         result = await ex.execute("gated", {"text": "x"})
         assert result.success is False
         assert "approval" in result.output
+
+    @pytest.mark.asyncio()
+    async def test_execute_approve_calls_callback_and_proceeds(self) -> None:
+        callback = AsyncMock(return_value=True)
+        pm = ToolPermissionManager(default=PermissionLevel.APPROVE)
+        ex = ToolExecutor(permission_manager=pm, approval_callback=callback)
+        ex.register(_make_tool("gated"))
+        result = await ex.execute("gated", {"text": "hi"})
+        assert result.success is True
+        assert result.output == "echo: hi"
+        callback.assert_called_once_with("gated", {"text": "hi"})
+
+    @pytest.mark.asyncio()
+    async def test_execute_approve_callback_denies(self) -> None:
+        callback = AsyncMock(return_value=False)
+        pm = ToolPermissionManager(default=PermissionLevel.APPROVE)
+        ex = ToolExecutor(permission_manager=pm, approval_callback=callback)
+        ex.register(_make_tool("gated"))
+        result = await ex.execute("gated", {"text": "x"})
+        assert result.success is False
+        assert "denied by user" in result.output
+
+    @pytest.mark.asyncio()
+    async def test_execute_approve_callback_exception_denies(self) -> None:
+        callback = AsyncMock(side_effect=RuntimeError("callback broke"))
+        pm = ToolPermissionManager(default=PermissionLevel.APPROVE)
+        ex = ToolExecutor(permission_manager=pm, approval_callback=callback)
+        ex.register(_make_tool("gated"))
+        result = await ex.execute("gated", {"text": "x"})
+        assert result.success is False
+        assert "denied by user" in result.output
+
+    @pytest.mark.asyncio()
+    async def test_set_approval_callback_after_init(self) -> None:
+        callback = AsyncMock(return_value=True)
+        ex = ToolExecutor()
+        ex.register(_make_tool("gated", permission="approve"))
+        # Without callback -> fails
+        result = await ex.execute("gated", {"text": "x"})
+        assert result.success is False
+        # Set callback -> succeeds
+        ex.set_approval_callback(callback)
+        result = await ex.execute("gated", {"text": "y"})
+        assert result.success is True
+        # Clear callback -> fails again
+        ex.set_approval_callback(None)
+        result = await ex.execute("gated", {"text": "z"})
+        assert result.success is False
 
     @pytest.mark.asyncio()
     async def test_execute_with_timeout(self) -> None:
@@ -711,6 +762,7 @@ class TestSystemTools:
 class TestGatewayTools:
     def setup_method(self) -> None:
         clear_sent_messages()
+        set_gateway_router(None)
 
     def test_send_message_tool_exists(self) -> None:
         tools = get_gateway_tools()
@@ -738,6 +790,26 @@ class TestGatewayTools:
         await _send_message("slack", "msg2")
         assert len(get_sent_messages()) == 2
 
+    @pytest.mark.asyncio()
+    async def test_send_message_via_router(self) -> None:
+        router = AsyncMock()
+        router.broadcast = AsyncMock()
+        set_gateway_router(router)
+        result = await _send_message("telegram", "hello via router")
+        assert "sent" in result.lower()
+        router.broadcast.assert_called_once_with("hello via router", ["telegram"])
+        # Should NOT be in fallback list when router works
+        assert get_sent_messages() == []
+
+    @pytest.mark.asyncio()
+    async def test_send_message_router_failure_falls_back(self) -> None:
+        router = AsyncMock()
+        router.broadcast = AsyncMock(side_effect=RuntimeError("channel down"))
+        set_gateway_router(router)
+        result = await _send_message("discord", "fallback msg")
+        assert "queued" in result.lower()
+        assert len(get_sent_messages()) == 1
+
     def test_clear_sent_messages(self) -> None:
         import asyncio
 
@@ -754,10 +826,15 @@ class TestGatewayTools:
 class TestMemoryTools:
     def setup_method(self) -> None:
         clear_memory_stores()
+        set_memory_manager(None)
 
     def test_store_memory_tool_exists(self) -> None:
         tools = get_memory_tools()
         assert any(t.name == "store_memory" for t in tools)
+
+    def test_recall_memory_tool_exists(self) -> None:
+        tools = get_memory_tools()
+        assert any(t.name == "recall_memory" for t in tools)
 
     def test_set_reminder_tool_exists(self) -> None:
         tools = get_memory_tools()
@@ -817,9 +894,79 @@ class TestMemoryTools:
         assert get_pending_reminders() == []
 
     @pytest.mark.asyncio()
+    async def test_recall_memory_fallback_found(self) -> None:
+        await _store_memory("The sky is blue", "semantic")
+        await _store_memory("How to bake bread", "procedural")
+        result = await _recall_memory("sky")
+        assert "Found 1" in result
+        assert "sky is blue" in result
+
+    @pytest.mark.asyncio()
+    async def test_recall_memory_fallback_not_found(self) -> None:
+        result = await _recall_memory("nonexistent topic")
+        assert "No memories found" in result
+
+    @pytest.mark.asyncio()
+    async def test_recall_memory_fallback_filter_type(self) -> None:
+        await _store_memory("fact A", "semantic")
+        await _store_memory("experience B", "episodic")
+        result = await _recall_memory("A", memory_type="semantic")
+        assert "Found 1" in result
+
+    @pytest.mark.asyncio()
+    async def test_store_memory_with_backend(self) -> None:
+        backend = AsyncMock()
+        backend.store = AsyncMock()
+        mgr = AsyncMock()
+        mgr._backend = backend
+        set_memory_manager(mgr)
+        result = await _store_memory("test fact", "semantic")
+        assert "Stored" in result
+        backend.store.assert_called_once_with("semantic", "test fact", {"source": "tool"})
+
+    @pytest.mark.asyncio()
+    async def test_recall_memory_with_backend(self) -> None:
+        mgr = AsyncMock()
+        mgr.search = AsyncMock(
+            return_value=[
+                {"content": "The answer is 42", "memory_type": "semantic"},
+            ]
+        )
+        set_memory_manager(mgr)
+        result = await _recall_memory("answer")
+        assert "Found 1" in result
+        assert "42" in result
+        mgr.search.assert_called_once_with("answer", memory_type="all", limit=10)
+
+    @pytest.mark.asyncio()
+    async def test_recall_memory_backend_empty(self) -> None:
+        mgr = AsyncMock()
+        mgr.search = AsyncMock(return_value=[])
+        set_memory_manager(mgr)
+        result = await _recall_memory("nothing")
+        assert "No memories found" in result
+
+    @pytest.mark.asyncio()
+    async def test_store_memory_backend_failure_falls_back(self) -> None:
+        backend = AsyncMock()
+        backend.store = AsyncMock(side_effect=RuntimeError("db error"))
+        mgr = AsyncMock()
+        mgr._backend = backend
+        set_memory_manager(mgr)
+        result = await _store_memory("fallback test", "semantic")
+        assert "Stored" in result
+        # Should be in the fallback list
+        assert len(get_stored_memories()) == 1
+
+    @pytest.mark.asyncio()
     async def test_memory_tools_category(self) -> None:
         tools = get_memory_tools()
         assert all(t.category == "memory" for t in tools)
+
+    def test_recall_memory_schema(self) -> None:
+        tools = get_memory_tools()
+        recall = next(t for t in tools if t.name == "recall_memory")
+        assert "query" in recall.parameters["properties"]
 
 
 # ======================================================================
@@ -844,6 +991,7 @@ class TestGetAllBuiltinTools:
             "shell_exec",
             "send_message",
             "store_memory",
+            "recall_memory",
             "set_reminder",
         }
         assert expected.issubset(names)
