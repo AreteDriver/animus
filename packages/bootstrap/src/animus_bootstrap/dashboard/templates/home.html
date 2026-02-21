@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Home{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">System Status</h2>
+
+    <!-- Status Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+        <!-- Runtime -->
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm text-animus-muted uppercase tracking-wide">Runtime</h3>
+                {% if runtime_status == 'running' %}
+                <span class="status-indicator status-ok"></span>
+                {% else %}
+                <span class="status-indicator status-error"></span>
+                {% endif %}
+            </div>
+            <p class="text-lg font-bold
+                {% if runtime_status == 'running' %}text-animus-green{% else %}text-animus-red{% endif %}">
+                {{ runtime_status | capitalize }}
+            </p>
+        </div>
+
+        <!-- Forge -->
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm text-animus-muted uppercase tracking-wide">Forge</h3>
+                {% if forge_status == 'connected' %}
+                <span class="status-indicator status-ok"></span>
+                {% else %}
+                <span class="status-indicator status-error"></span>
+                {% endif %}
+            </div>
+            <p class="text-lg font-bold
+                {% if forge_status == 'connected' %}text-animus-green{% else %}text-animus-red{% endif %}">
+                {{ forge_status | capitalize }}
+            </p>
+        </div>
+
+        <!-- Memory -->
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm text-animus-muted uppercase tracking-wide">Memory</h3>
+                <span class="status-indicator {% if memory_size != 'N/A' %}status-ok{% else %}status-error{% endif %}"></span>
+            </div>
+            <p class="text-lg font-bold text-animus-text">{{ memory_size }}</p>
+        </div>
+
+        <!-- Uptime -->
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm text-animus-muted uppercase tracking-wide">Uptime</h3>
+            </div>
+            <p class="text-lg font-bold text-animus-text">{{ uptime }}</p>
+        </div>
+
+    </div>
+
+    <!-- Component Summary -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-4">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Components</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+                <span class="text-animus-muted">Cognitive</span>
+                <p class="text-animus-text font-semibold mt-1">{{ cognitive_type | capitalize }}</p>
+            </div>
+            <div>
+                <span class="text-animus-muted">Intelligence</span>
+                <p class="text-animus-text font-semibold mt-1">{{ component_count }}/4 active</p>
+            </div>
+            <div>
+                <span class="text-animus-muted">Personas</span>
+                <p class="text-animus-text font-semibold mt-1">{{ persona_count }} loaded</p>
+            </div>
+            <div>
+                <span class="text-animus-muted">Channel</span>
+                <p class="text-animus-text font-semibold mt-1">WebChat</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Health endpoint hint -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Quick Links</h3>
+        <div class="space-y-2 text-sm">
+            <p><a href="/health" class="text-animus-green hover:underline">/health</a> — JSON health status</p>
+            <p><a href="/conversations" class="text-animus-green hover:underline">/conversations</a> — Chat with Animus</p>
+            <p><a href="/tools" class="text-animus-green hover:underline">/tools</a> — Registered tools ({{ component_count > 0 and '8 available' or 'disabled' }})</p>
+            <p><a href="/personas" class="text-animus-green hover:underline">/personas</a> — Persona profiles</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

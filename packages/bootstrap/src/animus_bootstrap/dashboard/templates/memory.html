@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Memory{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Memory Browser</h2>
+
+    <!-- Search Bar (placeholder) -->
+    <div class="mb-6">
+        <div class="flex gap-2">
+            <input type="text" placeholder="Search memories..."
+                   disabled
+                   class="flex-1 bg-animus-surface border border-animus-border rounded px-4 py-2 text-sm text-animus-muted focus:border-animus-green focus:outline-none cursor-not-allowed">
+            <button disabled
+                    class="bg-animus-border text-animus-muted px-4 py-2 rounded text-sm cursor-not-allowed">
+                Search
+            </button>
+        </div>
+    </div>
+
+    <!-- Placeholder Content -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-8 text-center">
+        <div class="text-animus-muted mb-4">
+            <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+            </svg>
+        </div>
+        <p class="text-animus-text text-lg mb-2">Memory browser coming in v0.2</p>
+        <p class="text-animus-muted text-sm">
+            Browse, search, and manage episodic and semantic memories.
+        </p>
+        <div class="mt-6">
+            <a href="/memory/export"
+               class="inline-block bg-animus-border text-animus-text px-4 py-2 rounded text-sm hover:bg-animus-green/20 transition-colors">
+                Export Config as JSON
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

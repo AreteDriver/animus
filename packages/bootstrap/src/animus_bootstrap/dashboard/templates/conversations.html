@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Conversations{% endblock %}
+
+{% block head %}
+<style>
+    .channel-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .channel-webchat { background-color: rgba(0, 255, 136, 0.15); color: #00ff88; }
+    .channel-telegram { background-color: rgba(0, 136, 204, 0.15); color: #0088cc; }
+    .channel-discord { background-color: rgba(88, 101, 242, 0.15); color: #5865F2; }
+    .channel-slack { background-color: rgba(74, 21, 75, 0.3); color: #b07ab1; }
+    .channel-matrix { background-color: rgba(13, 189, 139, 0.15); color: #0DBD8B; }
+    .channel-unknown { background-color: rgba(136, 136, 136, 0.15); color: #888888; }
+
+    .msg-feed {
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+    .msg-row {
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid #2a2a2a;
+        transition: background-color 0.15s;
+    }
+    .msg-row:hover {
+        background-color: rgba(42, 42, 42, 0.5);
+    }
+    #chat-input {
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        color: #e0e0e0;
+        font-family: inherit;
+    }
+    #chat-input:focus {
+        border-color: #00ff88;
+        outline: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Conversations</h2>
+
+    <!-- Message Feed -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg mb-4">
+        <div class="px-4 py-3 border-b border-animus-border flex items-center justify-between">
+            <h3 class="text-sm text-animus-muted uppercase tracking-wide">Recent Messages</h3>
+            <span class="text-xs text-animus-muted" id="msg-count">{{ messages | length }} messages</span>
+        </div>
+
+        <div class="msg-feed" id="message-feed"
+             hx-get="/conversations/messages"
+             hx-trigger="every 5s"
+             hx-swap="none"
+             hx-on::after-request="updateFeed(event)">
+
+            {% if messages %}
+                {% for msg in messages %}
+                <div class="msg-row">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="channel-badge channel-{{ msg.channel | default('unknown') }}">
+                            {{ msg.channel | default('unknown') }}
+                        </span>
+                        <span class="text-sm font-semibold text-animus-text">
+                            {{ msg.sender | default('Unknown') }}
+                        </span>
+                        <span class="text-xs text-animus-muted ml-auto">
+                            {{ msg.timestamp | default('') }}
+                        </span>
+                    </div>
+                    <p class="text-sm text-animus-text pl-1">{{ msg.text }}</p>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="p-8 text-center text-animus-muted text-sm">
+                    No messages yet. Connect a channel or use the WebChat below to start a conversation.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- WebChat Input -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+        <div class="flex gap-3">
+            <input type="text" id="chat-input"
+                   placeholder="Type a message..."
+                   class="flex-1 rounded px-3 py-2 text-sm"
+                   autocomplete="off">
+            <button id="chat-send"
+                    class="bg-animus-green text-animus-bg font-bold px-5 py-2 rounded text-sm hover:bg-animus-green/80 transition-colors">
+                Send
+            </button>
+        </div>
+        <p class="text-xs text-animus-muted mt-2" id="ws-status">WebSocket: connecting...</p>
+    </div>
+</div>
+
+<script>
+(function() {
+    // WebSocket chat
+    var ws = null;
+    var statusEl = document.getElementById('ws-status');
+    var inputEl = document.getElementById('chat-input');
+    var sendBtn = document.getElementById('chat-send');
+    var feedEl = document.getElementById('message-feed');
+
+    function connectWS() {
+        var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(proto + '//' + location.host + '/ws/chat');
+
+        ws.onopen = function() {
+            statusEl.textContent = 'WebSocket: connected';
+            statusEl.style.color = '#00ff88';
+        };
+
+        ws.onclose = function() {
+            statusEl.textContent = 'WebSocket: disconnected';
+            statusEl.style.color = '#ff4444';
+            // Auto-reconnect after 3s
+            setTimeout(connectWS, 3000);
+        };
+
+        ws.onerror = function() {
+            statusEl.textContent = 'WebSocket: error';
+            statusEl.style.color = '#ff4444';
+        };
+
+        ws.onmessage = function(event) {
+            try {
+                var msg = JSON.parse(event.data);
+                appendMessage(msg.channel || 'webchat', msg.sender || 'Animus', msg.text, msg.timestamp);
+            } catch(e) {
+                // plain text fallback
+                appendMessage('webchat', 'Animus', event.data, new Date().toISOString());
+            }
+        };
+    }
+
+    function appendMessage(channel, sender, text, timestamp) {
+        // Remove "no messages" placeholder if present
+        var placeholder = feedEl.querySelector('.p-8.text-center');
+        if (placeholder) placeholder.remove();
+
+        var row = document.createElement('div');
+        row.className = 'msg-row';
+
+        var ts = timestamp || '';
+        if (ts && ts.length > 19) ts = ts.substring(0, 19).replace('T', ' ');
+
+        row.innerHTML = '<div class="flex items-center gap-2 mb-1">' +
+            '<span class="channel-badge channel-' + channel + '">' + channel + '</span>' +
+            '<span class="text-sm font-semibold text-animus-text">' + sender + '</span>' +
+            '<span class="text-xs text-animus-muted ml-auto">' + ts + '</span>' +
+            '</div>' +
+            '<p class="text-sm text-animus-text pl-1">' + escapeHtml(text) + '</p>';
+
+        // Prepend (newest first)
+        feedEl.insertBefore(row, feedEl.firstChild);
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+    }
+
+    function sendMessage() {
+        var text = inputEl.value.trim();
+        if (!text) return;
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                text: text,
+                sender_id: 'webchat-user',
+                sender_name: 'User'
+            }));
+            appendMessage('webchat', 'User', text, new Date().toISOString());
+            inputEl.value = '';
+        } else {
+            statusEl.textContent = 'WebSocket: not connected — cannot send';
+            statusEl.style.color = '#ffaa00';
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    inputEl.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') sendMessage();
+    });
+
+    // HTMX polling response handler — updates message count
+    window.updateFeed = function(event) {
+        if (event.detail && event.detail.xhr) {
+            try {
+                var data = JSON.parse(event.detail.xhr.responseText);
+                document.getElementById('msg-count').textContent = data.length + ' messages';
+            } catch(e) {}
+        }
+    };
+
+    connectWS();
+})();
+</script>
+{% endblock %}

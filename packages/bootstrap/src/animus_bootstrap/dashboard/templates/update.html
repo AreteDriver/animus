@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Update{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Update Manager</h2>
+
+    <!-- Current Version -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-1">Current Version</h3>
+                <p class="text-2xl font-bold text-animus-text">v{{ current_version }}</p>
+            </div>
+            <div class="status-indicator status-ok"></div>
+        </div>
+    </div>
+
+    <!-- Update Actions -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-6">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Actions</h3>
+        <div class="space-y-3">
+            <button class="w-full bg-animus-border text-animus-text px-4 py-3 rounded text-sm text-left hover:bg-animus-green/10 hover:text-animus-green transition-colors"
+                    hx-get="/update"
+                    hx-target="body">
+                Check for Updates
+            </button>
+            <button class="w-full bg-animus-border text-animus-muted px-4 py-3 rounded text-sm text-left hover:bg-animus-green/10 transition-colors"
+                    hx-post="/update/apply"
+                    hx-target="#update-status">
+                Apply Update
+            </button>
+        </div>
+    </div>
+
+    <!-- Status Area -->
+    <div id="update-status" class="text-sm text-animus-muted"></div>
+
+    <!-- Info -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-2">Release Notes</h3>
+        <p class="text-sm text-animus-muted">
+            Update management coming in a future release. Currently installed: v{{ current_version }}.
+        </p>
+    </div>
+</div>
+{% endblock %}

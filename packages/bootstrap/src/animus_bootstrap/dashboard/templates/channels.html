@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Channels{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Channels</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for ch in channels %}
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-5 flex flex-col">
+            <!-- Header: icon + name + status dot -->
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl" aria-hidden="true">{{ ch.icon }}</span>
+                    <h3 class="text-base font-bold" style="color: {{ ch.color }};">
+                        {{ ch.display_name }}
+                    </h3>
+                </div>
+                {% if ch.enabled %}
+                <span class="status-indicator status-ok" title="Enabled"></span>
+                {% else %}
+                <span class="status-indicator" style="background-color: #555;" title="Disabled"></span>
+                {% endif %}
+            </div>
+
+            <!-- Description -->
+            <p class="text-xs text-animus-muted mb-4 flex-1">{{ ch.description }}</p>
+
+            <!-- Status label -->
+            <div class="flex items-center justify-between">
+                {% if ch.enabled %}
+                <span class="text-xs font-semibold uppercase tracking-wide" style="color: {{ ch.color }};">
+                    Enabled
+                </span>
+                {% else %}
+                <span class="text-xs font-semibold uppercase tracking-wide text-animus-muted">
+                    Disabled
+                </span>
+                {% endif %}
+
+                <!-- Toggle button -->
+                <form method="post" action="/channels/{{ ch.name }}/toggle" class="inline">
+                    {% if ch.enabled %}
+                    <button type="submit"
+                            class="text-xs px-3 py-1 rounded border border-animus-red text-animus-red hover:bg-animus-red/10 transition-colors">
+                        Disable
+                    </button>
+                    {% else %}
+                    <button type="submit"
+                            class="text-xs px-3 py-1 rounded border text-animus-green hover:bg-animus-green/10 transition-colors"
+                            style="border-color: {{ ch.color }}; color: {{ ch.color }};">
+                        Enable
+                    </button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

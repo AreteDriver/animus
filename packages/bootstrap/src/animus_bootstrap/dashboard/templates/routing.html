@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Channel Routing{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Channel Routing</h2>
+
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-6">
+        <p class="text-animus-muted text-sm mb-4">
+            Each messaging channel can be assigned to a specific persona. When a message arrives
+            on a channel, the persona engine routes it to the bound persona. Unbound channels
+            fall back to the default persona.
+        </p>
+    </div>
+
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Channel Assignments</h3>
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-animus-border text-animus-muted">
+                    <th class="text-left py-2 pr-4">Channel</th>
+                    <th class="text-left py-2">Assigned Persona</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in routing %}
+                <tr class="border-b border-animus-border">
+                    <td class="py-2 pr-4 text-animus-green font-bold">{{ entry.channel }}</td>
+                    <td class="py-2 text-animus-text">{{ entry.persona }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

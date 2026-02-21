@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Config{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Configuration</h2>
+
+    {% if saved %}
+    <div class="bg-animus-green/10 border border-animus-green/30 rounded-lg p-3 mb-6 text-animus-green text-sm">
+        Configuration saved successfully.
+    </div>
+    {% endif %}
+
+    <form method="post" action="/config" hx-post="/config" hx-target="body">
+
+        <!-- Identity -->
+        <fieldset class="bg-animus-surface border border-animus-border rounded-lg p-5 mb-4">
+            <legend class="text-sm text-animus-muted uppercase tracking-wide px-2">Identity</legend>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                <div>
+                    <label for="identity_name" class="block text-xs text-animus-muted mb-1">Name</label>
+                    <input type="text" id="identity_name" name="identity_name"
+                           value="{{ config.identity.name }}"
+                           class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                </div>
+                <div>
+                    <label for="identity_timezone" class="block text-xs text-animus-muted mb-1">Timezone</label>
+                    <input type="text" id="identity_timezone" name="identity_timezone"
+                           value="{{ config.identity.timezone }}"
+                           placeholder="e.g. America/New_York"
+                           class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                </div>
+                <div>
+                    <label for="identity_locale" class="block text-xs text-animus-muted mb-1">Locale</label>
+                    <input type="text" id="identity_locale" name="identity_locale"
+                           value="{{ config.identity.locale }}"
+                           placeholder="e.g. en_US"
+                           class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- API Keys -->
+        <fieldset class="bg-animus-surface border border-animus-border rounded-lg p-5 mb-4">
+            <legend class="text-sm text-animus-muted uppercase tracking-wide px-2">API Keys</legend>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                <div>
+                    <label for="anthropic_key" class="block text-xs text-animus-muted mb-1">Anthropic Key</label>
+                    <input type="password" id="anthropic_key" name="anthropic_key"
+                           value="{{ config.api.anthropic_key }}"
+                           class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                </div>
+                <div>
+                    <label for="openai_key" class="block text-xs text-animus-muted mb-1">OpenAI Key</label>
+                    <input type="password" id="openai_key" name="openai_key"
+                           value="{{ config.api.openai_key }}"
+                           class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- Forge -->
+        <fieldset class="bg-animus-surface border border-animus-border rounded-lg p-5 mb-4">
+            <legend class="text-sm text-animus-muted uppercase tracking-wide px-2">Forge</legend>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="forge_enabled" name="forge_enabled"
+                           {% if config.forge.enabled %}checked{% endif %}
+                           class="rounded bg-animus-bg border-animus-border text-animus-green focus:ring-animus-green">
+                    <label for="forge_enabled" class="text-xs text-animus-muted">Enabled</label>
+                </div>
+                <div>
+                    <label for="forge_host" class="block text-xs text-animus-muted mb-1">Host</label>
+                    <input type="text" id="forge_host" name="forge_host"
+                           value="{{ config.forge.host }}"
+                           class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                </div>
+                <div>
+                    <label for="forge_port" class="block text-xs text-animus-muted mb-1">Port</label>
+                    <input type="number" id="forge_port" name="forge_port"
+                           value="{{ config.forge.port }}"
+                           class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                </div>
+            </div>
+            <div class="mt-4">
+                <label for="forge_api_key" class="block text-xs text-animus-muted mb-1">Forge API Key</label>
+                <input type="password" id="forge_api_key" name="forge_api_key"
+                       value="{{ config.forge.api_key }}"
+                       class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+            </div>
+        </fieldset>
+
+        <!-- Memory -->
+        <fieldset class="bg-animus-surface border border-animus-border rounded-lg p-5 mb-4">
+            <legend class="text-sm text-animus-muted uppercase tracking-wide px-2">Memory</legend>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                <div>
+                    <label for="memory_backend" class="block text-xs text-animus-muted mb-1">Backend</label>
+                    <select id="memory_backend" name="memory_backend"
+                            class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                        <option value="sqlite" {% if config.memory.backend == 'sqlite' %}selected{% endif %}>SQLite</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="memory_path" class="block text-xs text-animus-muted mb-1">Path</label>
+                    <input type="text" id="memory_path" name="memory_path"
+                           value="{{ config.memory.path }}"
+                           class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                </div>
+                <div>
+                    <label for="max_context_tokens" class="block text-xs text-animus-muted mb-1">Max Context Tokens</label>
+                    <input type="number" id="max_context_tokens" name="max_context_tokens"
+                           value="{{ config.memory.max_context_tokens }}"
+                           class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- Services -->
+        <fieldset class="bg-animus-surface border border-animus-border rounded-lg p-5 mb-4">
+            <legend class="text-sm text-animus-muted uppercase tracking-wide px-2">Services</legend>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="autostart" name="autostart"
+                           {% if config.services.autostart %}checked{% endif %}
+                           class="rounded bg-animus-bg border-animus-border text-animus-green focus:ring-animus-green">
+                    <label for="autostart" class="text-xs text-animus-muted">Autostart</label>
+                </div>
+                <div>
+                    <label for="services_port" class="block text-xs text-animus-muted mb-1">Dashboard Port</label>
+                    <input type="number" id="services_port" name="services_port"
+                           value="{{ config.services.port }}"
+                           class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                </div>
+                <div>
+                    <label for="log_level" class="block text-xs text-animus-muted mb-1">Log Level</label>
+                    <select id="log_level" name="log_level"
+                            class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                        {% for level in ['debug', 'info', 'warning', 'error'] %}
+                        <option value="{{ level }}" {% if config.services.log_level == level %}selected{% endif %}>{{ level | upper }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+                <input type="checkbox" id="update_check" name="update_check"
+                       {% if config.services.update_check %}checked{% endif %}
+                       class="rounded bg-animus-bg border-animus-border text-animus-green focus:ring-animus-green">
+                <label for="update_check" class="text-xs text-animus-muted">Check for updates automatically</label>
+            </div>
+        </fieldset>
+
+        <!-- Data Directory -->
+        <fieldset class="bg-animus-surface border border-animus-border rounded-lg p-5 mb-6">
+            <legend class="text-sm text-animus-muted uppercase tracking-wide px-2">Storage</legend>
+            <div class="mt-2">
+                <label for="data_dir" class="block text-xs text-animus-muted mb-1">Data Directory</label>
+                <input type="text" id="data_dir" name="data_dir"
+                       value="{{ config.animus.data_dir }}"
+                       class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+            </div>
+        </fieldset>
+
+        <button type="submit"
+                class="bg-animus-green text-animus-bg font-bold px-6 py-2 rounded hover:bg-animus-green/80 transition-colors text-sm">
+            Save Configuration
+        </button>
+    </form>
+</div>
+{% endblock %}

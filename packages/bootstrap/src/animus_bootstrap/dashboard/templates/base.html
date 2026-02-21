@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Animus Dashboard{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'animus-bg': '#0f0f0f',
+                        'animus-surface': '#1a1a1a',
+                        'animus-border': '#2a2a2a',
+                        'animus-text': '#e0e0e0',
+                        'animus-muted': '#888888',
+                        'animus-green': '#00ff88',
+                        'animus-red': '#ff4444',
+                        'animus-yellow': '#ffaa00',
+                    },
+                    fontFamily: {
+                        'mono': ['"JetBrains Mono"', '"Fira Code"', 'ui-monospace', 'monospace'],
+                    },
+                },
+            },
+        }
+    </script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <link rel="stylesheet" href="/static/css/custom.css">
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-animus-bg text-animus-text font-mono min-h-screen flex">
+
+    <!-- Sidebar -->
+    <nav class="w-56 bg-animus-surface border-r border-animus-border min-h-screen p-4 flex flex-col">
+        <div class="mb-8">
+            <h1 class="text-animus-green text-lg font-bold tracking-wide">ANIMUS</h1>
+            <p class="text-animus-muted text-xs mt-1">Dashboard</p>
+        </div>
+
+        <ul class="space-y-1 flex-1">
+            <li>
+                <a href="/"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if request.url.path == '/' %}bg-animus-border text-animus-green{% endif %}">
+                    Home
+                </a>
+            </li>
+            <li>
+                <a href="/conversations"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/conversations' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Conversations
+                </a>
+            </li>
+            <li>
+                <a href="/channels"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/channels' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Channels
+                </a>
+            </li>
+            <li>
+                <a href="/config"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if request.url.path == '/config' %}bg-animus-border text-animus-green{% endif %}">
+                    Config
+                </a>
+            </li>
+            <li>
+                <a href="/memory"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/memory' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Memory
+                </a>
+            </li>
+            <li>
+                <a href="/logs"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/logs' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Logs
+                </a>
+            </li>
+            <li>
+                <a href="/update"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/update' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Update
+                </a>
+            </li>
+            <li>
+                <a href="/tools"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/tools' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Tools
+                </a>
+            </li>
+            <li>
+                <a href="/automations"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/automations' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Automations
+                </a>
+            </li>
+            <li>
+                <a href="/activity"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/activity' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Activity
+                </a>
+            </li>
+            <li>
+                <a href="/personas"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/personas' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Personas
+                </a>
+            </li>
+            <li>
+                <a href="/routing"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/routing' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Routing
+                </a>
+            </li>
+        </ul>
+
+        <div class="text-animus-muted text-xs mt-4 pt-4 border-t border-animus-border">
+            Animus Bootstrap v{{ version | default('0.4.0') }}
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-8 overflow-y-auto">
+        {% block content %}{% endblock %}
+    </main>
+
+</body>
+</html>

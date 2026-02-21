@@ -1,0 +1,373 @@
+"""Central runtime — boots and holds all live components."""
+
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+from typing import Any
+
+from animus_bootstrap.config import ConfigManager
+from animus_bootstrap.config.schema import AnimusConfig
+
+logger = logging.getLogger(__name__)
+
+
+class AnimusRuntime:
+    """Central runtime — boots and holds all live components.
+
+    The runtime is the single place that wires config to components.
+    Dashboard, CLI, and daemon all use it to get live references.
+    """
+
+    def __init__(self, config: AnimusConfig | None = None) -> None:
+        self._config = config or ConfigManager().load()
+        self._started = False
+
+        # Component references (populated by start())
+        self.session_manager: Any = None
+        self.memory_manager: Any = None
+        self.tool_executor: Any = None
+        self.proactive_engine: Any = None
+        self.automation_engine: Any = None
+        self.router: Any = None
+        self.cognitive_backend: Any = None
+        self.persona_engine: Any = None
+        self.context_adapter: Any = None
+
+    @property
+    def config(self) -> AnimusConfig:
+        return self._config
+
+    @property
+    def started(self) -> bool:
+        return self._started
+
+    async def start(self) -> None:
+        """Initialize and start all components based on config."""
+        if self._started:
+            logger.warning("Runtime already started")
+            return
+
+        logger.info("Animus runtime starting...")
+        data_dir = self._config.get_data_path()
+        data_dir.mkdir(parents=True, exist_ok=True)
+
+        # 1. Session manager
+        from animus_bootstrap.gateway.session import SessionManager
+
+        session_db = data_dir / "sessions.db"
+        self.session_manager = SessionManager(session_db)
+        logger.info("Session manager initialized: %s", session_db)
+
+        # 2. Cognitive backend
+        self.cognitive_backend = self._create_cognitive_backend()
+        logger.info("Cognitive backend: %s", self._config.gateway.default_backend)
+
+        # 3. Memory manager (if intelligence enabled)
+        if self._config.intelligence.enabled:
+            self.memory_manager = self._create_memory_manager()
+            logger.info(
+                "Memory manager initialized: %s",
+                self._config.intelligence.memory_backend,
+            )
+
+        # 4. Tool executor (if intelligence enabled)
+        if self._config.intelligence.enabled:
+            self.tool_executor = self._create_tool_executor()
+            logger.info(
+                "Tool executor initialized: %d tools registered",
+                len(self.tool_executor.list_tools()),
+            )
+            # Wire self-improvement dependencies
+            from animus_bootstrap.intelligence.tools.builtin.self_improve import (
+                set_self_improve_deps,
+            )
+
+            set_self_improve_deps(self.tool_executor, self.cognitive_backend)
+
+        # 5. Automation engine (if intelligence enabled)
+        if self._config.intelligence.enabled:
+            from animus_bootstrap.intelligence.automations.engine import AutomationEngine
+
+            automations_db = data_dir / "automations.db"
+            self.automation_engine = AutomationEngine(automations_db)
+            logger.info("Automation engine initialized")
+
+        # 6. Persona engine
+        if self._config.personas.enabled:
+            self.persona_engine = self._create_persona_engine()
+            from animus_bootstrap.personas.context import ContextAdapter
+
+            self.context_adapter = ContextAdapter()
+            logger.info(
+                "Persona engine initialized: %d personas",
+                self.persona_engine.persona_count,
+            )
+
+        # 7. Router (intelligent if components available, basic otherwise)
+        self.router = self._create_router()
+        logger.info("Message router initialized")
+
+        # 8. Proactive engine
+        if self._config.proactive.enabled and self._config.intelligence.enabled:
+            self.proactive_engine = await self._create_proactive_engine()
+            logger.info("Proactive engine started")
+
+        self._started = True
+        logger.info("Animus runtime started successfully")
+
+    async def stop(self) -> None:
+        """Gracefully shut down all components."""
+        if not self._started:
+            return
+
+        logger.info("Animus runtime stopping...")
+
+        if self.proactive_engine is not None:
+            await self.proactive_engine.stop()
+            self.proactive_engine.close()
+            logger.info("Proactive engine stopped")
+
+        if self.automation_engine is not None:
+            self.automation_engine.close()
+            logger.info("Automation engine closed")
+
+        if self.memory_manager is not None:
+            self.memory_manager.close()
+            logger.info("Memory manager closed")
+
+        if self.session_manager is not None:
+            self.session_manager.close()
+            logger.info("Session manager closed")
+
+        self._started = False
+        logger.info("Animus runtime stopped")
+
+    def _create_cognitive_backend(self) -> Any:
+        """Create cognitive backend based on config."""
+        backend_type = self._config.gateway.default_backend
+
+        anthropic_key = self._config.api.anthropic_key
+        if backend_type == "anthropic" and anthropic_key and len(anthropic_key) > 40:
+            from animus_bootstrap.gateway.cognitive import AnthropicBackend
+
+            return AnthropicBackend(api_key=anthropic_key)
+
+        if backend_type == "ollama":
+            from animus_bootstrap.gateway.cognitive import OllamaBackend
+
+            return OllamaBackend()
+
+        if backend_type == "forge" and self._config.forge.enabled:
+            from animus_bootstrap.gateway.cognitive import ForgeBackend
+
+            return ForgeBackend(
+                host=self._config.forge.host,
+                port=self._config.forge.port,
+                api_key=self._config.forge.api_key,
+            )
+
+        # Fallback to Ollama (always available locally)
+        from animus_bootstrap.gateway.cognitive import OllamaBackend
+
+        logger.warning(
+            "Backend '%s' not configured, falling back to Ollama",
+            backend_type,
+        )
+        return OllamaBackend()
+
+    def _create_memory_manager(self) -> Any:
+        """Create memory manager based on config."""
+        from animus_bootstrap.intelligence.memory import MemoryManager
+
+        backend_type = self._config.intelligence.memory_backend
+        db_path = Path(self._config.intelligence.memory_db_path).expanduser()
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if backend_type == "sqlite":
+            from animus_bootstrap.intelligence.memory_backends.sqlite_backend import (
+                SQLiteMemoryBackend,
+            )
+
+            backend = SQLiteMemoryBackend(db_path)
+            return MemoryManager(backend)
+
+        if backend_type == "chromadb":
+            from animus_bootstrap.intelligence.memory_backends.chromadb_backend import (
+                ChromaDBMemoryBackend,
+            )
+
+            backend = ChromaDBMemoryBackend()
+            return MemoryManager(backend)
+
+        if backend_type == "animus":
+            from animus_bootstrap.intelligence.memory_backends.animus_backend import (
+                AnimusMemoryBackend,
+            )
+
+            backend = AnimusMemoryBackend()
+            return MemoryManager(backend)
+
+        # Default to SQLite
+        from animus_bootstrap.intelligence.memory_backends.sqlite_backend import (
+            SQLiteMemoryBackend,
+        )
+
+        backend = SQLiteMemoryBackend(db_path)
+        return MemoryManager(backend)
+
+    def _create_tool_executor(self) -> Any:
+        """Create tool executor with built-in tools registered."""
+        from animus_bootstrap.intelligence.tools.builtin import get_all_builtin_tools
+        from animus_bootstrap.intelligence.tools.executor import ToolExecutor
+        from animus_bootstrap.intelligence.tools.permissions import (
+            PermissionLevel,
+            ToolPermissionManager,
+        )
+
+        perm_mgr = ToolPermissionManager(
+            default=PermissionLevel(self._config.intelligence.tool_approval_default)
+        )
+        executor = ToolExecutor(
+            max_calls_per_turn=self._config.intelligence.max_tool_calls_per_turn,
+            timeout_seconds=float(self._config.intelligence.tool_timeout_seconds),
+            permission_manager=perm_mgr,
+        )
+
+        for tool in get_all_builtin_tools():
+            executor.register(tool)
+
+        return executor
+
+    def _create_router(self) -> Any:
+        """Create message router -- intelligent if components are available."""
+        if (
+            self.memory_manager
+            or self.tool_executor
+            or self.automation_engine
+            or self.persona_engine
+        ):
+            from animus_bootstrap.intelligence.router import IntelligentRouter
+
+            return IntelligentRouter(
+                cognitive=self.cognitive_backend,
+                session_manager=self.session_manager,
+                memory=self.memory_manager,
+                tools=self.tool_executor,
+                automations=self.automation_engine,
+                system_prompt=self._config.gateway.system_prompt,
+                persona_engine=self.persona_engine,
+                context_adapter=self.context_adapter,
+            )
+
+        from animus_bootstrap.gateway.router import MessageRouter
+
+        return MessageRouter(
+            cognitive=self.cognitive_backend,
+            session_manager=self.session_manager,
+        )
+
+    def _create_persona_engine(self) -> Any:
+        """Create persona engine from config."""
+        from animus_bootstrap.personas.engine import PersonaEngine, PersonaProfile
+        from animus_bootstrap.personas.voice import VoiceConfig
+
+        engine = PersonaEngine()
+
+        # Register default persona from config
+        cfg = self._config.personas
+        default_persona = PersonaProfile(
+            name=cfg.default_name,
+            system_prompt=cfg.default_system_prompt,
+            voice=VoiceConfig(
+                tone=cfg.default_tone,
+                max_response_length=cfg.default_max_response_length,
+                emoji_policy=cfg.default_emoji_policy,
+            ),
+            is_default=True,
+        )
+        engine.register_persona(default_persona)
+
+        # Register named profiles from config
+        for profile_name, profile_cfg in cfg.profiles.items():
+            persona = PersonaProfile(
+                name=profile_cfg.name or profile_name,
+                description=profile_cfg.description,
+                system_prompt=profile_cfg.system_prompt,
+                voice=VoiceConfig(tone=profile_cfg.tone),
+                knowledge_domains=profile_cfg.knowledge_domains,
+                excluded_topics=profile_cfg.excluded_topics,
+                channel_bindings=profile_cfg.channel_bindings,
+            )
+            engine.register_persona(persona)
+
+        return engine
+
+    async def _create_proactive_engine(self) -> Any:
+        """Create and start proactive engine."""
+        from animus_bootstrap.intelligence.proactive.checks import get_builtin_checks
+        from animus_bootstrap.intelligence.proactive.engine import ProactiveEngine
+
+        data_dir = self._config.get_data_path()
+        proactive_db = data_dir / "proactive.db"
+
+        # Build send callback that routes through the gateway
+        async def send_nudge(text: str, channels: list[str]) -> None:
+            if self.router:
+                await self.router.broadcast(text, channels)
+
+        engine = ProactiveEngine(
+            db_path=proactive_db,
+            quiet_hours=(
+                self._config.proactive.quiet_hours_start,
+                self._config.proactive.quiet_hours_end,
+            ),
+            send_callback=send_nudge,
+        )
+
+        # Register built-in checks
+        for check in get_builtin_checks():
+            # Override from config if present
+            check_config = self._config.proactive.checks.get(check.name)
+            if check_config:
+                check.enabled = check_config.enabled
+                if check_config.schedule:
+                    check.schedule = check_config.schedule
+                if check_config.channels:
+                    check.channels = check_config.channels
+            engine.register_check(check)
+
+        await engine.start()
+
+        # Wire timer tools to the live proactive engine
+        from animus_bootstrap.intelligence.tools.builtin.timer_ctl import (
+            set_proactive_engine,
+        )
+
+        set_proactive_engine(engine)
+
+        return engine
+
+
+# Module-level singleton
+_runtime: AnimusRuntime | None = None
+
+
+def get_runtime() -> AnimusRuntime:
+    """Get or create the global runtime singleton."""
+    global _runtime  # noqa: PLW0603
+    if _runtime is None:
+        _runtime = AnimusRuntime()
+    return _runtime
+
+
+def set_runtime(runtime: AnimusRuntime) -> None:
+    """Set the global runtime singleton (for testing)."""
+    global _runtime  # noqa: PLW0603
+    _runtime = runtime
+
+
+def reset_runtime() -> None:
+    """Reset the global runtime singleton (for testing)."""
+    global _runtime  # noqa: PLW0603
+    _runtime = None

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Logs{% endblock %}
+
+{% block head %}
+<script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/sse.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Log Viewer</h2>
+
+    <!-- Filter Buttons (placeholder) -->
+    <div class="flex gap-2 mb-4">
+        <button class="bg-animus-surface border border-animus-border text-animus-text px-3 py-1 rounded text-xs hover:border-animus-green transition-colors">
+            ALL
+        </button>
+        <button class="bg-animus-surface border border-animus-border text-animus-muted px-3 py-1 rounded text-xs hover:border-animus-green transition-colors">
+            INFO
+        </button>
+        <button class="bg-animus-surface border border-animus-border text-animus-yellow px-3 py-1 rounded text-xs hover:border-animus-yellow transition-colors">
+            WARN
+        </button>
+        <button class="bg-animus-surface border border-animus-border text-animus-red px-3 py-1 rounded text-xs hover:border-animus-red transition-colors">
+            ERROR
+        </button>
+    </div>
+
+    <!-- Log Viewer -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg overflow-hidden">
+        <div class="log-viewer p-4"
+             hx-ext="sse"
+             sse-connect="/logs/stream"
+             sse-swap="log"
+             hx-swap="beforeend">
+            <noscript>
+                <p class="text-animus-muted text-sm">
+                    Live log streaming requires JavaScript. Reload the page to see the latest logs.
+                </p>
+            </noscript>
+            <p class="text-animus-muted text-sm">Connecting to log stream...</p>
+        </div>
+    </div>
+
+    <p class="text-animus-muted text-xs mt-2">
+        Log file: ~/.local/share/animus/animus.log
+    </p>
+</div>
+{% endblock %}

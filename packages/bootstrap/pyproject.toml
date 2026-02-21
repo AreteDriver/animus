@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "animus-bootstrap"
+version = "0.4.0"
+description = "Animus install daemon, onboarding wizard, and local dashboard"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "AreteDriver"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "tomli-w>=1.0.0",
+    "httpx>=0.25.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.6",
+    "sse-starlette>=1.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "respx>=0.20.0",
+]
+telegram = ["python-telegram-bot>=22.0"]
+discord = ["discord.py>=2.3"]
+slack = ["slack-bolt>=1.18"]
+matrix = ["matrix-nio>=0.24"]
+email = ["aiosmtplib>=3.0"]
+all-channels = [
+    "python-telegram-bot>=22.0",
+    "discord.py>=2.3",
+    "slack-bolt>=1.18",
+    "matrix-nio>=0.24",
+    "aiosmtplib>=3.0",
+]
+intelligence = [
+    "duckduckgo-search>=4.0",
+    "trafilatura>=1.6.0",
+    "croniter>=1.4.0",
+]
+mcp = ["mcp>=1.0.0"]
+chromadb = ["chromadb>=0.4.0"]
+
+[project.scripts]
+animus-bootstrap = "animus_bootstrap.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["animus_bootstrap*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src/animus_bootstrap"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true

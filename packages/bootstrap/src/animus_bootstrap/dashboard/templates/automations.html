@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Automations{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-animus-green">Automation Rules</h2>
+        <button class="px-4 py-2 bg-animus-border text-animus-muted rounded text-sm hover:bg-animus-green hover:text-animus-bg transition-colors cursor-not-allowed" disabled>
+            Add Rule
+        </button>
+    </div>
+
+    <!-- Rules Table -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-8">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Active Rules</h3>
+        {% if rules %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-animus-border text-animus-muted">
+                    <th class="text-left py-2 pr-4">Name</th>
+                    <th class="text-left py-2 pr-4">Trigger</th>
+                    <th class="text-left py-2 pr-4">Enabled</th>
+                    <th class="text-left py-2">Last Fired</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in rules %}
+                <tr class="border-b border-animus-border">
+                    <td class="py-2 pr-4 text-animus-green font-bold">{{ rule.name }}</td>
+                    <td class="py-2 pr-4 text-animus-text">{{ rule.trigger_type }}</td>
+                    <td class="py-2 pr-4">
+                        {% if rule.enabled %}
+                        <span class="text-animus-green">On</span>
+                        {% else %}
+                        <span class="text-animus-muted">Off</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 text-animus-muted">{{ rule.last_fired or "Never" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-animus-muted text-sm">No automation rules configured yet. Rules will appear here once configured.</p>
+        {% endif %}
+    </div>
+
+    <!-- Execution History -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Execution History</h3>
+        {% if history %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-animus-border text-animus-muted">
+                    <th class="text-left py-2 pr-4">Timestamp</th>
+                    <th class="text-left py-2 pr-4">Rule</th>
+                    <th class="text-left py-2 pr-4">Trigger</th>
+                    <th class="text-left py-2">Result</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in history %}
+                <tr class="border-b border-animus-border">
+                    <td class="py-2 pr-4 text-animus-muted">{{ entry.timestamp }}</td>
+                    <td class="py-2 pr-4 text-animus-text">{{ entry.rule }}</td>
+                    <td class="py-2 pr-4 text-animus-muted">{{ entry.trigger }}</td>
+                    <td class="py-2">
+                        {% if entry.success %}
+                        <span class="text-animus-green">OK</span>
+                        {% else %}
+                        <span class="text-animus-red">FAIL</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-animus-muted text-sm">No automation executions recorded yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
