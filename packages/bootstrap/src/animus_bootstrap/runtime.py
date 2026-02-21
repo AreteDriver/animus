@@ -129,6 +129,23 @@ class AnimusRuntime:
             self.proactive_engine = await self._create_proactive_engine()
             logger.info("Proactive engine started")
 
+        # 9. Persistent timer store + restore saved timers
+        if self._config.intelligence.enabled:
+            from animus_bootstrap.intelligence.tools.builtin.timer_ctl import (
+                restore_timers,
+                set_timer_store,
+            )
+            from animus_bootstrap.intelligence.tools.builtin.timer_store import (
+                TimerStore,
+            )
+
+            timers_db = data_dir / "timers.db"
+            self._timer_store = TimerStore(timers_db)
+            set_timer_store(self._timer_store)
+            restored = restore_timers()
+            if restored:
+                logger.info("Restored %d timers from persistent store", restored)
+
         self._started = True
         logger.info("Animus runtime started successfully")
 
@@ -147,6 +164,10 @@ class AnimusRuntime:
         if self.automation_engine is not None:
             self.automation_engine.close()
             logger.info("Automation engine closed")
+
+        if hasattr(self, "_timer_store") and self._timer_store is not None:
+            self._timer_store.close()
+            logger.info("Timer store closed")
 
         if self.memory_manager is not None:
             self.memory_manager.close()

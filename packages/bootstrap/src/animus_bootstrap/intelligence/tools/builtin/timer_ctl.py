@@ -16,11 +16,20 @@ _dynamic_timers: list[dict] = []
 # ProactiveEngine reference — set at registration time by runtime
 _proactive_engine = None
 
+# Persistent store reference — set at runtime
+_timer_store = None
+
 
 def set_proactive_engine(engine: object) -> None:
     """Wire the live ProactiveEngine for timer registration."""
     global _proactive_engine  # noqa: PLW0603
     _proactive_engine = engine
+
+
+def set_timer_store(store: object) -> None:
+    """Wire the persistent timer store."""
+    global _timer_store  # noqa: PLW0603
+    _timer_store = store
 
 
 def get_dynamic_timers() -> list[dict]:
@@ -31,6 +40,53 @@ def get_dynamic_timers() -> list[dict]:
 def clear_dynamic_timers() -> None:
     """Clear all dynamic timers."""
     _dynamic_timers.clear()
+
+
+def restore_timers() -> int:
+    """Restore timers from persistent store into in-memory registry.
+
+    Called during runtime startup to re-register saved timers with
+    the ProactiveEngine. Returns the number of timers restored.
+    """
+    if _timer_store is None:
+        return 0
+
+    saved = _timer_store.list_all()
+    count = 0
+    for entry in saved:
+        # Add to in-memory list (avoid duplicates)
+        if any(t["name"] == entry["name"] for t in _dynamic_timers):
+            continue
+        _dynamic_timers.append(entry)
+
+        # Register with ProactiveEngine if available
+        if _proactive_engine is not None:
+            _register_with_engine(
+                entry["name"], entry["schedule"], entry["action"], entry["channels"]
+            )
+
+        count += 1
+
+    if count:
+        logger.info("Restored %d timers from persistent store", count)
+    return count
+
+
+def _register_with_engine(name: str, schedule: str, action: str, channels: list[str]) -> None:
+    """Register a timer as a ProactiveCheck."""
+    from animus_bootstrap.intelligence.proactive.engine import ProactiveCheck
+
+    async def _timer_checker() -> str | None:
+        return action
+
+    check = ProactiveCheck(
+        name=f"timer:{name}",
+        schedule=schedule,
+        checker=_timer_checker,
+        channels=channels,
+        priority="normal",
+    )
+    _proactive_engine.register_check(check)
 
 
 async def _timer_create(name: str, schedule: str, action: str, channels: str = "") -> str:
@@ -55,31 +111,24 @@ async def _timer_create(name: str, schedule: str, action: str, channels: str = "
             return f"Invalid cron schedule: {exc}"
 
     channel_list = [c.strip() for c in channels.split(",") if c.strip()] if channels else []
+    created = datetime.now(UTC).isoformat()
 
     timer_entry = {
         "name": name,
         "schedule": schedule,
         "action": action,
         "channels": channel_list,
-        "created": datetime.now(UTC).isoformat(),
+        "created": created,
     }
     _dynamic_timers.append(timer_entry)
 
+    # Persist to store
+    if _timer_store is not None:
+        _timer_store.save(name, schedule, action, channel_list, created)
+
     # Register with ProactiveEngine if available
     if _proactive_engine is not None:
-        from animus_bootstrap.intelligence.proactive.engine import ProactiveCheck
-
-        async def _timer_checker() -> str | None:
-            return action
-
-        check = ProactiveCheck(
-            name=f"timer:{name}",
-            schedule=schedule,
-            checker=_timer_checker,
-            channels=channel_list,
-            priority="normal",
-        )
-        _proactive_engine.register_check(check)
+        _register_with_engine(name, schedule, action, channel_list)
         logger.info("Timer '%s' registered with ProactiveEngine", name)
         return f"Timer '{name}' created and registered (schedule: {schedule})"
 
@@ -123,6 +172,10 @@ async def _timer_cancel(name: str) -> str:
             _dynamic_timers.pop(i)
             found = True
             break
+
+    # Remove from persistent store
+    if _timer_store is not None:
+        _timer_store.remove(name)
 
     # Unregister from ProactiveEngine
     if _proactive_engine is not None:

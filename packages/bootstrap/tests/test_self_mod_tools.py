@@ -44,6 +44,7 @@ from animus_bootstrap.intelligence.tools.builtin.timer_ctl import (
     get_dynamic_timers,
     get_timer_tools,
     set_proactive_engine,
+    set_timer_store,
 )
 from animus_bootstrap.intelligence.tools.executor import ToolResult
 
@@ -433,6 +434,7 @@ class TestTimerCreate:
     def setup_method(self) -> None:
         clear_dynamic_timers()
         set_proactive_engine(None)
+        set_timer_store(None)
 
     @pytest.mark.asyncio()
     async def test_create_interval_timer(self) -> None:
@@ -474,6 +476,7 @@ class TestTimerList:
     def setup_method(self) -> None:
         clear_dynamic_timers()
         set_proactive_engine(None)
+        set_timer_store(None)
 
     @pytest.mark.asyncio()
     async def test_empty_list(self) -> None:
@@ -494,6 +497,7 @@ class TestTimerCancel:
     def setup_method(self) -> None:
         clear_dynamic_timers()
         set_proactive_engine(None)
+        set_timer_store(None)
 
     @pytest.mark.asyncio()
     async def test_cancel_existing(self) -> None:
@@ -522,6 +526,7 @@ class TestTimerFire:
     def setup_method(self) -> None:
         clear_dynamic_timers()
         set_proactive_engine(None)
+        set_timer_store(None)
 
     @pytest.mark.asyncio()
     async def test_fire_no_engine(self) -> None:
@@ -793,3 +798,157 @@ class TestNewToolsInBuiltinRegistry:
     def test_all_have_handlers(self) -> None:
         tools = get_all_builtin_tools()
         assert all(callable(t.handler) for t in tools)
+
+
+# ======================================================================
+# TimerStore — persistent SQLite storage
+# ======================================================================
+
+
+class TestTimerStore:
+    def test_create_and_list(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.timer_store import TimerStore
+
+        store = TimerStore(tmp_path / "timers.db")
+        store.save("daily", "0 9 * * *", "morning check", ["telegram"], "2026-01-01T00:00:00")
+        timers = store.list_all()
+        assert len(timers) == 1
+        assert timers[0]["name"] == "daily"
+        assert timers[0]["schedule"] == "0 9 * * *"
+        assert timers[0]["channels"] == ["telegram"]
+        store.close()
+
+    def test_remove_timer(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.timer_store import TimerStore
+
+        store = TimerStore(tmp_path / "timers.db")
+        store.save("t1", "every 5m", "test", [], "2026-01-01T00:00:00")
+        assert store.remove("t1") is True
+        assert store.list_all() == []
+        store.close()
+
+    def test_remove_nonexistent(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.timer_store import TimerStore
+
+        store = TimerStore(tmp_path / "timers.db")
+        assert store.remove("ghost") is False
+        store.close()
+
+    def test_upsert_overwrites(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.timer_store import TimerStore
+
+        store = TimerStore(tmp_path / "timers.db")
+        store.save("t1", "every 5m", "old action", [], "2026-01-01T00:00:00")
+        store.save("t1", "every 10m", "new action", ["discord"], "2026-01-01T00:00:00")
+        timers = store.list_all()
+        assert len(timers) == 1
+        assert timers[0]["schedule"] == "every 10m"
+        assert timers[0]["action"] == "new action"
+        store.close()
+
+    def test_persistence_across_instances(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.timer_store import TimerStore
+
+        db_path = tmp_path / "timers.db"
+        store1 = TimerStore(db_path)
+        store1.save("persist", "every 1h", "survive restart", [], "2026-01-01T00:00:00")
+        store1.close()
+
+        store2 = TimerStore(db_path)
+        timers = store2.list_all()
+        assert len(timers) == 1
+        assert timers[0]["name"] == "persist"
+        store2.close()
+
+
+# ======================================================================
+# Timer persistence integration — create/cancel persist to store
+# ======================================================================
+
+
+class TestTimerPersistence:
+    def setup_method(self) -> None:
+        clear_dynamic_timers()
+        set_proactive_engine(None)
+
+    def teardown_method(self) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.timer_ctl import set_timer_store
+
+        set_timer_store(None)
+        clear_dynamic_timers()
+
+    @pytest.mark.asyncio()
+    async def test_create_persists_to_store(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.timer_ctl import set_timer_store
+        from animus_bootstrap.intelligence.tools.builtin.timer_store import TimerStore
+
+        store = TimerStore(tmp_path / "timers.db")
+        set_timer_store(store)
+
+        await _timer_create("persisted", "every 10m", "check db")
+        saved = store.list_all()
+        assert len(saved) == 1
+        assert saved[0]["name"] == "persisted"
+        store.close()
+
+    @pytest.mark.asyncio()
+    async def test_cancel_removes_from_store(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.timer_ctl import set_timer_store
+        from animus_bootstrap.intelligence.tools.builtin.timer_store import TimerStore
+
+        store = TimerStore(tmp_path / "timers.db")
+        set_timer_store(store)
+
+        await _timer_create("will_cancel", "every 5m", "test")
+        await _timer_cancel("will_cancel")
+        saved = store.list_all()
+        assert len(saved) == 0
+        store.close()
+
+    @pytest.mark.asyncio()
+    async def test_restore_timers(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.timer_ctl import (
+            restore_timers,
+            set_timer_store,
+        )
+        from animus_bootstrap.intelligence.tools.builtin.timer_store import TimerStore
+
+        store = TimerStore(tmp_path / "timers.db")
+        store.save("saved1", "every 30m", "action1", ["telegram"], "2026-01-01T00:00:00")
+        store.save("saved2", "0 9 * * *", "action2", [], "2026-01-02T00:00:00")
+        set_timer_store(store)
+
+        count = restore_timers()
+        assert count == 2
+        timers = get_dynamic_timers()
+        assert len(timers) == 2
+        names = {t["name"] for t in timers}
+        assert names == {"saved1", "saved2"}
+        store.close()
+
+    @pytest.mark.asyncio()
+    async def test_restore_skips_duplicates(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.timer_ctl import (
+            restore_timers,
+            set_timer_store,
+        )
+        from animus_bootstrap.intelligence.tools.builtin.timer_store import TimerStore
+
+        store = TimerStore(tmp_path / "timers.db")
+        store.save("dup", "every 10m", "action", [], "2026-01-01T00:00:00")
+        set_timer_store(store)
+
+        # Pre-populate in-memory list
+        await _timer_create("dup", "every 10m", "action")
+        count = restore_timers()
+        assert count == 0  # already exists
+        store.close()
+
+    def test_restore_no_store(self) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.timer_ctl import (
+            restore_timers,
+            set_timer_store,
+        )
+
+        set_timer_store(None)
+        assert restore_timers() == 0
