@@ -1187,3 +1187,79 @@ class TestMCPToolBridge:
         bridge = MCPToolBridge(config_path=config)
         servers = await bridge.discover_servers()
         assert servers == []
+
+
+# ------------------------------------------------------------------
+# MCP auto-discovery in runtime
+# ------------------------------------------------------------------
+
+
+class TestMCPAutoDiscovery:
+    """Tests for MCP auto-discovery wiring in AnimusRuntime."""
+
+    @pytest.mark.asyncio()
+    async def test_discover_no_config_file(self, tmp_path: Path) -> None:
+        """Runtime skips MCP when config file doesn't exist."""
+        from animus_bootstrap.config.schema import AnimusConfig
+
+        cfg = AnimusConfig()
+        cfg.intelligence.mcp.config_path = str(tmp_path / "nonexistent.json")
+        cfg.intelligence.mcp.auto_discover = True
+
+        from animus_bootstrap.runtime import AnimusRuntime
+
+        runtime = AnimusRuntime(config=cfg)
+        # _discover_mcp_tools should not crash
+        runtime.tool_executor = runtime._create_tool_executor()
+        await runtime._discover_mcp_tools()
+        assert runtime._mcp_bridge is None
+
+    @pytest.mark.asyncio()
+    async def test_discover_empty_config(self, tmp_path: Path) -> None:
+        """Runtime handles empty MCP config gracefully."""
+        config = tmp_path / "mcp.json"
+        config.write_text('{"mcpServers": {}}', encoding="utf-8")
+
+        from animus_bootstrap.config.schema import AnimusConfig
+
+        cfg = AnimusConfig()
+        cfg.intelligence.mcp.config_path = str(config)
+        cfg.intelligence.mcp.auto_discover = True
+
+        from animus_bootstrap.runtime import AnimusRuntime
+
+        runtime = AnimusRuntime(config=cfg)
+        runtime.tool_executor = runtime._create_tool_executor()
+        await runtime._discover_mcp_tools()
+        assert runtime._mcp_bridge is None
+
+    @pytest.mark.asyncio()
+    async def test_discover_with_servers(self, tmp_path: Path) -> None:
+        """Runtime discovers servers and attempts import."""
+        config = tmp_path / "mcp.json"
+        config.write_text(
+            json.dumps(
+                {
+                    "mcpServers": {
+                        "test_srv": {"command": "nonexistent_binary", "args": []},
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        from animus_bootstrap.config.schema import AnimusConfig
+
+        cfg = AnimusConfig()
+        cfg.intelligence.mcp.config_path = str(config)
+        cfg.intelligence.mcp.auto_discover = True
+
+        from animus_bootstrap.runtime import AnimusRuntime
+
+        runtime = AnimusRuntime(config=cfg)
+        runtime.tool_executor = runtime._create_tool_executor()
+        # import_tools will fail because the binary doesn't exist,
+        # but it should not crash
+        await runtime._discover_mcp_tools()
+        # Bridge was created (discover found servers) but no tools imported
+        assert runtime._mcp_bridge is not None

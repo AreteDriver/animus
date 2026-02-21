@@ -33,6 +33,7 @@ class AnimusRuntime:
         self.cognitive_backend: Any = None
         self.persona_engine: Any = None
         self.context_adapter: Any = None
+        self._mcp_bridge: Any = None
 
     @property
     def config(self) -> AnimusConfig:
@@ -78,6 +79,10 @@ class AnimusRuntime:
                 "Tool executor initialized: %d tools registered",
                 len(self.tool_executor.list_tools()),
             )
+            # MCP tool auto-discovery
+            if self._config.intelligence.mcp.auto_discover:
+                await self._discover_mcp_tools()
+
             # Wire self-improvement dependencies
             from animus_bootstrap.intelligence.tools.builtin.self_improve import (
                 set_self_improve_deps,
@@ -155,6 +160,10 @@ class AnimusRuntime:
             return
 
         logger.info("Animus runtime stopping...")
+
+        if self._mcp_bridge is not None:
+            await self._mcp_bridge.close()
+            logger.info("MCP bridge closed")
 
         if self.proactive_engine is not None:
             await self.proactive_engine.stop()
@@ -275,6 +284,31 @@ class AnimusRuntime:
             executor.register(tool)
 
         return executor
+
+    async def _discover_mcp_tools(self) -> None:
+        """Discover and import tools from configured MCP servers."""
+        from animus_bootstrap.intelligence.tools.mcp_bridge import MCPToolBridge
+
+        config_path = Path(self._config.intelligence.mcp.config_path).expanduser()
+        bridge = MCPToolBridge(config_path)
+        server_names = await bridge.discover_servers()
+
+        if not server_names:
+            return
+
+        self._mcp_bridge = bridge
+        total = 0
+        for name in server_names:
+            tools = await bridge.import_tools(name)
+            for tool in tools:
+                try:
+                    self.tool_executor.register(tool)
+                    total += 1
+                except ValueError:
+                    logger.warning("MCP tool '%s' conflicts with existing tool", tool.name)
+
+        if total:
+            logger.info("Imported %d tools from %d MCP servers", total, len(server_names))
 
     def _create_router(self) -> Any:
         """Create message router -- intelligent if components are available."""
