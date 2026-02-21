@@ -41,6 +41,7 @@ from animus_bootstrap.intelligence.tools.builtin.timer_ctl import (
     _timer_create,
     _timer_fire,
     _timer_list,
+    _timer_update,
     clear_dynamic_timers,
     get_dynamic_timers,
     get_timer_tools,
@@ -582,13 +583,75 @@ class TestTimerFire:
         assert "not found" in result
 
 
+class TestTimerUpdate:
+    def setup_method(self) -> None:
+        clear_dynamic_timers()
+        set_proactive_engine(None)
+        set_timer_store(None)
+
+    @pytest.mark.asyncio()
+    async def test_update_not_found(self) -> None:
+        result = await _timer_update("ghost", schedule="every 5m")
+        assert "not found" in result
+
+    @pytest.mark.asyncio()
+    async def test_update_schedule(self) -> None:
+        await _timer_create("t1", "every 10m", "check stuff")
+        result = await _timer_update("t1", schedule="every 30m")
+        assert "updated" in result
+        assert "schedule=every 30m" in result
+        timers = get_dynamic_timers()
+        assert timers[0]["schedule"] == "every 30m"
+
+    @pytest.mark.asyncio()
+    async def test_update_action(self) -> None:
+        await _timer_create("t1", "every 10m", "old action")
+        result = await _timer_update("t1", action="new action")
+        assert "action=new action" in result
+        assert get_dynamic_timers()[0]["action"] == "new action"
+
+    @pytest.mark.asyncio()
+    async def test_update_channels(self) -> None:
+        await _timer_create("t1", "every 10m", "action")
+        result = await _timer_update("t1", channels="telegram,discord")
+        assert "updated" in result
+        assert get_dynamic_timers()[0]["channels"] == ["telegram", "discord"]
+
+    @pytest.mark.asyncio()
+    async def test_update_invalid_schedule(self) -> None:
+        await _timer_create("t1", "every 10m", "action")
+        result = await _timer_update("t1", schedule="invalid!!!")
+        assert "Invalid" in result
+        # Original schedule unchanged
+        assert get_dynamic_timers()[0]["schedule"] == "every 10m"
+
+    @pytest.mark.asyncio()
+    async def test_update_persists_to_store(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.timer_store import TimerStore
+
+        store = TimerStore(tmp_path / "timers.db")
+        set_timer_store(store)
+
+        await _timer_create("t1", "every 10m", "old")
+        await _timer_update("t1", action="new")
+        saved = store.list_all()
+        assert saved[0]["action"] == "new"
+        store.close()
+
+
 class TestTimerToolDefinitions:
     def test_tool_count(self) -> None:
-        assert len(get_timer_tools()) == 4
+        assert len(get_timer_tools()) == 5
 
     def test_tool_names(self) -> None:
         names = {t.name for t in get_timer_tools()}
-        assert names == {"timer_create", "timer_list", "timer_cancel", "timer_fire"}
+        assert names == {
+            "timer_create",
+            "timer_list",
+            "timer_cancel",
+            "timer_update",
+            "timer_fire",
+        }
 
     def test_category(self) -> None:
         assert all(t.category == "timer" for t in get_timer_tools())
@@ -809,6 +872,7 @@ class TestNewToolsInBuiltinRegistry:
             "timer_create",
             "timer_list",
             "timer_cancel",
+            "timer_update",
             "timer_fire",
             "analyze_behavior",
             "propose_improvement",
@@ -824,8 +888,8 @@ class TestNewToolsInBuiltinRegistry:
 
     def test_total_tool_count(self) -> None:
         tools = get_all_builtin_tools()
-        # 9 original (added recall_memory) + 16 new = 25
-        assert len(tools) == 25
+        # 9 original (added recall_memory) + 17 new = 26
+        assert len(tools) == 26
 
     def test_all_have_handlers(self) -> None:
         tools = get_all_builtin_tools()

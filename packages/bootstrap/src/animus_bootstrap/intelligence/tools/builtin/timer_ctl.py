@@ -187,6 +187,81 @@ async def _timer_cancel(name: str) -> str:
     return f"Timer '{name}' not found"
 
 
+async def _timer_update(
+    name: str,
+    schedule: str | None = None,
+    action: str | None = None,
+    channels: str | None = None,
+) -> str:
+    """Update an existing timer's schedule, action, or channels.
+
+    Only provided fields are changed; others remain as-is.
+    """
+    # Find the timer
+    timer = None
+    for t in _dynamic_timers:
+        if t["name"] == name:
+            timer = t
+            break
+
+    if timer is None:
+        return f"Timer '{name}' not found"
+
+    # Validate new schedule if provided
+    if schedule is not None:
+        from animus_bootstrap.intelligence.proactive.schedule import ScheduleParser
+
+        if ScheduleParser.is_interval(schedule):
+            try:
+                ScheduleParser.parse_interval(schedule)
+            except ValueError as exc:
+                return f"Invalid interval schedule: {exc}"
+        else:
+            try:
+                ScheduleParser.next_cron_fire(schedule)
+            except (ValueError, IndexError) as exc:
+                return f"Invalid cron schedule: {exc}"
+        timer["schedule"] = schedule
+
+    if action is not None:
+        timer["action"] = action
+
+    if channels is not None:
+        timer["channels"] = (
+            [c.strip() for c in channels.split(",") if c.strip()]
+            if channels
+            else []
+        )
+
+    # Update persistent store
+    if _timer_store is not None:
+        _timer_store.save(
+            timer["name"],
+            timer["schedule"],
+            timer["action"],
+            timer["channels"],
+            timer["created"],
+        )
+
+    # Re-register with ProactiveEngine if available
+    if _proactive_engine is not None:
+        _proactive_engine.unregister_check(f"timer:{name}")
+        _register_with_engine(
+            name, timer["schedule"], timer["action"], timer["channels"]
+        )
+
+    changes = []
+    if schedule is not None:
+        changes.append(f"schedule={schedule}")
+    if action is not None:
+        changes.append(f"action={action}")
+    if channels is not None:
+        changes.append(f"channels={timer['channels']}")
+
+    logger.info("Timer '%s' updated: %s", name, ", ".join(changes))
+    return f"Timer '{name}' updated: {', '.join(changes)}"
+
+
 async def _timer_fire(name: str) -> str:
     """Manually fire a timer immediately (for testing)."""
     if _proactive_engine is None:
@@ -262,6 +337,37 @@ def get_timer_tools() -> list[ToolDefinition]:
                 "required": ["name"],
             },
             handler=_timer_cancel,
+            category="timer",
+        ),
+        ToolDefinition(
+            name="timer_update",
+            description=(
+                "Update an existing timer's schedule, action, or channels. "
+                "Only provided fields are changed."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the timer to update.",
+                    },
+                    "schedule": {
+                        "type": "string",
+                        "description": "New cron expression or interval.",
+                    },
+                    "action": {
+                        "type": "string",
+                        "description": "New action message.",
+                    },
+                    "channels": {
+                        "type": "string",
+                        "description": "New comma-separated channel list.",
+                    },
+                },
+                "required": ["name"],
+            },
+            handler=_timer_update,
             category="timer",
         ),
         ToolDefinition(
