@@ -1067,10 +1067,10 @@ class TestMCPToolBridge:
         assert servers == []
 
     @pytest.mark.asyncio()
-    async def test_import_tools_returns_empty(self, tmp_path: Path) -> None:
+    async def test_import_tools_fails_on_missing_command(self, tmp_path: Path) -> None:
         config = tmp_path / "mcp.json"
         config.write_text(
-            json.dumps({"mcpServers": {"test": {"command": "test"}}}),
+            json.dumps({"mcpServers": {"test": {"command": "nonexistent_mcp_server_xyz"}}}),
             encoding="utf-8",
         )
         bridge = MCPToolBridge(config_path=config)
@@ -1085,10 +1085,87 @@ class TestMCPToolBridge:
         assert tools == []
 
     @pytest.mark.asyncio()
-    async def test_call_tool_raises_not_implemented(self) -> None:
+    async def test_call_tool_not_connected(self) -> None:
         bridge = MCPToolBridge()
-        with pytest.raises(NotImplementedError, match="not yet implemented"):
-            await bridge.call_tool("server", "tool", {})
+        result = await bridge.call_tool("server", "tool", {})
+        assert "not connected" in result
+
+    @pytest.mark.asyncio()
+    async def test_import_tools_with_mock_process(self) -> None:
+        bridge = MCPToolBridge()
+        bridge._servers = {"test": {"command": "echo"}}
+
+        # Mock the subprocess to return proper JSON-RPC responses
+        mock_proc = AsyncMock()
+        mock_proc.pid = 999
+        mock_proc.returncode = None
+        mock_proc.stdin = AsyncMock()
+        mock_proc.stdin.write = lambda data: None
+        mock_proc.stdin.drain = AsyncMock()
+
+        # Response queue: initialize, then tools/list
+        init_response = (
+            json.dumps(
+                {"jsonrpc": "2.0", "id": 1, "result": {"protocolVersion": "2024-11-05"}}
+            ).encode()
+            + b"\n"
+        )
+        tools_response = (
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "result": {
+                        "tools": [
+                            {
+                                "name": "greet",
+                                "description": "Say hello",
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {"name": {"type": "string"}},
+                                },
+                            }
+                        ]
+                    },
+                }
+            ).encode()
+            + b"\n"
+        )
+
+        responses = [init_response, tools_response]
+        response_idx = 0
+
+        async def mock_readline():
+            nonlocal response_idx
+            if response_idx < len(responses):
+                data = responses[response_idx]
+                response_idx += 1
+                return data
+            return b""
+
+        mock_proc.stdout = AsyncMock()
+        mock_proc.stdout.readline = mock_readline
+        mock_proc.terminate = lambda: None
+        mock_proc.kill = lambda: None
+        mock_proc.wait = AsyncMock()
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            tools = await bridge.import_tools("test")
+
+        assert len(tools) == 1
+        assert tools[0].name == "mcp_test_greet"
+        assert tools[0].description == "Say hello"
+        assert tools[0].category == "mcp:test"
+        assert callable(tools[0].handler)
+
+    @pytest.mark.asyncio()
+    async def test_close_terminates_connections(self) -> None:
+        bridge = MCPToolBridge()
+        mock_conn = AsyncMock()
+        bridge._connections = {"test": mock_conn}
+        await bridge.close()
+        mock_conn.close.assert_called_once()
+        assert bridge._connections == {}
 
     @pytest.mark.asyncio()
     async def test_discover_populates_servers_dict(self, tmp_path: Path) -> None:
