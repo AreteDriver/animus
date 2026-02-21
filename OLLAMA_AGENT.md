@@ -12,10 +12,10 @@
 |-------|-------------|--------|
 | 1. Validate | Venvs, imports, Ollama, deps | DONE |
 | 2. Code Quality | Lint, CodeQL, empty-except, `__all__` | DONE |
-| 3. Test Suite | 9,260 tests across 3 packages | DONE |
+| 3. Test Suite | 9,286 tests across 3 packages | DONE |
 | 4. Deploy | Systemd services, health checks | DONE |
-| 5. Harden | Exception narrowing, type hints, dep audit | **TODO** |
-| 6. Self-Improve | Review loop, test generation, coverage push | **TODO** |
+| 5. Harden | Exception narrowing, type hints, dep audit | DONE |
+| 6. Self-Improve | Review loop, test generation, coverage push | DONE |
 
 **Start at Phase 4.** Phases 1-3 were completed on 2026-02-20 by Claude Code.
 
@@ -97,9 +97,9 @@ You are an autonomous agent running via Ollama on this machine. Animus is a pers
 | Package | Tests | Coverage | Threshold | Status |
 |---------|-------|----------|-----------|--------|
 | Quorum  | 906   | 97%      | fail_under=97 | ALL PASSING |
-| Core    | 1,648 | 95%      | fail_under=95 | ALL PASSING (106 skips = optional deps) |
-| Forge   | 6,706 | 86%      | fail_under=85 | ALL PASSING |
-| **Total** | **9,260** | | | |
+| Core    | 1,648 | 96%      | fail_under=95 | ALL PASSING (106 skips = optional deps) |
+| Forge   | 6,732 | 88%      | fail_under=85 | ALL PASSING |
+| **Total** | **9,286** | | | |
 
 **Infrastructure:**
 - Virtual environments: all 3 created and verified (`packages/{core,forge,quorum}/.venv/`)
@@ -111,9 +111,17 @@ You are an autonomous agent running via Ollama on this machine. Animus is a pers
 - Lint: `ruff check packages/ && ruff format --check packages/` = clean
 
 **NOT yet done:**
-- Forge API not deployed as systemd service
-- `scripts/review.py` not yet created on disk
 - No `BLOCKERS.md` exists yet (nothing blocked)
+
+**Completed this session:**
+- Forge API deployed as systemd service (Phase 4 DONE)
+- `scripts/review.py` created (Phase 6.1 DONE)
+- Native Anthropic tool_use in cognitive.py (Phase 3 DONE)
+- `/workflow` command in chat.py (Phase 4 DONE)
+- Exception narrowing in Core (Phase 5.1 DONE)
+- Type hints added to Core (Phase 5.2 DONE)
+- pip-audit clean, pip 26.0.1 (Phase 5.3 DONE)
+- Coverage pushed: Core 96%, Forge 88% (Phase 6.2-6.4 DONE)
 
 **Gotchas:**
 - `pytest-timeout` is NOT installed in any venv -- use plain `pytest`
