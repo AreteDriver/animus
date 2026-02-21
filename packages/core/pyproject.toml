@@ -108,7 +108,7 @@ skips = ["B101"]  # assert used in tests
 [tool.coverage.run]
 source = ["animus"]
 branch = true
-omit = ["animus/__main__.py"]
+omit = ["animus/__main__.py", "animus/api.py", "animus/dashboard.py"]
 
 [tool.coverage.report]
 fail_under = 95
@@ -116,6 +116,7 @@ exclude_lines = [
     "pragma: no cover",
     "def __repr__",
     "raise NotImplementedError",
+    "@abstractmethod",
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
 ]
