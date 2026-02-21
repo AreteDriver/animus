@@ -9,17 +9,28 @@ from animus_bootstrap.intelligence.tools.executor import ToolDefinition
 
 logger = logging.getLogger(__name__)
 
-# Log of improvement proposals for audit trail
+# Log of improvement proposals for audit trail (in-memory fallback)
 _improvement_log: list[dict] = []
+
+# Persistent store (set at runtime)
+_improvement_store = None
+
+
+def set_improvement_store(store: object | None) -> None:
+    """Wire the persistent improvement store."""
+    global _improvement_store  # noqa: PLW0603
+    _improvement_store = store
 
 
 def get_improvement_log() -> list[dict]:
     """Return the improvement log (for testing/inspection)."""
+    if _improvement_store is not None:
+        return _improvement_store.list_all()
     return list(_improvement_log)
 
 
 def clear_improvement_log() -> None:
-    """Clear the improvement log."""
+    """Clear the in-memory improvement log."""
     _improvement_log.clear()
 
 
@@ -86,7 +97,6 @@ async def _propose_improvement(area: str, description: str) -> str:
     "workflow").  ``description`` explains the problem or desired enhancement.
     """
     proposal = {
-        "id": len(_improvement_log) + 1,
         "area": area,
         "description": description,
         "status": "proposed",
@@ -124,7 +134,13 @@ async def _propose_improvement(area: str, description: str) -> str:
             f"No cognitive backend available. Manual review needed for: {area} — {description}"
         )
 
-    _improvement_log.append(proposal)
+    # Persist to store or in-memory log
+    if _improvement_store is not None:
+        proposal["id"] = _improvement_store.save(proposal)
+    else:
+        proposal["id"] = len(_improvement_log) + 1
+        _improvement_log.append(proposal)
+
     logger.info("Improvement proposal #%d: %s", proposal["id"], area)
 
     output = f"Improvement Proposal #{proposal['id']}\n"
@@ -140,11 +156,16 @@ async def _apply_improvement(proposal_id: int, confirm: bool = False) -> str:
     If ``confirm`` is False (default), shows what would be done.
     If ``confirm`` is True, executes the improvement via code_patch.
     """
-    matching = [p for p in _improvement_log if p["id"] == proposal_id]
-    if not matching:
+    # Look up proposal from store or in-memory log
+    if _improvement_store is not None:
+        proposal = _improvement_store.get(proposal_id)
+    else:
+        matching = [p for p in _improvement_log if p["id"] == proposal_id]
+        proposal = matching[0] if matching else None
+
+    if proposal is None:
         return f"Proposal #{proposal_id} not found"
 
-    proposal = matching[0]
     if proposal["status"] == "applied":
         return f"Proposal #{proposal_id} has already been applied"
 
@@ -156,8 +177,13 @@ async def _apply_improvement(proposal_id: int, confirm: bool = False) -> str:
             f"Call apply_improvement with confirm=true to execute."
         )
 
-    proposal["status"] = "applied"
-    proposal["applied_at"] = datetime.now(UTC).isoformat()
+    applied_at = datetime.now(UTC).isoformat()
+    if _improvement_store is not None:
+        _improvement_store.update_status(proposal_id, "applied", applied_at)
+    else:
+        proposal["status"] = "applied"
+        proposal["applied_at"] = applied_at
+
     logger.info("Improvement proposal #%d applied", proposal_id)
     return (
         f"Proposal #{proposal_id} marked as applied.\n"
@@ -168,19 +194,23 @@ async def _apply_improvement(proposal_id: int, confirm: bool = False) -> str:
 
 async def _list_improvements(status: str = "all") -> str:
     """List improvement proposals, optionally filtered by status."""
-    if not _improvement_log:
-        return "No improvement proposals recorded"
-
-    filtered = _improvement_log
-    if status != "all":
-        filtered = [p for p in _improvement_log if p["status"] == status]
+    if _improvement_store is not None:
+        filtered = _improvement_store.list_all(status=status)
+    else:
+        filtered = _improvement_log
+        if status != "all":
+            filtered = [p for p in _improvement_log if p["status"] == status]
 
     if not filtered:
+        if status == "all":
+            return "No improvement proposals recorded"
         return f"No proposals with status '{status}'"
 
     lines = [f"Improvement Proposals ({len(filtered)}):"]
     for p in filtered:
-        lines.append(f"  #{p['id']} [{p['status']}] {p['area']}: {p['description'][:80]}")
+        lines.append(
+            f"  #{p['id']} [{p['status']}] {p['area']}: {p['description'][:80]}"
+        )
 
     return "\n".join(lines)
 

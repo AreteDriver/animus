@@ -33,6 +33,7 @@ from animus_bootstrap.intelligence.tools.builtin.self_improve import (
     clear_improvement_log,
     get_improvement_log,
     get_self_improve_tools,
+    set_improvement_store,
     set_self_improve_deps,
 )
 from animus_bootstrap.intelligence.tools.builtin.timer_ctl import (
@@ -643,6 +644,7 @@ class TestAnalyzeBehavior:
 
 class TestProposeImprovement:
     def setup_method(self) -> None:
+        set_improvement_store(None)
         clear_improvement_log()
         set_self_improve_deps(None, None)
 
@@ -675,6 +677,7 @@ class TestProposeImprovement:
 
 class TestApplyImprovement:
     def setup_method(self) -> None:
+        set_improvement_store(None)
         clear_improvement_log()
         set_self_improve_deps(None, None)
 
@@ -706,6 +709,7 @@ class TestApplyImprovement:
 
 class TestListImprovements:
     def setup_method(self) -> None:
+        set_improvement_store(None)
         clear_improvement_log()
         set_self_improve_deps(None, None)
 
@@ -952,3 +956,255 @@ class TestTimerPersistence:
 
         set_timer_store(None)
         assert restore_timers() == 0
+
+
+# ======================================================================
+# ImprovementStore — persistent SQLite storage
+# ======================================================================
+
+
+class TestImprovementStore:
+    def test_save_and_list(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.improvement_store import (
+            ImprovementStore,
+        )
+
+        store = ImprovementStore(tmp_path / "improvements.db")
+        pid = store.save(
+            {
+                "area": "tool:web_search",
+                "description": "Add retry logic",
+                "status": "proposed",
+                "timestamp": "2026-02-20T12:00:00+00:00",
+                "analysis": "Use exponential backoff",
+                "patch": None,
+            }
+        )
+        assert pid == 1
+        items = store.list_all()
+        assert len(items) == 1
+        assert items[0]["area"] == "tool:web_search"
+        assert items[0]["analysis"] == "Use exponential backoff"
+        store.close()
+
+    def test_auto_increment_id(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.improvement_store import (
+            ImprovementStore,
+        )
+
+        store = ImprovementStore(tmp_path / "improvements.db")
+        id1 = store.save(
+            {
+                "area": "a",
+                "description": "d1",
+                "timestamp": "2026-01-01",
+            }
+        )
+        id2 = store.save(
+            {
+                "area": "b",
+                "description": "d2",
+                "timestamp": "2026-01-02",
+            }
+        )
+        assert id1 == 1
+        assert id2 == 2
+        store.close()
+
+    def test_get_by_id(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.improvement_store import (
+            ImprovementStore,
+        )
+
+        store = ImprovementStore(tmp_path / "improvements.db")
+        store.save(
+            {
+                "area": "config",
+                "description": "validate schema",
+                "timestamp": "2026-01-01",
+                "analysis": "detailed analysis",
+            }
+        )
+        p = store.get(1)
+        assert p is not None
+        assert p["area"] == "config"
+        assert p["analysis"] == "detailed analysis"
+        assert store.get(999) is None
+        store.close()
+
+    def test_update_status(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.improvement_store import (
+            ImprovementStore,
+        )
+
+        store = ImprovementStore(tmp_path / "improvements.db")
+        store.save(
+            {
+                "area": "test",
+                "description": "test desc",
+                "timestamp": "2026-01-01",
+            }
+        )
+        assert store.update_status(1, "applied", "2026-01-02") is True
+        p = store.get(1)
+        assert p["status"] == "applied"
+        assert p["applied_at"] == "2026-01-02"
+        assert store.update_status(999, "applied") is False
+        store.close()
+
+    def test_update_analysis(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.improvement_store import (
+            ImprovementStore,
+        )
+
+        store = ImprovementStore(tmp_path / "improvements.db")
+        store.save(
+            {
+                "area": "test",
+                "description": "test desc",
+                "timestamp": "2026-01-01",
+            }
+        )
+        assert store.update_analysis(1, "new analysis") is True
+        p = store.get(1)
+        assert p["analysis"] == "new analysis"
+        store.close()
+
+    def test_list_filtered_by_status(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.improvement_store import (
+            ImprovementStore,
+        )
+
+        store = ImprovementStore(tmp_path / "improvements.db")
+        store.save(
+            {
+                "area": "a",
+                "description": "d1",
+                "status": "proposed",
+                "timestamp": "2026-01-01",
+            }
+        )
+        store.save(
+            {
+                "area": "b",
+                "description": "d2",
+                "status": "applied",
+                "timestamp": "2026-01-02",
+            }
+        )
+        proposed = store.list_all(status="proposed")
+        assert len(proposed) == 1
+        assert proposed[0]["area"] == "a"
+        applied = store.list_all(status="applied")
+        assert len(applied) == 1
+        assert applied[0]["area"] == "b"
+        store.close()
+
+    def test_persistence_across_instances(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.improvement_store import (
+            ImprovementStore,
+        )
+
+        db_path = tmp_path / "improvements.db"
+        store1 = ImprovementStore(db_path)
+        store1.save(
+            {
+                "area": "persist",
+                "description": "survive restart",
+                "timestamp": "2026-01-01",
+            }
+        )
+        store1.close()
+
+        store2 = ImprovementStore(db_path)
+        items = store2.list_all()
+        assert len(items) == 1
+        assert items[0]["area"] == "persist"
+        store2.close()
+
+
+# ======================================================================
+# Improvement persistence integration — propose/apply persist to store
+# ======================================================================
+
+
+class TestImprovementPersistence:
+    def setup_method(self) -> None:
+        set_improvement_store(None)
+        clear_improvement_log()
+        set_self_improve_deps(None, None)
+
+    def teardown_method(self) -> None:
+        set_improvement_store(None)
+        clear_improvement_log()
+
+    @pytest.mark.asyncio()
+    async def test_propose_persists_to_store(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.improvement_store import (
+            ImprovementStore,
+        )
+
+        store = ImprovementStore(tmp_path / "improvements.db")
+        set_improvement_store(store)
+
+        await _propose_improvement("tool:test", "Add caching")
+        saved = store.list_all()
+        assert len(saved) == 1
+        assert saved[0]["area"] == "tool:test"
+        assert saved[0]["status"] == "proposed"
+        store.close()
+
+    @pytest.mark.asyncio()
+    async def test_apply_updates_store(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.improvement_store import (
+            ImprovementStore,
+        )
+
+        store = ImprovementStore(tmp_path / "improvements.db")
+        set_improvement_store(store)
+
+        await _propose_improvement("router", "Fix routing")
+        await _apply_improvement(1, confirm=True)
+        p = store.get(1)
+        assert p is not None
+        assert p["status"] == "applied"
+        assert p["applied_at"] is not None
+        store.close()
+
+    @pytest.mark.asyncio()
+    async def test_list_reads_from_store(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.improvement_store import (
+            ImprovementStore,
+        )
+
+        store = ImprovementStore(tmp_path / "improvements.db")
+        set_improvement_store(store)
+
+        await _propose_improvement("a", "d1")
+        await _propose_improvement("b", "d2")
+        result = await _list_improvements()
+        assert "Improvement Proposals (2)" in result
+        store.close()
+
+    @pytest.mark.asyncio()
+    async def test_get_improvement_log_reads_store(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.builtin.improvement_store import (
+            ImprovementStore,
+        )
+
+        store = ImprovementStore(tmp_path / "improvements.db")
+        set_improvement_store(store)
+
+        await _propose_improvement("mem", "Optimize")
+        log = get_improvement_log()
+        assert len(log) == 1
+        assert log[0]["area"] == "mem"
+        store.close()
+
+    @pytest.mark.asyncio()
+    async def test_no_store_falls_back_to_memory(self) -> None:
+        set_improvement_store(None)
+        await _propose_improvement("fallback", "in-memory only")
+        log = get_improvement_log()
+        assert len(log) == 1
+        assert log[0]["area"] == "fallback"

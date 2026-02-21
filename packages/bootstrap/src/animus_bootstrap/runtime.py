@@ -85,10 +85,21 @@ class AnimusRuntime:
 
             # Wire self-improvement dependencies
             from animus_bootstrap.intelligence.tools.builtin.self_improve import (
+                set_improvement_store,
                 set_self_improve_deps,
             )
 
             set_self_improve_deps(self.tool_executor, self.cognitive_backend)
+
+            # Persistent improvement store
+            from animus_bootstrap.intelligence.tools.builtin.improvement_store import (
+                ImprovementStore,
+            )
+
+            improvements_db = data_dir / "improvements.db"
+            self._improvement_store = ImprovementStore(improvements_db)
+            set_improvement_store(self._improvement_store)
+            logger.info("Improvement store initialized: %s", improvements_db)
 
             # Wire memory tools to live memory manager
             if self.memory_manager is not None:
@@ -177,6 +188,10 @@ class AnimusRuntime:
         if hasattr(self, "_timer_store") and self._timer_store is not None:
             self._timer_store.close()
             logger.info("Timer store closed")
+
+        if hasattr(self, "_improvement_store") and self._improvement_store is not None:
+            self._improvement_store.close()
+            logger.info("Improvement store closed")
 
         if self.memory_manager is not None:
             self.memory_manager.close()
