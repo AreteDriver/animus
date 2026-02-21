@@ -67,11 +67,15 @@ async def _code_write(path: str, content: str) -> str:
     return f"Wrote {len(content)} bytes to {path}"
 
 
-async def _code_patch(path: str, old: str, new: str) -> str:
+async def _code_patch(
+    path: str, old: str, new: str, dry_run: bool = False
+) -> str:
     """Apply a search-and-replace patch to a source file.
 
     Finds the first occurrence of ``old`` in the file and replaces it with
     ``new``.  Returns a unified diff preview of the change.
+
+    If ``dry_run`` is True, returns the diff without writing to disk.
     """
     try:
         resolved = _resolve_animus_path(path)
@@ -90,11 +94,6 @@ async def _code_patch(path: str, old: str, new: str) -> str:
 
     patched = original.replace(old, new, 1)
 
-    try:
-        resolved.write_text(patched, encoding="utf-8")
-    except OSError as exc:
-        return f"Write error: {exc}"
-
     # Generate a unified diff for the caller to review
     diff = difflib.unified_diff(
         original.splitlines(keepends=True),
@@ -104,6 +103,15 @@ async def _code_patch(path: str, old: str, new: str) -> str:
         n=3,
     )
     diff_text = "".join(diff)
+
+    if dry_run:
+        return f"[DRY RUN] Diff for {path}:\n{diff_text}"
+
+    try:
+        resolved.write_text(patched, encoding="utf-8")
+    except OSError as exc:
+        return f"Write error: {exc}"
+
     logger.info("Self-modification: patched %s", resolved)
     return f"Patched {path}:\n{diff_text}"
 
@@ -189,7 +197,8 @@ def get_code_edit_tools() -> list[ToolDefinition]:
             description=(
                 "Apply a search-and-replace patch to a source file. "
                 "Finds the first occurrence of 'old' and replaces it with 'new'. "
-                "Returns a unified diff preview. Requires approval."
+                "Returns a unified diff preview. Use dry_run=true to preview "
+                "without writing. Requires approval."
             ),
             parameters={
                 "type": "object",
@@ -205,6 +214,11 @@ def get_code_edit_tools() -> list[ToolDefinition]:
                     "new": {
                         "type": "string",
                         "description": "Replacement text.",
+                    },
+                    "dry_run": {
+                        "type": "boolean",
+                        "description": "Preview diff without writing. Default false.",
+                        "default": False,
                     },
                 },
                 "required": ["path", "old", "new"],

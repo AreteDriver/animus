@@ -165,6 +165,34 @@ class TestCodePatch:
         result = await _code_patch("../../../../etc/hosts", "a", "b")
         assert "Permission denied" in result
 
+    @pytest.mark.asyncio()
+    async def test_dry_run_returns_diff_without_writing(self, tmp_path: Path) -> None:
+        f = tmp_path / "dry.py"
+        f.write_text("x = 1\n", encoding="utf-8")
+        with patch(
+            "animus_bootstrap.intelligence.tools.builtin.code_edit._ANIMUS_ROOT",
+            tmp_path,
+        ):
+            result = await _code_patch("dry.py", "x = 1", "x = 2", dry_run=True)
+        assert "[DRY RUN]" in result
+        assert "-x = 1" in result
+        assert "+x = 2" in result
+        # File should NOT be modified
+        assert f.read_text() == "x = 1\n"
+
+    @pytest.mark.asyncio()
+    async def test_dry_run_search_not_found(self, tmp_path: Path) -> None:
+        f = tmp_path / "dry_nf.py"
+        f.write_text("hello\n", encoding="utf-8")
+        with patch(
+            "animus_bootstrap.intelligence.tools.builtin.code_edit._ANIMUS_ROOT",
+            tmp_path,
+        ):
+            result = await _code_patch(
+                "dry_nf.py", "MISSING", "replacement", dry_run=True
+            )
+        assert "not found" in result
+
 
 class TestCodeList:
     @pytest.mark.asyncio()
