@@ -28,6 +28,7 @@ except ImportError:
 # Ordered preference lists per tier — first available model wins
 DEFAULT_TIER_MODELS: dict[str, list[str]] = {
     "reasoning": [
+        "deepseek-coder-v2",
         "qwen2.5:72b",
         "deepseek-r1:70b",
         "llama3.1:70b",

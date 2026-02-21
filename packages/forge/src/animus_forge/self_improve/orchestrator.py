@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -10,11 +11,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .analyzer import CodebaseAnalyzer, ImprovementSuggestion
-from .approval import ApprovalGate, ApprovalStage
+from .approval import ApprovalGate, ApprovalStage, ApprovalStatus
 from .pr_manager import PRManager, PullRequest
 from .rollback import RollbackManager, Snapshot
 from .safety import SafetyChecker, SafetyConfig, SafetyViolation
-from .sandbox import SandboxResult, SandboxStatus
+from .sandbox import Sandbox, SandboxResult
 
 if TYPE_CHECKING:
     from animus_forge.agents.provider_wrapper import AgentProvider
@@ -189,34 +190,53 @@ class SelfImproveOrchestrator:
 
                 if auto_approve:
                     self.approval_gate.auto_approve_for_testing(approval.id)
-
-                if not self.approval_gate.is_approved(approval.id):
-                    logger.info("Waiting for plan approval...")
-                    # In real implementation, would wait here
-                    if not auto_approve:
+                else:
+                    status = await self.approval_gate.wait_for_approval(approval)
+                    if status == ApprovalStatus.REJECTED:
+                        self._current_stage = WorkflowStage.FAILED
                         return ImprovementResult(
                             success=False,
                             stage_reached=WorkflowStage.AWAITING_PLAN_APPROVAL,
                             plan=plan,
-                            error="Plan approval required",
+                            error="Plan was rejected",
+                        )
+                    if status == ApprovalStatus.EXPIRED:
+                        self._current_stage = WorkflowStage.FAILED
+                        return ImprovementResult(
+                            success=False,
+                            stage_reached=WorkflowStage.AWAITING_PLAN_APPROVAL,
+                            plan=plan,
+                            error="Plan approval timed out",
                         )
 
-            # Stage 4: Implement in sandbox
+            # Stage 4: Generate changes via AI
             self._current_stage = WorkflowStage.IMPLEMENTING
-            logger.info("Implementing changes in sandbox...")
+            logger.info("Generating code changes...")
+            changes = await self._generate_changes(plan)
 
-            # For now, we don't actually generate code
-            # In a real implementation, this would use the AI provider
-            # changes = {}  # Would be populated by AI
-            logger.info("(Implementation would happen here)")
+            if not changes:
+                self._current_stage = WorkflowStage.FAILED
+                return ImprovementResult(
+                    success=False,
+                    stage_reached=WorkflowStage.IMPLEMENTING,
+                    plan=plan,
+                    error="No changes generated",
+                )
 
             # Stage 5: Test in sandbox
             self._current_stage = WorkflowStage.TESTING
-            sandbox_result = SandboxResult(
-                status=SandboxStatus.SUCCESS,
-                tests_passed=True,
-                lint_passed=True,
-            )
+            logger.info("Testing changes in sandbox...")
+            with Sandbox(self.codebase_path, timeout=self.config.sandbox_timeout) as sandbox:
+                applied = await sandbox.apply_changes(changes)
+                if not applied:
+                    self._current_stage = WorkflowStage.FAILED
+                    return ImprovementResult(
+                        success=False,
+                        stage_reached=WorkflowStage.TESTING,
+                        plan=plan,
+                        error="Failed to apply changes to sandbox",
+                    )
+                sandbox_result = await sandbox.validate_changes()
 
             if not sandbox_result.tests_passed:
                 if self.config.auto_rollback_on_test_failure:
@@ -240,20 +260,31 @@ class SelfImproveOrchestrator:
                         "sandbox_status": sandbox_result.status.value,
                         "tests_passed": sandbox_result.tests_passed,
                         "lint_passed": sandbox_result.lint_passed,
+                        "files_changed": list(changes.keys()),
                     },
                 )
 
                 if auto_approve:
                     self.approval_gate.auto_approve_for_testing(approval.id)
-
-                if not self.approval_gate.is_approved(approval.id):
-                    if not auto_approve:
+                else:
+                    status = await self.approval_gate.wait_for_approval(approval)
+                    if status == ApprovalStatus.REJECTED:
+                        self._current_stage = WorkflowStage.FAILED
                         return ImprovementResult(
                             success=False,
                             stage_reached=WorkflowStage.AWAITING_APPLY_APPROVAL,
                             plan=plan,
                             sandbox_result=sandbox_result,
-                            error="Apply approval required",
+                            error="Apply was rejected",
+                        )
+                    if status == ApprovalStatus.EXPIRED:
+                        self._current_stage = WorkflowStage.FAILED
+                        return ImprovementResult(
+                            success=False,
+                            stage_reached=WorkflowStage.AWAITING_APPLY_APPROVAL,
+                            plan=plan,
+                            sandbox_result=sandbox_result,
+                            error="Apply approval timed out",
                         )
 
             # Stage 7: Create snapshot
@@ -263,10 +294,10 @@ class SelfImproveOrchestrator:
                 codebase_path=self.codebase_path,
             )
 
-            # Stage 8: Apply changes
+            # Stage 8: Apply changes to working tree
             self._current_stage = WorkflowStage.APPLYING
             logger.info("Applying changes to working tree...")
-            # Would actually apply changes here
+            self._apply_changes(changes)
 
             # Stage 9: Create PR
             self._current_stage = WorkflowStage.CREATING_PR
@@ -290,14 +321,17 @@ class SelfImproveOrchestrator:
                 )
 
                 if not auto_approve:
-                    return ImprovementResult(
-                        success=True,
-                        stage_reached=WorkflowStage.AWAITING_MERGE_APPROVAL,
-                        plan=plan,
-                        snapshot=snapshot,
-                        sandbox_result=sandbox_result,
-                        pull_request=pr,
-                    )
+                    status = await self.approval_gate.wait_for_approval(approval)
+                    if status != ApprovalStatus.APPROVED:
+                        return ImprovementResult(
+                            success=True,
+                            stage_reached=WorkflowStage.AWAITING_MERGE_APPROVAL,
+                            plan=plan,
+                            snapshot=snapshot,
+                            sandbox_result=sandbox_result,
+                            pull_request=pr,
+                            error=f"Merge approval {status.value}",
+                        )
 
             self._current_stage = WorkflowStage.COMPLETE
             return ImprovementResult(
@@ -317,6 +351,138 @@ class SelfImproveOrchestrator:
                 stage_reached=self._current_stage,
                 error=str(e),
             )
+
+    async def _generate_changes(self, plan: ImprovementPlan) -> dict[str, str]:
+        """Generate code changes using the AI provider.
+
+        Builds a prompt from the plan, reads current file contents,
+        calls the provider, and parses the response as a JSON dict
+        of {file_path: new_content}.
+
+        Args:
+            plan: The improvement plan to implement.
+
+        Returns:
+            Dict mapping relative file paths to new file contents.
+            Empty dict if generation fails.
+        """
+        if not self.provider:
+            logger.warning("No AI provider — cannot generate changes")
+            return {}
+
+        # Read current contents of affected files
+        file_contents: dict[str, str] = {}
+        for file_path in plan.estimated_files:
+            full_path = self.codebase_path / file_path
+            if full_path.exists() and full_path.is_file():
+                try:
+                    file_contents[file_path] = full_path.read_text()[:8000]
+                except OSError as e:
+                    logger.warning(f"Cannot read {file_path}: {e}")
+
+        # Build the prompt
+        suggestions_text = "\n".join(
+            f"- {s.title}: {s.description}"
+            + (f"\n  Hints: {s.implementation_hints}" if s.implementation_hints else "")
+            + (f"\n  Files: {', '.join(s.affected_files)}" if s.affected_files else "")
+            for s in plan.suggestions
+        )
+
+        files_text = "\n\n".join(
+            f"=== {path} ===\n{content}" for path, content in file_contents.items()
+        )
+
+        prompt = f"""You are implementing code improvements for a Python project.
+
+## Plan: {plan.title}
+{plan.description}
+
+## Suggestions to implement:
+{suggestions_text}
+
+## Current file contents:
+{files_text}
+
+## Instructions:
+1. Implement the suggested improvements.
+2. Return COMPLETE file contents (not diffs) for each modified file.
+3. Return ONLY a JSON object mapping file paths to their new complete contents.
+4. Do not modify files beyond what the suggestions require.
+
+Return ONLY valid JSON in this format:
+{{"path/to/file.py": "complete file content here..."}}"""
+
+        try:
+            response = await self.provider.complete(
+                [
+                    {
+                        "role": "system",
+                        "content": "You are a senior Python engineer implementing code improvements. Return only valid JSON.",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
+
+            changes = self._parse_changes_response(response)
+
+            # Validate: filter out critical files
+            safe_changes: dict[str, str] = {}
+            for file_path, content in changes.items():
+                if self.safety_checker.is_protected_file(file_path):
+                    logger.warning(f"Skipping protected file: {file_path}")
+                    continue
+                safe_changes[file_path] = content
+
+            logger.info(f"Generated changes for {len(safe_changes)} files")
+            return safe_changes
+
+        except Exception as e:
+            logger.error(f"Code generation failed: {e}")
+            return {}
+
+    def _parse_changes_response(self, response: str) -> dict[str, str]:
+        """Parse the AI response into a file changes dict.
+
+        Handles raw JSON, markdown code blocks, and partial responses.
+
+        Args:
+            response: Raw AI response string.
+
+        Returns:
+            Dict mapping file paths to new content.
+        """
+        text = response.strip()
+
+        # Strip markdown code fences
+        if text.startswith("```"):
+            lines = text.split("\n")
+            # Remove first line (```json or ```) and last line (```)
+            lines = lines[1:]
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]
+            text = "\n".join(lines)
+
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, dict):
+                # Validate all values are strings
+                return {k: str(v) for k, v in parsed.items() if isinstance(k, str)}
+        except json.JSONDecodeError:
+            logger.warning("Failed to parse AI response as JSON")
+
+        return {}
+
+    def _apply_changes(self, changes: dict[str, str]) -> None:
+        """Apply generated changes to the working tree.
+
+        Args:
+            changes: Dict mapping relative file paths to new content.
+        """
+        for file_path, content in changes.items():
+            full_path = self.codebase_path / file_path
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path.write_text(content)
+            logger.info(f"Applied changes to {file_path}")
 
     def _create_plan(self, suggestions: list[ImprovementSuggestion]) -> ImprovementPlan:
         """Create an improvement plan from suggestions.

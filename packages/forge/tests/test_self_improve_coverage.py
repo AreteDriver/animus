@@ -31,6 +31,7 @@ from animus_forge.self_improve.pr_manager import (
 )
 from animus_forge.self_improve.rollback import RollbackManager, Snapshot
 from animus_forge.self_improve.safety import SafetyConfig
+from animus_forge.self_improve.sandbox import SandboxResult, SandboxStatus
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -1091,11 +1092,16 @@ class TestSelfImproveOrchestrator:
             branch_prefix="test-improve/",
         )
         orch = self._make_orchestrator(tmp_path, config)
-        result = asyncio.run(orch.run(auto_approve=False))
+
+        # wait_for_approval now polls — mock to return EXPIRED immediately
+        with patch.object(
+            orch.approval_gate, "wait_for_approval", new_callable=AsyncMock, return_value="expired"
+        ):
+            result = asyncio.run(orch.run(auto_approve=False))
 
         if result.stage_reached == WorkflowStage.AWAITING_PLAN_APPROVAL:
             assert result.success is False
-            assert "approval" in result.error.lower()
+            assert "timed out" in result.error.lower() or "expired" in result.error.lower()
 
     def test_run_full_workflow_auto_approve(self, tmp_path: Path, safety_config: SafetyConfig):
         """Run full workflow with auto-approve through all stages."""
@@ -1110,13 +1116,32 @@ class TestSelfImproveOrchestrator:
 
         orch = self._make_orchestrator(tmp_path, safety_config)
 
-        # Mock git operations in PR manager
-        with patch.object(orch.pr_manager, "_run_git"):
-            with patch("animus_forge.self_improve.pr_manager.subprocess.run") as mock_run:
-                mock_run.return_value = MagicMock(
-                    returncode=0, stdout="https://github.com/test/pull/1\n"
-                )
-                result = asyncio.run(orch.run(auto_approve=True))
+        # Mock code generation + sandbox + git
+        mock_sandbox = MagicMock()
+        mock_sandbox.__enter__ = MagicMock(return_value=mock_sandbox)
+        mock_sandbox.__exit__ = MagicMock(return_value=False)
+        mock_sandbox.apply_changes = AsyncMock(return_value=True)
+        mock_sandbox.validate_changes = AsyncMock(
+            return_value=SandboxResult(
+                status=SandboxStatus.SUCCESS, tests_passed=True, lint_passed=True
+            )
+        )
+
+        with (
+            patch.object(
+                orch,
+                "_generate_changes",
+                new_callable=AsyncMock,
+                return_value={"src/animus_forge/undoc.py": "fixed"},
+            ),
+            patch("animus_forge.self_improve.orchestrator.Sandbox", return_value=mock_sandbox),
+            patch.object(orch.pr_manager, "_run_git"),
+            patch("animus_forge.self_improve.pr_manager.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(
+                returncode=0, stdout="https://github.com/test/pull/1\n"
+            )
+            result = asyncio.run(orch.run(auto_approve=True))
 
         # With auto_approve and human_approval_merge, it may return at
         # AWAITING_MERGE_APPROVAL or COMPLETE
@@ -1130,10 +1155,29 @@ class TestSelfImproveOrchestrator:
 
         orch = self._make_orchestrator(tmp_path, safety_config)
 
-        with patch.object(orch.pr_manager, "_run_git"):
-            with patch("animus_forge.self_improve.pr_manager.subprocess.run") as mock_run:
-                mock_run.return_value = MagicMock(returncode=1, stderr="no gh")
-                result = asyncio.run(orch.run())
+        mock_sandbox = MagicMock()
+        mock_sandbox.__enter__ = MagicMock(return_value=mock_sandbox)
+        mock_sandbox.__exit__ = MagicMock(return_value=False)
+        mock_sandbox.apply_changes = AsyncMock(return_value=True)
+        mock_sandbox.validate_changes = AsyncMock(
+            return_value=SandboxResult(
+                status=SandboxStatus.SUCCESS, tests_passed=True, lint_passed=True
+            )
+        )
+
+        with (
+            patch.object(
+                orch,
+                "_generate_changes",
+                new_callable=AsyncMock,
+                return_value={"src/animus_forge/file.py": "fixed"},
+            ),
+            patch("animus_forge.self_improve.orchestrator.Sandbox", return_value=mock_sandbox),
+            patch.object(orch.pr_manager, "_run_git"),
+            patch("animus_forge.self_improve.pr_manager.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=1, stderr="no gh")
+            result = asyncio.run(orch.run())
 
         assert result.stage_reached == WorkflowStage.COMPLETE
         assert result.success is True
@@ -1283,11 +1327,37 @@ class TestSelfImproveOrchestrator:
             branch_prefix="test-improve/",
         )
         orch = self._make_orchestrator(tmp_path, config)
-        result = asyncio.run(orch.run(auto_approve=False))
+
+        mock_sandbox = MagicMock()
+        mock_sandbox.__enter__ = MagicMock(return_value=mock_sandbox)
+        mock_sandbox.__exit__ = MagicMock(return_value=False)
+        mock_sandbox.apply_changes = AsyncMock(return_value=True)
+        mock_sandbox.validate_changes = AsyncMock(
+            return_value=SandboxResult(
+                status=SandboxStatus.SUCCESS, tests_passed=True, lint_passed=True
+            )
+        )
+
+        with (
+            patch.object(
+                orch,
+                "_generate_changes",
+                new_callable=AsyncMock,
+                return_value={"src/animus_forge/f.py": "fixed"},
+            ),
+            patch("animus_forge.self_improve.orchestrator.Sandbox", return_value=mock_sandbox),
+            patch.object(
+                orch.approval_gate,
+                "wait_for_approval",
+                new_callable=AsyncMock,
+                return_value="expired",
+            ),
+        ):
+            result = asyncio.run(orch.run(auto_approve=False))
 
         if result.stage_reached == WorkflowStage.AWAITING_APPLY_APPROVAL:
             assert result.success is False
-            assert "approval" in result.error.lower()
+            assert "timed out" in result.error.lower() or "expired" in result.error.lower()
 
     def test_run_merge_approval_stops(self, tmp_path: Path):
         """Run stops at merge approval when required and not auto-approved."""
@@ -1306,10 +1376,35 @@ class TestSelfImproveOrchestrator:
         )
         orch = self._make_orchestrator(tmp_path, config)
 
-        with patch.object(orch.pr_manager, "_run_git"):
-            with patch("animus_forge.self_improve.pr_manager.subprocess.run") as mock_run:
-                mock_run.return_value = MagicMock(returncode=1, stderr="")
-                result = asyncio.run(orch.run(auto_approve=False))
+        mock_sandbox = MagicMock()
+        mock_sandbox.__enter__ = MagicMock(return_value=mock_sandbox)
+        mock_sandbox.__exit__ = MagicMock(return_value=False)
+        mock_sandbox.apply_changes = AsyncMock(return_value=True)
+        mock_sandbox.validate_changes = AsyncMock(
+            return_value=SandboxResult(
+                status=SandboxStatus.SUCCESS, tests_passed=True, lint_passed=True
+            )
+        )
+
+        with (
+            patch.object(
+                orch,
+                "_generate_changes",
+                new_callable=AsyncMock,
+                return_value={"src/animus_forge/f.py": "fixed"},
+            ),
+            patch("animus_forge.self_improve.orchestrator.Sandbox", return_value=mock_sandbox),
+            patch.object(orch.pr_manager, "_run_git"),
+            patch("animus_forge.self_improve.pr_manager.subprocess.run") as mock_run,
+            patch.object(
+                orch.approval_gate,
+                "wait_for_approval",
+                new_callable=AsyncMock,
+                return_value="expired",
+            ),
+        ):
+            mock_run.return_value = MagicMock(returncode=1, stderr="")
+            result = asyncio.run(orch.run(auto_approve=False))
 
         if result.stage_reached == WorkflowStage.AWAITING_MERGE_APPROVAL:
             assert result.success is True
@@ -1323,9 +1418,28 @@ class TestSelfImproveOrchestrator:
 
         orch = self._make_orchestrator(tmp_path, safety_config)
 
-        with patch.object(orch.pr_manager, "_run_git"):
-            with patch("animus_forge.self_improve.pr_manager.subprocess.run") as mock_run:
-                mock_run.return_value = MagicMock(returncode=1, stderr="")
-                result = asyncio.run(orch.run(focus_category="documentation"))
+        mock_sandbox = MagicMock()
+        mock_sandbox.__enter__ = MagicMock(return_value=mock_sandbox)
+        mock_sandbox.__exit__ = MagicMock(return_value=False)
+        mock_sandbox.apply_changes = AsyncMock(return_value=True)
+        mock_sandbox.validate_changes = AsyncMock(
+            return_value=SandboxResult(
+                status=SandboxStatus.SUCCESS, tests_passed=True, lint_passed=True
+            )
+        )
+
+        with (
+            patch.object(
+                orch,
+                "_generate_changes",
+                new_callable=AsyncMock,
+                return_value={"src/animus_forge/f.py": "fixed"},
+            ),
+            patch("animus_forge.self_improve.orchestrator.Sandbox", return_value=mock_sandbox),
+            patch.object(orch.pr_manager, "_run_git"),
+            patch("animus_forge.self_improve.pr_manager.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=1, stderr="")
+            result = asyncio.run(orch.run(focus_category="documentation"))
 
         assert result.success is True

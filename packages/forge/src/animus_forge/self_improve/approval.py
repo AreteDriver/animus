@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from animus_forge.state.backends import DatabaseBackend
 
 logger = logging.getLogger(__name__)
 
@@ -47,16 +52,44 @@ class ApprovalRequest:
 class ApprovalGate:
     """Manages human approval for self-improvement operations.
 
-    In a real implementation, this would integrate with:
-    - A web UI for approval
-    - Slack/Discord notifications
-    - GitHub PR reviews
+    Supports two modes:
+    - In-memory (default): approvals live only in process memory.
+    - Persistent (with backend): approvals stored in SQLite so the
+      orchestrator can resume after restarts.
     """
 
-    def __init__(self):
-        """Initialize the approval gate."""
+    def __init__(self, backend: DatabaseBackend | None = None):
+        """Initialize the approval gate.
+
+        Args:
+            backend: Optional database backend for persistence.
+                     If None, approvals are in-memory only.
+        """
+        self._backend = backend
         self._pending_approvals: dict[str, ApprovalRequest] = {}
         self._approval_history: list[ApprovalRequest] = []
+
+        if self._backend:
+            self._ensure_table()
+
+    def _ensure_table(self) -> None:
+        """Create the approvals table if it doesn't exist."""
+        if not self._backend:
+            return
+        self._backend.execute(
+            """CREATE TABLE IF NOT EXISTS self_improve_approvals (
+                id TEXT PRIMARY KEY,
+                stage TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL,
+                details TEXT NOT NULL DEFAULT '{}',
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at TEXT NOT NULL,
+                decided_at TEXT,
+                decided_by TEXT,
+                reason TEXT
+            )"""
+        )
 
     def request_approval(
         self,
@@ -89,7 +122,61 @@ class ApprovalGate:
         self._pending_approvals[request.id] = request
         logger.info(f"Created approval request {request.id}: {title}")
 
+        if self._backend:
+            self._persist_request(request)
+
         return request
+
+    def _persist_request(self, request: ApprovalRequest) -> None:
+        """Write an approval request to the database."""
+        if not self._backend:
+            return
+        with self._backend.transaction():
+            self._backend.execute(
+                """INSERT OR REPLACE INTO self_improve_approvals
+                   (id, stage, title, description, details, status, created_at, decided_at, decided_by, reason)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    request.id,
+                    request.stage.value,
+                    request.title,
+                    request.description,
+                    json.dumps(request.details),
+                    request.status.value,
+                    request.created_at.isoformat(),
+                    request.decided_at.isoformat() if request.decided_at else None,
+                    request.decided_by,
+                    request.reason,
+                ),
+            )
+
+    def _load_request(self, request_id: str) -> ApprovalRequest | None:
+        """Load an approval request from the database."""
+        if not self._backend:
+            return None
+        row = self._backend.fetchone(
+            "SELECT * FROM self_improve_approvals WHERE id = ?",
+            (request_id,),
+        )
+        if not row:
+            return None
+        return self._row_to_request(row)
+
+    @staticmethod
+    def _row_to_request(row: dict) -> ApprovalRequest:
+        """Convert a database row to an ApprovalRequest."""
+        return ApprovalRequest(
+            id=row["id"],
+            stage=ApprovalStage(row["stage"]),
+            title=row["title"],
+            description=row["description"],
+            details=json.loads(row["details"]) if row["details"] else {},
+            status=ApprovalStatus(row["status"]),
+            created_at=datetime.fromisoformat(row["created_at"]),
+            decided_at=datetime.fromisoformat(row["decided_at"]) if row.get("decided_at") else None,
+            decided_by=row.get("decided_by"),
+            reason=row.get("reason"),
+        )
 
     def get_pending(self, stage: ApprovalStage | None = None) -> list[ApprovalRequest]:
         """Get pending approval requests.
@@ -100,7 +187,19 @@ class ApprovalGate:
         Returns:
             List of pending requests.
         """
-        pending = [r for r in self._pending_approvals.values()]
+        if self._backend:
+            if stage:
+                rows = self._backend.fetchall(
+                    "SELECT * FROM self_improve_approvals WHERE status = 'pending' AND stage = ?",
+                    (stage.value,),
+                )
+            else:
+                rows = self._backend.fetchall(
+                    "SELECT * FROM self_improve_approvals WHERE status = 'pending'"
+                )
+            return [self._row_to_request(r) for r in rows]
+
+        pending = list(self._pending_approvals.values())
         if stage:
             pending = [r for r in pending if r.stage == stage]
         return pending
@@ -122,6 +221,8 @@ class ApprovalGate:
             Updated request, or None if not found.
         """
         request = self._pending_approvals.get(request_id)
+        if not request and self._backend:
+            request = self._load_request(request_id)
         if not request:
             return None
 
@@ -130,8 +231,11 @@ class ApprovalGate:
         request.decided_by = approved_by
         request.reason = reason
 
-        del self._pending_approvals[request_id]
+        self._pending_approvals.pop(request_id, None)
         self._approval_history.append(request)
+
+        if self._backend:
+            self._persist_request(request)
 
         logger.info(f"Approved request {request_id} by {approved_by}")
         return request
@@ -153,6 +257,8 @@ class ApprovalGate:
             Updated request, or None if not found.
         """
         request = self._pending_approvals.get(request_id)
+        if not request and self._backend:
+            request = self._load_request(request_id)
         if not request:
             return None
 
@@ -161,8 +267,11 @@ class ApprovalGate:
         request.decided_by = rejected_by
         request.reason = reason
 
-        del self._pending_approvals[request_id]
+        self._pending_approvals.pop(request_id, None)
         self._approval_history.append(request)
+
+        if self._backend:
+            self._persist_request(request)
 
         logger.info(f"Rejected request {request_id} by {rejected_by}: {reason}")
         return request
@@ -176,34 +285,74 @@ class ApprovalGate:
         Returns:
             True if approved.
         """
-        # Check history
+        # Check in-memory history first
         for request in self._approval_history:
             if request.id == request_id:
                 return request.status == ApprovalStatus.APPROVED
+
+        # Check database if available
+        if self._backend:
+            row = self._backend.fetchone(
+                "SELECT status FROM self_improve_approvals WHERE id = ?",
+                (request_id,),
+            )
+            if row:
+                return row["status"] == ApprovalStatus.APPROVED.value
+
         return False
 
-    def wait_for_approval(self, request: ApprovalRequest) -> ApprovalStatus:
-        """Wait for approval decision.
+    async def wait_for_approval(
+        self,
+        request: ApprovalRequest,
+        timeout: float = 3600.0,
+        poll_interval: float = 5.0,
+    ) -> ApprovalStatus:
+        """Wait for an approval decision with async polling.
 
-        In a real implementation, this would:
-        - Send notifications
-        - Poll for decision
-        - Handle timeouts
-
-        For now, this is synchronous and expects approval to be
-        set externally before calling.
+        Polls the in-memory state (and database if available) until
+        the request is decided or the timeout expires.
 
         Args:
             request: Request to wait for.
+            timeout: Maximum seconds to wait (default 1 hour).
+            poll_interval: Seconds between polls (default 5s).
 
         Returns:
-            Final status.
+            Final status (APPROVED, REJECTED, or EXPIRED).
         """
-        # In a real implementation, this would be async and poll
-        # For now, just return current status
-        if request.id in self._pending_approvals:
-            return ApprovalStatus.PENDING
-        return request.status
+        elapsed = 0.0
+        while elapsed < timeout:
+            # Check in-memory first
+            if request.id not in self._pending_approvals:
+                return request.status
+
+            # Check database for external decisions
+            if self._backend:
+                db_request = self._load_request(request.id)
+                if db_request and db_request.status != ApprovalStatus.PENDING:
+                    # Sync in-memory state
+                    request.status = db_request.status
+                    request.decided_at = db_request.decided_at
+                    request.decided_by = db_request.decided_by
+                    request.reason = db_request.reason
+                    self._pending_approvals.pop(request.id, None)
+                    self._approval_history.append(request)
+                    return request.status
+
+            await asyncio.sleep(poll_interval)
+            elapsed += poll_interval
+
+        # Timeout — mark as expired
+        request.status = ApprovalStatus.EXPIRED
+        request.decided_at = datetime.now()
+        self._pending_approvals.pop(request.id, None)
+        self._approval_history.append(request)
+
+        if self._backend:
+            self._persist_request(request)
+
+        logger.warning(f"Approval request {request.id} expired after {timeout}s")
+        return ApprovalStatus.EXPIRED
 
     def auto_approve_for_testing(self, request_id: str) -> None:
         """Auto-approve a request (for testing only).
@@ -227,6 +376,19 @@ class ApprovalGate:
         Returns:
             List of historical requests.
         """
+        if self._backend:
+            if stage:
+                rows = self._backend.fetchall(
+                    "SELECT * FROM self_improve_approvals WHERE status != 'pending' AND stage = ? ORDER BY decided_at DESC LIMIT ?",
+                    (stage.value, limit),
+                )
+            else:
+                rows = self._backend.fetchall(
+                    "SELECT * FROM self_improve_approvals WHERE status != 'pending' ORDER BY decided_at DESC LIMIT ?",
+                    (limit,),
+                )
+            return [self._row_to_request(r) for r in rows]
+
         history = self._approval_history.copy()
         if stage:
             history = [r for r in history if r.stage == stage]

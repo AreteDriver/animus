@@ -264,6 +264,33 @@ class Sandbox:
             duration_seconds=test_result.duration_seconds,
         )
 
+    @staticmethod
+    def _sanitize_env() -> dict[str, str]:
+        """Build a clean environment dict for subprocess execution.
+
+        Keeps only safe variables and strips anything that looks like
+        a secret (keys, tokens, passwords).
+
+        Returns:
+            Sanitized environment dictionary.
+        """
+        import os
+        import re
+
+        secret_pattern = re.compile(r"_(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL)S?$", re.IGNORECASE)
+        safe_vars = {"PATH", "HOME", "LANG", "TERM", "PYTHONPATH", "LC_ALL", "LC_CTYPE", "USER"}
+
+        clean_env: dict[str, str] = {}
+        for key, value in os.environ.items():
+            if key in safe_vars:
+                clean_env[key] = value
+            elif not secret_pattern.search(key):
+                # Allow non-secret vars that aren't in safe_vars
+                # but still filter anything that looks sensitive
+                clean_env[key] = value
+
+        return clean_env
+
     async def _run_command(
         self,
         cmd: list[str],
@@ -279,11 +306,14 @@ class Sandbox:
         if not self._sandbox_path:
             raise RuntimeError("Sandbox not created")
 
+        clean_env = self._sanitize_env()
+
         process = await asyncio.create_subprocess_exec(
             *cmd,
             cwd=str(self._sandbox_path),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env=clean_env,
         )
 
         try:

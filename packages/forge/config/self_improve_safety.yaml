@@ -17,6 +17,14 @@ protected_files:
     - "**/secrets*"
     - "**/*.key"
     - "**/*.pem"
+    # Identity and persona (immutable core)
+    - "**/identity/**"
+    - "**/CORE_VALUES*"
+    - "**/IDENTITY.md"
+    - "**/CLAUDE.md"
+    # Skill and workflow definitions
+    - "skills/**"
+    - "workflows/**"
 
   # Files that require extra review but can be modified
   sensitive:
@@ -59,6 +67,8 @@ denied_categories:
   - auth_changes
   - config_schema_changes
   - database_migrations
+  - identity_changes
+  - personality_changes
 
 # Sandbox configuration
 sandbox:
