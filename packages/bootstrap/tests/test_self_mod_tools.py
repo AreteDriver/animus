@@ -30,6 +30,7 @@ from animus_bootstrap.intelligence.tools.builtin.self_improve import (
     _apply_improvement,
     _list_improvements,
     _propose_improvement,
+    _self_improve_loop,
     clear_improvement_log,
     get_improvement_log,
     get_self_improve_tools,
@@ -826,9 +827,57 @@ class TestListImprovements:
         assert "#2" not in result
 
 
+class TestSelfImproveLoop:
+    def setup_method(self) -> None:
+        set_improvement_store(None)
+        clear_improvement_log()
+        set_self_improve_deps(None, None)
+
+    @pytest.mark.asyncio()
+    async def test_loop_runs_all_steps(self) -> None:
+        result = await _self_improve_loop("tool:search", "Too slow")
+        assert "Step 1: Behavior Analysis" in result
+        assert "Step 2: Improvement Proposal" in result
+        assert "Step 3: Summary" in result
+        assert "Proposal #1 created" in result
+        # Verify a proposal was actually created
+        log = get_improvement_log()
+        assert len(log) == 1
+        assert log[0]["area"] == "tool:search"
+
+    @pytest.mark.asyncio()
+    async def test_loop_with_cognitive_backend(self) -> None:
+        backend = AsyncMock()
+        backend.generate_response.return_value = "Add caching layer"
+        set_self_improve_deps(None, backend)
+        result = await _self_improve_loop("perf", "Slow queries")
+        assert "Add caching layer" in result
+        assert "apply_improvement" in result
+
+    @pytest.mark.asyncio()
+    async def test_loop_includes_apply_instruction(self) -> None:
+        result = await _self_improve_loop("config", "Missing validation")
+        assert "proposal_id=1" in result
+        assert "confirm=true" in result
+
+    @pytest.mark.asyncio()
+    async def test_loop_with_executor_history(self) -> None:
+        """Loop includes behavior analysis when executor has history."""
+        executor = MagicMock()
+        history_entry = MagicMock()
+        history_entry.tool_name = "web_search"
+        history_entry.success = True
+        history_entry.duration_ms = 200
+        history_entry.output = "result"
+        executor.get_history.return_value = [history_entry]
+        set_self_improve_deps(executor, None)
+        result = await _self_improve_loop("tools", "Optimize")
+        assert "web_search" in result
+
+
 class TestSelfImproveToolDefinitions:
     def test_tool_count(self) -> None:
-        assert len(get_self_improve_tools()) == 4
+        assert len(get_self_improve_tools()) == 5
 
     def test_tool_names(self) -> None:
         names = {t.name for t in get_self_improve_tools()}
@@ -837,6 +886,7 @@ class TestSelfImproveToolDefinitions:
             "propose_improvement",
             "apply_improvement",
             "list_improvements",
+            "self_improve_loop",
         }
 
     def test_propose_requires_approval(self) -> None:
@@ -878,6 +928,7 @@ class TestNewToolsInBuiltinRegistry:
             "propose_improvement",
             "apply_improvement",
             "list_improvements",
+            "self_improve_loop",
         }
         assert new_tools.issubset(names)
 
@@ -888,8 +939,8 @@ class TestNewToolsInBuiltinRegistry:
 
     def test_total_tool_count(self) -> None:
         tools = get_all_builtin_tools()
-        # 9 original (added recall_memory) + 17 new = 26
-        assert len(tools) == 26
+        # 9 original (added recall_memory) + 18 new = 27
+        assert len(tools) == 27
 
     def test_all_have_handlers(self) -> None:
         tools = get_all_builtin_tools()

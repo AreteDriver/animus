@@ -215,6 +215,48 @@ async def _list_improvements(status: str = "all") -> str:
     return "\n".join(lines)
 
 
+async def _self_improve_loop(area: str, description: str) -> str:
+    """Run a multi-turn self-improvement loop.
+
+    Steps:
+    1. Analyze recent behavior for context
+    2. Propose an improvement using the cognitive backend
+    3. Report findings for human review
+
+    The loop does NOT auto-apply patches — it stops after proposal
+    so a human can review and approve via apply_improvement.
+    """
+    steps: list[str] = []
+
+    # Step 1: Analyze
+    steps.append("=== Step 1: Behavior Analysis ===")
+    analysis = await _analyze_behavior(focus="all")
+    steps.append(analysis)
+
+    # Step 2: Propose
+    steps.append("\n=== Step 2: Improvement Proposal ===")
+    proposal_result = await _propose_improvement(area, description)
+    steps.append(proposal_result)
+
+    # Step 3: Report
+    steps.append("\n=== Step 3: Summary ===")
+    log = get_improvement_log()
+    if log:
+        latest = log[-1]
+        steps.append(f"Proposal #{latest['id']} created for area '{area}'.")
+        steps.append(f"Status: {latest['status']}")
+        if latest.get("analysis"):
+            steps.append(f"Analysis preview: {latest['analysis'][:200]}...")
+        steps.append(
+            "\nTo apply: call apply_improvement with "
+            f"proposal_id={latest['id']} and confirm=true."
+        )
+    else:
+        steps.append("No proposal was created.")
+
+    return "\n".join(steps)
+
+
 def get_self_improve_tools() -> list[ToolDefinition]:
     """Return self-improvement tool definitions."""
     return [
@@ -303,5 +345,32 @@ def get_self_improve_tools() -> list[ToolDefinition]:
             },
             handler=_list_improvements,
             category="self_improvement",
+        ),
+        ToolDefinition(
+            name="self_improve_loop",
+            description=(
+                "Run a multi-turn self-improvement loop: analyze behavior, "
+                "propose an improvement, and report findings. Does NOT auto-apply "
+                "— stops after proposal for human review."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "area": {
+                        "type": "string",
+                        "description": (
+                            "What to improve (e.g. 'tool:web_search', 'prompt')."
+                        ),
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Problem description or desired enhancement.",
+                    },
+                },
+                "required": ["area", "description"],
+            },
+            handler=_self_improve_loop,
+            category="self_improvement",
+            permission="approve",
         ),
     ]
