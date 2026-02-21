@@ -17,7 +17,8 @@
                     <th class="text-left py-2 pr-4">Schedule</th>
                     <th class="text-left py-2 pr-4">Action</th>
                     <th class="text-left py-2 pr-4">Channels</th>
-                    <th class="text-left py-2">Created</th>
+                    <th class="text-left py-2 pr-4">Created</th>
+                    <th class="text-left py-2">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -27,13 +28,23 @@
                     <td class="py-2 pr-4 text-animus-text">{{ timer.schedule }}</td>
                     <td class="py-2 pr-4 text-animus-text truncate max-w-xs">{{ timer.action }}</td>
                     <td class="py-2 pr-4 text-animus-muted">{{ timer.channels | join(", ") if timer.channels else "—" }}</td>
-                    <td class="py-2 text-animus-muted">{{ timer.created }}</td>
+                    <td class="py-2 pr-4 text-animus-muted">{{ timer.created }}</td>
+                    <td class="py-2">
+                        <form hx-post="/tools/execute" hx-target="#timer-result" hx-swap="innerHTML" class="inline">
+                            <input type="hidden" name="tool_name" value="timer_cancel">
+                            <input type="hidden" name="arguments_json" value='{"name": "{{ timer.name }}"}'>
+                            <button type="submit"
+                                class="px-2 py-1 bg-animus-red text-white rounded text-xs hover:opacity-80">
+                                Cancel
+                            </button>
+                        </form>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
         {% else %}
-        <p class="text-animus-muted text-sm">No dynamic timers created yet. Use the <code class="text-animus-green">timer_create</code> tool to add one.</p>
+        <p class="text-animus-muted text-sm">No dynamic timers created yet.</p>
         {% endif %}
     </div>
 
@@ -72,21 +83,54 @@
         {% endif %}
     </div>
 
-    <!-- Controls -->
-    <div class="bg-animus-surface border border-animus-border rounded-lg p-6">
-        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Controls</h3>
-        <p class="text-animus-muted text-sm mb-4">
-            Use <code class="text-animus-green">timer_create</code>, <code class="text-animus-green">timer_cancel</code>,
-            and <code class="text-animus-green">timer_fire</code> tools to manage timers.
-        </p>
-        <div class="flex gap-4">
-            <button class="px-4 py-2 bg-animus-border text-animus-muted rounded text-sm cursor-not-allowed" disabled>
+    <!-- Create Timer Form -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-8">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Create Timer</h3>
+        <form hx-post="/tools/execute" hx-target="#timer-result" hx-swap="innerHTML"
+              class="space-y-4" id="create-timer-form">
+            <input type="hidden" name="tool_name" value="timer_create">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-animus-muted text-xs mb-1">Name</label>
+                    <input type="text" id="timer-name" placeholder="e.g. daily_check" required
+                        class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-animus-muted text-xs mb-1">Schedule</label>
+                    <input type="text" id="timer-schedule" placeholder="e.g. every 30m or 0 9 * * *" required
+                        class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-animus-muted text-xs mb-1">Action (message sent on fire)</label>
+                <input type="text" id="timer-action" placeholder="e.g. Run health check" required
+                    class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-animus-muted text-xs mb-1">Channels (comma-separated, optional)</label>
+                <input type="text" id="timer-channels" placeholder="e.g. telegram,discord"
+                    class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+            </div>
+            <input type="hidden" name="arguments_json" id="timer-args-json" value="{}">
+            <button type="submit"
+                class="px-4 py-2 bg-animus-green text-animus-bg rounded text-sm font-bold hover:opacity-80 transition-opacity">
                 Create Timer
             </button>
-            <button class="px-4 py-2 bg-animus-border text-animus-muted rounded text-sm cursor-not-allowed" disabled>
-                Cancel Timer
-            </button>
-        </div>
+        </form>
+        <script>
+            document.getElementById('create-timer-form').addEventListener('htmx:configRequest', function(evt) {
+                var args = {
+                    name: document.getElementById('timer-name').value,
+                    schedule: document.getElementById('timer-schedule').value,
+                    action: document.getElementById('timer-action').value,
+                    channels: document.getElementById('timer-channels').value
+                };
+                evt.detail.parameters.arguments_json = JSON.stringify(args);
+            });
+        </script>
     </div>
+
+    <!-- Result -->
+    <div id="timer-result"></div>
 </div>
 {% endblock %}

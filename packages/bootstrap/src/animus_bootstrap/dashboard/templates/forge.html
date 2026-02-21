@@ -55,17 +55,33 @@
     <!-- Controls -->
     <div class="bg-animus-surface border border-animus-border rounded-lg p-6">
         <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Controls</h3>
-        <p class="text-animus-muted text-sm mb-4">
-            Use the <code class="text-animus-green">forge_start</code> and <code class="text-animus-green">forge_stop</code> tools via the intelligence layer to manage Forge lifecycle.
-        </p>
-        <div class="flex gap-4">
-            <button class="px-4 py-2 bg-animus-border text-animus-muted rounded text-sm cursor-not-allowed" disabled>
-                Start Forge
-            </button>
-            <button class="px-4 py-2 bg-animus-border text-animus-muted rounded text-sm cursor-not-allowed" disabled>
-                Stop Forge
-            </button>
+        <div class="flex gap-4 mb-4">
+            <form hx-post="/tools/execute" hx-target="#forge-result" hx-swap="innerHTML" class="inline">
+                <input type="hidden" name="tool_name" value="forge_start">
+                <input type="hidden" name="arguments_json" value="{}">
+                <button type="submit"
+                    class="px-4 py-2 bg-animus-green text-animus-bg rounded text-sm font-bold hover:opacity-80 transition-opacity">
+                    Start Forge
+                </button>
+            </form>
+            <form hx-post="/tools/execute" hx-target="#forge-result" hx-swap="innerHTML" class="inline">
+                <input type="hidden" name="tool_name" value="forge_stop">
+                <input type="hidden" name="arguments_json" value="{}">
+                <button type="submit"
+                    class="px-4 py-2 bg-animus-red text-white rounded text-sm font-bold hover:opacity-80 transition-opacity">
+                    Stop Forge
+                </button>
+            </form>
+            <form hx-post="/tools/execute" hx-target="#forge-result" hx-swap="innerHTML" class="inline">
+                <input type="hidden" name="tool_name" value="forge_status">
+                <input type="hidden" name="arguments_json" value="{}">
+                <button type="submit"
+                    class="px-4 py-2 bg-animus-border text-animus-text rounded text-sm hover:bg-animus-green hover:text-animus-bg transition-colors">
+                    Check Status
+                </button>
+            </form>
         </div>
+        <div id="forge-result"></div>
     </div>
     {% endif %}
 </div>

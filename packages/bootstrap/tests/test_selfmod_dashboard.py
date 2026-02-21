@@ -153,19 +153,19 @@ class TestTimersPage:
         assert "No live timers in the ProactiveEngine" in body
 
     def test_timers_page_has_controls(self, client: TestClient) -> None:
-        """GET /timers has control buttons."""
+        """GET /timers has create timer form."""
         resp = client.get("/timers")
         body = resp.text
         assert "Create Timer" in body
-        assert "Cancel Timer" in body
 
-    def test_timers_page_has_tool_references(self, client: TestClient) -> None:
-        """GET /timers references the correct tool names."""
+    def test_timers_page_has_create_form(self, client: TestClient) -> None:
+        """GET /timers has the create timer form fields."""
         resp = client.get("/timers")
         body = resp.text
+        assert "timer-name" in body
+        assert "timer-schedule" in body
+        assert "timer-action" in body
         assert "timer_create" in body
-        assert "timer_cancel" in body
-        assert "timer_fire" in body
 
     def test_timers_page_with_dynamic_timers(self, client: TestClient) -> None:
         """GET /timers shows timers when they exist."""
