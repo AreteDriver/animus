@@ -56,6 +56,7 @@ class ToolExecutor:
         approval_callback: (
             Callable[[str, dict[str, Any]], Coroutine[Any, Any, bool]] | None
         ) = None,
+        history_store: Any | None = None,
     ) -> None:
         self._tools: dict[str, ToolDefinition] = {}
         self._history: list[ToolResult] = []
@@ -63,6 +64,7 @@ class ToolExecutor:
         self._timeout = timeout_seconds
         self._permissions = permission_manager or ToolPermissionManager()
         self._approval_callback = approval_callback
+        self._history_store = history_store
 
     def register(self, tool: ToolDefinition) -> None:
         """Register a tool. Raises ValueError if name already taken."""
@@ -79,6 +81,10 @@ class ToolExecutor:
     ) -> None:
         """Set or clear the approval callback for APPROVE-level tools."""
         self._approval_callback = callback
+
+    def set_history_store(self, store: Any | None) -> None:
+        """Set or clear the persistent history store."""
+        self._history_store = store
 
     def unregister(self, name: str) -> None:
         """Remove a tool by name. No-op if not found."""
@@ -202,6 +208,11 @@ class ToolExecutor:
             )
 
         self._history.append(result)
+        if self._history_store is not None:
+            try:
+                self._history_store.save(result)
+            except Exception:
+                logger.exception("Failed to persist tool history for '%s'", name)
         return result
 
     async def execute_batch(self, tool_calls: list[dict]) -> list[ToolResult]:

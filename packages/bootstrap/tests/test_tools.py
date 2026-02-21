@@ -1263,3 +1263,201 @@ class TestMCPAutoDiscovery:
         await runtime._discover_mcp_tools()
         # Bridge was created (discover found servers) but no tools imported
         assert runtime._mcp_bridge is not None
+
+
+# ======================================================================
+# ToolHistoryStore — persistent SQLite storage
+# ======================================================================
+
+
+class TestToolHistoryStore:
+    """Tests for the persistent tool history store."""
+
+    def test_save_and_list(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.history_store import ToolHistoryStore
+
+        store = ToolHistoryStore(tmp_path / "history.db")
+        result = ToolResult(
+            id="abc-123",
+            tool_name="web_search",
+            success=True,
+            output="found it",
+            duration_ms=150.5,
+            timestamp=datetime(2026, 2, 20, 12, 0, 0, tzinfo=UTC),
+            arguments={"query": "test"},
+        )
+        store.save(result)
+        items = store.list_recent(limit=10)
+        assert len(items) == 1
+        assert items[0]["tool_name"] == "web_search"
+        assert items[0]["success"] is True
+        assert items[0]["arguments"] == {"query": "test"}
+        store.close()
+
+    def test_count(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.history_store import ToolHistoryStore
+
+        store = ToolHistoryStore(tmp_path / "history.db")
+        for i in range(5):
+            store.save(
+                ToolResult(
+                    id=f"id-{i}",
+                    tool_name="tool",
+                    success=True,
+                    output="ok",
+                    duration_ms=10.0,
+                    timestamp=datetime(2026, 1, 1, i, 0, 0, tzinfo=UTC),
+                )
+            )
+        assert store.count() == 5
+        store.close()
+
+    def test_list_recent_respects_limit(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.history_store import ToolHistoryStore
+
+        store = ToolHistoryStore(tmp_path / "history.db")
+        for i in range(10):
+            store.save(
+                ToolResult(
+                    id=f"id-{i}",
+                    tool_name="tool",
+                    success=True,
+                    output="ok",
+                    duration_ms=10.0,
+                    timestamp=datetime(2026, 1, 1, i, 0, 0, tzinfo=UTC),
+                )
+            )
+        items = store.list_recent(limit=3)
+        assert len(items) == 3
+        store.close()
+
+    def test_persistence_across_instances(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.history_store import ToolHistoryStore
+
+        db_path = tmp_path / "history.db"
+        store1 = ToolHistoryStore(db_path)
+        store1.save(
+            ToolResult(
+                id="persist-1",
+                tool_name="shell_exec",
+                success=False,
+                output="error",
+                duration_ms=500.0,
+                timestamp=datetime(2026, 2, 20, tzinfo=UTC),
+            )
+        )
+        store1.close()
+
+        store2 = ToolHistoryStore(db_path)
+        items = store2.list_recent()
+        assert len(items) == 1
+        assert items[0]["tool_name"] == "shell_exec"
+        assert items[0]["success"] is False
+        store2.close()
+
+    def test_duplicate_id_ignored(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.history_store import ToolHistoryStore
+
+        store = ToolHistoryStore(tmp_path / "history.db")
+        result = ToolResult(
+            id="dup-1",
+            tool_name="tool",
+            success=True,
+            output="ok",
+            duration_ms=10.0,
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        )
+        store.save(result)
+        store.save(result)  # duplicate — should be ignored
+        assert store.count() == 1
+        store.close()
+
+
+# ======================================================================
+# ToolExecutor + HistoryStore integration
+# ======================================================================
+
+
+class TestExecutorHistoryPersistence:
+    """Tests for ToolExecutor persisting to ToolHistoryStore."""
+
+    @pytest.mark.asyncio()
+    async def test_execute_persists_to_store(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.history_store import ToolHistoryStore
+
+        store = ToolHistoryStore(tmp_path / "history.db")
+        executor = ToolExecutor(history_store=store)
+
+        async def _echo(text: str = "hello") -> str:
+            return f"echo: {text}"
+
+        executor.register(
+            ToolDefinition(
+                name="echo",
+                description="Echo tool",
+                parameters={"type": "object", "properties": {}},
+                handler=_echo,
+            )
+        )
+        await executor.execute("echo", {"text": "world"})
+        saved = store.list_recent()
+        assert len(saved) == 1
+        assert saved[0]["tool_name"] == "echo"
+        assert saved[0]["success"] is True
+        store.close()
+
+    @pytest.mark.asyncio()
+    async def test_set_history_store(self, tmp_path: Path) -> None:
+        from animus_bootstrap.intelligence.tools.history_store import ToolHistoryStore
+
+        store = ToolHistoryStore(tmp_path / "history.db")
+        executor = ToolExecutor()
+
+        async def _noop() -> str:
+            return "ok"
+
+        executor.register(
+            ToolDefinition(
+                name="noop",
+                description="No-op",
+                parameters={"type": "object", "properties": {}},
+                handler=_noop,
+            )
+        )
+
+        # Execute without store — nothing persisted
+        await executor.execute("noop", {})
+        assert store.count() == 0
+
+        # Set store and execute again
+        executor.set_history_store(store)
+        await executor.execute("noop", {})
+        assert store.count() == 1
+        store.close()
+
+    @pytest.mark.asyncio()
+    async def test_store_failure_does_not_break_execution(
+        self, tmp_path: Path
+    ) -> None:
+        from unittest.mock import MagicMock
+
+        mock_store = MagicMock()
+        mock_store.save.side_effect = RuntimeError("db error")
+        executor = ToolExecutor(history_store=mock_store)
+
+        async def _ok() -> str:
+            return "ok"
+
+        executor.register(
+            ToolDefinition(
+                name="ok",
+                description="OK",
+                parameters={"type": "object", "properties": {}},
+                handler=_ok,
+            )
+        )
+
+        # Should succeed despite store failure
+        result = await executor.execute("ok", {})
+        assert result.success is True
+        assert result.output == "ok"

@@ -75,6 +75,17 @@ class AnimusRuntime:
         # 4. Tool executor (if intelligence enabled)
         if self._config.intelligence.enabled:
             self.tool_executor = self._create_tool_executor()
+
+            # Persistent tool history store
+            from animus_bootstrap.intelligence.tools.history_store import (
+                ToolHistoryStore,
+            )
+
+            history_db = data_dir / "tool_history.db"
+            self._tool_history_store = ToolHistoryStore(history_db)
+            self.tool_executor.set_history_store(self._tool_history_store)
+            logger.info("Tool history store initialized: %s", history_db)
+
             logger.info(
                 "Tool executor initialized: %d tools registered",
                 len(self.tool_executor.list_tools()),
@@ -192,6 +203,13 @@ class AnimusRuntime:
         if hasattr(self, "_improvement_store") and self._improvement_store is not None:
             self._improvement_store.close()
             logger.info("Improvement store closed")
+
+        if (
+            hasattr(self, "_tool_history_store")
+            and self._tool_history_store is not None
+        ):
+            self._tool_history_store.close()
+            logger.info("Tool history store closed")
 
         if self.memory_manager is not None:
             self.memory_manager.close()
