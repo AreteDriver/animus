@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Forge{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Forge Orchestration</h2>
+
+    <!-- Forge Status -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-2">Connection Status</h3>
+                {% if not forge_enabled %}
+                <p class="text-lg font-bold text-animus-muted">Disabled</p>
+                <p class="text-sm text-animus-muted mt-1">Enable Forge in config to manage it from here.</p>
+                {% elif forge_status == 'running' %}
+                <p class="text-lg font-bold text-animus-green">Running</p>
+                {% elif forge_status == 'stopped' %}
+                <p class="text-lg font-bold text-animus-red">Stopped</p>
+                {% else %}
+                <p class="text-lg font-bold text-animus-yellow">{{ forge_status | capitalize }}</p>
+                {% endif %}
+            </div>
+            {% if forge_enabled %}
+                {% if forge_status == 'running' %}
+                <span class="status-indicator status-ok"></span>
+                {% elif forge_status == 'stopped' %}
+                <span class="status-indicator status-error"></span>
+                {% else %}
+                <span class="status-indicator status-warn"></span>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    {% if forge_enabled %}
+    <!-- Health Details -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-8">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Health Details</h3>
+        {% if forge_health %}
+        <div class="space-y-2 text-sm">
+            {% for key, value in forge_health.items() %}
+            <div class="flex justify-between border-b border-animus-border py-2">
+                <span class="text-animus-muted">{{ key }}</span>
+                <span class="text-animus-text">{{ value }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-animus-muted text-sm">No health data available.</p>
+        {% endif %}
+    </div>
+
+    <!-- Controls -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Controls</h3>
+        <p class="text-animus-muted text-sm mb-4">
+            Use the <code class="text-animus-green">forge_start</code> and <code class="text-animus-green">forge_stop</code> tools via the intelligence layer to manage Forge lifecycle.
+        </p>
+        <div class="flex gap-4">
+            <button class="px-4 py-2 bg-animus-border text-animus-muted rounded text-sm cursor-not-allowed" disabled>
+                Start Forge
+            </button>
+            <button class="px-4 py-2 bg-animus-border text-animus-muted rounded text-sm cursor-not-allowed" disabled>
+                Stop Forge
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -124,6 +124,27 @@
                     Routing
                 </a>
             </li>
+            <li>
+                <a href="/self-mod"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/self-mod' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Self-Mod
+                </a>
+            </li>
+            <li>
+                <a href="/forge"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/forge' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Forge
+                </a>
+            </li>
+            <li>
+                <a href="/timers"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/timers' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Timers
+                </a>
+            </li>
         </ul>
 
         <div class="text-animus-muted text-xs mt-4 pt-4 border-t border-animus-border">

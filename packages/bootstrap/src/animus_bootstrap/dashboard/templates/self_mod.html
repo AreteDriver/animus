@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Self-Modification{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Self-Modification</h2>
+
+    <!-- Improvement Proposals -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-8">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Improvement Proposals</h3>
+        {% if improvements %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-animus-border text-animus-muted">
+                    <th class="text-left py-2 pr-4">ID</th>
+                    <th class="text-left py-2 pr-4">Area</th>
+                    <th class="text-left py-2 pr-4">Description</th>
+                    <th class="text-left py-2 pr-4">Status</th>
+                    <th class="text-left py-2">Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in improvements %}
+                <tr class="border-b border-animus-border">
+                    <td class="py-2 pr-4 text-animus-green font-bold">#{{ p.id }}</td>
+                    <td class="py-2 pr-4 text-animus-text">{{ p.area }}</td>
+                    <td class="py-2 pr-4 text-animus-text">{{ p.description[:80] }}</td>
+                    <td class="py-2 pr-4">
+                        {% if p.status == 'applied' %}
+                        <span class="text-animus-green">Applied</span>
+                        {% elif p.status == 'proposed' %}
+                        <span class="text-animus-yellow">Proposed</span>
+                        {% else %}
+                        <span class="text-animus-muted">{{ p.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 text-animus-muted">{{ p.timestamp }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-animus-muted text-sm">No improvement proposals yet. Use the <code class="text-animus-green">propose_improvement</code> tool to create one.</p>
+        {% endif %}
+    </div>
+
+    <!-- Code Edit History -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Code Edit History</h3>
+        {% if code_history %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-animus-border text-animus-muted">
+                    <th class="text-left py-2 pr-4">Timestamp</th>
+                    <th class="text-left py-2 pr-4">Tool</th>
+                    <th class="text-left py-2 pr-4">Success</th>
+                    <th class="text-left py-2 pr-4">Duration</th>
+                    <th class="text-left py-2">Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in code_history %}
+                <tr class="border-b border-animus-border">
+                    <td class="py-2 pr-4 text-animus-muted">{{ entry.timestamp }}</td>
+                    <td class="py-2 pr-4 text-animus-green font-bold">{{ entry.tool }}</td>
+                    <td class="py-2 pr-4">
+                        {% if entry.success %}
+                        <span class="text-animus-green">OK</span>
+                        {% else %}
+                        <span class="text-animus-red">FAIL</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 pr-4 text-animus-muted">{{ entry.duration }}ms</td>
+                    <td class="py-2 text-animus-muted text-xs truncate max-w-xs">{{ entry.output }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-animus-muted text-sm">No code edits recorded yet. Code edits via <code class="text-animus-green">code_write</code> and <code class="text-animus-green">code_patch</code> will appear here.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

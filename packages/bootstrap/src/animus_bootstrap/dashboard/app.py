@@ -20,11 +20,14 @@ from animus_bootstrap.dashboard.routers import (
     channels_page,
     config,
     conversations,
+    forge_page,
     home,
     logs,
     memory,
     personas_page,
     routing_page,
+    self_mod,
+    timers_page,
     tools,
     update,
 )
@@ -130,6 +133,9 @@ app.include_router(automations.router)
 app.include_router(activity.router)
 app.include_router(personas_page.router)
 app.include_router(routing_page.router)
+app.include_router(self_mod.router)
+app.include_router(forge_page.router)
+app.include_router(timers_page.router)
 
 
 @app.get("/health")
