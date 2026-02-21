@@ -22,7 +22,10 @@
             </thead>
             <tbody>
                 {% for p in improvements %}
-                <tr class="border-b border-animus-border">
+                <tr class="border-b border-animus-border cursor-pointer hover:bg-animus-bg"
+                    hx-get="/self-mod/improvement/{{ p.id }}"
+                    hx-target="#detail-{{ p.id }}"
+                    hx-swap="innerHTML">
                     <td class="py-2 pr-4 text-animus-green font-bold">#{{ p.id }}</td>
                     <td class="py-2 pr-4 text-animus-text">{{ p.area }}</td>
                     <td class="py-2 pr-4 text-animus-text">{{ p.description[:80] }}</td>
@@ -37,6 +40,7 @@
                     </td>
                     <td class="py-2 text-animus-muted">{{ p.timestamp }}</td>
                 </tr>
+                <tr><td colspan="5" id="detail-{{ p.id }}"></td></tr>
                 {% endfor %}
             </tbody>
         </table>

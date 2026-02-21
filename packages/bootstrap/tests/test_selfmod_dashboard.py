@@ -93,6 +93,111 @@ class TestSelfModPage:
         finally:
             clear_improvement_log()
 
+    def test_improvement_rows_have_htmx_detail(self, client: TestClient) -> None:
+        """Improvement rows include hx-get for detail expansion."""
+        from animus_bootstrap.intelligence.tools.builtin.self_improve import (
+            _improvement_log,
+        )
+
+        _improvement_log.append(
+            {
+                "id": 5,
+                "area": "config",
+                "description": "Validate schema",
+                "status": "proposed",
+                "timestamp": "2026-02-20T12:00:00+00:00",
+                "analysis": "Need validation",
+                "patch": None,
+            }
+        )
+        resp = client.get("/self-mod")
+        body = resp.text
+        assert 'hx-get="/self-mod/improvement/5"' in body
+        assert 'id="detail-5"' in body
+
+
+# ------------------------------------------------------------------
+# Improvement detail — GET /self-mod/improvement/{id}
+# ------------------------------------------------------------------
+
+
+class TestImprovementDetail:
+    """Tests for the improvement proposal detail fragment."""
+
+    def test_detail_not_found(self, client: TestClient) -> None:
+        """GET /self-mod/improvement/999 returns not-found message."""
+        resp = client.get("/self-mod/improvement/999")
+        assert resp.status_code == 200
+        assert "Proposal not found" in resp.text
+
+    def test_detail_returns_analysis(self, client: TestClient) -> None:
+        """GET /self-mod/improvement/{id} returns analysis text."""
+        from animus_bootstrap.intelligence.tools.builtin.self_improve import (
+            _improvement_log,
+        )
+
+        _improvement_log.append(
+            {
+                "id": 1,
+                "area": "tool:web_search",
+                "description": "Add retry logic for timeouts",
+                "status": "proposed",
+                "timestamp": "2026-02-20T12:00:00+00:00",
+                "analysis": "Should add exponential backoff with jitter",
+                "patch": None,
+            }
+        )
+        resp = client.get("/self-mod/improvement/1")
+        assert resp.status_code == 200
+        body = resp.text
+        assert "exponential backoff with jitter" in body
+        assert "tool:web_search" in body
+        assert "Add retry logic" in body
+
+    def test_detail_shows_patch_when_present(self, client: TestClient) -> None:
+        """GET /self-mod/improvement/{id} shows patch if available."""
+        from animus_bootstrap.intelligence.tools.builtin.self_improve import (
+            _improvement_log,
+        )
+
+        _improvement_log.append(
+            {
+                "id": 2,
+                "area": "router",
+                "description": "Fix routing",
+                "status": "applied",
+                "timestamp": "2026-02-20T13:00:00+00:00",
+                "analysis": "Route logic was wrong",
+                "patch": "--- a/router.py\n+++ b/router.py\n@@ -1 +1 @@\n-old\n+new",
+            }
+        )
+        resp = client.get("/self-mod/improvement/2")
+        assert resp.status_code == 200
+        body = resp.text
+        assert "Patch:" in body
+        assert "--- a/router.py" in body
+
+    def test_detail_no_patch_section_when_empty(self, client: TestClient) -> None:
+        """No patch section when patch is None."""
+        from animus_bootstrap.intelligence.tools.builtin.self_improve import (
+            _improvement_log,
+        )
+
+        _improvement_log.append(
+            {
+                "id": 3,
+                "area": "memory",
+                "description": "Optimize queries",
+                "status": "proposed",
+                "timestamp": "2026-02-20T14:00:00+00:00",
+                "analysis": "Some analysis",
+                "patch": None,
+            }
+        )
+        resp = client.get("/self-mod/improvement/3")
+        assert resp.status_code == 200
+        assert "Patch:" not in resp.text
+
 
 # ------------------------------------------------------------------
 # Forge page — GET /forge
