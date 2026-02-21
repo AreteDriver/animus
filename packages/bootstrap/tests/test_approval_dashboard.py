@@ -9,7 +9,9 @@ from fastapi.testclient import TestClient
 
 from animus_bootstrap.dashboard.app import app
 from animus_bootstrap.dashboard.routers.tools import (
+    _notify_sse,
     _pending_approvals,
+    _sse_subscribers,
     clear_pending_approvals,
     dashboard_approval_callback,
     get_pending_approvals,
@@ -223,3 +225,72 @@ class TestUtilityFunctions:
         clear_pending_approvals()
         assert len(_pending_approvals) == 0
         assert event.is_set()
+
+
+# ------------------------------------------------------------------
+# SSE notifications
+# ------------------------------------------------------------------
+
+
+class TestSSENotifications:
+    """Tests for SSE push notification system."""
+
+    def test_notify_sse_delivers_to_subscriber(self) -> None:
+        """_notify_sse pushes events to subscribed queues."""
+        q: asyncio.Queue[dict[str, str]] = asyncio.Queue(maxsize=10)
+        _sse_subscribers.append(q)
+        try:
+            _notify_sse("test_event", {"key": "value"})
+            msg = q.get_nowait()
+            assert msg["event"] == "test_event"
+            assert '"key"' in msg["data"]
+        finally:
+            _sse_subscribers.remove(q)
+
+    def test_notify_sse_drops_full_queue(self) -> None:
+        """_notify_sse removes subscribers with full queues."""
+        q: asyncio.Queue[dict[str, str]] = asyncio.Queue(maxsize=1)
+        _sse_subscribers.append(q)
+        # Fill the queue
+        q.put_nowait({"event": "filler", "data": "{}"})
+        # Next notify should drop the subscriber
+        _notify_sse("overflow", {"x": 1})
+        assert q not in _sse_subscribers
+
+    def test_notify_sse_no_subscribers_is_noop(self) -> None:
+        """_notify_sse does nothing with no subscribers."""
+        _notify_sse("ignored", {"a": 1})  # Should not raise
+
+    @pytest.mark.asyncio()
+    async def test_callback_notifies_sse_on_request(self) -> None:
+        """Approval callback sends SSE event when request is created."""
+        q: asyncio.Queue[dict[str, str]] = asyncio.Queue(maxsize=10)
+        _sse_subscribers.append(q)
+        try:
+            task = asyncio.create_task(
+                dashboard_approval_callback("test_tool", {"arg": 1})
+            )
+            await asyncio.sleep(0.05)
+
+            msg = q.get_nowait()
+            assert msg["event"] == "approval_requested"
+            assert "test_tool" in msg["data"]
+
+            # Clean up — approve to release the callback
+            entry = next(iter(get_pending_approvals().values()))
+            entry["approved"] = True
+            entry["event"].set()
+            await asyncio.wait_for(task, timeout=2.0)
+
+            # Should get resolved event too
+            resolved = q.get_nowait()
+            assert resolved["event"] == "approval_resolved"
+        finally:
+            if q in _sse_subscribers:
+                _sse_subscribers.remove(q)
+
+    def test_sse_subscriber_list_accessible(self) -> None:
+        """SSE subscriber list is accessible and starts empty."""
+        # Clear any leftover subscribers
+        _sse_subscribers.clear()
+        assert len(_sse_subscribers) == 0

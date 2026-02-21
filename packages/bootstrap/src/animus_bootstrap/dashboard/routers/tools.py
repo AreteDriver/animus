@@ -6,10 +6,12 @@ import asyncio
 import json
 import logging
 import uuid
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
+from starlette.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +23,9 @@ router = APIRouter()
 # ------------------------------------------------------------------
 
 _pending_approvals: dict[str, dict[str, Any]] = {}
+
+# SSE subscribers — each is an asyncio.Queue receiving event dicts
+_sse_subscribers: list[asyncio.Queue[dict[str, str]]] = []
 # Each entry: {
 #   "tool_name": str,
 #   "arguments": dict,
@@ -42,6 +47,19 @@ def clear_pending_approvals() -> None:
     _pending_approvals.clear()
 
 
+def _notify_sse(event_type: str, data: dict[str, Any]) -> None:
+    """Push an event to all SSE subscribers."""
+    msg = {"event": event_type, "data": json.dumps(data)}
+    dead: list[asyncio.Queue[dict[str, str]]] = []
+    for q in _sse_subscribers:
+        try:
+            q.put_nowait(msg)
+        except asyncio.QueueFull:
+            dead.append(q)
+    for q in dead:
+        _sse_subscribers.remove(q)
+
+
 async def dashboard_approval_callback(tool_name: str, arguments: dict[str, Any]) -> bool:
     """Approval callback that queues requests for the dashboard UI.
 
@@ -60,16 +78,26 @@ async def dashboard_approval_callback(tool_name: str, arguments: dict[str, Any])
     }
 
     logger.info("Approval requested for tool '%s' (id=%s)", tool_name, request_id)
+    _notify_sse(
+        "approval_requested",
+        {"id": request_id, "tool_name": tool_name, "arguments": arguments},
+    )
 
     try:
         await asyncio.wait_for(event.wait(), timeout=300.0)
     except TimeoutError:
         logger.warning("Approval for '%s' (id=%s) timed out", tool_name, request_id)
         _pending_approvals.pop(request_id, None)
+        _notify_sse("approval_timeout", {"id": request_id, "tool_name": tool_name})
         return False
 
     entry = _pending_approvals.pop(request_id, {})
-    return bool(entry.get("approved", False))
+    approved = bool(entry.get("approved", False))
+    _notify_sse(
+        "approval_resolved",
+        {"id": request_id, "tool_name": tool_name, "approved": approved},
+    )
+    return approved
 
 
 # ------------------------------------------------------------------
@@ -184,6 +212,38 @@ async def approve_tool(request_id: str, decision: str = Form("deny")) -> HTMLRes
     status = "approved" if approved else "denied"
     color = "text-animus-green" if approved else "text-animus-red"
     return HTMLResponse(f"<p class=\"{color} text-sm\">Tool '{entry['tool_name']}' {status}.</p>")
+
+
+@router.get("/tools/events")
+async def tools_events(request: Request) -> StreamingResponse:
+    """SSE stream for real-time approval notifications."""
+    queue: asyncio.Queue[dict[str, str]] = asyncio.Queue(maxsize=50)
+    _sse_subscribers.append(queue)
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    msg = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    yield f"event: {msg['event']}\ndata: {msg['data']}\n\n"
+                except TimeoutError:
+                    # Keepalive
+                    yield ": keepalive\n\n"
+        finally:
+            if queue in _sse_subscribers:
+                _sse_subscribers.remove(queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post("/tools/execute")
