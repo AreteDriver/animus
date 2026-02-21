@@ -204,10 +204,7 @@ class AnimusRuntime:
             self._improvement_store.close()
             logger.info("Improvement store closed")
 
-        if (
-            hasattr(self, "_tool_history_store")
-            and self._tool_history_store is not None
-        ):
+        if hasattr(self, "_tool_history_store") and self._tool_history_store is not None:
             self._tool_history_store.close()
             logger.info("Tool history store closed")
 

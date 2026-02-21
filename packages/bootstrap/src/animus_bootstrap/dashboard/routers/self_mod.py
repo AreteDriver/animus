@@ -62,17 +62,14 @@ async def improvement_detail(proposal_id: int, request: Request) -> HTMLResponse
 
     matching = [p for p in get_improvement_log() if p["id"] == proposal_id]
     if not matching:
-        return HTMLResponse(
-            '<p class="text-animus-red text-sm">Proposal not found.</p>'
-        )
+        return HTMLResponse('<p class="text-animus-red text-sm">Proposal not found.</p>')
 
     p = matching[0]
     analysis = p.get("analysis") or "No analysis available."
     patch = p.get("patch") or ""
 
     lines = [
-        '<div class="bg-animus-bg border border-animus-border rounded p-4 mt-2'
-        ' mb-4 text-sm">',
+        '<div class="bg-animus-bg border border-animus-border rounded p-4 mt-2 mb-4 text-sm">',
         f'<p class="text-animus-muted text-xs mb-1">Area: '
         f'<span class="text-animus-green">{p.get("area", "")}</span></p>',
         f'<p class="text-animus-text mb-2">{p.get("description", "")}</p>',

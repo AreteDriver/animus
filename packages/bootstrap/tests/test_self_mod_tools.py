@@ -190,9 +190,7 @@ class TestCodePatch:
             "animus_bootstrap.intelligence.tools.builtin.code_edit._ANIMUS_ROOT",
             tmp_path,
         ):
-            result = await _code_patch(
-                "dry_nf.py", "MISSING", "replacement", dry_run=True
-            )
+            result = await _code_patch("dry_nf.py", "MISSING", "replacement", dry_run=True)
         assert "not found" in result
 
 

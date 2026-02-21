@@ -228,9 +228,7 @@ async def _timer_update(
 
     if channels is not None:
         timer["channels"] = (
-            [c.strip() for c in channels.split(",") if c.strip()]
-            if channels
-            else []
+            [c.strip() for c in channels.split(",") if c.strip()] if channels else []
         )
 
     # Update persistent store
@@ -246,9 +244,7 @@ async def _timer_update(
     # Re-register with ProactiveEngine if available
     if _proactive_engine is not None:
         _proactive_engine.unregister_check(f"timer:{name}")
-        _register_with_engine(
-            name, timer["schedule"], timer["action"], timer["channels"]
-        )
+        _register_with_engine(name, timer["schedule"], timer["action"], timer["channels"])
 
     changes = []
     if schedule is not None:

@@ -267,9 +267,7 @@ class TestSSENotifications:
         q: asyncio.Queue[dict[str, str]] = asyncio.Queue(maxsize=10)
         _sse_subscribers.append(q)
         try:
-            task = asyncio.create_task(
-                dashboard_approval_callback("test_tool", {"arg": 1})
-            )
+            task = asyncio.create_task(dashboard_approval_callback("test_tool", {"arg": 1}))
             await asyncio.sleep(0.05)
 
             msg = q.get_nowait()

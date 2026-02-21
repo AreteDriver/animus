@@ -208,9 +208,7 @@ async def _list_improvements(status: str = "all") -> str:
 
     lines = [f"Improvement Proposals ({len(filtered)}):"]
     for p in filtered:
-        lines.append(
-            f"  #{p['id']} [{p['status']}] {p['area']}: {p['description'][:80]}"
-        )
+        lines.append(f"  #{p['id']} [{p['status']}] {p['area']}: {p['description'][:80]}")
 
     return "\n".join(lines)
 
@@ -248,8 +246,7 @@ async def _self_improve_loop(area: str, description: str) -> str:
         if latest.get("analysis"):
             steps.append(f"Analysis preview: {latest['analysis'][:200]}...")
         steps.append(
-            "\nTo apply: call apply_improvement with "
-            f"proposal_id={latest['id']} and confirm=true."
+            f"\nTo apply: call apply_improvement with proposal_id={latest['id']} and confirm=true."
         )
     else:
         steps.append("No proposal was created.")
@@ -358,9 +355,7 @@ def get_self_improve_tools() -> list[ToolDefinition]:
                 "properties": {
                     "area": {
                         "type": "string",
-                        "description": (
-                            "What to improve (e.g. 'tool:web_search', 'prompt')."
-                        ),
+                        "description": ("What to improve (e.g. 'tool:web_search', 'prompt')."),
                     },
                     "description": {
                         "type": "string",

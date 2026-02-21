@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import sqlite3
 from pathlib import Path
@@ -57,9 +56,7 @@ class ImprovementStore:
         self._conn.commit()
         return cursor.lastrowid  # type: ignore[return-value]
 
-    def update_status(
-        self, proposal_id: int, status: str, applied_at: str | None = None
-    ) -> bool:
+    def update_status(self, proposal_id: int, status: str, applied_at: str | None = None) -> bool:
         """Update a proposal's status. Returns True if a row was updated."""
         if applied_at:
             cursor = self._conn.execute(
@@ -85,9 +82,7 @@ class ImprovementStore:
 
     def get(self, proposal_id: int) -> dict | None:
         """Get a single proposal by ID."""
-        cursor = self._conn.execute(
-            "SELECT * FROM improvements WHERE id = ?", (proposal_id,)
-        )
+        cursor = self._conn.execute("SELECT * FROM improvements WHERE id = ?", (proposal_id,))
         row = cursor.fetchone()
         if row is None:
             return None
@@ -96,9 +91,7 @@ class ImprovementStore:
     def list_all(self, status: str = "all") -> list[dict]:
         """Return proposals, optionally filtered by status."""
         if status == "all":
-            cursor = self._conn.execute(
-                "SELECT * FROM improvements ORDER BY id"
-            )
+            cursor = self._conn.execute("SELECT * FROM improvements ORDER BY id")
         else:
             cursor = self._conn.execute(
                 "SELECT * FROM improvements WHERE status = ? ORDER BY id",
@@ -108,9 +101,7 @@ class ImprovementStore:
 
     def next_id(self) -> int:
         """Return the next auto-increment ID (for preview before insert)."""
-        cursor = self._conn.execute(
-            "SELECT seq FROM sqlite_sequence WHERE name = 'improvements'"
-        )
+        cursor = self._conn.execute("SELECT seq FROM sqlite_sequence WHERE name = 'improvements'")
         row = cursor.fetchone()
         return (row[0] + 1) if row else 1
 

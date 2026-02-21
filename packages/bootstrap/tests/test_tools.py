@@ -1436,9 +1436,7 @@ class TestExecutorHistoryPersistence:
         store.close()
 
     @pytest.mark.asyncio()
-    async def test_store_failure_does_not_break_execution(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_store_failure_does_not_break_execution(self, tmp_path: Path) -> None:
         from unittest.mock import MagicMock
 
         mock_store = MagicMock()

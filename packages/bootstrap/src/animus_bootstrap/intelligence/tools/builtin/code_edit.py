@@ -67,9 +67,7 @@ async def _code_write(path: str, content: str) -> str:
     return f"Wrote {len(content)} bytes to {path}"
 
 
-async def _code_patch(
-    path: str, old: str, new: str, dry_run: bool = False
-) -> str:
+async def _code_patch(path: str, old: str, new: str, dry_run: bool = False) -> str:
     """Apply a search-and-replace patch to a source file.
 
     Finds the first occurrence of ``old`` in the file and replaces it with
