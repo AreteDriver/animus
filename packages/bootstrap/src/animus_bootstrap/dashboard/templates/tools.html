@@ -6,6 +6,49 @@
 <div class="max-w-4xl">
     <h2 class="text-2xl font-bold text-animus-green mb-6">Registered Tools</h2>
 
+    <!-- Pending Approvals -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-8">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Pending Approvals</h3>
+        <div id="pending-approvals"
+             hx-get="/tools/pending"
+             hx-trigger="every 3s"
+             hx-swap="innerHTML">
+            {% if pending_approvals %}
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-animus-border text-animus-muted">
+                        <th class="text-left py-2 pr-4">Tool</th>
+                        <th class="text-left py-2 pr-4">Arguments</th>
+                        <th class="text-left py-2">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in pending_approvals %}
+                    <tr class="border-b border-animus-border">
+                        <td class="py-2 pr-4 text-animus-yellow font-bold">{{ p.tool_name }}</td>
+                        <td class="py-2 pr-4 text-animus-muted text-xs"><pre>{{ p.arguments }}</pre></td>
+                        <td class="py-2">
+                            <form method="post" action="/tools/approve/{{ p.id }}" class="inline">
+                                <button type="submit" name="decision" value="approve"
+                                    class="px-3 py-1 bg-animus-green text-animus-bg rounded text-xs hover:opacity-80 mr-2">
+                                    Approve
+                                </button>
+                                <button type="submit" name="decision" value="deny"
+                                    class="px-3 py-1 bg-animus-red text-white rounded text-xs hover:opacity-80">
+                                    Deny
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-animus-muted text-sm">No pending approvals.</p>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- Tools Table -->
     <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-8">
         <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Available Tools</h3>
@@ -35,6 +78,31 @@
         {% endif %}
     </div>
 
+    <!-- Manual Tool Execution -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-8">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Execute Tool</h3>
+        <form hx-post="/tools/execute"
+              hx-target="#execution-result"
+              hx-swap="innerHTML"
+              class="space-y-4">
+            <div>
+                <label class="block text-animus-muted text-xs mb-1">Tool Name</label>
+                <input type="text" name="tool_name" placeholder="e.g. forge_status"
+                       class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-animus-muted text-xs mb-1">Arguments (JSON)</label>
+                <textarea name="arguments_json" rows="3" placeholder='{}'
+                          class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text font-mono focus:border-animus-green focus:outline-none"></textarea>
+            </div>
+            <button type="submit"
+                    class="px-4 py-2 bg-animus-green text-animus-bg rounded text-sm font-bold hover:opacity-80 transition-opacity">
+                Execute
+            </button>
+        </form>
+        <div id="execution-result" class="mt-4"></div>
+    </div>
+
     <!-- Execution History -->
     <div class="bg-animus-surface border border-animus-border rounded-lg p-6">
         <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Recent Execution History</h3>
@@ -52,7 +120,7 @@
                 {% for entry in history %}
                 <tr class="border-b border-animus-border">
                     <td class="py-2 pr-4 text-animus-muted">{{ entry.timestamp }}</td>
-                    <td class="py-2 pr-4 text-animus-text">{{ entry.tool }}</td>
+                    <td class="py-2 pr-4 text-animus-text">{{ entry.tool_name }}</td>
                     <td class="py-2 pr-4">
                         {% if entry.success %}
                         <span class="text-animus-green">OK</span>
@@ -60,7 +128,7 @@
                         <span class="text-animus-red">FAIL</span>
                         {% endif %}
                     </td>
-                    <td class="py-2 text-animus-muted">{{ entry.duration }}</td>
+                    <td class="py-2 text-animus-muted">{{ entry.duration_ms }}ms</td>
                 </tr>
                 {% endfor %}
             </tbody>

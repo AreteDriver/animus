@@ -51,6 +51,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.warning("Runtime start failed — dashboard running in limited mode")
     app.state.runtime = runtime
 
+    # Wire the approval callback so dashboard can approve LLM-initiated tools
+    if runtime.started and getattr(runtime, "tool_executor", None) is not None:
+        from animus_bootstrap.dashboard.routers.tools import dashboard_approval_callback
+
+        runtime.tool_executor.set_approval_callback(dashboard_approval_callback)
+
     # Wire the WebChat adapter to the router so messages get processed
     webchat: WebChatAdapter = app.state.webchat
     await webchat.connect()
