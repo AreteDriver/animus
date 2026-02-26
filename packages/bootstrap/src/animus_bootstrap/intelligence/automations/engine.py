@@ -258,7 +258,7 @@ class AutomationEngine:
             try:
                 desc = await execute_action(action, context)
                 actions_executed.append(desc)
-            except Exception as exc:
+            except (OSError, ConnectionError, RuntimeError, ValueError, TimeoutError) as exc:
                 error = f"Action {action.type} failed: {exc}"
                 logger.warning("Automation %s action error: %s", rule.name, exc)
                 break

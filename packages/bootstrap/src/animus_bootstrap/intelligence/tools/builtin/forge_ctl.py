@@ -32,7 +32,7 @@ async def _forge_status(host: str = _DEFAULT_FORGE_HOST, port: int = _DEFAULT_FO
             return f"Forge responded with HTTP {resp.status_code}: {resp.text[:500]}"
     except httpx.ConnectError:
         return f"Forge is not reachable at {url}"
-    except Exception as exc:
+    except httpx.HTTPError as exc:
         return f"Error checking Forge status: {exc}"
 
 
@@ -94,7 +94,7 @@ async def _forge_start(host: str = _DEFAULT_FORGE_HOST, port: int = _DEFAULT_FOR
         return f"Forge failed to start: {stderr.decode().strip()}"
     except FileNotFoundError:
         return "Neither systemctl nor uvicorn found — cannot start Forge"
-    except Exception as exc:
+    except OSError as exc:
         return f"Error starting Forge: {exc}"
 
 
@@ -129,7 +129,7 @@ async def _forge_stop() -> str:
         if proc.returncode == 0:
             return "Forge process killed"
         return "No Forge process found to stop"
-    except Exception as exc:
+    except OSError as exc:
         return f"Error stopping Forge: {exc}"
 
 
@@ -169,7 +169,7 @@ async def _forge_invoke(
         return f"Invalid JSON body: {body[:200]}"
     except httpx.ConnectError:
         return f"Forge is not reachable at {url}"
-    except Exception as exc:
+    except httpx.HTTPError as exc:
         return f"Forge invoke error: {exc}"
 
 

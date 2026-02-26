@@ -35,7 +35,7 @@ async def _store_memory(content: str, memory_type: str = "semantic") -> str:
             await backend.store(memory_type, content, {"source": "tool"})
             logger.info("Stored %s memory via backend: %s", memory_type, content[:60])
             return f"Stored {memory_type} memory: {content[:100]}"
-        except Exception as exc:
+        except (OSError, ConnectionError, RuntimeError, ValueError) as exc:
             logger.warning("Backend store failed, using fallback: %s", exc)
 
     entry = {
@@ -63,7 +63,7 @@ async def _recall_memory(query: str, memory_type: str = "all", limit: int = 10) 
                 mtype = r.get("memory_type", "unknown")
                 lines.append(f"  [{mtype}] {content}")
             return "\n".join(lines)
-        except Exception as exc:
+        except (OSError, ConnectionError, RuntimeError, ValueError) as exc:
             logger.warning("Backend search failed: %s", exc)
             return f"Memory search failed: {exc}"
 

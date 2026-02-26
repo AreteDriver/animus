@@ -334,10 +334,16 @@ class LocalMemoryStore(MemoryStore):
             logger.info(f"Loaded {len(self._memories)} memories from disk")
 
     def _save(self):
-        """Save memories to disk."""
+        """Save memories to disk atomically.
+
+        Writes to a temporary file then renames for crash safety.
+        Uses compact JSON (no indent) for faster serialization.
+        """
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        with open(self.memories_file, "w") as f:
-            json.dump({k: v.to_dict() for k, v in self._memories.items()}, f, indent=2)
+        tmp_file = self.memories_file.with_suffix(".tmp")
+        with open(tmp_file, "w") as f:
+            json.dump({k: v.to_dict() for k, v in self._memories.items()}, f)
+        tmp_file.replace(self.memories_file)
 
     def store(self, memory: Memory) -> None:
         self._memories[memory.id] = memory

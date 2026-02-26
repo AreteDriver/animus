@@ -177,14 +177,14 @@ class MCPToolBridge:
 
         try:
             conn = await self._start_server(server_name)
-        except Exception as exc:
+        except (OSError, ConnectionError, TimeoutError) as exc:
             logger.warning("Failed to start MCP server '%s': %s", server_name, exc)
             return []
 
         # List tools
         try:
             result = await conn.send_request("tools/list")
-        except Exception as exc:
+        except (OSError, ConnectionError, TimeoutError, ValueError) as exc:
             logger.warning("Failed to list tools from MCP server '%s': %s", server_name, exc)
             await conn.close()
             self._connections.pop(server_name, None)
@@ -244,7 +244,7 @@ class MCPToolBridge:
                 "tools/call",
                 {"name": tool, "arguments": args},
             )
-        except Exception as exc:
+        except (OSError, ConnectionError, TimeoutError, ValueError) as exc:
             return f"MCP tool call failed: {exc}"
 
         # Extract text content from result
