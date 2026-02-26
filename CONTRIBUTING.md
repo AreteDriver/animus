@@ -69,7 +69,7 @@ Not ready to code? Ideas are valuable too. Open a discussion.
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.10+ (Core), 3.11+ (Bootstrap), 3.12+ (Forge)
 - Git
 - A local LLM setup (Ollama recommended)
 
@@ -77,42 +77,41 @@ Not ready to code? Ideas are valuable too. Open a discussion.
 
 ```bash
 # Clone the repo
-git clone https://github.com/[username]/animus.git
+git clone https://github.com/AreteDriver/animus.git
 cd animus
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
+# Install all packages in development mode
+pip install -e "packages/quorum/[dev]" \
+            -e "packages/forge/[dev]" \
+            -e "packages/core/[dev]" \
+            -e "packages/bootstrap/[dev]"
 
 # Install Ollama and pull a model
 # See: https://ollama.ai
-ollama pull llama3
+ollama pull llama3.1:8b
 
-# Run tests
-pytest
+# Run tests per package
+pytest packages/core/tests/ -v
+cd packages/forge && pytest tests/ -v && cd ../..
+PYTHONPATH=packages/quorum/python pytest packages/quorum/tests/ -v
+pytest packages/bootstrap/tests/ -v
 
-# Start development server
-python -m animus.cli
+# Lint
+ruff check packages/ && ruff format --check packages/
 ```
 
 ### Project Structure
 
 ```
 animus/
-├── animus/
-│   ├── core/           # Core layer (identity, security, guardrails)
-│   ├── memory/         # Memory layer (episodic, semantic, procedural)
-│   ├── cognitive/      # Cognitive layer (reasoning, tools, learning)
-│   ├── interface/      # Interface layer (CLI, API, etc.)
-│   └── utils/          # Shared utilities
-├── tests/
+├── packages/
+│   ├── core/                # Animus Core — exocortex, identity, memory, CLI
+│   ├── forge/               # Animus Forge — multi-agent orchestration
+│   ├── quorum/              # Animus Quorum — coordination protocol
+│   └── bootstrap/           # Animus Bootstrap — install daemon, wizard, dashboard
 ├── docs/
-├── config/
-└── scripts/
+├── scripts/
+└── .github/workflows/
 ```
 
 ---

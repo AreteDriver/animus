@@ -181,6 +181,17 @@ class ModelInterface(ABC):
         """Generate a streaming response."""
         pass
 
+    @abstractmethod
+    def generate_with_tools(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        tools: list[dict] | None = None,
+        max_tokens: int = 4096,
+    ) -> Any:
+        """Generate a response with tool definitions."""
+        pass
+
 
 class MockModel(ModelInterface):
     """Deterministic mock model for testing without a live LLM backend."""
@@ -208,6 +219,32 @@ class MockModel(ModelInterface):
         chunk_size = max(1, len(response) // 3)
         for i in range(0, len(response), chunk_size):
             yield response[i : i + chunk_size]
+
+    def generate_with_tools(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        tools: list[dict] | None = None,
+        max_tokens: int = 4096,
+    ) -> Any:
+        """Mock tool generation — returns a simple mock response object."""
+        prompt = ""
+        for msg in messages:
+            if isinstance(msg.get("content"), str):
+                prompt += msg["content"] + "\n"
+        text = self.generate(prompt.strip(), system)
+
+        class _MockBlock:
+            def __init__(self, t: str):
+                self.type = "text"
+                self.text = t
+
+        class _MockResponse:
+            def __init__(self, t: str):
+                self.content = [_MockBlock(t)]
+                self.stop_reason = "end_turn"
+
+        return _MockResponse(text)
 
     def reset(self) -> None:
         """Clear call history."""
@@ -246,6 +283,32 @@ class OllamaModel(ModelInterface):
             logger.error(f"Ollama error: {e}")
             return f"[Error communicating with Ollama: {e}]"
 
+    def generate_with_tools(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        tools: list[dict] | None = None,
+        max_tokens: int = 4096,
+    ) -> Any:
+        """Generate with tools using Ollama — falls back to plain generate."""
+        prompt = ""
+        for msg in messages:
+            if isinstance(msg.get("content"), str):
+                prompt += msg["content"] + "\n"
+        text = self.generate(prompt.strip(), system)
+
+        class _Block:
+            def __init__(self, t: str):
+                self.type = "text"
+                self.text = t
+
+        class _Response:
+            def __init__(self, t: str):
+                self.content = [_Block(t)]
+                self.stop_reason = "end_turn"
+
+        return _Response(text)
+
     async def generate_stream(self, prompt: str, system: str | None = None) -> AsyncIterator[str]:
         """Streaming generation - to be implemented."""
         yield self.generate(prompt, system)
@@ -256,14 +319,21 @@ class AnthropicModel(ModelInterface):
 
     def __init__(self, config: ModelConfig):
         self.config = config
+        self._client: Any = None
         logger.debug(f"AnthropicModel initialized with {config.model_name}")
+
+    def _get_client(self) -> Any:
+        """Return a cached Anthropic client instance."""
+        if self._client is None:
+            import anthropic
+
+            self._client = anthropic.Anthropic(api_key=self.config.api_key)
+        return self._client
 
     def generate(self, prompt: str, system: str | None = None) -> str:
         """Generate using Claude."""
         try:
-            import anthropic
-
-            client = anthropic.Anthropic(api_key=self.config.api_key)
+            client = self._get_client()
 
             logger.debug(
                 f"Anthropic request: model={self.config.model_name}, prompt_len={len(prompt)}"
@@ -307,9 +377,7 @@ class AnthropicModel(ModelInterface):
             Raw ``anthropic.types.Message`` object.
         """
         try:
-            import anthropic
-
-            client = anthropic.Anthropic(api_key=self.config.api_key)
+            client = self._get_client()
 
             kwargs: dict[str, Any] = {
                 "model": self.config.model_name,
@@ -380,6 +448,32 @@ class OpenAIModel(ModelInterface):
         except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
             logger.error(f"OpenAI error: {e}")
             return f"[Error communicating with OpenAI: {e}]"
+
+    def generate_with_tools(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        tools: list[dict] | None = None,
+        max_tokens: int = 4096,
+    ) -> Any:
+        """Generate with tools using OpenAI — falls back to plain generate."""
+        prompt = ""
+        for msg in messages:
+            if isinstance(msg.get("content"), str):
+                prompt += msg["content"] + "\n"
+        text = self.generate(prompt.strip(), system)
+
+        class _Block:
+            def __init__(self, t: str):
+                self.type = "text"
+                self.text = t
+
+        class _Response:
+            def __init__(self, t: str):
+                self.content = [_Block(t)]
+                self.stop_reason = "end_turn"
+
+        return _Response(text)
 
     async def generate_stream(self, prompt: str, system: str | None = None) -> AsyncIterator[str]:
         """Streaming generation - to be implemented."""

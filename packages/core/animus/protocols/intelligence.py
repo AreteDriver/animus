@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -14,3 +14,10 @@ class IntelligenceProvider(Protocol):
     async def generate_stream(
         self, prompt: str, system: str | None = None
     ) -> AsyncIterator[str]: ...
+    def generate_with_tools(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        tools: list[dict] | None = None,
+        max_tokens: int = 4096,
+    ) -> Any: ...

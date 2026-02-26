@@ -300,10 +300,18 @@ class SupervisorAgent:
                     continue
 
                 try:
+                    result_text = agent_result
+                    if len(result_text) > 2000:
+                        logger.warning(
+                            "Agent %s result truncated from %d to 2000 chars for consensus",
+                            agent_name,
+                            len(result_text),
+                        )
+                        result_text = result_text[:2000]
                     decision = self._run_consensus_vote(
                         agent_name=agent_name,
                         task=delegation.get("task", ""),
-                        result_text=agent_result[:2000],
+                        result_text=result_text,
                         quorum=consensus_level,
                         skill_name=delegation.get("_skill_name", ""),
                     )

@@ -7,7 +7,8 @@ import os
 import sys
 
 # Ensure animus package is importable from monorepo
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "packages", "core"))
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(_script_dir, "..", "packages", "core"))
 
 from pathlib import Path
 
@@ -32,7 +33,7 @@ DIM = "\033[2m"
 BOLD = "\033[1m"
 NC = "\033[0m"
 
-ANIMUS_ROOT = os.path.expanduser("~/projects/animus")
+ANIMUS_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MAX_AGENT_LOOPS = 8
 AUTO_SAVE_INTERVAL = 10  # Save conversation every N messages
 
@@ -45,14 +46,14 @@ If you catch yourself writing "you could" or "I would suggest" — STOP. Use a t
 Rules:
 - ALWAYS read a file before editing it
 - ONE change at a time, then verify
-- Paths are relative to ~/projects/animus/ or absolute
+- Paths are relative to the repo root or absolute
 - After edits, run: ruff check packages/ --fix && ruff format packages/
 - Never push to git, never delete files without asking"""
 
 
 def build_file_tree() -> str:
     """Build a real file tree of the project for context."""
-    tree_lines = ["~/projects/animus/"]
+    tree_lines = [f"{ANIMUS_ROOT}/"]
     for pkg_name, pkg_import, pkg_path in [
         ("core", "animus", "packages/core/animus"),
         ("forge", "animus_forge", "packages/forge/src/animus_forge"),
