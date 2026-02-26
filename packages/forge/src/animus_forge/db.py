@@ -243,67 +243,49 @@ class TaskStore:
         cost_usd: float,
         duration_ms: int,
     ) -> None:
-        """Insert or update running agent score aggregates."""
-        existing = self.backend.fetchone(
-            "SELECT * FROM agent_scores WHERE agent_role = ?",
-            (agent_role,),
+        """Insert or update running agent score aggregates using UPSERT."""
+        is_success = 1 if status == "completed" else 0
+        is_fail = 1 if status != "completed" else 0
+        success_rate = 100.0 if status == "completed" else 0.0
+        now = datetime.now().isoformat()
+
+        self.backend.execute(
+            """
+            INSERT INTO agent_scores
+                (agent_role, total_tasks, successful_tasks, failed_tasks,
+                 total_tokens, total_cost_usd, avg_duration_ms,
+                 success_rate, updated_at)
+            VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(agent_role) DO UPDATE SET
+                total_tasks = total_tasks + 1,
+                successful_tasks = successful_tasks + ?,
+                failed_tasks = failed_tasks + ?,
+                total_tokens = total_tokens + ?,
+                total_cost_usd = total_cost_usd + ?,
+                avg_duration_ms = (avg_duration_ms * total_tasks + ?) / (total_tasks + 1),
+                success_rate = ROUND(
+                    (successful_tasks + ?) * 100.0 / (total_tasks + 1), 1
+                ),
+                updated_at = ?
+            """,
+            (
+                agent_role,
+                is_success,
+                is_fail,
+                total_tokens,
+                cost_usd,
+                float(duration_ms),
+                success_rate,
+                now,
+                is_success,
+                is_fail,
+                total_tokens,
+                cost_usd,
+                float(duration_ms),
+                is_success,
+                now,
+            ),
         )
-
-        if existing is None:
-            is_success = 1 if status == "completed" else 0
-            is_fail = 1 if status != "completed" else 0
-            success_rate = 100.0 if status == "completed" else 0.0
-            self.backend.execute(
-                """
-                INSERT INTO agent_scores
-                    (agent_role, total_tasks, successful_tasks, failed_tasks,
-                     total_tokens, total_cost_usd, avg_duration_ms,
-                     success_rate, updated_at)
-                VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    agent_role,
-                    is_success,
-                    is_fail,
-                    total_tokens,
-                    cost_usd,
-                    float(duration_ms),
-                    success_rate,
-                    datetime.now().isoformat(),
-                ),
-            )
-        else:
-            new_total = existing["total_tasks"] + 1
-            new_success = existing["successful_tasks"] + (1 if status == "completed" else 0)
-            new_fail = existing["failed_tasks"] + (1 if status != "completed" else 0)
-            new_tokens = existing["total_tokens"] + total_tokens
-            new_cost = existing["total_cost_usd"] + cost_usd
-            # Running average for duration
-            new_avg = (
-                existing["avg_duration_ms"] * existing["total_tasks"] + duration_ms
-            ) / new_total
-            new_rate = round(new_success / new_total * 100, 1)
-
-            self.backend.execute(
-                """
-                UPDATE agent_scores
-                SET total_tasks = ?, successful_tasks = ?, failed_tasks = ?,
-                    total_tokens = ?, total_cost_usd = ?,
-                    avg_duration_ms = ?, success_rate = ?, updated_at = ?
-                WHERE agent_role = ?
-                """,
-                (
-                    new_total,
-                    new_success,
-                    new_fail,
-                    new_tokens,
-                    new_cost,
-                    round(new_avg, 1),
-                    new_rate,
-                    datetime.now().isoformat(),
-                    agent_role,
-                ),
-            )
 
     def _log_budget(
         self,

@@ -7,6 +7,7 @@ tokens, PII) using a key derived from Settings.secret_key via PBKDF2.
 import base64
 import functools
 import logging
+import os
 
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
@@ -15,7 +16,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 logger = logging.getLogger(__name__)
 
 _ENCRYPTED_PREFIX = "enc:"
-_PBKDF2_SALT = b"gorgon-field-encryption-v1"
+_PBKDF2_SALT = os.environ.get("ENCRYPTION_SALT", "gorgon-field-encryption-v1").encode()
 _PBKDF2_ITERATIONS = 480_000
 
 
