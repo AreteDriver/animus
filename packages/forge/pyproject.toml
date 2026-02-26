@@ -87,7 +87,7 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP"]
-ignore = ["E501", "UP042", "UP046"]  # UP042: StrEnum migration deferred, UP046: PEP 695 generics
+ignore = ["E501", "UP042", "UP046", "UP047"]  # UP042: StrEnum, UP046/UP047: PEP 695 generics
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
