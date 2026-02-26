@@ -138,10 +138,11 @@ def _render_file_view(filename: str, content: str, locked: bool) -> HTMLResponse
     preview = (
         content[:500].replace("<", "&lt;").replace(">", "&gt;") if content else "<em>Empty</em>"
     )
+    safe_name = filename.replace("<", "&lt;").replace(">", "&gt;")
 
     return HTMLResponse(f"""
     <div class="flex items-center justify-between mb-2">
-        <h4 class="text-sm font-bold text-animus-text">{filename}{lock_icon}</h4>
+        <h4 class="text-sm font-bold text-animus-text">{safe_name}{lock_icon}</h4>
         {edit_btn}
     </div>
     <pre class="text-xs text-animus-muted whitespace-pre-wrap">{preview}</pre>

@@ -23,7 +23,10 @@ def verify_auth(authorization: str | None = Header(None)) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized("Authentication required. Provide Bearer token in Authorization header.")
 
-    token = authorization.split(" ")[1]
+    parts = authorization.split(" ", maxsplit=1)
+    if len(parts) != 2 or not parts[1]:
+        raise unauthorized("Malformed Authorization header. Expected: Bearer <token>")
+    token = parts[1]
     user_id = verify_token(token)
 
     if not user_id:

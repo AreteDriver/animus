@@ -274,6 +274,9 @@ class AnthropicModel(ModelInterface):
                 system=system or "You are a helpful assistant.",
                 messages=[{"role": "user", "content": prompt}],
             )
+            if not message.content:
+                logger.warning("Anthropic returned empty content")
+                return ""
             result = message.content[0].text
             logger.debug(f"Anthropic response: len={len(result)}")
             return result
