@@ -182,7 +182,7 @@ def serve() -> None:
     port = cfg.services.port
     uvicorn.run(
         "animus_bootstrap.dashboard.app:app",
-        host="0.0.0.0",  # noqa: S104
+        host="127.0.0.1",
         port=port,
         reload=False,
     )

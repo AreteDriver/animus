@@ -620,6 +620,7 @@ When you have gathered enough information, provide your final answer."""
         system = self._build_system_prompt(context, mode)
         anthropic_tools = tools_to_anthropic_format(tools)
         messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
+        text_parts: list[str] = []
 
         for _ in range(max_iterations):
             response = self.primary.generate_with_tools(
@@ -629,7 +630,7 @@ When you have gathered enough information, provide your final answer."""
             )
 
             # Collect text and tool_use blocks from the response
-            text_parts: list[str] = []
+            text_parts = []
             tool_use_blocks: list[Any] = []
             for block in response.content:
                 if block.type == "text":
