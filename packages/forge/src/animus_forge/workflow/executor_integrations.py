@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import shlex
 import subprocess
 from datetime import UTC
 
@@ -78,8 +79,8 @@ class IntegrationHandlersMixin:
 
         try:
             result = subprocess.run(
-                command,
-                shell=True,
+                shlex.split(command),
+                shell=False,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
