@@ -1,14 +1,76 @@
 # Animus
 
+*An exocortex architecture for personal cognitive sovereignty.*
+
 ![CI](https://github.com/AreteDriver/animus/workflows/CI/badge.svg)
 ![CodeQL](https://github.com/AreteDriver/animus/workflows/CodeQL%20Security%20Scan/badge.svg)
 ![Security](https://github.com/AreteDriver/animus/workflows/Security/badge.svg)
 [![PyPI - convergentAI](https://img.shields.io/pypi/v/convergentAI?label=convergentAI&color=blue)](https://pypi.org/project/convergentAI/)
 ![License](https://img.shields.io/github/license/AreteDriver/animus)
 
-**Personal AI exocortex with production-grade multi-agent orchestration.**
+Animus is a framework for sovereign personal AI — persistent, cryptographically owned, model-agnostic, loyal to one user. Not a chatbot. A different kind of cognitive relationship: context that accumulates across sessions, devices, and years, aligned to you rather than a platform's incentives.
 
-Four independently installable packages: a personal AI interface, a workflow orchestration engine, a decentralized agent coordination protocol, and a system bootstrap daemon. 9,600+ tests. v2.0.0.
+**[Read the whitepaper](docs/whitepaper.pdf)** | **[Architecture deep dive](docs/ARCHITECTURE.md)** | **[Roadmap](docs/ROADMAP.md)**
+
+---
+
+## The Architecture
+
+Three-layer stack. Each layer solves exactly one problem and is independently useful.
+
+```
+┌─────────────────────────────────────────┐
+│           INTERFACE LAYER               │
+│   Desktop · Mobile · Wearable · API     │
+├─────────────────────────────────────────┤
+│           COGNITIVE LAYER               │
+│   Reasoning · Forge · Quorum            │
+├─────────────────────────────────────────┤
+│           MEMORY LAYER                  │
+│   Episodic · Semantic · Procedural      │
+├─────────────────────────────────────────┤
+│           CORE LAYER                    │
+│   Identity · Security · Ethics          │
+└─────────────────────────────────────────┘
+```
+
+---
+
+## Subsystems
+
+### Forge — Multi-Agent Orchestration
+
+Production orchestration engine. Declarative YAML workflows, 10 agent archetypes, per-agent token budgets, quality gates, SQLite checkpoint/resume, streaming execution logs, MCP tool execution, and consensus voting. Built on lean manufacturing principles from the Toyota Production System. Proven in production via the Gorgon Media Engine (480 videos/month, 8 languages, zero human bottleneck).
+
+[`packages/forge/`](packages/forge/) | `import animus_forge`
+
+### Quorum — Agent Coordination Protocol
+
+Decentralized coordination using stigmergy. Agents read a shared intent graph and self-adjust to be compatible with high-stability commitments — no inter-agent messaging, no supervisor bottleneck. Includes triumvirate voting, flocking behaviors, and phi-weighted stability scoring. Optional Rust PyO3 backend for performance.
+
+[`packages/quorum/`](packages/quorum/) | `import convergent` | [PyPI: convergentAI](https://pypi.org/project/convergentAI/)
+
+### Core — Personal Exocortex
+
+User-facing layer. Persistent memory (episodic, semantic, procedural via ChromaDB), identity system, 40+ CLI commands, integrations (Google Calendar, Todoist, filesystem, webhooks), and a cognitive layer supporting Anthropic, OpenAI, and Ollama with native tool use.
+
+[`packages/core/`](packages/core/) | `import animus`
+
+### Bootstrap — System Daemon
+
+Install daemon, setup wizard, and ops dashboard for deploying Animus on new machines. One-command install, Rich-based onboarding wizard, FastAPI+HTMX dashboard at localhost:7700, systemd/launchd service management.
+
+[`packages/bootstrap/`](packages/bootstrap/) | `import animus_bootstrap`
+
+---
+
+## Core Principles
+
+- **Persistence** — context accumulates across sessions, devices, and years
+- **Sovereignty** — cryptographic ownership, local-first by default
+- **Loyalty** — aligned to you, not a platform's incentives
+- **Portability** — moves with you across all devices
+- **Model independence** — swap models without losing memory or context
 
 ---
 
@@ -25,41 +87,6 @@ To run the Forge test suite (must run from its package directory):
 ```bash
 cd packages/forge && pytest tests/ -q  # 6,700+ tests
 ```
-
----
-
-## What This Does
-
-Animus breaks complex tasks into multi-agent workflows with built-in cost controls, quality gates, and checkpoint/resume. Agents coordinate through a shared intent graph instead of expensive supervisor patterns — O(n) reads instead of O(n^2) messages.
-
----
-
-## Architecture
-
-```
-┌──────────────────────────────────────────┐
-│              ANIMUS CORE                  │
-│  Identity · Memory · Learning · CLI       │
-│  import animus          1,736 tests  95%  │
-├──────────────────────────────────────────┤
-│              ANIMUS FORGE                 │
-│  Workflows · Budgets · Quality Gates      │
-│  import animus_forge    6,731 tests  85%  │
-├──────────────────────────────────────────┤
-│              ANIMUS QUORUM                │
-│  Intent Graph · Consensus · Stigmergy     │
-│  import convergent        906 tests  97%  │
-└──────────────────────────────────────────┘
-         + Bootstrap (daemon, wizard, dashboard)
-```
-
-**Core** — User-facing exocortex. Persistent memory (episodic, semantic, procedural via ChromaDB), identity system, 40+ CLI commands, integrations (Google Calendar, Todoist, filesystem, webhooks), and a cognitive layer supporting Anthropic, OpenAI, and Ollama with native tool use.
-
-**Forge** — Headless orchestration engine. Declarative YAML workflows, 10 agent archetypes, per-agent token budgets, quality gates, SQLite checkpoint/resume, FastAPI backend, streaming execution logs, MCP tool execution, eval framework, and consensus voting. Deployed as a systemd service.
-
-**Quorum** — Decentralized coordination protocol. Agents read a shared intent graph and self-adjust to be compatible with high-stability commitments — no inter-agent messaging, no supervisor bottleneck. Includes triumvirate voting, stigmergy, flocking behaviors, and phi-weighted stability scoring. Optional Rust PyO3 backend for performance. [Published on PyPI as `convergentAI`](https://pypi.org/project/convergentAI/).
-
-**Bootstrap** — Install daemon, setup wizard, and ops dashboard for deploying Animus on new machines.
 
 ---
 
@@ -132,24 +159,37 @@ animus/
 ├── packages/
 │   ├── core/                    # import animus
 │   │   ├── animus/              # Identity, memory, cognitive, CLI, integrations
-│   │   ├── configs/             # YAML configs
-│   │   └── tests/               # 1,736 tests
+│   │   └── tests/               # 1,736 tests, 95% coverage
 │   ├── forge/                   # import animus_forge
 │   │   ├── src/animus_forge/    # Executor, agents, API, CLI, TUI, dashboard
-│   │   ├── migrations/          # 14 SQL migrations
+│   │   ├── migrations/          # 16 SQL migrations
 │   │   ├── workflows/           # YAML workflow definitions
-│   │   ├── skills/              # Agent skill definitions
-│   │   └── tests/               # 6,731 tests
+│   │   └── tests/               # 6,731 tests, 85% coverage
 │   ├── quorum/                  # import convergent (PyPI: convergentAI)
 │   │   ├── python/convergent/   # Intent graph, voting, stigmergy, bridge
 │   │   ├── src/                 # Rust PyO3 (optional performance layer)
-│   │   └── tests/               # 906 tests
+│   │   └── tests/               # 906 tests, 97% coverage
 │   └── bootstrap/               # import animus_bootstrap
 │       ├── src/animus_bootstrap/ # Daemon, wizard, dashboard
-│       └── tests/               # 287 tests
-├── docs/whitepapers/            # Architecture whitepapers
+│       └── tests/               # 1,115 tests, 94% coverage
+├── docs/                        # Architecture, roadmap, whitepapers
 └── .github/workflows/           # CI: lint, test (per-package), security, CodeQL
 ```
+
+---
+
+## Status
+
+Active development. Architecture complete. Implementation in progress.
+
+| Component | Version | Tests | Coverage | Stage |
+|-----------|---------|------:|:--------:|-------|
+| Core | 2.0.0 | 1,736 | 95% | Active — CLI, memory, integrations |
+| Forge | 2.0.0 | 6,731 | 85% | Production deployed (systemd service) |
+| Quorum | 1.1.0 | 906 | 97% | [Live on PyPI](https://pypi.org/project/convergentAI/) |
+| Bootstrap | 0.5.0 | 1,115 | 94% | Active — daemon + wizard + dashboard |
+
+**Total: 10,488 tests across 4 packages.**
 
 ---
 
@@ -167,37 +207,12 @@ animus/
 
 ---
 
-## Tech Stack
+## Documentation
 
-| Component | Technology |
-|-----------|-----------|
-| Language | Python 3.10+ (Core), Python 3.12+ (Forge), Rust (Quorum optional) |
-| State | SQLite WAL (checkpoints, budgets, migrations), ChromaDB (semantic memory) |
-| Workflows | Declarative YAML |
-| LLM | Claude API, OpenAI, Ollama (native tool use per provider) |
-| API | FastAPI (Forge backend, deployed as systemd service) |
-| Coordination | PyPI: [convergentAI](https://pypi.org/project/convergentAI/) |
-
----
-
-## Status
-
-| Package | Version | Tests | Coverage | Stage |
-|---------|---------|------:|:--------:|-------|
-| Core | 2.0.0 | 1,736 | 95% | Active — CLI, memory, integrations |
-| Forge | 2.0.0 | 6,731 | 85% | Active — deployed as systemd service |
-| Quorum | 1.1.0 | 906 | 97% | Active — [live on PyPI](https://pypi.org/project/convergentAI/) |
-| Bootstrap | 0.1.0 | 287 | 93% | Active — daemon + wizard |
-
-**Total: 9,660+ tests across 4 packages.**
-
----
-
-## Background
-
-This project grew out of 17+ years of enterprise operations experience, including applying Toyota Production System principles to AI workflow systematization. The orchestration layer (Forge) treats multi-agent execution the way a lean manufacturing line treats production — visible budgets, quality gates at every stage, and waste elimination through checkpoint/resume.
-
-The coordination layer (Quorum) draws from biological systems research. Traditional multi-agent coordination uses either sequential execution (safe but slow) or supervisor patterns (flexible but expensive). Quorum introduces a third option: stigmergic coordination, where agents self-organize through shared environmental state rather than direct communication.
+- [Architecture](docs/ARCHITECTURE.md)
+- [Whitepaper (PDF)](docs/whitepaper.pdf)
+- [Roadmap](docs/ROADMAP.md)
+- [Whitepapers (Markdown)](docs/whitepapers/)
 
 ---
 
