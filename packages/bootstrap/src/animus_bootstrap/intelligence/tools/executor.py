@@ -211,7 +211,7 @@ class ToolExecutor:
         if self._history_store is not None:
             try:
                 self._history_store.save(result)
-            except Exception:
+            except (OSError, RuntimeError, ValueError):
                 logger.exception("Failed to persist tool history for '%s'", name)
         return result
 

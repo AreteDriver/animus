@@ -32,7 +32,7 @@ async def _send_message(channel: str, text: str) -> str:
             await _router.broadcast(text, [channel])
             logger.info("Sent message to channel '%s' via router", channel)
             return f"Message sent to channel '{channel}': {text[:100]}"
-        except Exception as exc:
+        except (OSError, ConnectionError, RuntimeError) as exc:
             logger.warning("Router broadcast failed, using fallback: %s", exc)
 
     _sent_messages.append({"channel": channel, "text": text})

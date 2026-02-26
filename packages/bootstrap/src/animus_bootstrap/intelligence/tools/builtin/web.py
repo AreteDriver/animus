@@ -36,7 +36,7 @@ async def _web_search(query: str) -> str:
             if body:
                 lines.append(f"  {body[:200]}")
         return "\n".join(lines)
-    except Exception as exc:
+    except (ConnectionError, TimeoutError, ValueError, RuntimeError) as exc:
         logger.warning("web_search failed: %s", exc)
         return f"Search failed: {exc}"
 

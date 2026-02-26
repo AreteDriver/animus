@@ -119,7 +119,7 @@ class ChromaDBMemoryBackend:
                 try:
                     c.delete(ids=[memory_id])
                     return True
-                except Exception:
+                except (ValueError, RuntimeError):
                     return False
 
             if await asyncio.to_thread(_delete):

@@ -126,7 +126,7 @@ async def _propose_improvement(area: str, description: str) -> str:
                 max_tokens=1024,
             )
             proposal["analysis"] = response
-        except Exception as exc:
+        except (ConnectionError, TimeoutError, RuntimeError, ValueError) as exc:
             proposal["analysis"] = f"Cognitive analysis failed: {exc}"
             logger.warning("Self-improvement analysis failed: %s", exc)
     else:

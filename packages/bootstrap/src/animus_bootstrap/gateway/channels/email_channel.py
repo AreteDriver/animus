@@ -205,8 +205,8 @@ class EmailAdapter:
                 messages.append(gw_msg)
 
             conn.logout()
-        except Exception:
-            logger.exception("Failed to fetch IMAP messages")
+        except (OSError, ConnectionError, ValueError) as exc:
+            logger.warning("Failed to fetch IMAP messages: %s", exc)
 
         return messages
 
