@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import signal
 import threading
 import time
@@ -241,13 +242,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AI Workflow Orchestrator", version="0.1.0", lifespan=lifespan)
 
-# CORS middleware for frontend development
+# CORS middleware — configurable via CORS_ORIGINS env var (comma-separated)
+_default_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+_cors_origins = (
+    os.environ.get("CORS_ORIGINS", "").split(",")
+    if os.environ.get("CORS_ORIGINS")
+    else _default_origins
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[o.strip() for o in _cors_origins if o.strip()],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 

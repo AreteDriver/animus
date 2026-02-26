@@ -1,6 +1,6 @@
 """Convergent — Multi-agent coherence and coordination for AI systems."""
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 from convergent.async_backend import AsyncBackendWrapper, AsyncGraphBackend
 from convergent.benchmark import (

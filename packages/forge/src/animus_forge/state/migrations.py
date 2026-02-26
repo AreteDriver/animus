@@ -58,13 +58,15 @@ def _get_applied_migrations(backend: DatabaseBackend) -> set[str]:
             if not result or not result.get("exists", False):
                 return set()
         except Exception:
+            logger.debug("Could not check schema_migrations table existence")
             return set()
 
     try:
         rows = backend.fetchall("SELECT version FROM schema_migrations")
         return {row["version"] for row in rows}
     except Exception:
-        # Table doesn't exist yet (SQLite)
+        # Table doesn't exist yet — expected on first run
+        logger.debug("schema_migrations table not found, assuming fresh database")
         return set()
 
 
