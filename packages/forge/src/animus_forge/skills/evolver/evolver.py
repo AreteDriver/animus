@@ -149,7 +149,7 @@ class SkillEvolver:
                     "modifications": change.modifications,
                 },
             )
-            status = self._approval_gate.wait_for_approval(request)
+            status = request.status
             if status.value != "approved":
                 logger.info("Change to %s not approved: %s", change.skill_name, status)
                 return False

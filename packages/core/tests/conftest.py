@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-# Exclude benchmark tests from normal collection (requires pytest-benchmark).
-# Benchmark CI job runs them explicitly via: pytest tests/test_benchmarks.py --benchmark-only
-collect_ignore = ["test_benchmarks.py"]
-
 from pathlib import Path
 
 import pytest
 
 from animus.cognitive import CognitiveLayer, ModelConfig
+
+# Exclude benchmark tests from normal collection (requires pytest-benchmark).
+# Benchmark CI job runs them explicitly via: pytest tests/test_benchmarks.py --benchmark-only
+collect_ignore = ["test_benchmarks.py"]
 
 
 @pytest.fixture

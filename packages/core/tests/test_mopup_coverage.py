@@ -118,7 +118,9 @@ class TestAnthropicModel:
         model = AnthropicModel(config)
 
         mock_anthropic = MagicMock()
-        mock_anthropic.Anthropic.return_value.messages.create.side_effect = RuntimeError("auth failed")
+        mock_anthropic.Anthropic.return_value.messages.create.side_effect = RuntimeError(
+            "auth failed"
+        )
         with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
             result = model.generate("test")
         assert "Error" in result
