@@ -910,7 +910,7 @@ class TestServeFunction:
             serve()
             mock_run.assert_called_once_with(
                 "animus_bootstrap.dashboard.app:app",
-                host="0.0.0.0",
+                host="127.0.0.1",
                 port=8080,
                 reload=False,
             )
