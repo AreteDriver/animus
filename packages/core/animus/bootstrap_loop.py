@@ -213,6 +213,8 @@ def run_consensus(
             agent_a_confidence,
             agent_b_vote,
             agent_b_confidence,
+            reasoning_a=agent_a_reasoning,
+            reasoning_b=agent_b_reasoning,
         )
 
 
@@ -221,6 +223,8 @@ def _local_consensus_fallback(
     confidence_a: float,
     vote_b: str,
     confidence_b: float,
+    reasoning_a: str = "",
+    reasoning_b: str = "",
 ) -> ConsensusResult:
     """Fallback consensus when Quorum isn't available.
 
@@ -239,11 +243,16 @@ def _local_consensus_fallback(
     else:
         reject_weight += confidence_b * 0.5
 
+    reasoning = [
+        reasoning_a or "Agent A analysis (local fallback).",
+        reasoning_b or "Agent B review (local fallback).",
+    ]
+
     return ConsensusResult(
         approved=approve_weight > reject_weight,
         approve_weight=approve_weight,
         reject_weight=reject_weight,
-        reasoning=["Local fallback consensus (Quorum not available)"],
+        reasoning=reasoning,
     )
 
 

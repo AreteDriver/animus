@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from animus_forge.tools.models import EditProposal, ProposalStatus
+from animus_forge.tools.models import ProposalStatus
 from animus_forge.tools.proposals import ProposalManager, log_file_access
 
 
