@@ -25,6 +25,7 @@ Usage::
 
 from __future__ import annotations
 
+import collections
 import logging
 from dataclasses import dataclass
 
@@ -200,13 +201,15 @@ def topological_order(resolver: IntentResolver) -> list[str]:
     for src, dsts in graph._adjacency.items():
         for dst in dsts:
             reverse_adj[dst].add(src)
+            # in_degree tracks the reversed graph: out-degree of original
+            # = in-degree of reversed, which is what Kahn's needs here.
             in_degree[src] = in_degree.get(src, 0) + 1
 
-    queue = sorted([n for n, d in in_degree.items() if d == 0])
+    queue = collections.deque(sorted(n for n, d in in_degree.items() if d == 0))
     order: list[str] = []
 
     while queue:
-        node = queue.pop(0)
+        node = queue.popleft()
         order.append(node)
         for dependent in sorted(reverse_adj[node]):
             in_degree[dependent] -= 1

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import shlex
 
 from animus_bootstrap.intelligence.tools.executor import ToolDefinition
 
@@ -13,10 +14,11 @@ _DEFAULT_TIMEOUT = 30.0
 
 
 async def _shell_exec(command: str, timeout: float = _DEFAULT_TIMEOUT) -> str:
-    """Execute a shell command and return stdout + stderr."""
+    """Execute a command and return stdout + stderr."""
     try:
-        proc = await asyncio.create_subprocess_shell(
-            command,
+        args = shlex.split(command)
+        proc = await asyncio.create_subprocess_exec(
+            *args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

@@ -401,7 +401,12 @@ class SwarmEngine:
         state.revision_counts[gate_key] = count
 
         # Find the stage containing the revise target
-        target_stage_idx = next(s.index for s in stages if req.target in s.agent_names)
+        target_stage_idx = next(
+            (s.index for s in stages if req.target in s.agent_names),
+            None,
+        )
+        if target_stage_idx is None:
+            raise GateFailedError(f"Revision target agent {req.target!r} not found in any stage")
 
         # Clear results for agents in target stage and later stages
         agents_to_clear = set()

@@ -9,6 +9,7 @@ import fnmatch
 import glob as glob_module
 import json
 import re
+import shlex
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -410,8 +411,8 @@ def _tool_run_command(params: dict) -> ToolResult:
             timeout = min(timeout, _security_config.command_timeout_seconds)
 
         result = subprocess.run(
-            command,
-            shell=True,
+            shlex.split(command),
+            shell=False,
             capture_output=True,
             text=True,
             timeout=timeout,

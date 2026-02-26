@@ -303,7 +303,12 @@ class ForgeEngine:
         state.revision_counts[gate_key] = count
 
         # Find target index
-        target_idx = next(i for i, a in enumerate(config.agents) if a.name == req.target)
+        target_idx = next(
+            (i for i, a in enumerate(config.agents) if a.name == req.target),
+            None,
+        )
+        if target_idx is None:
+            raise GateFailedError(f"Revision target agent {req.target!r} not found in workflow")
 
         # Clear downstream results (keep only agents before target)
         keep_agents = {config.agents[j].name for j in range(target_idx)}
