@@ -4,10 +4,22 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from animus_bootstrap.config import ConfigManager
 from animus_bootstrap.config.schema import AnimusConfig
+
+if TYPE_CHECKING:
+    from animus_bootstrap.gateway.session import SessionManager
+    from animus_bootstrap.identity import IdentityFileManager
+    from animus_bootstrap.intelligence.feedback import FeedbackStore
+    from animus_bootstrap.intelligence.memory import MemoryManager
+    from animus_bootstrap.intelligence.proactive.engine import ProactiveEngine
+    from animus_bootstrap.intelligence.router import IntelligentRouter
+    from animus_bootstrap.intelligence.tools.executor import ToolExecutor
+    from animus_bootstrap.intelligence.tools.mcp_bridge import MCPBridge
+    from animus_bootstrap.personas.context import ContextAdapter
+    from animus_bootstrap.personas.engine import PersonaEngine
 
 logger = logging.getLogger(__name__)
 
@@ -24,18 +36,18 @@ class AnimusRuntime:
         self._started = False
 
         # Component references (populated by start())
-        self.identity_manager: Any = None
-        self.feedback_store: Any = None
-        self.session_manager: Any = None
-        self.memory_manager: Any = None
-        self.tool_executor: Any = None
-        self.proactive_engine: Any = None
+        self.identity_manager: IdentityFileManager | None = None
+        self.feedback_store: FeedbackStore | None = None
+        self.session_manager: SessionManager | None = None
+        self.memory_manager: MemoryManager | None = None
+        self.tool_executor: ToolExecutor | None = None
+        self.proactive_engine: ProactiveEngine | None = None
         self.automation_engine: Any = None
-        self.router: Any = None
+        self.router: IntelligentRouter | None = None
         self.cognitive_backend: Any = None
-        self.persona_engine: Any = None
-        self.context_adapter: Any = None
-        self._mcp_bridge: Any = None
+        self.persona_engine: PersonaEngine | None = None
+        self.context_adapter: ContextAdapter | None = None
+        self._mcp_bridge: MCPBridge | None = None
 
     @property
     def config(self) -> AnimusConfig:

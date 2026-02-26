@@ -256,14 +256,21 @@ class AnthropicModel(ModelInterface):
 
     def __init__(self, config: ModelConfig):
         self.config = config
+        self._client: Any = None
         logger.debug(f"AnthropicModel initialized with {config.model_name}")
+
+    def _get_client(self) -> Any:
+        """Return a cached Anthropic client instance."""
+        if self._client is None:
+            import anthropic
+
+            self._client = anthropic.Anthropic(api_key=self.config.api_key)
+        return self._client
 
     def generate(self, prompt: str, system: str | None = None) -> str:
         """Generate using Claude."""
         try:
-            import anthropic
-
-            client = anthropic.Anthropic(api_key=self.config.api_key)
+            client = self._get_client()
 
             logger.debug(
                 f"Anthropic request: model={self.config.model_name}, prompt_len={len(prompt)}"
@@ -307,9 +314,7 @@ class AnthropicModel(ModelInterface):
             Raw ``anthropic.types.Message`` object.
         """
         try:
-            import anthropic
-
-            client = anthropic.Anthropic(api_key=self.config.api_key)
+            client = self._get_client()
 
             kwargs: dict[str, Any] = {
                 "model": self.config.model_name,

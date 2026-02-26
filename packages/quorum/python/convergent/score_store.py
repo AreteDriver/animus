@@ -13,6 +13,10 @@ from __future__ import annotations
 import logging
 import sqlite3
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from convergent.protocol import Decision
 
 logger = logging.getLogger(__name__)
 
@@ -182,10 +186,9 @@ class ScoreStore:
 
     # --- Decision History ---
 
-    def record_decision(self, decision: object) -> None:
+    def record_decision(self, decision: Decision) -> None:
         """Persist a Decision and its votes.
 
-        Accepts a ``Decision`` dataclass from ``convergent.protocol``.
         Stores the full decision as JSON plus individual vote records.
 
         Args:
@@ -197,22 +200,22 @@ class ScoreStore:
             "(request_id, task_id, question, outcome, decided_at, decision_json) "
             "VALUES (?, ?, ?, ?, ?, ?)",
             (
-                decision.request.request_id,  # type: ignore[attr-defined]
-                decision.request.task_id,  # type: ignore[attr-defined]
-                decision.request.question,  # type: ignore[attr-defined]
-                decision.outcome.value,  # type: ignore[attr-defined]
-                decision.decided_at,  # type: ignore[attr-defined]
-                decision.to_json(),  # type: ignore[attr-defined]
+                decision.request.request_id,
+                decision.request.task_id,
+                decision.request.question,
+                decision.outcome.value,
+                decision.decided_at,
+                decision.to_json(),
             ),
         )
-        for vote in decision.votes:  # type: ignore[attr-defined]
+        for vote in decision.votes:
             self._conn.execute(
                 "INSERT INTO vote_records "
                 "(request_id, agent_id, choice, confidence, "
                 "weighted_score, reasoning, voted_at) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
-                    decision.request.request_id,  # type: ignore[attr-defined]
+                    decision.request.request_id,
                     vote.agent.agent_id,
                     vote.choice.value,
                     vote.confidence,
