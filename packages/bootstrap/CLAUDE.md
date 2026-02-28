@@ -10,7 +10,7 @@ Animus Bootstrap — install daemon, onboarding wizard, local dashboard, message
 - **Language**: Python
 - **Files**: 270 across 3 languages
 - **Lines**: ~37,000
-- **Tests**: 1565, 95% coverage (fail_under=95)
+- **Tests**: 1606, 96% coverage (fail_under=96)
 - **Tools**: 31 (8 built-in + 4 identity + MCP bridge)
 - **Dashboard Pages**: 15+ (HTMX, localhost:7700)
 

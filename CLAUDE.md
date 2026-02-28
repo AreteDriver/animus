@@ -33,7 +33,7 @@ animus/
 │   │   └── pyproject.toml
 │   └── bootstrap/               # Animus Bootstrap — install daemon, wizard, dashboard + gateway + intelligence
 │       ├── src/animus_bootstrap/ # Python package: import animus_bootstrap
-│       ├── tests/               # 1565 tests, 95% coverage
+│       ├── tests/               # 1606 tests, 96% coverage
 │       └── pyproject.toml
 ├── docs/
 │   └── whitepapers/             # Architecture whitepapers (all 3 layers)
