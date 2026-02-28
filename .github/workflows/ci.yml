@@ -194,6 +194,9 @@ jobs:
           pip install -e "packages/forge/[dev]"
           pip install -e "packages/core/[dev,api]"
 
+      - name: Create benchmarks output directory
+        run: mkdir -p .benchmarks
+
       - name: Run Core benchmarks
         run: >
           pytest packages/core/tests/test_benchmarks.py
