@@ -64,7 +64,7 @@ class TelegramAdapter:
         try:
             await self._app.updater.start_polling()  # type: ignore[union-attr]
         except asyncio.CancelledError:
-            pass
+            logger.debug("Telegram polling cancelled")
 
     async def _handle_update(self, update: Update, _context: Any) -> None:  # type: ignore[name-defined]
         """Convert a Telegram Update into a GatewayMessage and dispatch."""
@@ -97,7 +97,7 @@ class TelegramAdapter:
             try:
                 await self._poll_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Telegram poll task cancelled")
 
         if self._app:
             try:

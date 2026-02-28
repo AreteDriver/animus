@@ -58,7 +58,7 @@ class SignalAdapter:
             try:
                 await self._receive_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Signal receive task cancelled")
         self.is_connected = False
         logger.info("Signal adapter disconnected")
 

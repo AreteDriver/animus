@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+import animus_forge.workflow.executor_clients as _mod
 from animus_forge.workflow.executor_clients import (
     _get_claude_client,
     _get_openai_client,
@@ -41,15 +42,11 @@ class TestClientFactories:
 
     def setup_method(self):
         # Reset global state
-        import animus_forge.workflow.executor_clients as mod
-
-        mod._claude_client = None
-        mod._openai_client = None
+        _mod._claude_client = None
+        _mod._openai_client = None
 
     def test_get_claude_client_import_error(self):
-        import animus_forge.workflow.executor_clients as mod
-
-        mod._claude_client = None
+        _mod._claude_client = None
         with patch.dict(
             "sys.modules",
             {"animus_forge.api_clients.claude_code_client": None},
@@ -62,9 +59,7 @@ class TestClientFactories:
             assert result2 is None
 
     def test_get_openai_client_import_error(self):
-        import animus_forge.workflow.executor_clients as mod
-
-        mod._openai_client = None
+        _mod._openai_client = None
         with patch.dict(
             "sys.modules",
             {"animus_forge.api_clients.openai_client": None},
@@ -75,9 +70,7 @@ class TestClientFactories:
             assert result2 is None
 
     def test_get_claude_client_success(self):
-        import animus_forge.workflow.executor_clients as mod
-
-        mod._claude_client = None
+        _mod._claude_client = None
         result = _get_claude_client()
         # In Forge venv, ClaudeCodeClient is available
         assert result is not None
@@ -85,9 +78,7 @@ class TestClientFactories:
         assert _get_claude_client() is result
 
     def test_get_openai_client_success(self):
-        import animus_forge.workflow.executor_clients as mod
-
-        mod._openai_client = None
+        _mod._openai_client = None
         result = _get_openai_client()
         assert result is not None
         assert _get_openai_client() is result

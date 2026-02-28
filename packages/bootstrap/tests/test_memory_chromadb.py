@@ -42,14 +42,11 @@ class TestChromaDBBackendInit:
         with patch.dict("sys.modules", {"chromadb": mock_chromadb}):
             # Temporarily enable
             import animus_bootstrap.intelligence.memory_backends.chromadb_backend as mod
-            from animus_bootstrap.intelligence.memory_backends.chromadb_backend import (
-                ChromaDBMemoryBackend,
-            )
 
             original = mod.HAS_CHROMADB
             mod.HAS_CHROMADB = True
             try:
-                backend = ChromaDBMemoryBackend()
+                backend = mod.ChromaDBMemoryBackend()
                 assert backend._collections is not None
             finally:
                 mod.HAS_CHROMADB = original
@@ -83,14 +80,11 @@ class TestChromaDBBackendOperations:
 
         with patch.dict("sys.modules", {"chromadb": mock_chromadb}):
             import animus_bootstrap.intelligence.memory_backends.chromadb_backend as mod
-            from animus_bootstrap.intelligence.memory_backends.chromadb_backend import (
-                ChromaDBMemoryBackend,
-            )
 
             original = mod.HAS_CHROMADB
             mod.HAS_CHROMADB = True
             try:
-                b = ChromaDBMemoryBackend()
+                b = mod.ChromaDBMemoryBackend()
                 b._mock_collections = collections
                 yield b
             finally:

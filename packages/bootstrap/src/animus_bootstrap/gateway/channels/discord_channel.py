@@ -105,7 +105,7 @@ class DiscordAdapter:
             try:
                 await self._run_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Discord run task cancelled")
 
         self.is_connected = False
         logger.info("Discord adapter disconnected")

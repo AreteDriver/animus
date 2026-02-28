@@ -291,12 +291,12 @@ class TestForgeStatus:
 
     @pytest.mark.asyncio()
     async def test_status_no_httpx(self) -> None:
+        import importlib
+        import sys
+
+        mod = sys.modules["animus_bootstrap.intelligence.tools.builtin.forge_ctl"]
         with patch.dict("sys.modules", {"httpx": None}):
-            # Need to reimport to trigger the ImportError
-            import importlib
-
-            import animus_bootstrap.intelligence.tools.builtin.forge_ctl as mod
-
+            # Need to reload to trigger the ImportError
             importlib.reload(mod)
             result = await mod._forge_status()
             assert "httpx not installed" in result

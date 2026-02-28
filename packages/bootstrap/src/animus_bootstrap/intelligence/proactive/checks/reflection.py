@@ -50,6 +50,9 @@ async def _run_reflection() -> str | None:
         logger.debug("Reflection skipped — no identity manager")
         return None
 
+    if _memory_manager is not None:
+        logger.debug("Reflection has memory manager available for context enrichment")
+
     # Gather feedback if available
     feedback_summary = ""
     if _feedback_store is not None:

@@ -9,10 +9,11 @@ import uuid
 logger = logging.getLogger(__name__)
 
 try:
-    import chromadb  # noqa: F401
+    import chromadb
 
     HAS_CHROMADB = True
 except ImportError:
+    chromadb = None  # type: ignore[assignment]
     HAS_CHROMADB = False
 
 
@@ -31,12 +32,10 @@ class ChromaDBMemoryBackend:
             msg = "chromadb not installed. pip install animus-bootstrap[chromadb]"
             raise RuntimeError(msg)
 
-        import chromadb as _chromadb
-
         if persist_directory:
-            self._client = _chromadb.PersistentClient(path=persist_directory)
+            self._client = chromadb.PersistentClient(path=persist_directory)  # type: ignore[union-attr]
         else:
-            self._client = _chromadb.Client()
+            self._client = chromadb.Client()  # type: ignore[union-attr]
 
         self._collections = {
             t: self._client.get_or_create_collection(name=f"{t}_memories") for t in self.VALID_TYPES

@@ -811,8 +811,6 @@ class TestGatewayTools:
         assert len(get_sent_messages()) == 1
 
     def test_clear_sent_messages(self) -> None:
-        import asyncio
-
         asyncio.get_event_loop().run_until_complete(_send_message("ch", "m"))
         clear_sent_messages()
         assert get_sent_messages() == []
@@ -885,8 +883,6 @@ class TestMemoryTools:
         assert "scheduled_for" in reminders[0]
 
     def test_clear_memory_stores(self) -> None:
-        import asyncio
-
         asyncio.get_event_loop().run_until_complete(_store_memory("x"))
         asyncio.get_event_loop().run_until_complete(_set_reminder("y", 5))
         clear_memory_stores()

@@ -91,7 +91,7 @@ class MatrixAdapter:
         try:
             await self._client.sync_forever(timeout=30000)
         except asyncio.CancelledError:
-            pass
+            logger.debug("Matrix sync cancelled")
         except Exception:
             logger.exception("Matrix sync error")
 
@@ -102,7 +102,7 @@ class MatrixAdapter:
             try:
                 await self._sync_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Matrix sync task cancelled")
 
         if self._client:
             try:

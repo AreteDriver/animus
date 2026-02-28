@@ -672,13 +672,15 @@ class TestAnimusBackend:
 
 class TestExports:
     def test_intelligence_init_exports(self) -> None:
-        import animus_bootstrap.intelligence as intel
+        import sys
 
+        intel = sys.modules["animus_bootstrap.intelligence"]
         assert hasattr(intel, "MemoryContext")
         assert hasattr(intel, "MemoryManager")
 
     def test_backends_init_exports(self) -> None:
-        import animus_bootstrap.intelligence.memory_backends as backends
+        import sys
 
+        backends = sys.modules["animus_bootstrap.intelligence.memory_backends"]
         assert hasattr(backends, "MemoryBackend")
         assert hasattr(backends, "SQLiteMemoryBackend")

@@ -86,7 +86,7 @@ class EmailAdapter:
             try:
                 await self._poll_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Email poll task cancelled")
         self.is_connected = False
         logger.info("Email adapter disconnected")
 

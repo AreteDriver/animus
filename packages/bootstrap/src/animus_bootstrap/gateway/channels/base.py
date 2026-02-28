@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
-if TYPE_CHECKING:
-    from animus_bootstrap.gateway.models import ChannelHealth, GatewayMessage, GatewayResponse
+from animus_bootstrap.gateway.models import ChannelHealth, GatewayMessage, GatewayResponse
 
 MessageCallback = Callable[["GatewayMessage"], Awaitable[None]]
 

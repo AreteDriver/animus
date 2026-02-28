@@ -194,7 +194,7 @@ class ProactiveEngine:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Proactive engine scheduler task cancelled")
             self._task = None
         logger.info("Proactive engine stopped")
 
