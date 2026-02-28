@@ -74,8 +74,8 @@ async def approve_proposal(proposal_id: int, request: Request) -> HTMLResponse:
         from datetime import UTC, datetime
 
         store.update_status(proposal_id, "approved", datetime.now(UTC).isoformat())
-    except (ValueError, PermissionError) as exc:
-        return HTMLResponse(f'<p class="text-animus-red text-sm">{exc}</p>')
+    except (ValueError, PermissionError):
+        return HTMLResponse('<p class="text-animus-red text-sm">Failed to apply proposal.</p>')
 
     return HTMLResponse(
         f'<div class="bg-animus-green/10 border border-animus-green rounded p-3 text-sm">'

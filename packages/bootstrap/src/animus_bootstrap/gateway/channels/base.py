@@ -25,11 +25,9 @@ class ChannelAdapter(Protocol):
 
     async def connect(self) -> None:
         """Establish the channel connection."""
-        ...
 
     async def disconnect(self) -> None:
         """Tear down the channel connection and clean up resources."""
-        ...
 
     async def send_message(self, response: GatewayResponse) -> str:
         """Send a response message through the channel.
@@ -37,12 +35,9 @@ class ChannelAdapter(Protocol):
         Returns:
             A platform-specific message ID for tracking.
         """
-        ...
 
     async def on_message(self, callback: MessageCallback) -> None:
         """Register a callback to be invoked when an inbound message arrives."""
-        ...
 
     async def health_check(self) -> ChannelHealth:
         """Return the current health status of this channel."""
-        ...

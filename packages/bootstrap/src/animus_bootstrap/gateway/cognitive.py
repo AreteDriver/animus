@@ -20,7 +20,8 @@ class CognitiveBackend(Protocol):
         messages: list[dict],
         system_prompt: str | None = None,
         max_tokens: int = 4096,
-    ) -> str: ...
+    ) -> str:
+        """Generate a text response from messages."""
 
     async def generate_structured(
         self,
@@ -28,7 +29,8 @@ class CognitiveBackend(Protocol):
         system_prompt: str | None = None,
         max_tokens: int = 4096,
         tools: list[dict] | None = None,
-    ) -> CognitiveResponse: ...
+    ) -> CognitiveResponse:
+        """Generate a structured response with optional tool calls."""
 
 
 class AnthropicBackend:

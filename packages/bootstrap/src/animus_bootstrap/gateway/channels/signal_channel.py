@@ -49,7 +49,7 @@ class SignalAdapter:
         self.is_connected = True
         loop = asyncio.get_running_loop()
         self._receive_task = loop.create_task(self._receive_loop())
-        logger.info("Signal adapter connected for %s", self._phone)
+        logger.info("Signal adapter connected")
 
     async def disconnect(self) -> None:
         """Cancel the background receive loop."""

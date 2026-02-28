@@ -6,7 +6,7 @@ import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,7 @@ class IdentityFileManager:
         self._jinja = Environment(
             loader=FileSystemLoader(str(_TEMPLATES_DIR)),
             keep_trailing_newline=True,
+            autoescape=select_autoescape(),
         )
 
     @property

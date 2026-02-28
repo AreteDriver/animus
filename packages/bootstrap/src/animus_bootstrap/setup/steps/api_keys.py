@@ -110,7 +110,7 @@ def _configure_ollama(console: Console) -> dict[str, object]:
                 data = resp.json()
                 models = [m["name"] for m in data.get("models", [])]
         except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPError):
-            pass
+            available = False
 
     if not available:
         console.print("  [yellow]Ollama not detected[/yellow] at localhost:11434")

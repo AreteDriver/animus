@@ -88,7 +88,7 @@ async def toggle_channel(channel_name: str) -> RedirectResponse:
     for ch in channels:
         if ch["name"] == channel_name:
             ch["enabled"] = not ch["enabled"]
-            logger.info("Channel %s toggled to %s", channel_name, ch["enabled"])
+            logger.info("Channel %s toggled to %s", ch["name"], ch["enabled"])
             break
 
     return RedirectResponse(url="/channels", status_code=303)

@@ -60,7 +60,7 @@ class WhatsAppAdapter:
             raise ConnectionError(f"WhatsApp API returned {resp.status_code}: {resp.text}")
 
         self.is_connected = True
-        logger.info("WhatsApp adapter connected for phone_id %s", self._phone_id)
+        logger.info("WhatsApp adapter connected")
 
     async def disconnect(self) -> None:
         """Close the HTTP client."""

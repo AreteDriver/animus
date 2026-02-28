@@ -8,7 +8,7 @@ from animus_bootstrap.intelligence.proactive.engine import ProactiveCheck
 
 logger = logging.getLogger(__name__)
 
-# Module-level references, wired at runtime
+# Module-level references, wired at runtime via set_reflection_deps()
 _identity_manager = None
 _feedback_store = None
 _memory_manager = None

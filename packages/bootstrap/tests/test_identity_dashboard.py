@@ -94,7 +94,7 @@ class TestIdentityEdit:
     def test_edit_unknown_file(self, client):
         resp = client.get("/identity/edit/BAD.md")
         assert resp.status_code == 200
-        assert "Unknown file" in resp.text
+        assert "Unknown identity file" in resp.text
 
 
 class TestIdentitySave:

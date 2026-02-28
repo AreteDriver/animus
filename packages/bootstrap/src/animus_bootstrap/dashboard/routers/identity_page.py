@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from html import escape as html_escape
+
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 
@@ -54,8 +56,9 @@ async def identity_edit_form(filename: str, request: Request) -> HTMLResponse:
     try:
         content = mgr.read(filename)
     except ValueError:
-        return HTMLResponse(f'<p class="text-animus-red text-sm">Unknown file: {filename}</p>')
+        return HTMLResponse('<p class="text-animus-red text-sm">Unknown identity file.</p>')
 
+    safe_fn = html_escape(filename)
     locked = filename in mgr.LOCKED_FILES
     ro = 'readonly class="opacity-60 cursor-not-allowed"' if locked else ""
     card_id = filename.replace(".", "-")
@@ -73,13 +76,14 @@ async def identity_edit_form(filename: str, request: Request) -> HTMLResponse:
     cancel_cls = (
         "bg-animus-border text-animus-text px-4 py-1 rounded text-xs hover:bg-animus-muted/20"
     )
+    safe_content = html_escape(content)
     return HTMLResponse(
-        f'<form hx-put="/identity/{filename}" '
+        f'<form hx-put="/identity/{safe_fn}" '
         f'hx-target="#card-{card_id}" hx-swap="innerHTML">'
         f'<textarea name="content" rows="12" class="{ta_cls}" '
-        f"{ro}>{content}</textarea>"
+        f"{ro}>{safe_content}</textarea>"
         f'<div class="flex gap-2 mt-2">{save_btn}'
-        f'<button type="button" hx-get="/identity/view/{filename}" '
+        f'<button type="button" hx-get="/identity/view/{safe_fn}" '
         f'hx-target="#card-{card_id}" hx-swap="innerHTML" '
         f'class="{cancel_cls}">Cancel</button></div></form>'
     )
@@ -100,8 +104,8 @@ async def identity_save(filename: str, request: Request, content: str = Form("")
             mgr.write_locked(filename, content)
         else:
             mgr.write(filename, content)
-    except (ValueError, PermissionError) as exc:
-        return HTMLResponse(f'<p class="text-animus-red text-sm">{exc}</p>')
+    except (ValueError, PermissionError):
+        return HTMLResponse('<p class="text-animus-red text-sm">Failed to save file.</p>')
 
     return _render_file_view(filename, content, locked)
 
@@ -118,7 +122,7 @@ async def identity_view(filename: str, request: Request) -> HTMLResponse:
     try:
         content = mgr.read(filename)
     except ValueError:
-        return HTMLResponse(f'<p class="text-animus-red text-sm">Unknown file: {filename}</p>')
+        return HTMLResponse('<p class="text-animus-red text-sm">Unknown identity file.</p>')
 
     locked = filename in mgr.LOCKED_FILES
     return _render_file_view(filename, content, locked)
@@ -126,19 +130,17 @@ async def identity_view(filename: str, request: Request) -> HTMLResponse:
 
 def _render_file_view(filename: str, content: str, locked: bool) -> HTMLResponse:
     """Render a file card's inner content with Edit button."""
+    safe_name = html_escape(filename)
     lock_icon = ' <span title="Immutable — human-edit only">&#128274;</span>' if locked else ""
     edit_btn = (
         ""
         if filename == "LEARNED.md"
-        else f'<button hx-get="/identity/edit/{filename}" '
+        else f'<button hx-get="/identity/edit/{safe_name}" '
         f'hx-target="#card-{filename.replace(".", "-")}" hx-swap="innerHTML" '
         f'class="text-xs text-animus-green hover:underline">Edit</button>'
     )
 
-    preview = (
-        content[:500].replace("<", "&lt;").replace(">", "&gt;") if content else "<em>Empty</em>"
-    )
-    safe_name = filename.replace("<", "&lt;").replace(">", "&gt;")
+    preview = html_escape(content[:500]) if content else "<em>Empty</em>"
 
     return HTMLResponse(f"""
     <div class="flex items-center justify-between mb-2">

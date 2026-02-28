@@ -20,6 +20,7 @@ async def forge_page(request: Request) -> object:
     forge_status = "unknown"
     forge_health: dict = {}
     forge_enabled = False
+    cfg = None
 
     runtime = _get_runtime(request)
     if runtime is not None:
@@ -30,7 +31,7 @@ async def forge_page(request: Request) -> object:
                 forge_enabled = getattr(forge_cfg, "enabled", False)
 
     # Probe Forge health if enabled
-    if forge_enabled:
+    if forge_enabled and cfg is not None:
         try:
             import httpx
 

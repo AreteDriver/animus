@@ -7,6 +7,7 @@ import json
 import logging
 import uuid
 from collections.abc import AsyncGenerator
+from html import escape as html_escape
 from typing import Any
 
 from fastapi import APIRouter, Form, Request
@@ -265,16 +266,19 @@ async def execute_tool(
     executor = runtime.tool_executor
     tool = executor.get_tool(tool_name)
     if tool is None:
-        return HTMLResponse(f'<p class="text-animus-red text-sm">Unknown tool: {tool_name}</p>')
+        return HTMLResponse(
+            f'<p class="text-animus-red text-sm">Unknown tool: {html_escape(tool_name)}</p>'
+        )
 
     result = await executor.execute(tool_name, arguments)
 
+    safe_name = html_escape(tool_name)
     color = "text-animus-green" if result.success else "text-animus-red"
-    output_escaped = result.output.replace("<", "&lt;").replace(">", "&gt;")[:1000]
+    output_escaped = html_escape(result.output[:1000])
     return HTMLResponse(
         f'<div class="bg-animus-surface border border-animus-border rounded p-4 mt-2">'
         f'<p class="{color} text-sm font-bold">'
-        f"{tool_name}: {'OK' if result.success else 'FAIL'} "
+        f"{safe_name}: {'OK' if result.success else 'FAIL'} "
         f"({result.duration_ms:.0f}ms)</p>"
         f'<pre class="text-animus-text text-xs mt-2 whitespace-pre-wrap">'
         f"{output_escaped}</pre></div>"
