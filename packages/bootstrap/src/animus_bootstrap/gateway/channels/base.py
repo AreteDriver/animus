@@ -7,6 +7,14 @@ from typing import Protocol, runtime_checkable
 
 from animus_bootstrap.gateway.models import ChannelHealth, GatewayMessage, GatewayResponse
 
+__all__ = [
+    "ChannelAdapter",
+    "ChannelHealth",
+    "GatewayMessage",
+    "GatewayResponse",
+    "MessageCallback",
+]
+
 MessageCallback = Callable[["GatewayMessage"], Awaitable[None]]
 
 

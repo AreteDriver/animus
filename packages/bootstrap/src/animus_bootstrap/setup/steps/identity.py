@@ -49,12 +49,13 @@ def _detect_timezone() -> str:
     Returns:
         Timezone name string (e.g. ``"EST"`` or ``"UTC+05:30"``).
     """
+    tz_name = "UTC"
     try:
         tz = datetime.datetime.now().astimezone().tzinfo
         if tz is not None:
-            tz_name = str(tz)
-            if tz_name:
-                return tz_name
+            name = str(tz)
+            if name:
+                tz_name = name
     except (ValueError, OSError):
         tz_name = "UTC"
     return tz_name

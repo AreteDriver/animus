@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import sys
 from unittest.mock import patch
 
-import animus_forge.workflow.executor_clients as _mod
 from animus_forge.workflow.executor_clients import (
     _get_claude_client,
     _get_openai_client,
@@ -12,6 +12,8 @@ from animus_forge.workflow.executor_clients import (
     get_circuit_breaker,
     reset_circuit_breakers,
 )
+
+_mod = sys.modules["animus_forge.workflow.executor_clients"]
 
 
 class TestCircuitBreakerConfig:

@@ -60,7 +60,7 @@ async def identity_edit_form(filename: str, request: Request) -> HTMLResponse:
     safe_fn = _esc(filename)
     locked = filename in mgr.LOCKED_FILES
     ro = 'readonly class="opacity-60 cursor-not-allowed"' if locked else ""
-    card_id = filename.replace(".", "-")
+    card_id = _esc(filename.replace(".", "-"))
     ta_cls = (
         "w-full bg-animus-bg border border-animus-border "
         "rounded p-3 text-sm text-animus-text font-mono resize-y"
@@ -135,7 +135,7 @@ def _render_file_view(filename: str, content: str, locked: bool) -> HTMLResponse
         ""
         if filename == "LEARNED.md"
         else f'<button hx-get="/identity/edit/{safe_name}" '
-        f'hx-target="#card-{filename.replace(".", "-")}" hx-swap="innerHTML" '
+        f'hx-target="#card-{_esc(filename.replace(".", "-"))}" hx-swap="innerHTML" '
         f'class="text-xs text-animus-green hover:underline">Edit</button>'
     )
 
