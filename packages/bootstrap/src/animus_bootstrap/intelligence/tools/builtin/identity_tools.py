@@ -6,6 +6,7 @@ import json
 import logging
 from datetime import UTC, datetime
 
+from animus_bootstrap.intelligence.proposals import IdentityProposalManager
 from animus_bootstrap.intelligence.tools.executor import ToolDefinition
 
 logger = logging.getLogger(__name__)
@@ -13,23 +14,40 @@ logger = logging.getLogger(__name__)
 # Module-level reference, set via set_identity_manager()
 _identity_manager = None
 _improvement_store = None
+_proposal_manager: IdentityProposalManager | None = None
 
 
 def set_identity_manager(manager) -> None:  # noqa: ANN001
     """Wire the live IdentityFileManager into identity tools."""
-    global _identity_manager  # noqa: PLW0603
+    global _identity_manager, _proposal_manager  # noqa: PLW0603
     _identity_manager = manager
+    _rebuild_proposal_manager()
 
 
 def set_identity_improvement_store(store) -> None:  # noqa: ANN001
     """Wire the ImprovementStore for proposal creation on large changes."""
-    global _improvement_store  # noqa: PLW0603
+    global _improvement_store, _proposal_manager  # noqa: PLW0603
     _improvement_store = store
+    _rebuild_proposal_manager()
+
+
+def _rebuild_proposal_manager() -> None:
+    """Rebuild the IdentityProposalManager when dependencies change."""
+    global _proposal_manager  # noqa: PLW0603
+    if _improvement_store is not None and _identity_manager is not None:
+        _proposal_manager = IdentityProposalManager(_improvement_store, _identity_manager)
+    else:
+        _proposal_manager = None
 
 
 def _create_proposal(filename: str, current: str, content: str, reason: str) -> dict:
-    """Create an identity change proposal in the improvement store."""
-    proposal = {
+    """Create an identity change proposal via IdentityProposalManager or fallback."""
+    if _proposal_manager is not None:
+        proposal = _proposal_manager.create(filename, content, reason)
+        return {"id": proposal.id, "file": proposal.file, "status": proposal.status}
+
+    # Fallback: direct store access (when manager not yet wired)
+    proposal_dict = {
         "area": f"identity:{filename}",
         "description": f"Proposed change to {filename}: {reason}",
         "status": "proposed",
@@ -38,11 +56,11 @@ def _create_proposal(filename: str, current: str, content: str, reason: str) -> 
         "patch": content,
     }
     if _improvement_store is not None:
-        proposal_id = _improvement_store.save(proposal)
-        proposal["id"] = proposal_id
+        proposal_id = _improvement_store.save(proposal_dict)
+        proposal_dict["id"] = proposal_id
     else:
-        proposal["id"] = 0
-    return proposal
+        proposal_dict["id"] = 0
+    return proposal_dict
 
 
 async def _identity_read(arguments: dict) -> str:

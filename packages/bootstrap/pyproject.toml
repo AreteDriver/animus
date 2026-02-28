@@ -12,13 +12,18 @@ requires-python = ">=3.11"
 authors = [
     {name = "AreteDriver"},
 ]
+keywords = ["ai", "personal-ai", "ollama", "self-improving", "local-first", "exocortex"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Typing :: Typed",
 ]
 dependencies = [
     "typer>=0.9.0,<1",
@@ -33,6 +38,11 @@ dependencies = [
     "python-multipart>=0.0.6,<1",
     "sse-starlette>=1.6.0,<4",
 ]
+
+[project.urls]
+Homepage = "https://github.com/AreteDriver/Animus"
+Repository = "https://github.com/AreteDriver/Animus"
+Issues = "https://github.com/AreteDriver/Animus/issues"
 
 [project.optional-dependencies]
 dev = [
