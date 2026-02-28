@@ -83,7 +83,7 @@ def build_file_tree() -> str:
             if len(files) > 15:
                 tree_lines.append(f"    ... +{len(files) - 15} more")
         except OSError:
-            pass
+            tree_lines.append(f"    (could not read {pkg_name})")
     return "\n".join(tree_lines)
 
 

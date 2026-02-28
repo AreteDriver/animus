@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from html import escape as html_escape
-
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
+from markupsafe import escape as _esc
 
 router = APIRouter()
 
@@ -58,7 +57,7 @@ async def identity_edit_form(filename: str, request: Request) -> HTMLResponse:
     except ValueError:
         return HTMLResponse('<p class="text-animus-red text-sm">Unknown identity file.</p>')
 
-    safe_fn = html_escape(filename)
+    safe_fn = _esc(filename)
     locked = filename in mgr.LOCKED_FILES
     ro = 'readonly class="opacity-60 cursor-not-allowed"' if locked else ""
     card_id = filename.replace(".", "-")
@@ -76,7 +75,7 @@ async def identity_edit_form(filename: str, request: Request) -> HTMLResponse:
     cancel_cls = (
         "bg-animus-border text-animus-text px-4 py-1 rounded text-xs hover:bg-animus-muted/20"
     )
-    safe_content = html_escape(content)
+    safe_content = _esc(content)
     return HTMLResponse(
         f'<form hx-put="/identity/{safe_fn}" '
         f'hx-target="#card-{card_id}" hx-swap="innerHTML">'
@@ -130,7 +129,7 @@ async def identity_view(filename: str, request: Request) -> HTMLResponse:
 
 def _render_file_view(filename: str, content: str, locked: bool) -> HTMLResponse:
     """Render a file card's inner content with Edit button."""
-    safe_name = html_escape(filename)
+    safe_name = _esc(filename)
     lock_icon = ' <span title="Immutable — human-edit only">&#128274;</span>' if locked else ""
     edit_btn = (
         ""
@@ -140,7 +139,7 @@ def _render_file_view(filename: str, content: str, locked: bool) -> HTMLResponse
         f'class="text-xs text-animus-green hover:underline">Edit</button>'
     )
 
-    preview = html_escape(content[:500]) if content else "<em>Empty</em>"
+    preview = _esc(content[:500]) if content else "<em>Empty</em>"
 
     return HTMLResponse(f"""
     <div class="flex items-center justify-between mb-2">

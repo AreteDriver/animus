@@ -968,7 +968,8 @@ class TestTimerStore:
 
         store = TimerStore(tmp_path / "timers.db")
         store.save("t1", "every 5m", "test", [], "2026-01-01T00:00:00")
-        assert store.remove("t1") is True
+        removed = store.remove("t1")
+        assert removed is True
         assert store.list_all() == []
         store.close()
 
@@ -976,7 +977,8 @@ class TestTimerStore:
         from animus_bootstrap.intelligence.tools.builtin.timer_store import TimerStore
 
         store = TimerStore(tmp_path / "timers.db")
-        assert store.remove("ghost") is False
+        removed = store.remove("ghost")
+        assert removed is False
         store.close()
 
     def test_upsert_overwrites(self, tmp_path: Path) -> None:

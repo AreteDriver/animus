@@ -65,7 +65,7 @@ async def _check_forge_status(cfg_manager: ConfigManager) -> str:
             if resp.status_code == 200:
                 return "connected"
     except httpx.HTTPError:
-        pass
+        return "disconnected"
     return "disconnected"
 
 

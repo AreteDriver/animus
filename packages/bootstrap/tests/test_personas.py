@@ -850,14 +850,16 @@ class TestPersonaStorage:
         db = tmp_path / "personas.db"
         store = PersonaStorage(db)
         store.save(_make_persona())
-        assert store.delete("p-1") is True
+        deleted = store.delete("p-1")
+        assert deleted is True
         assert store.load("p-1") is None
         store.close()
 
     def test_delete_nonexistent(self, tmp_path: pytest.TempPathFactory) -> None:
         db = tmp_path / "personas.db"
         store = PersonaStorage(db)
-        assert store.delete("nope") is False
+        deleted = store.delete("nope")
+        assert deleted is False
         store.close()
 
     def test_save_update_existing(self, tmp_path: pytest.TempPathFactory) -> None:

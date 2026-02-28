@@ -643,7 +643,7 @@ class TestFilesystemTools:
 
     @pytest.mark.asyncio()
     async def test_file_read_rejects_outside_sandbox(self) -> None:
-        result = await _file_read("/etc/shadow")
+        await _file_read("/etc/shadow")
         # /etc/shadow may or may not be under home; path validation depends
         # on whether /etc is under ~. Force a restrictive sandbox:
         tools = get_filesystem_tools(allowed_roots=["/tmp/safe_only"])

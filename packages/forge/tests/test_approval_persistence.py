@@ -295,7 +295,7 @@ class TestWaitForApproval:
             # Start approval in background, wait in foreground
             task = asyncio.create_task(approve_after_delay())
             status = await memory_gate.wait_for_approval(req, timeout=5.0, poll_interval=0.05)
-            await task
+            task.result()  # Propagate errors
             return status
 
         status = asyncio.run(run())
@@ -313,7 +313,7 @@ class TestWaitForApproval:
         async def run():
             task = asyncio.create_task(reject_after_delay())
             status = await memory_gate.wait_for_approval(req, timeout=5.0, poll_interval=0.05)
-            await task
+            task.result()  # Propagate errors
             return status
 
         status = asyncio.run(run())
@@ -336,7 +336,7 @@ class TestWaitForApproval:
         async def run():
             task = asyncio.create_task(approve_via_db())
             status = await gate.wait_for_approval(req, timeout=5.0, poll_interval=0.05)
-            await task
+            task.result()  # Propagate errors
             return status
 
         status = asyncio.run(run())

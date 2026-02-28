@@ -71,7 +71,7 @@ async def _forge_start(host: str = _DEFAULT_FORGE_HOST, port: int = _DEFAULT_FOR
             return "Forge started via systemd service"
         logger.warning("systemd start failed: %s", stderr.decode().strip())
     except (FileNotFoundError, TimeoutError):
-        pass
+        logger.debug("systemd start unavailable, trying uvicorn fallback")
 
     # Fallback: direct uvicorn launch
     try:
@@ -116,7 +116,7 @@ async def _forge_stop() -> str:
             return "Forge stopped via systemd service"
         logger.warning("systemd stop failed: %s", stderr.decode().strip())
     except (FileNotFoundError, TimeoutError):
-        pass
+        logger.debug("systemd stop unavailable, trying pkill fallback")
 
     # Fallback: kill the uvicorn process
     try:

@@ -56,5 +56,5 @@ def _detect_timezone() -> str:
             if tz_name:
                 return tz_name
     except (ValueError, OSError):
-        pass
-    return "UTC"
+        tz_name = "UTC"
+    return tz_name

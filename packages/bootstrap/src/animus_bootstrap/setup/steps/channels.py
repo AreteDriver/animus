@@ -142,7 +142,7 @@ def _parse_selection(raw: str, channel_names: list[str]) -> list[str]:
                     seen.add(name)
                 continue
         except ValueError:
-            pass
+            idx = -1  # Not numeric — fall through to name match
 
         # Try name match
         if token in channel_names and token not in seen:
