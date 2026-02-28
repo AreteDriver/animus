@@ -218,7 +218,7 @@ class IdentityProposalManager:
             rejection_note = f"{analysis}\nRejection reason: {reason}".strip()
             self._store.update_analysis(proposal_id, rejection_note)  # type: ignore[union-attr]
 
-        logger.info("Proposal #%d rejected: %s", proposal_id, reason or "(no reason)")
+        logger.info("Proposal #%d rejected", proposal_id)
 
         proposal = Proposal.from_store_dict(
             {**raw, "status": "rejected", "applied_at": now},

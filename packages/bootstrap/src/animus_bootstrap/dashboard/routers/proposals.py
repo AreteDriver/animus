@@ -79,8 +79,8 @@ async def approve_proposal(proposal_id: int, request: Request) -> HTMLResponse:
 
     try:
         result = pm.approve(proposal_id)
-    except ValueError as exc:
-        return HTMLResponse(f'<p class="text-animus-red text-sm">{exc}</p>')
+    except ValueError:
+        return HTMLResponse('<p class="text-animus-red text-sm">Proposal not found.</p>')
     except PermissionError:
         return HTMLResponse('<p class="text-animus-red text-sm">Cannot modify locked file.</p>')
 
@@ -99,8 +99,8 @@ async def reject_proposal(proposal_id: int, request: Request) -> HTMLResponse:
 
     try:
         pm.reject(proposal_id)
-    except ValueError as exc:
-        return HTMLResponse(f'<p class="text-animus-red text-sm">{exc}</p>')
+    except ValueError:
+        return HTMLResponse('<p class="text-animus-red text-sm">Proposal not found.</p>')
 
     return HTMLResponse(
         '<div class="bg-animus-red/10 border border-animus-red rounded p-3 text-sm">'
