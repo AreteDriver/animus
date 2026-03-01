@@ -7,7 +7,7 @@
 - **Version**: 2.0.0
 - **Python**: >=3.10 (Core), >=3.11 (Bootstrap), >=3.12 (Forge)
 - **Layout**: Multi-package monorepo under `packages/`
-- **Tests**: 11,700+ across 4 packages
+- **Tests**: 11,800+ across 4 packages
 - **License**: MIT
 
 ## Monorepo Structure
