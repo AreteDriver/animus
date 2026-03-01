@@ -99,7 +99,7 @@ source = ["src/animus_forge"]
 omit = ["*/tests/*", "*/__main__.py", "*/tui/*"]
 
 [tool.coverage.report]
-fail_under = 85
+fail_under = 90
 show_missing = true
 exclude_lines = [
     "pragma: no cover",
