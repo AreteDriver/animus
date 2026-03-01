@@ -296,6 +296,32 @@ class TestParseChangesResponse:
         # JSON keys are always strings, but values might not be
         assert self.orch._parse_changes_response('{"a.py": 123}') == {"a.py": "123"}
 
+    def test_json_with_preamble_text(self):
+        """Regex fallback extracts JSON after preamble prose."""
+        text = 'Here are the changes I made:\n\n{"a.py": "content"}'
+        assert self.orch._parse_changes_response(text) == {"a.py": "content"}
+
+    def test_json_with_trailing_text(self):
+        """Regex fallback extracts JSON before trailing explanation."""
+        text = '{"a.py": "fixed"}\n\nI fixed the issue by adding type hints.'
+        assert self.orch._parse_changes_response(text) == {"a.py": "fixed"}
+
+    def test_json_in_markdown_with_surrounding_prose(self):
+        """Regex fallback handles markdown fences with extra prose outside."""
+        text = (
+            "Sure! Here are the changes:\n\n"
+            '```json\n{"a.py": "new content"}\n```\n\n'
+            "Let me know if you need anything else."
+        )
+        assert self.orch._parse_changes_response(text) == {"a.py": "new content"}
+
+    def test_nested_json_extraction(self):
+        """Regex captures outermost braces for nested JSON values."""
+        text = 'Some text {"a.py": "def f():\\n    return {1: 2}\\n"} done'
+        result = self.orch._parse_changes_response(text)
+        assert "a.py" in result
+        assert "{1: 2}" in result["a.py"]
+
 
 # ===========================================================================
 # Apply Changes tests

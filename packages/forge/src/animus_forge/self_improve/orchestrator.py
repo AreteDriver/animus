@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -468,8 +469,20 @@ Return ONLY valid JSON in this format:
                 # Validate all values are strings
                 return {k: str(v) for k, v in parsed.items() if isinstance(k, str)}
         except json.JSONDecodeError:
-            logger.warning("Failed to parse AI response as JSON")
+            pass
 
+        # Fallback: extract outermost {...} block via regex
+        # Handles preamble text, trailing explanations, prose around fenced JSON
+        match = re.search(r"\{[\s\S]*\}", text)
+        if match:
+            try:
+                parsed = json.loads(match.group())
+                if isinstance(parsed, dict):
+                    return {k: str(v) for k, v in parsed.items() if isinstance(k, str)}
+            except json.JSONDecodeError:
+                pass
+
+        logger.warning("Failed to parse AI response as JSON")
         return {}
 
     def _apply_changes(self, changes: dict[str, str]) -> None:
