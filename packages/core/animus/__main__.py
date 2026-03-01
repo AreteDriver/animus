@@ -614,7 +614,7 @@ def main():
                 console.print("[dim]Goodbye.[/dim]")
                 break
 
-            if user_input.lower() == "help":
+            if user_input.lower() in ("help", "/help"):
                 show_help()
                 continue
 
