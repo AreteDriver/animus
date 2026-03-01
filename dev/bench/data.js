@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772364370596,
+  "lastUpdate": 1772366021518,
   "repoUrl": "https://github.com/AreteDriver/animus",
   "entries": {
     "Benchmark": [
@@ -1968,6 +1968,170 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.000026891399276044763",
             "extra": "mean: 1.1922629211772693 msec\nrounds: 850"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "committer": {
+            "email": "AreteDriver@users.noreply.github.com",
+            "name": "AreteDriver",
+            "username": "AreteDriver"
+          },
+          "distinct": true,
+          "id": "5dd952eaf78e810a8c409b95dcc6d766e05c38c0",
+          "message": "test(forge): push coverage from 90% to 93% with 135 targeted tests\n\nExclude untestable Streamlit UI modules (dashboard/workflow_builder/*,\ndashboard/eval_page.py) from coverage measurement. Add 135 tests across\n10 classes covering dashboard routes, workflow CRUD, execution actions,\ncoordination endpoints, calendar/notion clients, marketplace, and\nexecutor step fallback paths. Raise fail_under from 90 to 93.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-01T03:39:25-08:00",
+          "tree_id": "4382a73cfbbeb798243f0ceadcc8172ed786502a",
+          "url": "https://github.com/AreteDriver/animus/commit/5dd952eaf78e810a8c409b95dcc6d766e05c38c0"
+        },
+        "date": 1772366021159,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::TestMemorySerdeBenchmark::test_memory_serde_500",
+            "value": 534.6353671155246,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006268119475501254",
+            "extra": "mean: 1.8704336852895085 msec\nrounds: 537"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestConversationSerdeBenchmark::test_conversation_serde_50msg",
+            "value": 620.9797151787242,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00022444787380691066",
+            "extra": "mean: 1.61035856012171 msec\nrounds: 657"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestDetectModeBenchmark::test_detect_mode_1000",
+            "value": 204.95529248718304,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000057515980089773114",
+            "extra": "mean: 4.87911284390246 msec\nrounds: 205"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestDelegationDetectionBenchmark::test_delegation_detection_500",
+            "value": 287.6254675161325,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000036940815918184675",
+            "extra": "mean: 3.4767435882356676 msec\nrounds: 289"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestEntitySearchBenchmark::test_entity_search_200",
+            "value": 1963.5292695241774,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000012557325186493925",
+            "extra": "mean: 509.28703509590684 usec\nrounds: 2023"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestLocalSearchBenchmark::test_local_search_500",
+            "value": 3374.777915349038,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001834747936040529",
+            "extra": "mean: 296.3157947229172 usec\nrounds: 3449"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestWorkflowParseBenchmark::test_parse_20_step_workflow",
+            "value": 21134.166232452055,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000002539648703732546",
+            "extra": "mean: 47.31674715723937 usec\nrounds: 22603"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestYAMLLoadBenchmark::test_load_yaml_10_steps",
+            "value": 340.3292043093799,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015986658484257396",
+            "extra": "mean: 2.938331437142665 msec\nrounds: 350"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestConditionEvalBenchmark::test_condition_evaluate_1000",
+            "value": 4655.550700473157,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000008463818147923521",
+            "extra": "mean: 214.7973600412873 usec\nrounds: 4805"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestCacheBenchmark::test_cache_set_get_1000",
+            "value": 34.745985615355245,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005792570636983566",
+            "extra": "mean: 28.780303171427995 msec\nrounds: 35"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestTaskStoreBenchmark::test_record_query_100",
+            "value": 11.726796608587806,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004814457481718415",
+            "extra": "mean: 85.27477992307607 msec\nrounds: 13"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestBudgetBenchmark::test_budget_record_usage_500",
+            "value": 1011.4835339372127,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00013127068721817487",
+            "extra": "mean: 988.6468404557089 usec\nrounds: 1053"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestCheckpointBenchmark::test_checkpoint_lifecycle_20",
+            "value": 53.67472586228073,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0015215522371912385",
+            "extra": "mean: 18.630742568966486 msec\nrounds: 58"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestSkillLookupBenchmark::test_skill_lookup_100",
+            "value": 9242.465920200877,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000005816413152180156",
+            "extra": "mean: 108.19623341151208 usec\nrounds: 9811"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestResolverBenchmark::test_resolve_50_intents",
+            "value": 667.9651152319633,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002168978968585213",
+            "extra": "mean: 1.4970841698113702 msec\nrounds: 689"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestStructuralOverlapBenchmark::test_structural_overlaps_1000",
+            "value": 274.64623954949167,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001380000780480045",
+            "extra": "mean: 3.6410474858141955 msec\nrounds: 282"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestConstraintBenchmark::test_validate_20_constraints",
+            "value": 183665.8820386976,
+            "unit": "iter/sec",
+            "range": "stddev: 7.675422583567375e-7",
+            "extra": "mean: 5.444669357748786 usec\nrounds: 190877"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestPhiScoringBenchmark::test_phi_score_100_outcomes",
+            "value": 85896.4536706445,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000001062379404975464",
+            "extra": "mean: 11.64192416877106 usec\nrounds: 90253"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestRealisticScenarioBenchmark::test_realistic_25_agents",
+            "value": 197.11712343094146,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000042722047169682516",
+            "extra": "mean: 5.073125980099555 msec\nrounds: 201"
+          },
+          {
+            "name": "tests/test_benchmarks.py::TestPublishThroughputBenchmark::test_publish_100_intents",
+            "value": 828.6821502132142,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000024431524201914647",
+            "extra": "mean: 1.2067352962082107 msec\nrounds: 844"
           }
         ]
       }
