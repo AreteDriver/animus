@@ -69,7 +69,7 @@ class PersistentBudgetManager:
 
         query += " ORDER BY created_at DESC"
 
-        rows = self.backend.fetchall(query, tuple(params) if params else None)
+        rows = self.backend.fetchall(query, tuple(params))
         return [self._row_to_budget(row) for row in rows]
 
     def get_budget(self, budget_id: str) -> Budget | None:
