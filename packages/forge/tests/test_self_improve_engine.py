@@ -82,6 +82,58 @@ def plan() -> ImprovementPlan:
 
 
 # ===========================================================================
+# create_agent_provider() factory tests
+# ===========================================================================
+
+
+class TestCreateAgentProvider:
+    """Tests for create_agent_provider factory function."""
+
+    def test_create_ollama_provider_defaults(self):
+        """Ollama branch constructs OllamaProvider with env defaults."""
+        from animus_forge.agents.provider_wrapper import create_agent_provider
+
+        with patch.dict(os.environ, {}, clear=False):
+            # Remove env vars if set so defaults kick in
+            os.environ.pop("OLLAMA_HOST", None)
+            os.environ.pop("OLLAMA_MODEL", None)
+
+            with patch("animus_forge.providers.ollama_provider.httpx") as mock_httpx:
+                mock_httpx.Client.return_value = MagicMock()
+                mock_httpx.AsyncClient.return_value = MagicMock()
+
+                agent_provider = create_agent_provider("ollama")
+
+        assert agent_provider.provider.config.base_url == "http://localhost:11434"
+        assert agent_provider.provider.config.default_model == "deepseek-coder-v2"
+        assert agent_provider.provider.config.timeout == 600.0
+
+    def test_create_ollama_provider_custom_env(self):
+        """Ollama branch reads OLLAMA_HOST and OLLAMA_MODEL from env."""
+        from animus_forge.agents.provider_wrapper import create_agent_provider
+
+        with patch.dict(
+            os.environ,
+            {"OLLAMA_HOST": "http://gpu-box:11434", "OLLAMA_MODEL": "qwen2.5:14b"},
+        ):
+            with patch("animus_forge.providers.ollama_provider.httpx") as mock_httpx:
+                mock_httpx.Client.return_value = MagicMock()
+                mock_httpx.AsyncClient.return_value = MagicMock()
+
+                agent_provider = create_agent_provider("ollama")
+
+        assert agent_provider.provider.config.base_url == "http://gpu-box:11434"
+        assert agent_provider.provider.config.default_model == "qwen2.5:14b"
+
+    def test_create_unknown_provider_raises(self):
+        """Unknown provider type raises ValueError."""
+        from animus_forge.agents.provider_wrapper import create_agent_provider
+
+        with pytest.raises(ValueError, match="Unknown provider type"):
+            create_agent_provider("does-not-exist")
+
+
+# ===========================================================================
 # Code Generation (_generate_changes) tests
 # ===========================================================================
 

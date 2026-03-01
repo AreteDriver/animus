@@ -126,7 +126,7 @@ def create_agent_provider(provider_type: str = "anthropic") -> AgentProvider:
     """Create an agent provider.
 
     Args:
-        provider_type: Type of provider ('anthropic' or 'openai').
+        provider_type: Type of provider ('anthropic', 'openai', or 'ollama').
 
     Returns:
         Configured AgentProvider.
@@ -145,6 +145,24 @@ def create_agent_provider(provider_type: str = "anthropic") -> AgentProvider:
 
         settings = get_settings()
         provider = OpenAIProvider(api_key=settings.openai_api_key)
+        return AgentProvider(provider)
+
+    elif provider_type == "ollama":
+        import os
+
+        from animus_forge.providers.base import ProviderConfig, ProviderType
+        from animus_forge.providers.ollama_provider import OllamaProvider
+
+        host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+        model = os.environ.get("OLLAMA_MODEL", "deepseek-coder-v2")
+        provider = OllamaProvider(
+            config=ProviderConfig(
+                provider_type=ProviderType.OLLAMA,
+                base_url=host,
+                default_model=model,
+                timeout=600.0,
+            ),
+        )
         return AgentProvider(provider)
 
     else:
