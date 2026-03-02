@@ -8,7 +8,7 @@ Multi-agent orchestration framework for production AI workflows
 
 - **Version**: 1.2.0
 - **Language**: Python
-- **Tests**: 7,490 (93% coverage, fail_under=93)
+- **Tests**: 8,254 (95% coverage, fail_under=95)
 - **Files**: 576 across 2 languages
 - **Lines**: 200,965
 
