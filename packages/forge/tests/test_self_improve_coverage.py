@@ -1443,3 +1443,1543 @@ class TestSelfImproveOrchestrator:
             result = asyncio.run(orch.run(focus_category="documentation"))
 
         assert result.success is True
+
+
+# ---------------------------------------------------------------------------
+# Coverage gap tests — approval.py
+# ---------------------------------------------------------------------------
+
+
+class TestApprovalGateCoverage:
+    """Tests for ApprovalGate database persistence and async polling."""
+
+    def _make_backend(self):
+        """Create a mock DatabaseBackend."""
+        backend = MagicMock()
+        backend.execute = MagicMock()
+        backend.fetchone = MagicMock(return_value=None)
+        backend.fetchall = MagicMock(return_value=[])
+        backend.transaction = MagicMock()
+        return backend
+
+    def test_init_with_backend_creates_table(self):
+        """ApprovalGate creates the approvals table when backend is provided."""
+        from animus_forge.self_improve.approval import ApprovalGate
+
+        backend = self._make_backend()
+        ApprovalGate(backend=backend)
+        backend.execute.assert_called_once()
+        call_sql = backend.execute.call_args[0][0]
+        assert "CREATE TABLE IF NOT EXISTS self_improve_approvals" in call_sql
+
+    def test_ensure_table_no_backend(self):
+        """_ensure_table is a no-op without a backend."""
+        from animus_forge.self_improve.approval import ApprovalGate
+
+        gate = ApprovalGate()
+        gate._ensure_table()  # Should not raise
+
+    def test_request_approval_persists_to_db(self):
+        """request_approval persists the request when backend is available."""
+        from animus_forge.self_improve.approval import ApprovalGate, ApprovalStage
+
+        backend = self._make_backend()
+        gate = ApprovalGate(backend=backend)
+        req = gate.request_approval(
+            stage=ApprovalStage.PLAN,
+            title="Test",
+            description="Desc",
+            details={"key": "val"},
+        )
+        assert req.id in gate._pending_approvals
+        # execute called for table creation + persist
+        assert backend.execute.call_count >= 2
+
+    def test_persist_request_no_backend(self):
+        """_persist_request is a no-op without backend."""
+        from animus_forge.self_improve.approval import (
+            ApprovalGate,
+            ApprovalRequest,
+            ApprovalStage,
+        )
+
+        gate = ApprovalGate()
+        req = ApprovalRequest(
+            id="x", stage=ApprovalStage.PLAN, title="T", description="D", details={}
+        )
+        gate._persist_request(req)  # Should not raise
+
+    def test_load_request_no_backend(self):
+        """_load_request returns None without backend."""
+        from animus_forge.self_improve.approval import ApprovalGate
+
+        gate = ApprovalGate()
+        assert gate._load_request("any") is None
+
+    def test_load_request_found(self):
+        """_load_request returns request from database row."""
+        from animus_forge.self_improve.approval import ApprovalGate
+
+        backend = self._make_backend()
+        backend.fetchone.return_value = {
+            "id": "r1",
+            "stage": "plan",
+            "title": "T",
+            "description": "D",
+            "details": '{"k": "v"}',
+            "status": "pending",
+            "created_at": "2026-01-01T00:00:00",
+            "decided_at": None,
+            "decided_by": None,
+            "reason": None,
+        }
+        gate = ApprovalGate(backend=backend)
+        req = gate._load_request("r1")
+        assert req is not None
+        assert req.id == "r1"
+        assert req.details == {"k": "v"}
+
+    def test_load_request_not_found(self):
+        """_load_request returns None when row not found."""
+        from animus_forge.self_improve.approval import ApprovalGate
+
+        backend = self._make_backend()
+        backend.fetchone.return_value = None
+        gate = ApprovalGate(backend=backend)
+        assert gate._load_request("missing") is None
+
+    def test_row_to_request_with_decided_at(self):
+        """_row_to_request parses decided_at datetime."""
+        from animus_forge.self_improve.approval import ApprovalGate, ApprovalStatus
+
+        row = {
+            "id": "r1",
+            "stage": "apply",
+            "title": "T",
+            "description": "D",
+            "details": "{}",
+            "status": "approved",
+            "created_at": "2026-01-01T00:00:00",
+            "decided_at": "2026-01-01T01:00:00",
+            "decided_by": "admin",
+            "reason": "looks good",
+        }
+        req = ApprovalGate._row_to_request(row)
+        assert req.status == ApprovalStatus.APPROVED
+        assert req.decided_at is not None
+        assert req.decided_by == "admin"
+        assert req.reason == "looks good"
+
+    def test_row_to_request_empty_details(self):
+        """_row_to_request handles empty/falsy details."""
+        from animus_forge.self_improve.approval import ApprovalGate
+
+        row = {
+            "id": "r1",
+            "stage": "plan",
+            "title": "T",
+            "description": "D",
+            "details": "",
+            "status": "pending",
+            "created_at": "2026-01-01T00:00:00",
+        }
+        req = ApprovalGate._row_to_request(row)
+        assert req.details == {}
+
+    def test_get_pending_with_backend_no_stage(self):
+        """get_pending queries backend without stage filter."""
+        from animus_forge.self_improve.approval import ApprovalGate
+
+        backend = self._make_backend()
+        backend.fetchall.return_value = [
+            {
+                "id": "r1",
+                "stage": "plan",
+                "title": "T",
+                "description": "D",
+                "details": "{}",
+                "status": "pending",
+                "created_at": "2026-01-01T00:00:00",
+            }
+        ]
+        gate = ApprovalGate(backend=backend)
+        pending = gate.get_pending()
+        assert len(pending) == 1
+        assert pending[0].id == "r1"
+
+    def test_get_pending_with_backend_stage_filter(self):
+        """get_pending filters by stage when provided."""
+        from animus_forge.self_improve.approval import ApprovalGate, ApprovalStage
+
+        backend = self._make_backend()
+        backend.fetchall.return_value = []
+        gate = ApprovalGate(backend=backend)
+        pending = gate.get_pending(stage=ApprovalStage.APPLY)
+        assert pending == []
+        call_args = backend.fetchall.call_args
+        assert "stage = ?" in call_args[0][0]
+
+    def test_get_pending_in_memory_with_stage_filter(self):
+        """get_pending filters by stage in-memory."""
+        from animus_forge.self_improve.approval import ApprovalGate, ApprovalStage
+
+        gate = ApprovalGate()
+        gate.request_approval(ApprovalStage.PLAN, "Plan A", "desc")
+        gate.request_approval(ApprovalStage.APPLY, "Apply B", "desc")
+        plan_pending = gate.get_pending(stage=ApprovalStage.PLAN)
+        assert len(plan_pending) == 1
+        assert plan_pending[0].stage == ApprovalStage.PLAN
+
+    def test_approve_from_db(self):
+        """approve loads from database when not in memory."""
+        from animus_forge.self_improve.approval import ApprovalGate, ApprovalStatus
+
+        backend = self._make_backend()
+        backend.fetchone.return_value = {
+            "id": "r1",
+            "stage": "plan",
+            "title": "T",
+            "description": "D",
+            "details": "{}",
+            "status": "pending",
+            "created_at": "2026-01-01T00:00:00",
+        }
+        gate = ApprovalGate(backend=backend)
+        result = gate.approve("r1", approved_by="tester", reason="ok")
+        assert result is not None
+        assert result.status == ApprovalStatus.APPROVED
+        assert result.decided_by == "tester"
+
+    def test_approve_not_found(self):
+        """approve returns None when request not found anywhere."""
+        from animus_forge.self_improve.approval import ApprovalGate
+
+        gate = ApprovalGate()
+        assert gate.approve("nonexistent") is None
+
+    def test_approve_persists_to_db(self):
+        """approve persists updated status to database."""
+        from animus_forge.self_improve.approval import ApprovalGate, ApprovalStage
+
+        backend = self._make_backend()
+        gate = ApprovalGate(backend=backend)
+        req = gate.request_approval(ApprovalStage.PLAN, "T", "D")
+        gate.approve(req.id, approved_by="admin")
+        # persist called for create + approve
+        assert backend.execute.call_count >= 3
+
+    def test_reject_from_db(self):
+        """reject loads from database when not in memory."""
+        from animus_forge.self_improve.approval import ApprovalGate, ApprovalStatus
+
+        backend = self._make_backend()
+        backend.fetchone.return_value = {
+            "id": "r2",
+            "stage": "apply",
+            "title": "T",
+            "description": "D",
+            "details": "{}",
+            "status": "pending",
+            "created_at": "2026-01-01T00:00:00",
+        }
+        gate = ApprovalGate(backend=backend)
+        result = gate.reject("r2", rejected_by="reviewer", reason="bad")
+        assert result is not None
+        assert result.status == ApprovalStatus.REJECTED
+        assert result.reason == "bad"
+
+    def test_reject_not_found(self):
+        """reject returns None when request not found."""
+        from animus_forge.self_improve.approval import ApprovalGate
+
+        gate = ApprovalGate()
+        assert gate.reject("nonexistent") is None
+
+    def test_reject_in_memory(self):
+        """reject works for in-memory request."""
+        from animus_forge.self_improve.approval import (
+            ApprovalGate,
+            ApprovalStage,
+            ApprovalStatus,
+        )
+
+        gate = ApprovalGate()
+        req = gate.request_approval(ApprovalStage.PLAN, "T", "D")
+        result = gate.reject(req.id, reason="not ready")
+        assert result.status == ApprovalStatus.REJECTED
+        assert req.id not in gate._pending_approvals
+        assert result in gate._approval_history
+
+    def test_is_approved_in_history(self):
+        """is_approved finds approved request in history."""
+        from animus_forge.self_improve.approval import ApprovalGate, ApprovalStage
+
+        gate = ApprovalGate()
+        req = gate.request_approval(ApprovalStage.PLAN, "T", "D")
+        gate.approve(req.id)
+        assert gate.is_approved(req.id) is True
+
+    def test_is_approved_rejected_in_history(self):
+        """is_approved returns False for rejected request."""
+        from animus_forge.self_improve.approval import ApprovalGate, ApprovalStage
+
+        gate = ApprovalGate()
+        req = gate.request_approval(ApprovalStage.PLAN, "T", "D")
+        gate.reject(req.id)
+        assert gate.is_approved(req.id) is False
+
+    def test_is_approved_from_db(self):
+        """is_approved checks database when not in history."""
+        from animus_forge.self_improve.approval import ApprovalGate
+
+        backend = self._make_backend()
+        backend.fetchone.return_value = {"status": "approved"}
+        gate = ApprovalGate(backend=backend)
+        assert gate.is_approved("db-req") is True
+
+    def test_is_approved_not_found(self):
+        """is_approved returns False when request not found."""
+        from animus_forge.self_improve.approval import ApprovalGate
+
+        gate = ApprovalGate()
+        assert gate.is_approved("nonexistent") is False
+
+    def test_is_approved_from_db_not_approved(self):
+        """is_approved returns False for non-approved DB entry."""
+        from animus_forge.self_improve.approval import ApprovalGate
+
+        backend = self._make_backend()
+        backend.fetchone.return_value = {"status": "rejected"}
+        gate = ApprovalGate(backend=backend)
+        assert gate.is_approved("db-req") is False
+
+    async def test_wait_for_approval_already_decided(self):
+        """wait_for_approval returns immediately if already decided."""
+        from animus_forge.self_improve.approval import (
+            ApprovalGate,
+            ApprovalStage,
+            ApprovalStatus,
+        )
+
+        gate = ApprovalGate()
+        req = gate.request_approval(ApprovalStage.PLAN, "T", "D")
+        gate.approve(req.id)
+        # Request removed from pending, so polling returns immediately
+        status = await gate.wait_for_approval(req, timeout=1.0, poll_interval=0.1)
+        assert status == ApprovalStatus.APPROVED
+
+    async def test_wait_for_approval_timeout_expires(self):
+        """wait_for_approval marks as expired after timeout."""
+        from animus_forge.self_improve.approval import (
+            ApprovalGate,
+            ApprovalStage,
+            ApprovalStatus,
+        )
+
+        gate = ApprovalGate()
+        req = gate.request_approval(ApprovalStage.PLAN, "T", "D")
+        status = await gate.wait_for_approval(req, timeout=0.15, poll_interval=0.1)
+        assert status == ApprovalStatus.EXPIRED
+        assert req.status == ApprovalStatus.EXPIRED
+        assert req.decided_at is not None
+        assert req.id not in gate._pending_approvals
+
+    async def test_wait_for_approval_timeout_with_backend(self):
+        """wait_for_approval persists expired status to database."""
+        from animus_forge.self_improve.approval import (
+            ApprovalGate,
+            ApprovalStage,
+            ApprovalStatus,
+        )
+
+        backend = self._make_backend()
+        gate = ApprovalGate(backend=backend)
+        req = gate.request_approval(ApprovalStage.PLAN, "T", "D")
+        status = await gate.wait_for_approval(req, timeout=0.15, poll_interval=0.1)
+        assert status == ApprovalStatus.EXPIRED
+        # Persist called for create + expire
+        assert backend.execute.call_count >= 3
+
+    async def test_wait_for_approval_db_decision(self):
+        """wait_for_approval detects external decision via database."""
+        from animus_forge.self_improve.approval import (
+            ApprovalGate,
+            ApprovalStage,
+            ApprovalStatus,
+        )
+
+        backend = self._make_backend()
+        gate = ApprovalGate(backend=backend)
+        req = gate.request_approval(ApprovalStage.PLAN, "T", "D")
+
+        # First poll: still pending. Second poll: approved externally.
+        backend.fetchone.side_effect = [
+            None,  # First poll
+            {
+                "id": req.id,
+                "stage": "plan",
+                "title": "T",
+                "description": "D",
+                "details": "{}",
+                "status": "approved",
+                "created_at": "2026-01-01T00:00:00",
+                "decided_at": "2026-01-01T01:00:00",
+                "decided_by": "external_user",
+                "reason": "approved externally",
+            },
+        ]
+        status = await gate.wait_for_approval(req, timeout=1.0, poll_interval=0.05)
+        assert status == ApprovalStatus.APPROVED
+        assert req.decided_by == "external_user"
+
+    def test_get_history_with_backend_no_stage(self):
+        """get_history queries backend without stage filter."""
+        from animus_forge.self_improve.approval import ApprovalGate
+
+        backend = self._make_backend()
+        backend.fetchall.return_value = [
+            {
+                "id": "r1",
+                "stage": "plan",
+                "title": "T",
+                "description": "D",
+                "details": "{}",
+                "status": "approved",
+                "created_at": "2026-01-01T00:00:00",
+                "decided_at": "2026-01-01T01:00:00",
+                "decided_by": "admin",
+                "reason": None,
+            }
+        ]
+        gate = ApprovalGate(backend=backend)
+        history = gate.get_history()
+        assert len(history) == 1
+
+    def test_get_history_with_backend_stage_filter(self):
+        """get_history filters by stage when provided."""
+        from animus_forge.self_improve.approval import ApprovalGate, ApprovalStage
+
+        backend = self._make_backend()
+        backend.fetchall.return_value = []
+        gate = ApprovalGate(backend=backend)
+        history = gate.get_history(stage=ApprovalStage.MERGE)
+        assert history == []
+        call_sql = backend.fetchall.call_args[0][0]
+        assert "stage = ?" in call_sql
+
+    def test_get_history_in_memory_with_stage(self):
+        """get_history filters by stage in-memory."""
+        from animus_forge.self_improve.approval import (
+            ApprovalGate,
+            ApprovalStage,
+        )
+
+        gate = ApprovalGate()
+        req1 = gate.request_approval(ApprovalStage.PLAN, "Plan", "desc")
+        req2 = gate.request_approval(ApprovalStage.APPLY, "Apply", "desc")
+        gate.approve(req1.id)
+        gate.reject(req2.id)
+        history = gate.get_history(stage=ApprovalStage.PLAN)
+        assert len(history) == 1
+        assert history[0].stage == ApprovalStage.PLAN
+
+    def test_get_history_in_memory_limit(self):
+        """get_history respects limit."""
+        from animus_forge.self_improve.approval import ApprovalGate, ApprovalStage
+
+        gate = ApprovalGate()
+        for _ in range(5):
+            req = gate.request_approval(ApprovalStage.PLAN, "T", "D")
+            gate.approve(req.id)
+        history = gate.get_history(limit=3)
+        assert len(history) == 3
+
+
+# ---------------------------------------------------------------------------
+# Coverage gap tests — sandbox.py
+# ---------------------------------------------------------------------------
+
+
+class TestSandboxCoverage:
+    """Tests for Sandbox create, apply, test, lint, validate, cleanup."""
+
+    def test_init_sets_defaults(self, tmp_path):
+        """Sandbox initializes with correct defaults."""
+        from animus_forge.self_improve.sandbox import Sandbox, SandboxStatus
+
+        sb = Sandbox(tmp_path)
+        assert sb.source_path == tmp_path
+        assert sb.timeout == 300
+        assert sb.cleanup_on_exit is True
+        assert sb.sandbox_path is None
+        assert sb.status == SandboxStatus.CREATED
+
+    def test_create_copies_source(self, tmp_path):
+        """create() copies source tree to temp directory."""
+        from animus_forge.self_improve.sandbox import Sandbox
+
+        (tmp_path / "hello.py").write_text("print('hi')\n")
+        sb = Sandbox(tmp_path)
+        path = sb.create()
+        assert path is not None
+        assert (path / "hello.py").exists()
+        assert (path / "hello.py").read_text() == "print('hi')\n"
+        sb.cleanup()
+
+    def test_create_skips_ignored_dirs(self, tmp_path):
+        """create() ignores .git, __pycache__, .venv, etc."""
+        from animus_forge.self_improve.sandbox import Sandbox
+
+        (tmp_path / ".git").mkdir()
+        (tmp_path / ".git" / "config").write_text("git config")
+        (tmp_path / "__pycache__").mkdir()
+        (tmp_path / "__pycache__" / "mod.pyc").write_text("bytecode")
+        (tmp_path / "src.py").write_text("code")
+        sb = Sandbox(tmp_path)
+        path = sb.create()
+        assert not (path / ".git").exists()
+        assert not (path / "__pycache__").exists()
+        assert (path / "src.py").exists()
+        sb.cleanup()
+
+    def test_create_idempotent(self, tmp_path):
+        """create() returns same path on subsequent calls."""
+        from animus_forge.self_improve.sandbox import Sandbox
+
+        (tmp_path / "f.py").write_text("x")
+        sb = Sandbox(tmp_path)
+        p1 = sb.create()
+        p2 = sb.create()
+        assert p1 == p2
+        sb.cleanup()
+
+    def test_cleanup_removes_temp_dir(self, tmp_path):
+        """cleanup() removes the sandbox directory."""
+        from animus_forge.self_improve.sandbox import Sandbox
+
+        (tmp_path / "f.py").write_text("x")
+        sb = Sandbox(tmp_path)
+        sb.create()
+        temp_dir = sb._temp_dir
+        assert temp_dir.exists()
+        sb.cleanup()
+        assert not temp_dir.exists()
+        assert sb._temp_dir is None
+        assert sb._sandbox_path is None
+
+    def test_cleanup_noop_when_not_created(self, tmp_path):
+        """cleanup() is safe to call without create()."""
+        from animus_forge.self_improve.sandbox import Sandbox
+
+        sb = Sandbox(tmp_path)
+        sb.cleanup()  # Should not raise
+
+    def test_context_manager_creates_and_cleans(self, tmp_path):
+        """Context manager creates on enter and cleans on exit."""
+        from animus_forge.self_improve.sandbox import Sandbox
+
+        (tmp_path / "f.py").write_text("x")
+        with Sandbox(tmp_path) as sb:
+            assert sb.sandbox_path is not None
+            temp_dir = sb._temp_dir
+            assert temp_dir.exists()
+        assert not temp_dir.exists()
+
+    def test_context_manager_no_cleanup(self, tmp_path):
+        """Context manager skips cleanup when cleanup_on_exit=False."""
+        from animus_forge.self_improve.sandbox import Sandbox
+
+        (tmp_path / "f.py").write_text("x")
+        with Sandbox(tmp_path, cleanup_on_exit=False) as sb:
+            temp_dir = sb._temp_dir
+        assert temp_dir.exists()
+        # Manual cleanup
+        import shutil
+
+        shutil.rmtree(temp_dir)
+
+    async def test_apply_changes_success(self, tmp_path):
+        """apply_changes writes files to sandbox."""
+        from animus_forge.self_improve.sandbox import Sandbox
+
+        (tmp_path / "f.py").write_text("original")
+        sb = Sandbox(tmp_path)
+        sb.create()
+        result = await sb.apply_changes({"f.py": "modified", "new/nested.py": "new file"})
+        assert result is True
+        assert (sb.sandbox_path / "f.py").read_text() == "modified"
+        assert (sb.sandbox_path / "new" / "nested.py").read_text() == "new file"
+        sb.cleanup()
+
+    async def test_apply_changes_not_created(self, tmp_path):
+        """apply_changes raises when sandbox not created."""
+        from animus_forge.self_improve.sandbox import Sandbox
+
+        sb = Sandbox(tmp_path)
+        with pytest.raises(RuntimeError, match="Sandbox not created"):
+            await sb.apply_changes({"f.py": "x"})
+
+    async def test_apply_changes_error(self, tmp_path):
+        """apply_changes returns False on write error."""
+        from animus_forge.self_improve.sandbox import Sandbox
+
+        (tmp_path / "f.py").write_text("x")
+        sb = Sandbox(tmp_path)
+        sb.create()
+        with patch.object(Path, "write_text", side_effect=OSError("disk full")):
+            result = await sb.apply_changes({"f.py": "new content"})
+        assert result is False
+        sb.cleanup()
+
+    async def test_run_tests_not_created(self, tmp_path):
+        """run_tests returns FAILED when sandbox not created."""
+        from animus_forge.self_improve.sandbox import Sandbox, SandboxStatus
+
+        sb = Sandbox(tmp_path)
+        result = await sb.run_tests()
+        assert result.status == SandboxStatus.FAILED
+        assert result.error == "Sandbox not created"
+
+    async def test_run_tests_success(self, tmp_path):
+        """run_tests returns SUCCESS when pytest passes."""
+        from animus_forge.self_improve.sandbox import Sandbox, SandboxStatus
+
+        (tmp_path / "f.py").write_text("x")
+        sb = Sandbox(tmp_path)
+        sb.create()
+
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 0
+        mock_proc.communicate = AsyncMock(return_value=(b"all passed", b""))
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            result = await sb.run_tests()
+        assert result.status == SandboxStatus.SUCCESS
+        assert result.tests_passed is True
+        assert result.test_output == "all passed"
+        assert sb.status == SandboxStatus.SUCCESS
+        sb.cleanup()
+
+    async def test_run_tests_failure(self, tmp_path):
+        """run_tests returns FAILED when pytest fails."""
+        from animus_forge.self_improve.sandbox import Sandbox, SandboxStatus
+
+        (tmp_path / "f.py").write_text("x")
+        sb = Sandbox(tmp_path)
+        sb.create()
+
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 1
+        mock_proc.communicate = AsyncMock(return_value=(b"2 failed", b"err"))
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            result = await sb.run_tests()
+        assert result.status == SandboxStatus.FAILED
+        assert result.tests_passed is False
+        assert "2 failed" in result.test_output
+        assert sb.status == SandboxStatus.FAILED
+        sb.cleanup()
+
+    async def test_run_tests_timeout(self, tmp_path):
+        """run_tests returns TIMEOUT on timeout."""
+        from animus_forge.self_improve.sandbox import Sandbox, SandboxStatus
+
+        (tmp_path / "f.py").write_text("x")
+        sb = Sandbox(tmp_path, timeout=1)
+        sb.create()
+
+        mock_proc = AsyncMock()
+        mock_proc.kill = MagicMock()
+        mock_proc.wait = AsyncMock()
+        with (
+            patch("asyncio.create_subprocess_exec", return_value=mock_proc),
+            patch("asyncio.wait_for", side_effect=TimeoutError()),
+        ):
+            result = await sb.run_tests()
+        assert result.status == SandboxStatus.TIMEOUT
+        assert sb.status == SandboxStatus.TIMEOUT
+        sb.cleanup()
+
+    async def test_run_tests_exception(self, tmp_path):
+        """run_tests returns FAILED on unexpected exception."""
+        from animus_forge.self_improve.sandbox import Sandbox, SandboxStatus
+
+        (tmp_path / "f.py").write_text("x")
+        sb = Sandbox(tmp_path)
+        sb.create()
+
+        with patch("asyncio.create_subprocess_exec", side_effect=RuntimeError("oops")):
+            result = await sb.run_tests()
+        assert result.status == SandboxStatus.FAILED
+        assert result.error == "oops"
+        sb.cleanup()
+
+    async def test_run_lint_not_created(self, tmp_path):
+        """run_lint returns FAILED when sandbox not created."""
+        from animus_forge.self_improve.sandbox import Sandbox, SandboxStatus
+
+        sb = Sandbox(tmp_path)
+        result = await sb.run_lint()
+        assert result.status == SandboxStatus.FAILED
+        assert result.error == "Sandbox not created"
+
+    async def test_run_lint_success(self, tmp_path):
+        """run_lint returns SUCCESS when ruff passes."""
+        from animus_forge.self_improve.sandbox import Sandbox, SandboxStatus
+
+        (tmp_path / "f.py").write_text("x")
+        sb = Sandbox(tmp_path)
+        sb.create()
+
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 0
+        mock_proc.communicate = AsyncMock(return_value=(b"ok", b""))
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            result = await sb.run_lint()
+        assert result.status == SandboxStatus.SUCCESS
+        assert result.lint_passed is True
+        sb.cleanup()
+
+    async def test_run_lint_failure(self, tmp_path):
+        """run_lint returns FAILED when ruff finds issues."""
+        from animus_forge.self_improve.sandbox import Sandbox, SandboxStatus
+
+        (tmp_path / "f.py").write_text("x")
+        sb = Sandbox(tmp_path)
+        sb.create()
+
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 1
+        mock_proc.communicate = AsyncMock(return_value=(b"E501", b""))
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            result = await sb.run_lint()
+        assert result.status == SandboxStatus.FAILED
+        assert result.lint_passed is False
+        sb.cleanup()
+
+    async def test_run_lint_exception(self, tmp_path):
+        """run_lint returns FAILED on exception."""
+        from animus_forge.self_improve.sandbox import Sandbox, SandboxStatus
+
+        (tmp_path / "f.py").write_text("x")
+        sb = Sandbox(tmp_path)
+        sb.create()
+
+        with patch("asyncio.create_subprocess_exec", side_effect=OSError("no ruff")):
+            result = await sb.run_lint()
+        assert result.status == SandboxStatus.FAILED
+        assert result.error == "no ruff"
+        sb.cleanup()
+
+    async def test_validate_changes_all_pass(self, tmp_path):
+        """validate_changes returns SUCCESS when both lint and tests pass."""
+        from animus_forge.self_improve.sandbox import Sandbox, SandboxResult, SandboxStatus
+
+        (tmp_path / "f.py").write_text("x")
+        sb = Sandbox(tmp_path)
+        sb.create()
+
+        with (
+            patch.object(
+                sb,
+                "run_lint",
+                new_callable=AsyncMock,
+                return_value=SandboxResult(
+                    status=SandboxStatus.SUCCESS, lint_passed=True, lint_output="ok"
+                ),
+            ),
+            patch.object(
+                sb,
+                "run_tests",
+                new_callable=AsyncMock,
+                return_value=SandboxResult(
+                    status=SandboxStatus.SUCCESS,
+                    tests_passed=True,
+                    test_output="passed",
+                    duration_seconds=1.5,
+                ),
+            ),
+        ):
+            result = await sb.validate_changes()
+        assert result.status == SandboxStatus.SUCCESS
+        assert result.tests_passed is True
+        assert result.lint_passed is True
+        sb.cleanup()
+
+    async def test_validate_changes_lint_fails(self, tmp_path):
+        """validate_changes returns FAILED when lint fails."""
+        from animus_forge.self_improve.sandbox import Sandbox, SandboxResult, SandboxStatus
+
+        (tmp_path / "f.py").write_text("x")
+        sb = Sandbox(tmp_path)
+        sb.create()
+
+        with (
+            patch.object(
+                sb,
+                "run_lint",
+                new_callable=AsyncMock,
+                return_value=SandboxResult(status=SandboxStatus.FAILED, lint_passed=False),
+            ),
+            patch.object(
+                sb,
+                "run_tests",
+                new_callable=AsyncMock,
+                return_value=SandboxResult(status=SandboxStatus.SUCCESS, tests_passed=True),
+            ),
+        ):
+            result = await sb.validate_changes()
+        assert result.status == SandboxStatus.FAILED
+        sb.cleanup()
+
+    def test_sanitize_env(self, tmp_path):
+        """_sanitize_env strips secret-like variables."""
+        from animus_forge.self_improve.sandbox import Sandbox
+
+        sb = Sandbox(tmp_path)
+        with patch.dict(
+            "os.environ",
+            {
+                "PATH": "/usr/bin",
+                "HOME": "/home/user",
+                "API_KEY": "secret123",
+                "AWS_SECRET_KEY": "s3cret",
+                "NORMAL_VAR": "ok",
+            },
+            clear=True,
+        ):
+            env = sb._sanitize_env()
+        assert "PATH" in env
+        assert "HOME" in env
+        assert "NORMAL_VAR" in env
+        assert "API_KEY" not in env
+        assert "AWS_SECRET_KEY" not in env
+
+    async def test_run_command_not_created(self, tmp_path):
+        """_run_command raises when sandbox not created."""
+        from animus_forge.self_improve.sandbox import Sandbox
+
+        sb = Sandbox(tmp_path)
+        with pytest.raises(RuntimeError, match="Sandbox not created"):
+            await sb._run_command(["echo", "hi"])
+
+    async def test_run_command_timeout_kills_process(self, tmp_path):
+        """_run_command kills process on timeout and re-raises."""
+        from animus_forge.self_improve.sandbox import Sandbox
+
+        (tmp_path / "f.py").write_text("x")
+        sb = Sandbox(tmp_path, timeout=1)
+        sb.create()
+
+        mock_proc = AsyncMock()
+        mock_proc.kill = MagicMock()
+        mock_proc.wait = AsyncMock()
+        with (
+            patch("asyncio.create_subprocess_exec", return_value=mock_proc),
+            patch("asyncio.wait_for", side_effect=TimeoutError()),
+        ):
+            with pytest.raises(TimeoutError):
+                await sb._run_command(["sleep", "100"])
+        mock_proc.kill.assert_called_once()
+        sb.cleanup()
+
+    def test_sandbox_result_defaults(self):
+        """SandboxResult has correct defaults."""
+        from animus_forge.self_improve.sandbox import SandboxResult, SandboxStatus
+
+        r = SandboxResult(status=SandboxStatus.CREATED)
+        assert r.exit_code == 0
+        assert r.stdout == ""
+        assert r.stderr == ""
+        assert r.tests_passed is False
+        assert r.lint_passed is False
+        assert r.error is None
+        assert r.metadata == {}
+
+
+# ---------------------------------------------------------------------------
+# Coverage gap tests — safety.py
+# ---------------------------------------------------------------------------
+
+
+class TestSafetyCheckerCoverage:
+    """Tests for SafetyConfig.load(), _from_dict(), and SafetyChecker methods."""
+
+    def test_load_default_no_file(self, tmp_path):
+        """load() returns defaults when config file doesn't exist."""
+        config = SafetyConfig.load(config_path=tmp_path / "nonexistent.yaml")
+        assert config.max_files_per_pr == 10
+        assert config.human_approval_plan is True
+
+    def test_load_from_yaml(self, tmp_path):
+        """load() reads from YAML file."""
+        import yaml
+
+        config_data = {
+            "protected_files": {
+                "critical": ["*.lock"],
+                "sensitive": ["config/*"],
+            },
+            "limits": {
+                "max_files_per_pr": 5,
+                "max_lines_changed": 200,
+                "max_deleted_files": 1,
+                "max_new_files": 3,
+            },
+            "requirements": {
+                "tests_must_pass": False,
+                "human_approval": {
+                    "plan": False,
+                    "apply": True,
+                    "merge": False,
+                },
+            },
+            "sandbox": {
+                "use_branch": False,
+                "branch_prefix": "auto/",
+                "isolated_execution": False,
+                "timeout": 120,
+            },
+            "rollback": {
+                "max_snapshots": 5,
+                "auto_rollback_on_test_failure": False,
+            },
+            "allowed_categories": ["documentation", "testing"],
+            "denied_categories": ["security"],
+        }
+        config_file = tmp_path / "safety.yaml"
+        with open(config_file, "w") as f:
+            yaml.dump(config_data, f)
+
+        config = SafetyConfig.load(config_path=config_file)
+        assert config.critical_files == ["*.lock"]
+        assert config.sensitive_files == ["config/*"]
+        assert config.max_files_per_pr == 5
+        assert config.max_lines_changed == 200
+        assert config.max_deleted_files == 1
+        assert config.max_new_files == 3
+        assert config.tests_must_pass is False
+        assert config.human_approval_plan is False
+        assert config.human_approval_apply is True
+        assert config.human_approval_merge is False
+        assert config.use_branch is False
+        assert config.branch_prefix == "auto/"
+        assert config.isolated_execution is False
+        assert config.sandbox_timeout == 120
+        assert config.max_snapshots == 5
+        assert config.auto_rollback_on_test_failure is False
+        assert config.allowed_categories == ["documentation", "testing"]
+        assert config.denied_categories == ["security"]
+
+    def test_from_dict_defaults(self):
+        """_from_dict uses defaults for missing keys."""
+        config = SafetyConfig._from_dict({})
+        assert config.critical_files == []
+        assert config.max_files_per_pr == 10
+        assert config.human_approval_plan is True
+
+    def test_is_protected_file_match(self):
+        """is_protected_file matches glob patterns."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        config = SafetyConfig(critical_files=["*.lock", "Dockerfile"])
+        checker = SafetyChecker(config)
+        assert checker.is_protected_file("poetry.lock") is True
+        assert checker.is_protected_file("Dockerfile") is True
+        assert checker.is_protected_file("main.py") is False
+
+    def test_is_sensitive_file_match(self):
+        """is_sensitive_file matches glob patterns."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        config = SafetyConfig(sensitive_files=["config/*", "*.env"])
+        checker = SafetyChecker(config)
+        assert checker.is_sensitive_file("config/settings.yaml") is True
+        assert checker.is_sensitive_file("prod.env") is True
+        assert checker.is_sensitive_file("src/main.py") is False
+
+    def test_matches_patterns_no_patterns(self):
+        """_matches_patterns returns False with empty patterns."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        checker = SafetyChecker(SafetyConfig())
+        assert checker._matches_patterns("any.py", []) is False
+
+    def test_is_allowed_category_denied(self):
+        """is_allowed_category returns False for denied categories."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        config = SafetyConfig(denied_categories=["security", "infra"])
+        checker = SafetyChecker(config)
+        assert checker.is_allowed_category("security") is False
+        assert checker.is_allowed_category("documentation") is True
+
+    def test_is_allowed_category_allowed_list(self):
+        """is_allowed_category checks allowed list when set."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        config = SafetyConfig(allowed_categories=["docs", "tests"])
+        checker = SafetyChecker(config)
+        assert checker.is_allowed_category("docs") is True
+        assert checker.is_allowed_category("refactoring") is False
+
+    def test_is_allowed_category_no_restrictions(self):
+        """is_allowed_category allows all when no lists set."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        checker = SafetyChecker(SafetyConfig())
+        assert checker.is_allowed_category("anything") is True
+
+    def test_check_changes_file_limit(self):
+        """check_changes detects too many files."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        config = SafetyConfig(max_files_per_pr=2)
+        checker = SafetyChecker(config)
+        violations = checker.check_changes(
+            files_modified=["a.py", "b.py"],
+            files_added=["c.py"],
+            files_deleted=[],
+            lines_changed=10,
+        )
+        assert any(v.violation_type == "file_limit" for v in violations)
+
+    def test_check_changes_delete_limit(self):
+        """check_changes detects too many deletions."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        config = SafetyConfig(max_deleted_files=0)
+        checker = SafetyChecker(config)
+        violations = checker.check_changes(
+            files_modified=[],
+            files_added=[],
+            files_deleted=["old.py"],
+            lines_changed=0,
+        )
+        assert any(v.violation_type == "delete_limit" for v in violations)
+
+    def test_check_changes_new_file_limit(self):
+        """check_changes detects too many new files."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        config = SafetyConfig(max_new_files=1)
+        checker = SafetyChecker(config)
+        violations = checker.check_changes(
+            files_modified=[],
+            files_added=["a.py", "b.py"],
+            files_deleted=[],
+            lines_changed=0,
+        )
+        assert any(v.violation_type == "new_file_limit" for v in violations)
+
+    def test_check_changes_lines_limit(self):
+        """check_changes detects too many lines changed."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        config = SafetyConfig(max_lines_changed=100)
+        checker = SafetyChecker(config)
+        violations = checker.check_changes(
+            files_modified=[],
+            files_added=[],
+            files_deleted=[],
+            lines_changed=200,
+        )
+        assert any(v.violation_type == "lines_limit" for v in violations)
+
+    def test_check_changes_protected_file(self):
+        """check_changes detects protected file modification."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        config = SafetyConfig(critical_files=["*.lock"])
+        checker = SafetyChecker(config)
+        violations = checker.check_changes(
+            files_modified=["poetry.lock"],
+            files_added=[],
+            files_deleted=[],
+            lines_changed=1,
+        )
+        assert any(v.violation_type == "protected_file" for v in violations)
+
+    def test_check_changes_denied_category(self):
+        """check_changes detects denied category."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        config = SafetyConfig(denied_categories=["security"])
+        checker = SafetyChecker(config)
+        violations = checker.check_changes(
+            files_modified=[],
+            files_added=[],
+            files_deleted=[],
+            lines_changed=0,
+            category="security",
+        )
+        assert any(v.violation_type == "denied_category" for v in violations)
+
+    def test_check_changes_sensitive_file_warning(self):
+        """check_changes adds warning for sensitive files."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        config = SafetyConfig(sensitive_files=["config/*"])
+        checker = SafetyChecker(config)
+        violations = checker.check_changes(
+            files_modified=["config/settings.yaml"],
+            files_added=[],
+            files_deleted=[],
+            lines_changed=1,
+        )
+        sensitive_violations = [v for v in violations if v.violation_type == "sensitive_file"]
+        assert len(sensitive_violations) == 1
+        assert sensitive_violations[0].severity == "warning"
+
+    def test_check_changes_clean(self):
+        """check_changes returns empty list when all is safe."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        checker = SafetyChecker(SafetyConfig())
+        violations = checker.check_changes(
+            files_modified=["main.py"],
+            files_added=[],
+            files_deleted=[],
+            lines_changed=10,
+        )
+        assert violations == []
+
+    def test_has_blocking_violations_error(self):
+        """has_blocking_violations returns True for error-level violations."""
+        from animus_forge.self_improve.safety import SafetyChecker, SafetyViolation
+
+        checker = SafetyChecker(SafetyConfig())
+        violations = [
+            SafetyViolation(file_path="", violation_type="test", message="m", severity="error")
+        ]
+        assert checker.has_blocking_violations(violations) is True
+
+    def test_has_blocking_violations_warning_only(self):
+        """has_blocking_violations returns False for warning-only violations."""
+        from animus_forge.self_improve.safety import SafetyChecker, SafetyViolation
+
+        checker = SafetyChecker(SafetyConfig())
+        violations = [
+            SafetyViolation(file_path="", violation_type="test", message="m", severity="warning")
+        ]
+        assert checker.has_blocking_violations(violations) is False
+
+    def test_has_blocking_violations_empty(self):
+        """has_blocking_violations returns False with no violations."""
+        from animus_forge.self_improve.safety import SafetyChecker
+
+        checker = SafetyChecker(SafetyConfig())
+        assert checker.has_blocking_violations([]) is False
+
+
+# ---------------------------------------------------------------------------
+# Coverage gap tests — orchestrator.py
+# ---------------------------------------------------------------------------
+
+
+class TestOrchestratorCoverage:
+    """Tests for orchestrator _generate_changes, _apply_changes, and workflow paths."""
+
+    def _make_orch(self, tmp_path, provider=None):
+        """Create orchestrator with test config."""
+        config = SafetyConfig(
+            human_approval_plan=False,
+            human_approval_apply=False,
+            human_approval_merge=False,
+            max_files_per_pr=50,
+            max_lines_changed=5000,
+            max_new_files=20,
+            branch_prefix="test/",
+        )
+        return SelfImproveOrchestrator(codebase_path=tmp_path, provider=provider, config=config)
+
+    async def test_generate_changes_no_provider(self, tmp_path):
+        """_generate_changes returns empty dict without provider."""
+        orch = self._make_orch(tmp_path)
+        plan = ImprovementPlan(
+            id="p1",
+            title="T",
+            description="D",
+            suggestions=[],
+            implementation_steps=[],
+            estimated_files=["f.py"],
+            estimated_lines=10,
+        )
+        changes = await orch._generate_changes(plan)
+        assert changes == {}
+
+    async def test_generate_changes_reads_files(self, tmp_path):
+        """_generate_changes reads affected files and calls provider."""
+        (tmp_path / "src.py").write_text("original code")
+        provider = AsyncMock()
+        provider.complete = AsyncMock(return_value='{"src.py": "improved code"}')
+        orch = self._make_orch(tmp_path, provider=provider)
+
+        suggestion = ImprovementSuggestion(
+            id="s1",
+            category=ImprovementCategory.REFACTORING,
+            title="Improve",
+            description="Make better",
+            affected_files=["src.py"],
+            estimated_lines=5,
+            implementation_hints="Add docstring",
+        )
+        plan = ImprovementPlan(
+            id="p1",
+            title="T",
+            description="D",
+            suggestions=[suggestion],
+            implementation_steps=["step1"],
+            estimated_files=["src.py"],
+            estimated_lines=5,
+        )
+        changes = await orch._generate_changes(plan)
+        assert changes == {"src.py": "improved code"}
+        provider.complete.assert_called_once()
+
+    async def test_generate_changes_skips_nonexistent_files(self, tmp_path):
+        """_generate_changes skips files that don't exist."""
+        provider = AsyncMock()
+        provider.complete = AsyncMock(return_value='{"new.py": "content"}')
+        orch = self._make_orch(tmp_path, provider=provider)
+
+        plan = ImprovementPlan(
+            id="p1",
+            title="T",
+            description="D",
+            suggestions=[],
+            implementation_steps=[],
+            estimated_files=["nonexistent.py"],
+            estimated_lines=5,
+        )
+        changes = await orch._generate_changes(plan)
+        assert changes == {"new.py": "content"}
+
+    async def test_generate_changes_skips_protected_files(self, tmp_path):
+        """_generate_changes filters out protected files from response."""
+        (tmp_path / "safe.py").write_text("ok")
+        provider = AsyncMock()
+        provider.complete = AsyncMock(
+            return_value='{"safe.py": "improved", "pyproject.toml": "bad"}'
+        )
+        config = SafetyConfig(
+            critical_files=["pyproject.toml"],
+            human_approval_plan=False,
+            human_approval_apply=False,
+            human_approval_merge=False,
+            branch_prefix="test/",
+        )
+        orch = SelfImproveOrchestrator(codebase_path=tmp_path, provider=provider, config=config)
+
+        plan = ImprovementPlan(
+            id="p1",
+            title="T",
+            description="D",
+            suggestions=[],
+            implementation_steps=[],
+            estimated_files=["safe.py"],
+            estimated_lines=5,
+        )
+        changes = await orch._generate_changes(plan)
+        assert "safe.py" in changes
+        assert "pyproject.toml" not in changes
+
+    async def test_generate_changes_exception(self, tmp_path):
+        """_generate_changes returns empty dict on provider exception."""
+        provider = AsyncMock()
+        provider.complete = AsyncMock(side_effect=RuntimeError("API down"))
+        orch = self._make_orch(tmp_path, provider=provider)
+
+        plan = ImprovementPlan(
+            id="p1",
+            title="T",
+            description="D",
+            suggestions=[],
+            implementation_steps=[],
+            estimated_files=[],
+            estimated_lines=0,
+        )
+        changes = await orch._generate_changes(plan)
+        assert changes == {}
+
+    async def test_generate_changes_unreadable_file(self, tmp_path):
+        """_generate_changes skips files that can't be read."""
+        (tmp_path / "bad.py").write_text("content")
+        provider = AsyncMock()
+        provider.complete = AsyncMock(return_value='{"bad.py": "new"}')
+        orch = self._make_orch(tmp_path, provider=provider)
+
+        plan = ImprovementPlan(
+            id="p1",
+            title="T",
+            description="D",
+            suggestions=[],
+            implementation_steps=[],
+            estimated_files=["bad.py"],
+            estimated_lines=5,
+        )
+        with patch.object(Path, "read_text", side_effect=OSError("perm denied")):
+            changes = await orch._generate_changes(plan)
+        assert changes == {"bad.py": "new"}
+
+    def test_parse_changes_response_valid_json(self, tmp_path):
+        """_parse_changes_response parses raw JSON."""
+        orch = self._make_orch(tmp_path)
+        result = orch._parse_changes_response('{"a.py": "content"}')
+        assert result == {"a.py": "content"}
+
+    def test_parse_changes_response_markdown_fenced(self, tmp_path):
+        """_parse_changes_response strips markdown code fences."""
+        orch = self._make_orch(tmp_path)
+        text = '```json\n{"a.py": "content"}\n```'
+        result = orch._parse_changes_response(text)
+        assert result == {"a.py": "content"}
+
+    def test_parse_changes_response_regex_fallback(self, tmp_path):
+        """_parse_changes_response uses regex fallback for preamble text."""
+        orch = self._make_orch(tmp_path)
+        text = 'Here are the changes:\n{"a.py": "content"}\nDone!'
+        result = orch._parse_changes_response(text)
+        assert result == {"a.py": "content"}
+
+    def test_parse_changes_response_invalid(self, tmp_path):
+        """_parse_changes_response returns empty dict for unparseable text."""
+        orch = self._make_orch(tmp_path)
+        result = orch._parse_changes_response("not json at all")
+        assert result == {}
+
+    def test_parse_changes_response_non_dict(self, tmp_path):
+        """_parse_changes_response returns empty dict for non-dict JSON."""
+        orch = self._make_orch(tmp_path)
+        result = orch._parse_changes_response('["a", "b"]')
+        assert result == {}
+
+    def test_parse_changes_response_non_string_values(self, tmp_path):
+        """_parse_changes_response converts non-string values to strings."""
+        orch = self._make_orch(tmp_path)
+        result = orch._parse_changes_response('{"a.py": 123, "b.py": true}')
+        assert result == {"a.py": "123", "b.py": "True"}
+
+    def test_apply_changes_writes_files(self, tmp_path):
+        """_apply_changes writes content to files."""
+        orch = self._make_orch(tmp_path)
+        orch._apply_changes({"src/new.py": "new content", "existing.py": "updated"})
+        assert (tmp_path / "src" / "new.py").read_text() == "new content"
+        assert (tmp_path / "existing.py").read_text() == "updated"
+
+    async def test_run_no_changes_generated(self, tmp_path):
+        """Run fails when _generate_changes returns empty dict."""
+        src = tmp_path / "src" / "animus_forge"
+        src.mkdir(parents=True)
+        (src / "f.py").write_text("import os\n\ndef func():\n    pass\n")
+
+        provider = AsyncMock()
+        provider.complete = AsyncMock(return_value="not valid json")
+        orch = self._make_orch(tmp_path, provider=provider)
+
+        result = await orch.run()
+        if result.stage_reached == WorkflowStage.IMPLEMENTING:
+            assert result.success is False
+            assert "No changes generated" in result.error
+
+    async def test_run_sandbox_apply_fails(self, tmp_path):
+        """Run fails when sandbox apply_changes returns False."""
+        src = tmp_path / "src" / "animus_forge"
+        src.mkdir(parents=True)
+        (src / "f.py").write_text("import os\n\ndef func():\n    pass\n")
+
+        orch = self._make_orch(tmp_path)
+
+        mock_sandbox = MagicMock()
+        mock_sandbox.__enter__ = MagicMock(return_value=mock_sandbox)
+        mock_sandbox.__exit__ = MagicMock(return_value=False)
+        mock_sandbox.apply_changes = AsyncMock(return_value=False)
+
+        with (
+            patch.object(
+                orch,
+                "_generate_changes",
+                new_callable=AsyncMock,
+                return_value={"src/animus_forge/f.py": "fixed"},
+            ),
+            patch(
+                "animus_forge.self_improve.orchestrator.Sandbox",
+                return_value=mock_sandbox,
+            ),
+        ):
+            result = await orch.run()
+
+        assert result.success is False
+        assert result.stage_reached == WorkflowStage.TESTING
+        assert "Failed to apply" in result.error
+
+    async def test_run_tests_fail_auto_rollback(self, tmp_path):
+        """Run fails when sandbox tests fail and auto_rollback is enabled."""
+        src = tmp_path / "src" / "animus_forge"
+        src.mkdir(parents=True)
+        (src / "f.py").write_text("import os\n\ndef func():\n    pass\n")
+
+        orch = self._make_orch(tmp_path)
+
+        mock_sandbox = MagicMock()
+        mock_sandbox.__enter__ = MagicMock(return_value=mock_sandbox)
+        mock_sandbox.__exit__ = MagicMock(return_value=False)
+        mock_sandbox.apply_changes = AsyncMock(return_value=True)
+        mock_sandbox.validate_changes = AsyncMock(
+            return_value=SandboxResult(
+                status=SandboxStatus.FAILED, tests_passed=False, lint_passed=True
+            )
+        )
+
+        with (
+            patch.object(
+                orch,
+                "_generate_changes",
+                new_callable=AsyncMock,
+                return_value={"src/animus_forge/f.py": "fixed"},
+            ),
+            patch(
+                "animus_forge.self_improve.orchestrator.Sandbox",
+                return_value=mock_sandbox,
+            ),
+        ):
+            result = await orch.run()
+
+        assert result.success is False
+        assert result.stage_reached == WorkflowStage.TESTING
+        assert "Tests failed" in result.error
+
+    async def test_run_plan_rejected(self, tmp_path):
+        """Run fails when plan is rejected."""
+        from animus_forge.self_improve.approval import ApprovalStatus as _ApprovalStatus
+
+        src = tmp_path / "src" / "animus_forge"
+        src.mkdir(parents=True)
+        (src / "f.py").write_text("import os\n\ndef func():\n    pass\n")
+
+        config = SafetyConfig(
+            human_approval_plan=True,
+            human_approval_apply=False,
+            human_approval_merge=False,
+            max_files_per_pr=50,
+            max_lines_changed=5000,
+            max_new_files=20,
+            branch_prefix="test/",
+        )
+        orch = SelfImproveOrchestrator(codebase_path=tmp_path, config=config)
+
+        with patch.object(
+            orch.approval_gate,
+            "wait_for_approval",
+            new_callable=AsyncMock,
+            return_value=_ApprovalStatus.REJECTED,
+        ):
+            result = await orch.run(auto_approve=False)
+
+        if result.stage_reached == WorkflowStage.AWAITING_PLAN_APPROVAL:
+            assert result.success is False
+            assert "rejected" in result.error.lower()
+
+    async def test_run_apply_rejected(self, tmp_path):
+        """Run fails when apply approval is rejected."""
+        from animus_forge.self_improve.approval import ApprovalStatus as _ApprovalStatus
+
+        src = tmp_path / "src" / "animus_forge"
+        src.mkdir(parents=True)
+        (src / "f.py").write_text("import os\n\ndef func():\n    pass\n")
+
+        config = SafetyConfig(
+            human_approval_plan=False,
+            human_approval_apply=True,
+            human_approval_merge=False,
+            max_files_per_pr=50,
+            max_lines_changed=5000,
+            max_new_files=20,
+            branch_prefix="test/",
+        )
+        orch = SelfImproveOrchestrator(codebase_path=tmp_path, config=config)
+
+        mock_sandbox = MagicMock()
+        mock_sandbox.__enter__ = MagicMock(return_value=mock_sandbox)
+        mock_sandbox.__exit__ = MagicMock(return_value=False)
+        mock_sandbox.apply_changes = AsyncMock(return_value=True)
+        mock_sandbox.validate_changes = AsyncMock(
+            return_value=SandboxResult(
+                status=SandboxStatus.SUCCESS, tests_passed=True, lint_passed=True
+            )
+        )
+
+        with (
+            patch.object(
+                orch,
+                "_generate_changes",
+                new_callable=AsyncMock,
+                return_value={"src/animus_forge/f.py": "fixed"},
+            ),
+            patch(
+                "animus_forge.self_improve.orchestrator.Sandbox",
+                return_value=mock_sandbox,
+            ),
+            patch.object(
+                orch.approval_gate,
+                "wait_for_approval",
+                new_callable=AsyncMock,
+                return_value=_ApprovalStatus.REJECTED,
+            ),
+        ):
+            result = await orch.run(auto_approve=False)
+
+        if result.stage_reached == WorkflowStage.AWAITING_APPLY_APPROVAL:
+            assert result.success is False
+            assert "rejected" in result.error.lower()
+
+    async def test_run_apply_expired(self, tmp_path):
+        """Run fails when apply approval expires."""
+        from animus_forge.self_improve.approval import ApprovalStatus as _ApprovalStatus
+
+        src = tmp_path / "src" / "animus_forge"
+        src.mkdir(parents=True)
+        (src / "f.py").write_text("import os\n\ndef func():\n    pass\n")
+
+        config = SafetyConfig(
+            human_approval_plan=False,
+            human_approval_apply=True,
+            human_approval_merge=False,
+            max_files_per_pr=50,
+            max_lines_changed=5000,
+            max_new_files=20,
+            branch_prefix="test/",
+        )
+        orch = SelfImproveOrchestrator(codebase_path=tmp_path, config=config)
+
+        mock_sandbox = MagicMock()
+        mock_sandbox.__enter__ = MagicMock(return_value=mock_sandbox)
+        mock_sandbox.__exit__ = MagicMock(return_value=False)
+        mock_sandbox.apply_changes = AsyncMock(return_value=True)
+        mock_sandbox.validate_changes = AsyncMock(
+            return_value=SandboxResult(
+                status=SandboxStatus.SUCCESS, tests_passed=True, lint_passed=True
+            )
+        )
+
+        with (
+            patch.object(
+                orch,
+                "_generate_changes",
+                new_callable=AsyncMock,
+                return_value={"src/animus_forge/f.py": "fixed"},
+            ),
+            patch(
+                "animus_forge.self_improve.orchestrator.Sandbox",
+                return_value=mock_sandbox,
+            ),
+            patch.object(
+                orch.approval_gate,
+                "wait_for_approval",
+                new_callable=AsyncMock,
+                return_value=_ApprovalStatus.EXPIRED,
+            ),
+        ):
+            result = await orch.run(auto_approve=False)
+
+        if result.stage_reached == WorkflowStage.AWAITING_APPLY_APPROVAL:
+            assert result.success is False
+            assert "timed out" in result.error.lower()

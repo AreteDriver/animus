@@ -8,7 +8,7 @@ Multi-agent orchestration framework for production AI workflows
 
 - **Version**: 1.2.0
 - **Language**: Python
-- **Tests**: 8,254 (95% coverage, fail_under=95)
+- **Tests**: 8,350 (95% coverage, fail_under=95)
 - **Files**: 576 across 2 languages
 - **Lines**: 200,965
 
@@ -155,7 +155,7 @@ animus_forge.cli:app
 - `ANALYZE`
 
 ### Outstanding Items
-- **TODO**: Fix self-improve coverage test artifact (`tests/test_self_improve_coverage.py`)
+- None
 
 ## Git Conventions
 
