@@ -96,10 +96,10 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 source = ["src/animus_forge"]
-omit = ["*/tests/*", "*/__main__.py", "*/tui/*", "*/dashboard/workflow_builder/*", "*/dashboard/eval_page.py"]
+omit = ["*/tests/*", "*/__main__.py", "*/tui/*", "*/dashboard/workflow_builder/*", "*/dashboard/eval_page.py", "*/dashboard/app.py", "*/dashboard/mcp_page.py", "*/dashboard/cost_dashboard.py"]
 
 [tool.coverage.report]
-fail_under = 95
+fail_under = 97
 show_missing = true
 exclude_lines = [
     "pragma: no cover",

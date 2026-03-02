@@ -7,7 +7,7 @@
 - **Version**: 2.0.0
 - **Python**: >=3.10 (Core), >=3.11 (Bootstrap), >=3.12 (Forge)
 - **Layout**: Multi-package monorepo under `packages/`
-- **Tests**: 12,500+ across 4 packages
+- **Tests**: 13,100+ across 4 packages
 - **License**: MIT
 
 ## Monorepo Structure
@@ -21,7 +21,7 @@ animus/
 │   │   └── pyproject.toml
 │   ├── forge/                   # Animus Forge — multi-agent orchestration (was: Gorgon)
 │   │   ├── src/animus_forge/    # Python package: import animus_forge
-│   │   ├── tests/               # 8254 tests, 95% coverage
+│   │   ├── tests/               # 8797 tests, 97% coverage
 │   │   ├── skills/              # Skill definitions (YAML + docs)
 │   │   ├── migrations/          # 14 SQL migrations
 │   │   ├── workflows/           # YAML workflow definitions
