@@ -17,7 +17,7 @@ animus/
 ├── packages/
 │   ├── core/                    # Animus Core — exocortex, identity, memory, CLI
 │   │   ├── animus/              # Python package: import animus
-│   │   ├── tests/               # 2046 tests, 97% coverage
+│   │   ├── tests/               # 2080 tests, 97% coverage
 │   │   └── pyproject.toml
 │   ├── forge/                   # Animus Forge — multi-agent orchestration (was: Gorgon)
 │   │   ├── src/animus_forge/    # Python package: import animus_forge

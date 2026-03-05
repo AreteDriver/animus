@@ -169,6 +169,61 @@ def create_mcp_server():
 
         return "\n".join(lines)
 
+    # -----------------------------------------------------------------------
+    # Workflow tools
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_run_workflow(workflow_path: str, task_description: str = "") -> str:
+        """Run a Forge workflow pipeline.
+
+        Args:
+            workflow_path: Path to workflow YAML file (e.g., configs/examples/build_task.yaml).
+            task_description: Optional task description to inject into the first agent's prompt.
+        """
+        from pathlib import Path
+
+        from animus.cognitive import CognitiveLayer, ModelConfig
+        from animus.forge import ForgeEngine
+        from animus.forge.loader import load_workflow
+        from animus.forge.models import ForgeError
+        from animus.tools import create_default_registry
+
+        wf_path = Path(workflow_path)
+        if not wf_path.exists():
+            return f"Workflow not found: {workflow_path}"
+
+        try:
+            wf_config = load_workflow(wf_path)
+        except ForgeError as e:
+            return f"Failed to load workflow: {e}"
+
+        if task_description and wf_config.agents:
+            existing = wf_config.agents[0].system_prompt or ""
+            wf_config.agents[0].system_prompt = f"{existing}\n\n## Task\n{task_description}"
+
+        # Use default model config
+        model_config = ModelConfig.ollama()
+        cognitive = CognitiveLayer(model_config)
+        tools = create_default_registry()
+
+        cp_dir = config.data_dir / "checkpoints"
+        cp_dir.mkdir(exist_ok=True)
+        engine = ForgeEngine(cognitive=cognitive, checkpoint_dir=cp_dir, tools=tools)
+
+        try:
+            state = engine.run(wf_config)
+            lines = [f"Workflow '{wf_config.name}' {state.status}"]
+            for result in state.results:
+                status = "OK" if result.success else "FAIL"
+                lines.append(f"  [{status}] {result.agent_name} ({result.tokens_used} tokens)")
+                if result.error:
+                    lines.append(f"        {result.error}")
+            lines.append(f"Total: {state.total_tokens} tokens, ${state.total_cost:.4f}")
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Workflow failed: {e}"
+
     return mcp
 
 

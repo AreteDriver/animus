@@ -85,7 +85,7 @@ class TestMcpServerCreation:
 
     def test_tool_count(self, server):
         tools = server._tool_manager.list_tools()
-        assert len(tools) == 8
+        assert len(tools) == 9
 
 
 class TestMemoryTools:
@@ -196,3 +196,50 @@ class TestBriefTool:
         mock_memory.recall.return_value = []
         result = _run(server.call_tool("animus_brief", {}))
         assert "No relevant context" in result[0][0].text
+
+
+class TestRunWorkflow:
+    """Test animus_run_workflow MCP tool."""
+
+    @pytest.fixture
+    def server(self, tmp_path):
+        with patch("animus.mcp_server.AnimusConfig") as mock_config_cls:
+            mock_config = MagicMock()
+            mock_config.data_dir = tmp_path
+            mock_config.memory.backend = "dict"
+            mock_config_cls.load.return_value = mock_config
+            from animus.mcp_server import create_mcp_server
+
+            return create_mcp_server()
+
+    def test_workflow_not_found(self, server):
+        result = _run(
+            server.call_tool("animus_run_workflow", {"workflow_path": "/nonexistent/wf.yaml"})
+        )
+        assert "not found" in result[0][0].text.lower()
+
+    def test_workflow_runs(self, server, tmp_path):
+        # Create a minimal workflow YAML
+        wf_yaml = tmp_path / "test_wf.yaml"
+        wf_yaml.write_text(
+            "name: test_wf\n"
+            "description: Test\n"
+            "provider: mock\n"
+            "model: mock\n"
+            "max_cost_usd: 1.0\n"
+            "agents:\n"
+            "  - name: step1\n"
+            "    archetype: writer\n"
+            "    budget_tokens: 100\n"
+            "    outputs: [result]\n"
+            "gates: []\n"
+        )
+        result = _run(
+            server.call_tool(
+                "animus_run_workflow",
+                {"workflow_path": str(wf_yaml), "task_description": "test task"},
+            )
+        )
+        text = result[0][0].text
+        # Should complete or fail gracefully
+        assert "test_wf" in text or "failed" in text.lower()

@@ -67,6 +67,28 @@ def _validate_path(path: str) -> tuple[bool, str | None]:
     return True, None
 
 
+def _validate_write_path(path: str) -> tuple[bool, str | None]:
+    """Validate a path for write operations (write_file, edit_file).
+
+    First runs standard path validation, then checks write_roots sandbox.
+    When write_roots is configured, writes are restricted to those directories.
+    """
+    is_valid, error = _validate_path(path)
+    if not is_valid:
+        return is_valid, error
+
+    if _security_config is None or not _security_config.write_roots:
+        return True, None
+
+    resolved = Path(path).expanduser().resolve()
+    for root in _security_config.write_roots:
+        root_resolved = Path(root).expanduser().resolve()
+        if resolved == root_resolved or root_resolved in resolved.parents:
+            return True, None
+
+    return False, f"Write denied: path not in write_roots ({_security_config.write_roots})"
+
+
 def _validate_command(command: str) -> tuple[bool, str | None]:
     """
     Validate a shell command against security rules.
@@ -483,7 +505,7 @@ def _tool_write_file(params: dict) -> ToolResult:
             error="Missing required parameter: content",
         )
 
-    is_valid, error = _validate_path(path)
+    is_valid, error = _validate_write_path(path)
     if not is_valid:
         return ToolResult(tool_name="write_file", success=False, output=None, error=error)
 
@@ -528,7 +550,7 @@ def _tool_edit_file(params: dict) -> ToolResult:
             error="Missing required parameters: old_text and new_text",
         )
 
-    is_valid, error = _validate_path(path)
+    is_valid, error = _validate_write_path(path)
     if not is_valid:
         return ToolResult(tool_name="edit_file", success=False, output=None, error=error)
 

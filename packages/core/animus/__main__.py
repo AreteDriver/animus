@@ -751,6 +751,22 @@ def main():
                     wf_config.agents[0].system_prompt = f"{existing}\n\n## Task\n{task_desc}"
                 cp_dir = config.data_dir / "checkpoints"
                 cp_dir.mkdir(exist_ok=True)
+
+                # Sandbox: restrict writes to a build workspace
+                import tempfile
+
+                from animus.tools import _set_security_config
+
+                build_workspace = Path(tempfile.mkdtemp(prefix="animus_build_"))
+                sandbox_config = config.security.tools if hasattr(config, "security") else None
+                if sandbox_config is None:
+                    from animus.config import ToolsSecurityConfig
+
+                    sandbox_config = ToolsSecurityConfig()
+                sandbox_config.write_roots = [str(build_workspace)]
+                _set_security_config(sandbox_config)
+                console.print(f"[dim]Build workspace: {build_workspace}[/dim]")
+
                 engine = ForgeEngine(cognitive=cognitive, checkpoint_dir=cp_dir, tools=tools)
                 console.print(f"[cyan][bold]Build Pipeline[/bold]: {task_desc}[/cyan]")
                 console.print("  Steps: planner → coder → verifier → fixer")
@@ -775,6 +791,9 @@ def main():
                     )
                 except Exception as e:
                     console.print(f"[yellow]Build failed: {e}[/yellow]")
+                finally:
+                    # Reset security config after build
+                    _set_security_config(None)
                 continue
 
             if user_input.lower() == "/history":

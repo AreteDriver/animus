@@ -206,6 +206,10 @@ class ToolsSecurityConfig:
     )
     max_file_size_kb: int = 1000  # 1MB default
 
+    # Write sandbox: when set, write_file/edit_file only work within these dirs.
+    # Empty list = no restriction (writes allowed anywhere in allowed_paths).
+    write_roots: list[str] = field(default_factory=list)
+
     # Command execution restrictions
     command_enabled: bool = True
     command_blocklist: list[str] = field(

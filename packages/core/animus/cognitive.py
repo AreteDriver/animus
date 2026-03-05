@@ -528,8 +528,20 @@ class OpenAIModel(ModelInterface):
         self.config = config
         logger.debug(f"OpenAIModel initialized with {config.model_name}")
 
-    def generate(self, prompt: str, system: str | None = None) -> str:
-        """Generate using OpenAI-compatible API."""
+    def generate(
+        self,
+        prompt: str,
+        system: str | None = None,
+        stream_callback: Callable[[str], None] | None = None,
+    ) -> str:
+        """Generate using OpenAI-compatible API.
+
+        Args:
+            prompt: The prompt text.
+            system: Optional system prompt.
+            stream_callback: If provided, called with each token chunk as it
+                arrives. The full response is still returned at the end.
+        """
         try:
             import openai
 
@@ -549,11 +561,27 @@ class OpenAIModel(ModelInterface):
             logger.debug(
                 f"OpenAI request: model={self.config.model_name}, prompt_len={len(prompt)}"
             )
-            response = client.chat.completions.create(
-                model=self.config.model_name,
-                messages=messages,
-            )
-            result = response.choices[0].message.content or ""
+
+            if stream_callback:
+                parts: list[str] = []
+                stream = client.chat.completions.create(
+                    model=self.config.model_name,
+                    messages=messages,
+                    stream=True,
+                )
+                for chunk in stream:
+                    delta = chunk.choices[0].delta
+                    if delta.content:
+                        parts.append(delta.content)
+                        stream_callback(delta.content)
+                result = "".join(parts)
+            else:
+                response = client.chat.completions.create(
+                    model=self.config.model_name,
+                    messages=messages,
+                )
+                result = response.choices[0].message.content or ""
+
             logger.debug(f"OpenAI response: len={len(result)}")
             return result
 

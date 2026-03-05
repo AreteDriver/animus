@@ -1102,12 +1102,102 @@ class TestOpenAIModel:
             chunks = asyncio.run(self._collect_stream(model, "hello"))
         assert "".join(chunks) == "streamed"
 
+    def test_openai_generate_with_stream_callback(self):
+        """stream_callback receives each token chunk via OpenAI streaming."""
+        model = self._make_model()
+        mock_openai = MagicMock()
+
+        # Simulate streaming chunks
+        chunk1 = MagicMock()
+        chunk1.choices = [MagicMock()]
+        chunk1.choices[0].delta.content = "Hello"
+        chunk2 = MagicMock()
+        chunk2.choices = [MagicMock()]
+        chunk2.choices[0].delta.content = " world"
+
+        mock_openai.OpenAI.return_value.chat.completions.create.return_value = iter(
+            [chunk1, chunk2]
+        )
+
+        received: list[str] = []
+        with patch.dict(sys.modules, {"openai": mock_openai}):
+            result = model.generate("hi", stream_callback=received.append)
+        assert result == "Hello world"
+        assert received == ["Hello", " world"]
+        # Verify stream=True was passed
+        _, kwargs = mock_openai.OpenAI.return_value.chat.completions.create.call_args
+        assert kwargs.get("stream") is True
+
     @staticmethod
     async def _collect_stream(model, prompt):
         chunks = []
         async for chunk in model.generate_stream(prompt):
             chunks.append(chunk)
         return chunks
+
+
+class TestWriteRootsSandbox:
+    """Test write_roots sandbox in ToolsSecurityConfig."""
+
+    def test_write_file_blocked_outside_write_roots(self, tmp_path):
+        from animus.config import ToolsSecurityConfig
+        from animus.tools import _set_security_config, _tool_write_file
+
+        config = ToolsSecurityConfig(
+            allowed_paths=[str(tmp_path)],
+            write_roots=[str(tmp_path / "sandbox")],
+        )
+        _set_security_config(config)
+        try:
+            # Write inside sandbox — should succeed
+            sandbox = tmp_path / "sandbox"
+            sandbox.mkdir()
+            result = _tool_write_file({"path": str(sandbox / "ok.txt"), "content": "hello"})
+            assert result.success
+
+            # Write outside sandbox — should fail
+            result = _tool_write_file({"path": str(tmp_path / "outside.txt"), "content": "nope"})
+            assert not result.success
+            assert "write_roots" in result.error.lower() or "Write denied" in result.error
+        finally:
+            _set_security_config(None)
+
+    def test_edit_file_blocked_outside_write_roots(self, tmp_path):
+        from animus.config import ToolsSecurityConfig
+        from animus.tools import _set_security_config, _tool_edit_file
+
+        # Create a file outside sandbox
+        target = tmp_path / "real.py"
+        target.write_text("old content")
+
+        config = ToolsSecurityConfig(
+            allowed_paths=[str(tmp_path)],
+            write_roots=[str(tmp_path / "sandbox")],
+        )
+        _set_security_config(config)
+        try:
+            result = _tool_edit_file({"path": str(target), "old_text": "old", "new_text": "new"})
+            assert not result.success
+            assert "Write denied" in result.error
+            # File should be unchanged
+            assert target.read_text() == "old content"
+        finally:
+            _set_security_config(None)
+
+    def test_no_write_roots_allows_all(self, tmp_path):
+        from animus.config import ToolsSecurityConfig
+        from animus.tools import _set_security_config, _tool_write_file
+
+        config = ToolsSecurityConfig(
+            allowed_paths=[str(tmp_path)],
+            write_roots=[],  # No restriction
+        )
+        _set_security_config(config)
+        try:
+            result = _tool_write_file({"path": str(tmp_path / "anywhere.txt"), "content": "ok"})
+            assert result.success
+        finally:
+            _set_security_config(None)
 
 
 class TestMockModelWithTools:

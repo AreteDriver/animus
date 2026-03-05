@@ -23,7 +23,7 @@ Unify entry points, expose Animus as an MCP server, stabilize all packages.
 - [x] Optional dep: `pip install animus[mcp]`
 - [x] 18 tests (skip gracefully without mcp package)
 - [ ] Add to Claude Code MCP config for live use (needs manual setup)
-- [ ] Expose `animus_run_workflow` (trigger Forge pipelines — deferred)
+- [x] Expose `animus_run_workflow` (trigger Forge pipelines via MCP)
 
 ## Phase 3: Bootstrap Stabilization ✅
 - [x] All 1697 tests pass in venv
