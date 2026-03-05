@@ -31,11 +31,11 @@ Unify entry points, expose Animus as an MCP server, stabilize all packages.
 - [x] Collection errors on system Python are dep-only (tomli-w, python-multipart)
 - [x] Bootstrap test count updated in CLAUDE.md
 
-## Phase 4: Release
-- [ ] All packages: run full test suites
-- [ ] Tag v2.2.0
-- [ ] GitHub Release with changelog
-- [ ] Update MEMORY.md with new test counts
+## Phase 4: Release ✅
+- [x] All packages: full test suites pass
+- [x] Tag v2.2.0 pushed
+- [x] GitHub Release created: https://github.com/AreteDriver/animus/releases/tag/v2.2.0
+- [x] MEMORY.md updated with new test counts
 
 ## Context
 - Core: 2046 tests, 97% coverage
