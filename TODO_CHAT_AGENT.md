@@ -3,22 +3,33 @@
 ## Goal
 Make Animus work like Claude Code: take ideas, autonomously build them.
 
-## Phase 1: Wire chat.py to Animus Core
-- [ ] Replace raw `urllib.request` → `CognitiveLayer` (Anthropic primary, Ollama fallback)
-- [ ] Replace hand-rolled tool exec → `ToolRegistry` + `create_default_tools()`
-- [ ] Add `MemoryLayer` so context persists across sessions
-- [ ] Shrink chat.py from ~700 lines to ~50 (thin wrapper)
+## Phase 1: Wire chat.py to Animus Core ✅
+- [x] Replace raw `urllib.request` → `CognitiveLayer` (Anthropic primary, Ollama fallback)
+- [x] Replace hand-rolled tool exec → `ToolRegistry` + `create_default_tools()`
+- [x] Add `MemoryLayer` so context persists across sessions
+- [x] Shrink chat.py from ~700 lines to ~373 (thin wrapper over Core)
 
-## Phase 2: Claude brain + Ollama hands
-- [ ] Use Claude API for planning/reasoning/tool-selection (reliable tool calling)
-- [ ] Use Ollama for cheap local subtasks (summarization, formatting, simple analysis)
-- [ ] CognitiveLayer already supports this via `provider` + `fallback` args
+## Phase 2: Claude brain + Ollama hands ✅
+- [x] `classify_task()` — route heavy tasks (planning, code gen) to Claude, light tasks (summarize, format) to Ollama
+- [x] `CognitiveLayer.delegate_to_local()` — explicitly route subtask to local model
+- [x] `CognitiveLayer.think_routed()` — auto-route based on task classification
+- [x] `create_local_think_tool()` — tool that lets Claude offload cheap subtasks to Ollama during agentic loop
+- [x] `CognitiveLayer.has_dual_models` property
+- [x] `/model` slash command for routing visibility
+- [x] 52 tests covering classify_task, delegate_to_local, think_routed, local_think tool
 
-## Phase 3: Forge workflows for "build X" tasks
-- [ ] Create YAML workflow template: plan → code → lint → test → commit
-- [ ] Wire ForgeEngine into chat agent for multi-step tasks
-- [ ] Add quality gates (ruff + pytest must pass before continuing)
-- [ ] Budget tracking so it doesn't burn unlimited tokens
+## Phase 3: Forge workflows for "build X" tasks ✅
+- [x] `build_task.yaml` — 4-agent pipeline: planner → coder → verifier → fixer
+- [x] New archetypes: `planner`, `coder`, `verifier` in ForgeAgent
+- [x] Planner uses `read_file`/`list_files` tools to understand codebase before planning
+- [x] Coder uses `read_file`/`write_file`/`edit_file`/`list_files` to implement changes
+- [x] Verifier uses `run_command` to run ruff + pytest
+- [x] Fixer uses `read_file`/`edit_file`/`run_command` to fix issues
+- [x] Quality gate after fixer: halt if PASS not in output
+- [x] Budget tracking: $2.00 max per build task
+- [x] `/build <description>` slash command injects task into pipeline
+- [x] Task description injected into planner system prompt
+- [x] 27 tests covering archetypes, workflow loading, agent execution, gate validation
 
 ## Phase 4: Constrained tool selection for Ollama-only mode
 - [ ] Numbered menu approach instead of free-form tool calling

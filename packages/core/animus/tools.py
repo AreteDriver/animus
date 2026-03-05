@@ -1087,3 +1087,67 @@ def create_memory_tools(memory_layer) -> list[Tool]:
             category="memory",
         ),
     ]
+
+
+def create_local_think_tool(cognitive_layer) -> Tool:
+    """Create a tool that delegates subtasks to the local/cheap model.
+
+    When Claude is the primary model, this tool lets it offload cheap
+    subtasks (summarization, formatting, data extraction) to Ollama
+    instead of doing them itself and burning API tokens.
+
+    Only useful when dual models are configured (cloud primary + local fallback).
+    """
+
+    def _tool_local_think(params: dict) -> ToolResult:
+        """Run a subtask on the local model."""
+        prompt = params.get("prompt")
+        if not prompt:
+            return ToolResult(
+                tool_name="local_think",
+                success=False,
+                output=None,
+                error="Missing required parameter: prompt",
+            )
+
+        system = params.get("system")
+        try:
+            result = cognitive_layer.delegate_to_local(prompt, system)
+            return ToolResult(
+                tool_name="local_think",
+                success=True,
+                output=result,
+            )
+        except Exception as e:
+            return ToolResult(
+                tool_name="local_think",
+                success=False,
+                output=None,
+                error=str(e),
+            )
+
+    return Tool(
+        name="local_think",
+        description=(
+            "Delegate a simple subtask to the local model (Ollama) to save API costs. "
+            "Use for: summarizing text, reformatting output, extracting data from text, "
+            "simple Q&A, translating formats. Do NOT use for: planning, code generation, "
+            "debugging, complex reasoning, or tool selection."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "The subtask prompt to send to the local model",
+                },
+                "system": {
+                    "type": "string",
+                    "description": "Optional system prompt for the local model",
+                },
+            },
+            "required": ["prompt"],
+        },
+        handler=_tool_local_think,
+        category="cognitive",
+    )

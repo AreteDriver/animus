@@ -23,7 +23,12 @@ from animus.forge.loader import load_workflow
 from animus.forge.models import ForgeError
 from animus.logging import setup_logging
 from animus.memory import Conversation, MemoryLayer
-from animus.tools import ToolRegistry, create_default_registry, create_memory_tools
+from animus.tools import (
+    ToolRegistry,
+    create_default_registry,
+    create_local_think_tool,
+    create_memory_tools,
+)
 
 # ANSI colors
 CYAN = "\033[0;36m"
@@ -183,6 +188,69 @@ def _run_workflow(
     print(f"\n  Total: {state.total_tokens} tokens, ${state.total_cost:.4f}")
 
 
+def _run_build_task(
+    task_description: str,
+    cognitive: CognitiveLayer,
+    tools: ToolRegistry | None = None,
+) -> None:
+    """Run the autonomous build pipeline: plan → code → verify → fix.
+
+    Uses the build_task.yaml workflow with the task description injected
+    as the planner's input.
+    """
+    build_yaml = (
+        Path(ANIMUS_ROOT)
+        / "packages"
+        / "core"
+        / "configs"
+        / "examples"
+        / "build_task.yaml"
+    )
+
+    if not build_yaml.exists():
+        print(f"{YELLOW}Build workflow not found: {build_yaml}{NC}")
+        return
+
+    try:
+        config = load_workflow(build_yaml)
+    except ForgeError as e:
+        print(f"{YELLOW}Failed to load build workflow: {e}{NC}")
+        return
+
+    # Inject the task description into the planner agent's system prompt
+    if config.agents:
+        existing_prompt = config.agents[0].system_prompt or ""
+        config.agents[0].system_prompt = (
+            f"{existing_prompt}\n\n## Task\n{task_description}"
+        )
+
+    checkpoint_dir = Path(ANIMUS_ROOT) / ".checkpoints"
+    checkpoint_dir.mkdir(exist_ok=True)
+    engine = ForgeEngine(cognitive=cognitive, checkpoint_dir=checkpoint_dir, tools=tools)
+
+    print(f"{CYAN}{BOLD}Build Pipeline{NC}: {task_description}")
+    print(f"  Steps: planner → coder → verifier → fixer")
+    print(f"  Budget: ${config.max_cost_usd:.2f}")
+    print()
+
+    try:
+        state = engine.run(config)
+    except Exception as e:
+        print(f"{YELLOW}Build failed: {e}{NC}")
+        return
+
+    # Print results summary
+    status_color = GREEN if state.status == "completed" else YELLOW
+    print(f"\n{status_color}Build {state.status}{NC}")
+    for result in state.results:
+        indicator = f"{GREEN}OK{NC}" if result.success else f"{YELLOW}FAIL{NC}"
+        cost = f"${result.cost_usd:.4f}"
+        print(f"  [{indicator}] {result.agent_name}  ({result.tokens_used} tokens, {cost})")
+        if result.error:
+            print(f"        {YELLOW}{result.error}{NC}")
+    print(f"\n  Total: {state.total_tokens} tokens, ${state.total_cost:.4f}")
+
+
 def handle_slash(
     cmd: str,
     memory: MemoryLayer,
@@ -214,6 +282,18 @@ def handle_slash(
         print(f"  Auto-approve: {auto}")
         return ""
 
+    if command == "/model":
+        provider = cognitive.primary_config.provider.value
+        model = cognitive.primary_config.model_name
+        print(f"  {BOLD}Primary:{NC} {provider}/{model}")
+        if cognitive.fallback_config:
+            fb = cognitive.fallback_config
+            print(f"  {BOLD}Local:{NC}   {fb.provider.value}/{fb.model_name}")
+            print(f"  {DIM}Dual-model routing active. Claude plans, Ollama executes cheap tasks.{NC}")
+        else:
+            print(f"  {DIM}Single model mode. Set ANTHROPIC_API_KEY for dual-model routing.{NC}")
+        return ""
+
     if command == "/auto":
         current = os.environ.get("ANIMUS_AUTO_APPROVE", "false")
         new_val = "false" if current.lower() in ("1", "true", "yes") else "true"
@@ -222,6 +302,15 @@ def handle_slash(
         print(f"Auto-approve: {color}{new_val.upper()}{NC}")
         if new_val == "true":
             print(f"{YELLOW}  Tools will execute without confirmation.{NC}")
+        return ""
+
+    if command == "/build":
+        task = parts[1].strip() if len(parts) > 1 else ""
+        if not task:
+            print(f"{YELLOW}Usage: /build <description of what to build>{NC}")
+            print(f"  {DIM}Example: /build add a health check endpoint to the API{NC}")
+            return ""
+        _run_build_task(task, cognitive, tools)
         return ""
 
     if command == "/workflow":
@@ -251,12 +340,18 @@ def handle_slash(
   {CYAN}add type hints to packages/core/animus/memory.py{NC}
 
 {BOLD}Slash commands:{NC}
+  {CYAN}/build{NC}      Autonomous build pipeline (plan/code/lint/test/fix)
   {CYAN}/status{NC}     Provider, model, and memory info
+  {CYAN}/model{NC}      Show model routing (dual-model info)
   {CYAN}/auto{NC}       Toggle auto-approve for tool execution
   {CYAN}/workflow{NC}   List or run Forge YAML workflows
   {CYAN}/clear{NC}      Save and reset conversation
   {CYAN}/help{NC}       This message
   {CYAN}/quit{NC}       Save and exit
+
+{BOLD}Build pipeline:{NC}
+  {CYAN}/build add a health check endpoint{NC}
+  {CYAN}/build fix the broken import in memory.py{NC}
 
 {BOLD}Workflow usage:{NC}
   {CYAN}/workflow{NC}        List available workflows
@@ -298,10 +393,14 @@ def main() -> None:
     for tool in create_memory_tools(memory):
         tools.register(tool)
 
+    # Register local_think tool when dual models are configured
+    if cognitive.has_dual_models:
+        tools.register(create_local_think_tool(cognitive))
+
     # Banner
     print(f"{CYAN}{BOLD}Animus{NC} — {primary.provider.value}/{primary.model_name}")
     if fallback:
-        print(f"  Fallback: {fallback.provider.value}/{fallback.model_name}")
+        print(f"  Local: {fallback.provider.value}/{fallback.model_name} (dual-model routing)")
     stats = memory.get_statistics()
     print(f"  {stats.get('total', 0)} memories | /help for commands\n")
 

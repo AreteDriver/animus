@@ -2,7 +2,14 @@
 
 __version__ = "1.0.0"
 
-from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode, detect_mode
+from animus.cognitive import (
+    CognitiveLayer,
+    ModelConfig,
+    ReasoningMode,
+    TaskWeight,
+    classify_task,
+    detect_mode,
+)
 from animus.config import AnimusConfig
 from animus.decision import Decision, DecisionFramework
 from animus.entities import Entity, EntityMemory, EntityType, RelationType
@@ -100,6 +107,7 @@ __all__ = [
     "Task",
     "TaskStatus",
     "TaskTracker",
+    "TaskWeight",
     "Tool",
     "ToolRegistry",
     "ToolResult",
@@ -109,6 +117,7 @@ __all__ = [
     "WorkflowConfig",
     "WorkflowState",
     "__version__",
+    "classify_task",
     "create_default_registry",
     "detect_mode",
     "detect_register",

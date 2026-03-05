@@ -1,0 +1,86 @@
+# Autonomous coding workflow: plan, implement, verify, fix.
+#
+# Usage:
+#   /build add a health check endpoint to the API
+#
+# Pipeline:
+#   1. planner  — reads codebase, produces implementation plan
+#   2. coder    — implements the plan using file tools
+#   3. verifier — runs lint + tests, reports results
+#   4. fixer    — if verifier found issues, fixes them
+#
+# Quality gates:
+#   - After verifier: lint + tests must pass or fixer runs
+#   - After fixer: final check, halt on failure
+
+name: build_task
+description: Autonomous coding pipeline — plan, implement, lint, test, fix
+
+provider: anthropic
+model: claude-sonnet-4-20250514
+max_cost_usd: 2.00
+
+agents:
+  - name: planner
+    archetype: planner
+    budget_tokens: 8000
+    tools: [read_file, list_files]
+    outputs: [plan]
+    system_prompt: |
+      You are a senior engineer planning an implementation.
+      1. Read the relevant files to understand existing patterns
+      2. Produce a concrete plan with:
+         - Files to create or modify
+         - Exact changes needed (function signatures, imports, etc.)
+         - Test strategy
+      3. Keep the plan minimal — smallest change that works
+
+  - name: coder
+    archetype: coder
+    budget_tokens: 15000
+    tools: [read_file, write_file, edit_file, list_files]
+    inputs: [planner.plan]
+    outputs: [changes_summary]
+    system_prompt: |
+      You are a senior engineer implementing a plan.
+      Rules:
+      - Read files BEFORE editing them
+      - One change at a time
+      - Follow existing code style and patterns
+      - Add type hints
+      - Do NOT refactor unrelated code
+
+  - name: verifier
+    archetype: verifier
+    budget_tokens: 5000
+    tools: [run_command]
+    inputs: [coder.changes_summary]
+    outputs: [verification_result]
+    system_prompt: |
+      You verify code changes by running quality checks.
+      Run these commands in order:
+      1. ruff check packages/ --fix
+      2. ruff format packages/
+      3. pytest (relevant test files) -v --tb=short
+      Report results as PASS or FAIL with details.
+
+  - name: fixer
+    archetype: coder
+    budget_tokens: 10000
+    tools: [read_file, edit_file, run_command]
+    inputs: [verifier.verification_result, coder.changes_summary]
+    outputs: [fix_summary]
+    system_prompt: |
+      You fix lint errors and test failures.
+      1. Read the verification results
+      2. If all checks passed, report PASS with no changes needed
+      3. Otherwise, fix each issue one at a time
+      4. Re-run the failing check after each fix
+      5. Report PASS when all issues are resolved, or FAIL with remaining issues
+
+gates:
+  - name: lint_test_check
+    after: fixer
+    type: automated
+    pass_condition: "fix_summary contains PASS"
+    on_fail: halt

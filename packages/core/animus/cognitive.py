@@ -47,6 +47,69 @@ class ReasoningMode(Enum):
     BACKGROUND = "background"  # Async processing
 
 
+class TaskWeight(Enum):
+    """Task complexity classification for dual-model routing."""
+
+    HEAVY = "heavy"  # Planning, tool selection, code generation, multi-step reasoning
+    LIGHT = "light"  # Summarization, formatting, simple Q&A, data extraction
+
+
+# Patterns that indicate a lightweight task suitable for local/cheap models
+_LIGHT_TASK_PATTERNS = [
+    r"^summarize\b",
+    r"^format\b",
+    r"^reformat\b",
+    r"^rewrite\s+(?:this|the)\b",
+    r"^convert\s+(?:this|the)\b",
+    r"^extract\b",
+    r"^list\s+(?:the|all)\b",
+    r"^count\b",
+    r"^sort\b",
+    r"^what\s+(?:is|are)\s+(?:the\s+)?(?:name|type|value|size|length|count)\b",
+    r"^translate\b",
+    r"^clean\s+up\b",
+    r"^simplify\b",
+]
+
+# Patterns that indicate a heavyweight task requiring capable models
+_HEAVY_TASK_PATTERNS = [
+    r"^(?:plan|design|architect)\b",
+    r"^(?:implement|build|create|write|add)\s+(?:a\s+)?(?:new\s+)?(?:feature|module|class|function|endpoint|test|workflow)",
+    r"^(?:fix|debug|diagnose|investigate)\b",
+    r"^(?:review|audit|analyze)\s+(?:the\s+)?(?:code|security|performance|architecture|\w+\s+module)",
+    r"^(?:refactor|optimize|migrate)\b",
+    r"decide\b",
+    r"trade.?offs?\b",
+    r"(?:should\s+(?:I|we)|what\s+approach|how\s+(?:should|would|to)\s+(?:I|we))\b",
+]
+
+
+def classify_task(prompt: str) -> TaskWeight:
+    """Classify a task as heavy or light based on prompt patterns.
+
+    Heavy tasks go to the primary (capable) model.
+    Light tasks can be delegated to local/cheap models.
+    """
+    prompt_lower = prompt.lower().strip()
+
+    for pattern in _HEAVY_TASK_PATTERNS:
+        if re.search(pattern, prompt_lower):
+            return TaskWeight.HEAVY
+
+    for pattern in _LIGHT_TASK_PATTERNS:
+        if re.search(pattern, prompt_lower):
+            return TaskWeight.LIGHT
+
+    # Default: if prompt is short and looks like a simple question, it's light
+    # Otherwise, assume heavy (safer — don't send complex tasks to weak models)
+    if len(prompt) < 200 and not any(
+        kw in prompt_lower for kw in ("implement", "build", "fix", "debug", "plan", "review")
+    ):
+        return TaskWeight.LIGHT
+
+    return TaskWeight.HEAVY
+
+
 # Patterns for automatic mode detection
 MODE_PATTERNS = {
     ReasoningMode.DEEP: [
@@ -578,6 +641,62 @@ class CognitiveLayer:
                 logger.debug(f"Entity extraction failed: {e}")
 
         return response
+
+    def delegate_to_local(
+        self,
+        prompt: str,
+        system: str | None = None,
+    ) -> str:
+        """Route a subtask to the local/fallback model for cheap execution.
+
+        When the primary model is a cloud API (Anthropic/OpenAI), this sends
+        the subtask to the local Ollama fallback instead of burning API tokens.
+        If no fallback is configured, falls back to the primary model.
+
+        Typical use: summarization, formatting, data extraction, simple Q&A
+        that doesn't need the reasoning power of the primary model.
+        """
+        target = self.fallback or self.primary
+        target_name = (
+            self.fallback_config.provider.value
+            if self.fallback_config
+            else self.primary_config.provider.value
+        )
+        logger.debug(f"Delegating to local model ({target_name}): {prompt[:80]}...")
+
+        try:
+            return target.generate(prompt, system)
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
+            logger.warning(f"Local delegation failed ({target_name}): {e}")
+            # If local fails and we have a different primary, try that
+            if target is not self.primary:
+                logger.info("Local model unavailable, using primary as fallback")
+                return self.primary.generate(prompt, system)
+            return f"[Error: local model unavailable: {e}]"
+
+    def think_routed(
+        self,
+        prompt: str,
+        context: str | None = None,
+        mode: ReasoningMode = ReasoningMode.QUICK,
+    ) -> str:
+        """Generate a response, routing to the appropriate model based on task weight.
+
+        Heavy tasks (planning, code gen, debugging) go to the primary model.
+        Light tasks (summarization, formatting) go to the local/fallback model.
+        """
+        weight = classify_task(prompt)
+        logger.debug(f"Task classified as {weight.value}: {prompt[:60]}...")
+
+        if weight == TaskWeight.LIGHT and self.fallback:
+            return self.delegate_to_local(prompt, self._build_system_prompt(context, mode))
+
+        return self.think(prompt, context, mode)
+
+    @property
+    def has_dual_models(self) -> bool:
+        """Whether both a cloud primary and local fallback are configured."""
+        return self.fallback is not None
 
     def _enrich_context(self, prompt: str, context: str | None) -> str | None:
         """Enrich context with entity knowledge and proactive nudges."""
