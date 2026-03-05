@@ -814,7 +814,7 @@ When you have gathered enough information, provide your final answer."""
             return self._think_with_tools_anthropic(
                 prompt, context, mode, tools, max_iterations, approval_callback
             )
-        return self._think_with_tools_markdown(
+        return self._think_with_tools_constrained(
             prompt, context, mode, tools, max_iterations, approval_callback
         )
 
@@ -971,6 +971,163 @@ When you have gathered enough information, provide your final answer."""
             final_response = response
 
         return final_response
+
+    def _think_with_tools_constrained(
+        self,
+        prompt: str,
+        context: str | None = None,
+        mode: ReasoningMode = ReasoningMode.QUICK,
+        tools: "ToolRegistry | None" = None,
+        max_iterations: int = 5,
+        approval_callback: Callable | None = None,
+    ) -> str:
+        """Constrained tool loop for local models (Ollama/Mock/OpenAI).
+
+        Instead of asking the model to output free-form JSON tool calls,
+        presents a numbered menu and parses a simple structured response:
+
+            TOOL: 3
+            path: /some/file.py
+
+        This is much more reliable with 7B-8B models that struggle with
+        JSON formatting.
+        """
+        menu_text, number_map = tools.get_numbered_menu()
+        system = self._build_system_prompt(context, mode)
+
+        constrained_instructions = f"""{menu_text}
+
+To use a tool, respond with EXACTLY this format on its own line:
+TOOL: <number>
+Then each required parameter on its own line as key: value
+
+Example:
+TOOL: 3
+path: /home/user/file.py
+
+After seeing tool results, pick another tool or respond with TOOL: 0 to give your final answer.
+Your final answer (after TOOL: 0) should address the user's request directly."""
+
+        messages = [{"role": "user", "content": prompt}]
+        final_response = ""
+
+        for iteration in range(max_iterations):
+            logger.debug(f"Constrained tool iteration {iteration + 1}/{max_iterations}")
+
+            full_prompt = self._format_messages(messages)
+            if iteration == 0:
+                full_prompt += f"\n\n{constrained_instructions}"
+
+            response = self.primary.generate(full_prompt, system)
+
+            # Parse constrained tool selection
+            tool_selection = self._parse_constrained_tool(response, number_map)
+
+            if tool_selection is None:
+                # No tool call found or TOOL: 0 — treat response as final
+                final_response = self._strip_tool_lines(response)
+                break
+
+            tool_name, params = tool_selection
+
+            tool = tools.get(tool_name)
+            if not tool:
+                messages.append({"role": "assistant", "content": response})
+                messages.append({"role": "user", "content": f"Error: Unknown tool '{tool_name}'"})
+                continue
+
+            # Check approval
+            if tool.requires_approval and approval_callback:
+                if not approval_callback(tool_name, params):
+                    messages.append({"role": "assistant", "content": response})
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": f"Tool '{tool_name}' was not approved by user.",
+                        }
+                    )
+                    continue
+
+            # Execute
+            result = tools.execute(tool_name, params)
+            logger.debug(f"Tool {tool_name} result: success={result.success}")
+
+            messages.append({"role": "assistant", "content": response})
+            messages.append({"role": "user", "content": f"Tool result:\n{result.to_context()}"})
+
+        else:
+            logger.warning(f"Max constrained iterations ({max_iterations}) reached")
+            final_response = response
+
+        return final_response
+
+    @staticmethod
+    def _parse_constrained_tool(
+        response: str,
+        number_map: dict[int, str],
+    ) -> tuple[str, dict] | None:
+        """Parse a constrained tool selection from model response.
+
+        Looks for 'TOOL: N' followed by key: value parameter lines.
+        Returns (tool_name, params) or None if no tool / TOOL: 0.
+        """
+        # Find TOOL: N line
+        tool_match = re.search(r"TOOL:\s*(\d+)", response)
+        if not tool_match:
+            return None
+
+        tool_num = int(tool_match.group(1))
+        if tool_num == 0:
+            return None
+
+        tool_name = number_map.get(tool_num)
+        if not tool_name:
+            return None
+
+        # Extract key: value lines after the TOOL line
+        params: dict[str, str] = {}
+        lines = response[tool_match.end() :].strip().split("\n")
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith("TOOL:"):
+                break
+            # Parse key: value (first colon splits key from value)
+            if ":" in line:
+                key, _, value = line.partition(":")
+                key = key.strip()
+                value = value.strip()
+                if key and value:
+                    params[key] = value
+
+        return tool_name, params
+
+    @staticmethod
+    def _strip_tool_lines(response: str) -> str:
+        """Remove TOOL: lines and parameter lines from response text."""
+        lines = response.split("\n")
+        result = []
+        skip_params = False
+        for line in lines:
+            tool_match = re.match(r"\s*TOOL:\s*(\d+)", line)
+            if tool_match:
+                tool_num = int(tool_match.group(1))
+                # TOOL: 0 means "no tool" — don't skip subsequent lines
+                skip_params = tool_num != 0
+                continue
+            if skip_params:
+                # Check if this looks like a key: value parameter line
+                stripped = line.strip()
+                if (
+                    stripped
+                    and ":" in stripped
+                    and not stripped.startswith(("- ", "* ", "#", " " * 4))
+                ):
+                    # Looks like a parameter — skip it
+                    continue
+                # Not a parameter line — stop skipping
+                skip_params = False
+            result.append(line)
+        return "\n".join(result).strip()
 
     def _format_messages(self, messages: list[dict]) -> str:
         """Format message history for the model."""

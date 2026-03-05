@@ -151,21 +151,21 @@ class TestCognitiveWithMock:
         assert result == "Mock thinking."
 
     def test_think_with_tools_tool_call(self):
-        """Model returns a tool call JSON, verify agentic loop executes it."""
-        tool_response = (
-            'Let me check.\n```tool\n{"tool": "test_tool", "params": {"key": "val"}}\n```'
-        )
-        # First iteration matches "User: Hello" -> tool call
-        # Second iteration matches "Tool results:" -> final answer (no tool block)
+        """Model returns constrained tool selection, verify agentic loop executes it."""
+        tool_response = "Let me check.\nTOOL: 1\nkey: val"
+        # First iteration selects tool, second returns final answer
         cog = self._make_cognitive(
             default_response=tool_response,
-            response_map={"Tool results:": "Final answer after tools."},
+            response_map={"Tool result:": "TOOL: 0\nFinal answer after tools."},
         )
 
-        # Set up a mock tool registry
+        # Set up a mock tool registry with numbered menu
         mock_registry = MagicMock()
         mock_registry.list_tools.return_value = ["test_tool"]
-        mock_registry.get_schema_text.return_value = "Available tools: test_tool"
+        mock_registry.get_numbered_menu.return_value = (
+            "0: No tool\n1: test_tool (key) — Does test things",
+            {1: "test_tool"},
+        )
 
         mock_tool = MagicMock()
         mock_tool.requires_approval = False
@@ -177,7 +177,7 @@ class TestCognitiveWithMock:
         mock_registry.execute.return_value = mock_result
 
         result = cog.think_with_tools("Hello", tools=mock_registry, max_iterations=3)
-        assert result == "Final answer after tools."
+        assert "Final answer after tools" in result
         mock_registry.execute.assert_called_once_with("test_tool", {"key": "val"})
 
     def test_fallback_model(self):
@@ -579,20 +579,21 @@ class TestThinkWithToolsAnthropicPath:
         result = cog.think_with_tools("Use the missing tool", tools=tools)
         assert result == "Sorry, that tool failed."
 
-    def test_markdown_path_still_works(self):
-        """Regression: Ollama/Mock still use the markdown path."""
-        tool_response = (
-            'Let me check.\n```tool\n{"tool": "test_tool", "params": {"key": "val"}}\n```'
-        )
+    def test_constrained_path_still_works(self):
+        """Regression: Ollama/Mock use the constrained numbered menu path."""
+        tool_response = "Let me check.\nTOOL: 1\nkey: val"
         config = ModelConfig.mock(
             default_response=tool_response,
-            response_map={"Tool results:": "Final answer from markdown path."},
+            response_map={"Tool result:": "TOOL: 0\nFinal answer from constrained path."},
         )
         cog = CognitiveLayer(primary_config=config)
 
         mock_registry = MagicMock()
         mock_registry.list_tools.return_value = ["test_tool"]
-        mock_registry.get_schema_text.return_value = "Available tools: test_tool"
+        mock_registry.get_numbered_menu.return_value = (
+            "0: No tool\n1: test_tool (key) — Does test things",
+            {1: "test_tool"},
+        )
 
         mock_tool = MagicMock()
         mock_tool.requires_approval = False
@@ -604,5 +605,5 @@ class TestThinkWithToolsAnthropicPath:
         mock_registry.execute.return_value = mock_result
 
         result = cog.think_with_tools("Hello", tools=mock_registry, max_iterations=3)
-        assert result == "Final answer from markdown path."
+        assert "Final answer from constrained path" in result
         mock_registry.execute.assert_called_once_with("test_tool", {"key": "val"})

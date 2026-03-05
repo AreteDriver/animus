@@ -343,17 +343,15 @@ class TestCognitiveThinkWithTools:
         from animus.cognitive import CognitiveLayer, ModelConfig
         from animus.tools import Tool, ToolRegistry, ToolResult
 
-        # First call returns tool invocation, second returns final answer
+        # First call returns constrained tool selection, second returns final answer
         cognitive = CognitiveLayer(ModelConfig.mock(default_response="The time is 10:00 AM"))
-        # Override model.generate to return tool call first, then final answer
         call_count = {"n": 0}
-        original_generate = cognitive.primary.generate
 
         def sequenced_generate(prompt, system=None):
             call_count["n"] += 1
             if call_count["n"] == 1:
-                return '```tool\n{"tool": "get_time", "params": {}}\n```'
-            return original_generate(prompt, system)
+                return "TOOL: 1\n"  # get_time is tool #1 (only tool)
+            return "TOOL: 0\nThe time is 10:00 AM"
 
         cognitive.primary.generate = sequenced_generate
 
@@ -372,35 +370,38 @@ class TestCognitiveThinkWithTools:
 
     def test_think_with_tools_unknown_tool(self):
         from animus.cognitive import CognitiveLayer, ModelConfig
-        from animus.tools import ToolRegistry
+        from animus.tools import Tool, ToolRegistry, ToolResult
 
-        response_map = {
-            "test": '```tool\n{"tool": "nonexistent", "params": {}}\n```',
-        }
-        cognitive = CognitiveLayer(
-            ModelConfig.mock(
-                default_response="Done.",
-                response_map=response_map,
+        # Register a dummy tool so the menu has entries, but model picks wrong number
+        cognitive = CognitiveLayer(ModelConfig.mock(default_response="TOOL: 99\n"))
+        registry = ToolRegistry()
+        registry.register(
+            Tool(
+                name="dummy",
+                description="Dummy",
+                parameters={},
+                handler=lambda p: ToolResult(tool_name="dummy", success=True, output="ok"),
             )
         )
-        registry = ToolRegistry()
 
-        result = cognitive.think_with_tools("test", tools=registry)
+        result = cognitive.think_with_tools("test", tools=registry, max_iterations=2)
         assert isinstance(result, str)
 
     def test_think_with_tools_approval_denied(self):
         from animus.cognitive import CognitiveLayer, ModelConfig
         from animus.tools import Tool, ToolRegistry, ToolResult
 
-        response_map = {
-            "delete": '```tool\n{"tool": "danger", "params": {}}\n```',
-        }
-        cognitive = CognitiveLayer(
-            ModelConfig.mock(
-                default_response="Cancelled.",
-                response_map=response_map,
-            )
-        )
+        call_count = {"n": 0}
+
+        def sequenced_generate(prompt, system=None):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                return "TOOL: 1\n"  # danger tool is #1
+            return "TOOL: 0\nCancelled."
+
+        cognitive = CognitiveLayer(ModelConfig.mock())
+        cognitive.primary.generate = sequenced_generate
+
         registry = ToolRegistry()
         registry.register(
             Tool(

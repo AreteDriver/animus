@@ -31,10 +31,15 @@ Make Animus work like Claude Code: take ideas, autonomously build them.
 - [x] Task description injected into planner system prompt
 - [x] 27 tests covering archetypes, workflow loading, agent execution, gate validation
 
-## Phase 4: Constrained tool selection for Ollama-only mode
-- [ ] Numbered menu approach instead of free-form tool calling
-- [ ] Deterministic parsing of structured responses
-- [ ] Fallback when no Claude API key is available
+## Phase 4: Constrained tool selection for Ollama-only mode ✅
+- [x] `get_numbered_menu()` — presents tools as numbered list instead of free-form JSON
+- [x] `_think_with_tools_constrained()` — deterministic loop using `TOOL: N` + `key: value` format
+- [x] `_parse_constrained_tool()` — parses numbered selection + key:value params
+- [x] `_strip_tool_lines()` — cleans TOOL: lines from final response (TOOL:0 preserves content)
+- [x] Dispatch updated: Ollama/Mock/OpenAI all route to constrained loop
+- [x] Old markdown `\`\`\`tool` loop preserved as `_think_with_tools_markdown()` (not dispatched)
+- [x] 26 tests covering menu generation, parsing, strip logic, constrained loop, dispatch
+- [x] Existing tests updated to constrained format (3 tests migrated)
 
 ## Phase 5: Memory + Learning
 - [ ] Store task outcomes in MemoryLayer (what worked, what broke)

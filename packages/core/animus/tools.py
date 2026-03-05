@@ -199,6 +199,26 @@ class ToolRegistry:
                     )
         return "\n".join(lines)
 
+    def get_numbered_menu(self) -> tuple[str, dict[int, str]]:
+        """Get a numbered tool menu for constrained selection.
+
+        Returns:
+            (menu_text, number_to_name_map) where menu_text is a formatted
+            string and number_to_name_map maps 1-based indices to tool names.
+        """
+        tools = list(self._tools.values())
+        number_map: dict[int, str] = {}
+        lines = ["Pick a tool by number (or 0 for no tool):"]
+        lines.append("  0: No tool needed — answer directly")
+        for i, tool in enumerate(tools, 1):
+            number_map[i] = tool.name
+            params_hint = ""
+            required = tool.parameters.get("required", [])
+            if required:
+                params_hint = f" ({', '.join(required)})"
+            lines.append(f"  {i}: {tool.name}{params_hint} — {tool.description[:80]}")
+        return "\n".join(lines), number_map
+
     def execute(self, name: str, params: dict) -> ToolResult:
         """
         Execute a tool by name with given parameters.
