@@ -58,6 +58,7 @@ class WorkflowExecutor(
         memory_config: MemoryConfig | None = None,
         feedback_engine=None,
         execution_manager=None,
+        arete_hooks=None,
     ):
         """Initialize executor.
 
@@ -72,6 +73,7 @@ class WorkflowExecutor(
             memory_config: Optional MemoryConfig for memory behavior
             feedback_engine: Optional FeedbackEngine for outcome tracking and learning
             execution_manager: Optional ExecutionManager for streaming execution logs
+            arete_hooks: Optional AreteHooks for Arete Tool bridge integration
         """
         self.checkpoint_manager = checkpoint_manager
         self.contract_validator = contract_validator
@@ -83,6 +85,7 @@ class WorkflowExecutor(
         self.memory_config = memory_config
         self.feedback_engine = feedback_engine
         self.execution_manager = execution_manager
+        self.arete_hooks = arete_hooks
         self._execution_id: str | None = None
         self._handlers: dict[str, StepHandler] = {
             "shell": self._execute_shell,
@@ -401,6 +404,16 @@ class WorkflowExecutor(
                 )
             except Exception as fb_err:
                 logger.debug(f"Feedback engine workflow processing error (non-fatal): {fb_err}")
+
+        # Arete Tool post-workflow hooks
+        if self.arete_hooks:
+            try:
+                self.arete_hooks.on_workflow_complete(
+                    workflow_id=workflow_id or "",
+                    status=result.status,
+                )
+            except Exception:
+                logger.debug("Arete hooks post-workflow failed", exc_info=True)
 
         # Complete execution tracking
         if self.execution_manager and self._execution_id:
