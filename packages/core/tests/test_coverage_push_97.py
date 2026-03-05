@@ -800,12 +800,238 @@ class TestAnthropicModel:
             chunks = asyncio.run(self._collect_stream(model, "test"))
         assert "streamed result" in "".join(chunks)
 
+    def test_anthropic_generate_with_stream_callback(self):
+        """stream_callback receives each token chunk via Anthropic streaming."""
+        model = self._make_model()
+        mock_anthropic = MagicMock()
+        mock_client = MagicMock()
+
+        # Simulate the context manager from client.messages.stream()
+        mock_stream_ctx = MagicMock()
+        mock_stream_ctx.__enter__ = MagicMock(return_value=mock_stream_ctx)
+        mock_stream_ctx.__exit__ = MagicMock(return_value=False)
+        mock_stream_ctx.text_stream = iter(["Hello", " from", " Claude"])
+        mock_client.messages.stream.return_value = mock_stream_ctx
+        mock_anthropic.Anthropic.return_value = mock_client
+
+        received: list[str] = []
+        with patch.dict(sys.modules, {"anthropic": mock_anthropic}):
+            model._client = None
+            result = model.generate("hi", stream_callback=received.append)
+        assert result == "Hello from Claude"
+        assert received == ["Hello", " from", " Claude"]
+        mock_client.messages.stream.assert_called_once()
+
     @staticmethod
     async def _collect_stream(model, prompt):
         chunks = []
         async for chunk in model.generate_stream(prompt):
             chunks.append(chunk)
         return chunks
+
+
+class TestMarkdownToolLoop:
+    """Cover _think_with_tools_markdown (lines 952-1007)."""
+
+    def test_markdown_tool_loop_no_tools(self):
+        """Markdown loop with no tool calls returns response directly."""
+        from animus.cognitive import CognitiveLayer, ModelConfig
+        from animus.tools import Tool, ToolRegistry, ToolResult
+
+        cognitive = CognitiveLayer(ModelConfig.mock(default_response="Just text, no tools."))
+        registry = ToolRegistry()
+        registry.register(
+            Tool(
+                name="test_tool",
+                description="Test",
+                parameters={},
+                handler=lambda p: ToolResult(tool_name="test_tool", success=True, output="ok"),
+            )
+        )
+        result = cognitive._think_with_tools_markdown("hello", tools=registry)
+        assert result == "Just text, no tools."
+
+    def test_markdown_tool_loop_with_tool_call(self):
+        """Markdown loop executes tool and produces final answer."""
+        from animus.cognitive import CognitiveLayer, ModelConfig
+        from animus.tools import Tool, ToolRegistry, ToolResult
+
+        call_count = {"n": 0}
+
+        def sequenced(prompt, system=None):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                return '```tool\n{"tool": "greet", "params": {"name": "world"}}\n```'
+            return "Hello world!"
+
+        cognitive = CognitiveLayer(ModelConfig.mock())
+        cognitive.primary.generate = sequenced
+
+        registry = ToolRegistry()
+        registry.register(
+            Tool(
+                name="greet",
+                description="Greet",
+                parameters={"name": "string"},
+                handler=lambda p: ToolResult(
+                    tool_name="greet", success=True, output=f"Hi {p.get('name')}"
+                ),
+            )
+        )
+        result = cognitive._think_with_tools_markdown("say hi", tools=registry)
+        assert "Hello world!" in result
+
+    def test_markdown_tool_loop_max_iterations(self):
+        """Markdown loop respects max_iterations."""
+        from animus.cognitive import CognitiveLayer, ModelConfig
+        from animus.tools import Tool, ToolRegistry, ToolResult
+
+        # Always return tool calls — should hit max iterations
+        cognitive = CognitiveLayer(ModelConfig.mock())
+        cognitive.primary.generate = lambda p, s=None: (
+            '```tool\n{"tool": "loop", "params": {}}\n```'
+        )
+
+        registry = ToolRegistry()
+        registry.register(
+            Tool(
+                name="loop",
+                description="Loop",
+                parameters={},
+                handler=lambda p: ToolResult(tool_name="loop", success=True, output="again"),
+            )
+        )
+        result = cognitive._think_with_tools_markdown("go", tools=registry, max_iterations=2)
+        assert isinstance(result, str)
+
+    def test_markdown_tool_loop_unknown_tool(self):
+        """Markdown loop handles unknown tool name."""
+        from animus.cognitive import CognitiveLayer, ModelConfig
+        from animus.tools import Tool, ToolRegistry, ToolResult
+
+        call_count = {"n": 0}
+
+        def sequenced(prompt, system=None):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                return '```tool\n{"tool": "nonexistent", "params": {}}\n```'
+            return "Done"
+
+        cognitive = CognitiveLayer(ModelConfig.mock())
+        cognitive.primary.generate = sequenced
+
+        registry = ToolRegistry()
+        registry.register(
+            Tool(
+                name="real",
+                description="Real",
+                parameters={},
+                handler=lambda p: ToolResult(tool_name="real", success=True, output="ok"),
+            )
+        )
+        result = cognitive._think_with_tools_markdown("test", tools=registry)
+        assert result == "Done"
+
+    def test_markdown_tool_loop_approval_denied(self):
+        """Markdown loop handles approval denial."""
+        from animus.cognitive import CognitiveLayer, ModelConfig
+        from animus.tools import Tool, ToolRegistry, ToolResult
+
+        call_count = {"n": 0}
+
+        def sequenced(prompt, system=None):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                return '```tool\n{"tool": "danger", "params": {}}\n```'
+            return "Cancelled"
+
+        cognitive = CognitiveLayer(ModelConfig.mock())
+        cognitive.primary.generate = sequenced
+
+        registry = ToolRegistry()
+        registry.register(
+            Tool(
+                name="danger",
+                description="Dangerous",
+                parameters={},
+                handler=lambda p: ToolResult(tool_name="danger", success=True, output="boom"),
+                requires_approval=True,
+            )
+        )
+        result = cognitive._think_with_tools_markdown(
+            "do it",
+            tools=registry,
+            approval_callback=lambda name, params: False,
+        )
+        assert result == "Cancelled"
+
+
+class TestRemoveToolBlocks:
+    """Cover _remove_tool_blocks (lines 1205-1206)."""
+
+    def test_removes_tool_blocks(self):
+        from animus.cognitive import CognitiveLayer, ModelConfig
+
+        cognitive = CognitiveLayer(ModelConfig.mock())
+        text = 'Before\n```tool\n{"tool":"x"}\n```\nAfter'
+        result = cognitive._remove_tool_blocks(text)
+        assert "Before" in result
+        assert "After" in result
+        assert "tool" not in result.lower() or "tool" not in result
+
+    def test_no_tool_blocks(self):
+        from animus.cognitive import CognitiveLayer, ModelConfig
+
+        cognitive = CognitiveLayer(ModelConfig.mock())
+        result = cognitive._remove_tool_blocks("Plain text")
+        assert result == "Plain text"
+
+
+class TestConstrainedUnknownTool:
+    """Cover unknown tool path in constrained loop (lines 1077-1079)."""
+
+    def test_constrained_unknown_tool_continues(self):
+        """When _parse_constrained_tool returns a name not in registry, loop continues."""
+        from unittest.mock import patch
+
+        from animus.cognitive import CognitiveLayer, ModelConfig
+        from animus.tools import Tool, ToolRegistry, ToolResult
+
+        call_count = {"n": 0}
+
+        def sequenced(prompt, system=None, **kwargs):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                return "TOOL: 1\n"
+            return "TOOL: 0\nRecovered."
+
+        cognitive = CognitiveLayer(ModelConfig.mock())
+        cognitive.primary.generate = sequenced
+
+        registry = ToolRegistry()
+        registry.register(
+            Tool(
+                name="real_tool",
+                description="Real tool",
+                parameters={},
+                handler=lambda p: ToolResult(tool_name="real_tool", success=True, output="ok"),
+            )
+        )
+
+        # Patch _parse_constrained_tool to return a name not in registry on first call
+        original_parse = CognitiveLayer._parse_constrained_tool
+        parse_count = {"n": 0}
+
+        @staticmethod
+        def fake_parse(response, number_map):
+            parse_count["n"] += 1
+            if parse_count["n"] == 1:
+                return ("ghost_tool", {})  # Name not in registry
+            return original_parse(response, number_map)
+
+        with patch.object(CognitiveLayer, "_parse_constrained_tool", fake_parse):
+            result = cognitive._think_with_tools_constrained("test", tools=registry)
+        assert "Recovered" in result
 
 
 class TestOpenAIModel:

@@ -418,24 +418,51 @@ class AnthropicModel(ModelInterface):
             self._client = anthropic.Anthropic(api_key=self.config.api_key)
         return self._client
 
-    def generate(self, prompt: str, system: str | None = None) -> str:
-        """Generate using Claude."""
+    def generate(
+        self,
+        prompt: str,
+        system: str | None = None,
+        stream_callback: Callable[[str], None] | None = None,
+    ) -> str:
+        """Generate using Claude.
+
+        Args:
+            prompt: The prompt text.
+            system: Optional system prompt.
+            stream_callback: If provided, called with each token chunk as it
+                arrives. The full response is still returned at the end.
+        """
         try:
             client = self._get_client()
 
             logger.debug(
                 f"Anthropic request: model={self.config.model_name}, prompt_len={len(prompt)}"
             )
-            message = client.messages.create(
-                model=self.config.model_name,
-                max_tokens=4096,
-                system=system or "You are a helpful assistant.",
-                messages=[{"role": "user", "content": prompt}],
-            )
-            if not message.content:
-                logger.warning("Anthropic returned empty content")
-                return ""
-            result = message.content[0].text
+
+            if stream_callback:
+                parts: list[str] = []
+                with client.messages.stream(
+                    model=self.config.model_name,
+                    max_tokens=4096,
+                    system=system or "You are a helpful assistant.",
+                    messages=[{"role": "user", "content": prompt}],
+                ) as stream:
+                    for text in stream.text_stream:
+                        parts.append(text)
+                        stream_callback(text)
+                result = "".join(parts)
+            else:
+                message = client.messages.create(
+                    model=self.config.model_name,
+                    max_tokens=4096,
+                    system=system or "You are a helpful assistant.",
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                if not message.content:
+                    logger.warning("Anthropic returned empty content")
+                    return ""
+                result = message.content[0].text
+
             logger.debug(f"Anthropic response: len={len(result)}")
             return result
 
