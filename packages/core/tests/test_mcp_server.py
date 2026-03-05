@@ -243,3 +243,66 @@ class TestRunWorkflow:
         text = result[0][0].text
         # Should complete or fail gracefully
         assert "test_wf" in text or "failed" in text.lower()
+
+
+class TestMCPAuth:
+    """Test MCP server API key authentication."""
+
+    def test_no_auth_configured(self):
+        """Without ANIMUS_MCP_API_KEY, all calls pass."""
+        from animus.mcp_server import _check_auth
+
+        with patch.dict("os.environ", {}, clear=False):
+            with patch("animus.mcp_server._MCP_API_KEY", None):
+                assert _check_auth() is None
+                assert _check_auth("anything") is None
+
+    def test_auth_required_no_key(self):
+        """With ANIMUS_MCP_API_KEY set, missing key is rejected."""
+        from animus.mcp_server import _check_auth
+
+        with patch("animus.mcp_server._MCP_API_KEY", "secret123"):
+            result = _check_auth("")
+            assert result is not None
+            assert "Authentication required" in result
+
+    def test_auth_required_wrong_key(self):
+        """Wrong key is rejected."""
+        from animus.mcp_server import _check_auth
+
+        with patch("animus.mcp_server._MCP_API_KEY", "secret123"):
+            result = _check_auth("wrong")
+            assert result is not None
+
+    def test_auth_required_correct_key(self):
+        """Correct key passes."""
+        from animus.mcp_server import _check_auth
+
+        with patch("animus.mcp_server._MCP_API_KEY", "secret123"):
+            assert _check_auth("secret123") is None
+
+    def test_remember_with_auth(self, tmp_path):
+        """animus_remember blocks without valid key when auth is configured."""
+        with patch("animus.mcp_server._MCP_API_KEY", "testkey"):
+            with patch("animus.mcp_server.AnimusConfig") as mock_config_cls:
+                mock_config = MagicMock()
+                mock_config.data_dir = tmp_path
+                mock_config.memory.backend = "sqlite"
+                mock_config_cls.load.return_value = mock_config
+
+                from animus.mcp_server import create_mcp_server
+
+                server = create_mcp_server()
+
+                # No key → blocked
+                result = _run(server.call_tool("animus_remember", {"content": "test"}))
+                assert "Authentication required" in result[0][0].text
+
+                # Correct key → passes
+                result = _run(
+                    server.call_tool(
+                        "animus_remember",
+                        {"content": "test", "api_key": "testkey"},
+                    )
+                )
+                assert "Authentication required" not in result[0][0].text

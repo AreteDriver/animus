@@ -7,7 +7,7 @@
 - **Version**: 2.2.0
 - **Python**: >=3.10 (Core), >=3.11 (Bootstrap), >=3.12 (Forge)
 - **Layout**: Multi-package monorepo under `packages/`
-- **Tests**: 13,597 across 4 packages
+- **Tests**: 13,602 across 4 packages
 - **License**: MIT
 
 ## Monorepo Structure
@@ -17,7 +17,7 @@ animus/
 ├── packages/
 │   ├── core/                    # Animus Core — exocortex, identity, memory, CLI
 │   │   ├── animus/              # Python package: import animus
-│   │   ├── tests/               # 2103 tests, 97% coverage
+│   │   ├── tests/               # 2108 tests, 97% coverage
 │   │   └── pyproject.toml
 │   ├── forge/                   # Animus Forge — multi-agent orchestration (was: Gorgon)
 │   │   ├── src/animus_forge/    # Python package: import animus_forge

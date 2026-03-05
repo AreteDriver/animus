@@ -1120,6 +1120,21 @@ Your final answer (after TOOL: 0) should address the user's request directly."""
             tool_selection = self._parse_constrained_tool(response, number_map)
 
             if tool_selection is None:
+                # Check if response looks like a failed tool call attempt
+                if "TOOL" in response.upper() and "TOOL: 0" not in response.upper():
+                    # Model tried to call a tool but format was wrong — retry
+                    messages.append({"role": "assistant", "content": response})
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "Format error. Use EXACTLY: TOOL: <number>\n"
+                                "followed by param: value lines. Or TOOL: 0 for final answer."
+                            ),
+                        }
+                    )
+                    logger.debug("Constrained tool parse failed, retrying with format hint")
+                    continue
                 # No tool call found or TOOL: 0 — treat response as final
                 final_response = self._strip_tool_lines(response)
                 break

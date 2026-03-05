@@ -10,7 +10,7 @@
 
 Animus coordinates AI agents across complex workflows — with the operational discipline of a manufacturing line. Every agent has a token budget. Every workflow has a cost ceiling. If a pipeline fails at step 4 of 6, it restarts at step 4, not step 1. Inspired by the Toyota Production System: make cost visible, make waste impossible to ignore.
 
-Four independently-installable packages. 13,100+ tests. Zero vendor lock-in (Claude, OpenAI, Ollama).
+Four independently-installable packages. 13,597 tests. Zero vendor lock-in (Claude, OpenAI, Ollama).
 
 **[Architecture](docs/ARCHITECTURE.md)** | **[Roadmap](docs/ROADMAP.md)** | **[Whitepaper](docs/whitepaper.pdf)**
 
@@ -81,13 +81,38 @@ One-command install, Rich-based onboarding wizard, FastAPI+HTMX ops dashboard at
 ```bash
 git clone https://github.com/AreteDriver/animus && cd animus
 pip install -e packages/core -e packages/forge -e packages/quorum
-pytest packages/core/tests/ packages/quorum/tests/ -q  # 2,600+ tests in seconds
+pytest packages/core/tests/ packages/quorum/tests/ -q  # 3,000+ tests in seconds
 ```
 
 To run the Forge test suite (must run from its package directory):
 
 ```bash
-cd packages/forge && pytest tests/ -q  # 6,700+ tests
+cd packages/forge && pytest tests/ -q  # 8,800+ tests
+```
+
+### Run the CLI
+
+```bash
+python -m animus  # Interactive agent with memory, tools, streaming
+```
+
+### MCP Server (Claude Code integration)
+
+```bash
+pip install animus[mcp]
+python -m animus.mcp_server  # 9 tools: memory, tasks, workflows
+```
+
+Add to `~/.claude/mcp.json`:
+```json
+{
+  "mcpServers": {
+    "animus": {
+      "command": "python",
+      "args": ["-m", "animus.mcp_server"]
+    }
+  }
+}
 ```
 
 ---
@@ -161,19 +186,19 @@ animus/
 ├── packages/
 │   ├── core/                    # import animus
 │   │   ├── animus/              # Identity, memory, cognitive, CLI, integrations
-│   │   └── tests/               # 1,736 tests, 95% coverage
+│   │   └── tests/               # 2,103 tests, 97% coverage
 │   ├── forge/                   # import animus_forge
 │   │   ├── src/animus_forge/    # Executor, agents, API, CLI, TUI, dashboard
 │   │   ├── migrations/          # 16 SQL migrations
 │   │   ├── workflows/           # YAML workflow definitions
-│   │   └── tests/               # 6,731 tests, 85% coverage
+│   │   └── tests/               # 8,871 tests, 97% coverage
 │   ├── quorum/                  # import convergent (PyPI: convergentAI)
 │   │   ├── python/convergent/   # Intent graph, voting, stigmergy, bridge
 │   │   ├── src/                 # Rust PyO3 (optional performance layer)
-│   │   └── tests/               # 906 tests, 97% coverage
+│   │   └── tests/               # 926 tests, 97% coverage
 │   └── bootstrap/               # import animus_bootstrap
 │       ├── src/animus_bootstrap/ # Daemon, wizard, dashboard
-│       └── tests/               # 1,115 tests, 94% coverage
+│       └── tests/               # 1,697 tests, 96% coverage
 ├── docs/                        # Architecture, roadmap, whitepapers
 └── .github/workflows/           # CI: lint, test (per-package), security, CodeQL
 ```
@@ -182,16 +207,16 @@ animus/
 
 ## Status
 
-Active development. Architecture complete. Implementation in progress.
+Active development. Architecture stable. v2.3.0 released.
 
 | Component | Version | Tests | Coverage | Stage |
 |-----------|---------|------:|:--------:|-------|
-| Core | 2.0.0 | 1,879 | 97% | Active — CLI, memory, integrations |
-| Forge | 2.0.0 | 8,797 | 97% | Production deployed (systemd service) |
-| Quorum | 1.1.0 | 906 | 97% | [Live on PyPI](https://pypi.org/project/convergentAI/) |
-| Bootstrap | 0.5.0 | 1,606 | 96% | Active — daemon + wizard + dashboard |
+| Core | 2.3.0 | 2,103 | 97% | Active — CLI, memory, MCP server, integrations |
+| Forge | 2.0.0 | 8,871 | 97% | Production deployed (systemd service) |
+| Quorum | 1.1.0 | 926 | 97% | [Live on PyPI](https://pypi.org/project/convergentAI/) |
+| Bootstrap | 0.5.0 | 1,697 | 96% | Active — daemon + wizard + dashboard |
 
-**Total: 13,188 tests across 4 packages.**
+**Total: 13,597 tests across 4 packages.**
 
 ---
 

@@ -2,11 +2,14 @@
 
 Run: python -m animus.mcp_server
 Or add to Claude Code MCP config.
+
+Auth: Set ANIMUS_MCP_API_KEY env var to require authentication.
 """
 
 from __future__ import annotations
 
 import json
+import os
 
 from animus.config import AnimusConfig
 from animus.logging import get_logger
@@ -14,6 +17,18 @@ from animus.memory import MemoryLayer, MemoryType
 from animus.tasks import TaskTracker
 
 logger = get_logger("mcp_server")
+
+# Optional API key for MCP server authentication
+_MCP_API_KEY = os.environ.get("ANIMUS_MCP_API_KEY")
+
+
+def _check_auth(api_key: str = "") -> str | None:
+    """Validate API key if one is configured. Returns error message or None."""
+    if not _MCP_API_KEY:
+        return None  # No auth configured
+    if api_key == _MCP_API_KEY:
+        return None
+    return "Authentication required. Pass api_key parameter matching ANIMUS_MCP_API_KEY."
 
 
 def create_mcp_server():
@@ -37,14 +52,20 @@ def create_mcp_server():
     # -----------------------------------------------------------------------
 
     @mcp.tool()
-    def animus_remember(content: str, tags: str = "", memory_type: str = "semantic") -> str:
+    def animus_remember(
+        content: str, tags: str = "", memory_type: str = "semantic", api_key: str = ""
+    ) -> str:
         """Store a memory in Animus.
 
         Args:
             content: Text to remember (fact, decision, observation, pattern).
             tags: Comma-separated tags for categorization.
             memory_type: One of: semantic (facts), episodic (events), procedural (how-tos).
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
         """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
         tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
         try:
             mt = MemoryType(memory_type)
@@ -123,23 +144,31 @@ def create_mcp_server():
         return "\n".join(lines)
 
     @mcp.tool()
-    def animus_create_task(description: str, priority: int = 5) -> str:
+    def animus_create_task(description: str, priority: int = 5, api_key: str = "") -> str:
         """Create a new task.
 
         Args:
             description: What needs to be done.
             priority: Priority 1-10 (1=highest, 10=lowest). Default 5.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
         """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
         task = tasks.add_task(description=description, priority=priority)
         return f"Created task {task.id[:8]}: {description}"
 
     @mcp.tool()
-    def animus_complete_task(task_id: str) -> str:
+    def animus_complete_task(task_id: str, api_key: str = "") -> str:
         """Mark a task as completed.
 
         Args:
             task_id: Task ID or partial ID prefix.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
         """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
         success = tasks.complete_task(task_id)
         if success:
             return f"Task {task_id} marked complete."
@@ -174,13 +203,19 @@ def create_mcp_server():
     # -----------------------------------------------------------------------
 
     @mcp.tool()
-    def animus_run_workflow(workflow_path: str, task_description: str = "") -> str:
+    def animus_run_workflow(
+        workflow_path: str, task_description: str = "", api_key: str = ""
+    ) -> str:
         """Run a Forge workflow pipeline.
 
         Args:
             workflow_path: Path to workflow YAML file (e.g., configs/examples/build_task.yaml).
             task_description: Optional task description to inject into the first agent's prompt.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
         """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
         from pathlib import Path
 
         from animus.cognitive import CognitiveLayer, ModelConfig

@@ -646,9 +646,21 @@ def main():
 
     history = FileHistory(str(config.history_file))
 
-    # Start a new conversation
+    # Start a new conversation, loading context from last session
     conversation = Conversation.new()
     logger.info(f"Started conversation {conversation.id[:8]}")
+
+    # Load last session context for continuity
+    last_session_context = ""
+    try:
+        recent_convos = memory.recall("Conversation from", MemoryType.EPISODIC, limit=1)
+        if recent_convos:
+            last = recent_convos[0]
+            # Truncate to avoid bloating context
+            last_session_context = last.content[:500]
+            console.print("[dim]Last session context loaded.[/dim]")
+    except Exception as e:
+        logger.debug(f"Failed to load last session: {e}")
 
     # Cleanup on exit
     def cleanup_on_exit():
@@ -2534,6 +2546,8 @@ def main():
 
             # Build context: agent personality + memory recall + past outcomes
             context_parts = [AGENT_CONTEXT]
+            if last_session_context:
+                context_parts.append(f"\nLast session summary:\n{last_session_context}")
             context_memories = memory.recall(user_input, limit=3)
             if context_memories:
                 context_parts.append(
