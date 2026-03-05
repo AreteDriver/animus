@@ -573,6 +573,7 @@ class TestBuiltinTools:
         mock_config.command_enabled = True
         mock_config.command_blocklist = []
         mock_config.command_timeout_seconds = 5
+        mock_config.write_roots = []
         _set_security_config(mock_config)
         try:
             result = _tool_run_command({"command": "echo test", "timeout": 30})

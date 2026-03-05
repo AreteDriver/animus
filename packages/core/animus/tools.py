@@ -121,6 +121,23 @@ def _validate_command(command: str) -> tuple[bool, str | None]:
         if re.search(pattern, normalized, re.IGNORECASE):
             return False, "Command blocked by security policy"
 
+    # Sandbox: block destructive commands targeting paths outside write_roots
+    if _security_config.write_roots:
+        destructive_cmds = ("rm", "mv", "cp", "chmod", "chown")
+        parts = normalized.split()
+        if parts and parts[0] in destructive_cmds:
+            for arg in parts[1:]:
+                if arg.startswith("-"):
+                    continue  # Skip flags
+                arg_path = Path(arg).expanduser().resolve()
+                in_sandbox = any(
+                    arg_path == Path(r).expanduser().resolve()
+                    or Path(r).expanduser().resolve() in arg_path.parents
+                    for r in _security_config.write_roots
+                )
+                if not in_sandbox:
+                    return False, f"Command targets path outside sandbox: {arg}"
+
     return True, None
 
 
@@ -449,8 +466,12 @@ def _tool_run_command(params: dict) -> ToolResult:
 
     try:
         timeout = params.get("timeout", 30)
+        cwd = None
         if _security_config:
             timeout = min(timeout, _security_config.command_timeout_seconds)
+            # Sandbox: run commands from within write_roots when set
+            if _security_config.write_roots:
+                cwd = _security_config.write_roots[0]
 
         result = subprocess.run(
             shlex.split(command),
@@ -458,6 +479,7 @@ def _tool_run_command(params: dict) -> ToolResult:
             capture_output=True,
             text=True,
             timeout=timeout,
+            cwd=cwd,
         )
 
         output = result.stdout
