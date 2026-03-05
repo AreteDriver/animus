@@ -14,6 +14,7 @@ from animus_forge.state.agent_context import MemoryConfig, WorkflowMemoryManager
 
 from .executor_ai import AIHandlersMixin
 from .executor_approval import ApprovalHandlerMixin
+from .executor_arete import AreteToolsHandlerMixin
 from .executor_error import ErrorHandlerMixin
 from .executor_integrations import IntegrationHandlersMixin
 from .executor_mcp import MCPHandlersMixin
@@ -35,6 +36,7 @@ class WorkflowExecutor(
     MCPHandlersMixin,
     DistributionPatternsMixin,
     ApprovalHandlerMixin,
+    AreteToolsHandlerMixin,
 ):
     """Executes workflows with contract validation and state persistence.
 
@@ -102,6 +104,10 @@ class WorkflowExecutor(
             "slack": self._execute_slack,
             "calendar": self._execute_calendar,
             "browser": self._execute_browser,
+            # Arete Tool handlers
+            "signal_audit": self._execute_signal_audit,
+            "autopsy_analyze": self._execute_autopsy_analyze,
+            "verdict_capture": self._execute_verdict_capture,
         }
         self._context: dict = {}
         self._current_workflow_id: str | None = None

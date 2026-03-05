@@ -444,6 +444,10 @@ VALID_STEP_TYPES = frozenset(
         "loop",
         "mcp_tool",
         "approval",
+        # Arete Tool step types
+        "signal_audit",
+        "autopsy_analyze",
+        "verdict_capture",
     }
 )
 VALID_OPERATORS = frozenset(

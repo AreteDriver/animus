@@ -1,0 +1,32 @@
+name: Signal Audit Quality Gate
+version: "1.0"
+description: Run signal-audit quality analysis on a file and gate on minimum score
+
+inputs:
+  file:
+    type: string
+    required: true
+    description: Path to file to audit
+  min_score:
+    type: integer
+    required: false
+    default: 70
+    description: Minimum passing score (0-100)
+
+outputs:
+  - audit_result
+
+steps:
+  - id: run_audit
+    type: signal_audit
+    params:
+      file: "${file}"
+      min_score: ${min_score}
+    outputs:
+      - audit_result
+
+  - id: report
+    type: shell
+    depends_on: [run_audit]
+    params:
+      command: "echo 'Audit passed: score=${audit_result.score} grade=${audit_result.grade}'"

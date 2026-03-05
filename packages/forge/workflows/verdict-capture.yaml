@@ -1,0 +1,37 @@
+name: Verdict Capture
+version: "1.0"
+description: Log a technical decision with reasoning, alternatives, and review date
+
+inputs:
+  title:
+    type: string
+    required: true
+    description: Decision title
+  reasoning:
+    type: string
+    required: true
+    description: Why this decision was made
+  alternatives:
+    type: list
+    required: false
+    default: []
+    description: Alternatives that were considered
+  category:
+    type: string
+    required: false
+    default: general
+    description: Decision category (architecture, tooling, process, general)
+
+outputs:
+  - verdict_result
+
+steps:
+  - id: capture
+    type: verdict_capture
+    params:
+      title: "${title}"
+      reasoning: "${reasoning}"
+      alternatives: ${alternatives}
+      category: "${category}"
+    outputs:
+      - verdict_result
