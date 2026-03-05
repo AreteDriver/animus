@@ -420,6 +420,43 @@ class TestCognitiveThinkWithTools:
         )
         assert isinstance(result, str)
 
+    def test_think_with_tools_stream_callback(self):
+        """stream_callback is forwarded to model generate when supported."""
+        from animus.cognitive import CognitiveLayer, ModelConfig
+        from animus.tools import Tool, ToolRegistry, ToolResult
+
+        received: list[str] = []
+        cognitive = CognitiveLayer(ModelConfig.mock())
+
+        # Replace generate with one that accepts stream_callback
+        # Returns TOOL: 0 to signal no tool call (final answer)
+        def mock_generate(prompt, system=None, stream_callback=None):
+            answer = "TOOL: 0\nStreamed answer."
+            if stream_callback:
+                for token in ["TOOL: 0\n", "Streamed", " answer", "."]:
+                    stream_callback(token)
+            return answer
+
+        cognitive.primary.generate = mock_generate
+
+        registry = ToolRegistry()
+        registry.register(
+            Tool(
+                name="dummy",
+                description="Dummy tool",
+                parameters={},
+                handler=lambda p: ToolResult(tool_name="dummy", success=True, output="ok"),
+            )
+        )
+
+        result = cognitive.think_with_tools(
+            "hello",
+            tools=registry,
+            stream_callback=received.append,
+        )
+        assert "Streamed answer." in result
+        assert len(received) > 0  # callback was invoked
+
     def test_parse_tool_calls_invalid_json(self):
         from animus.cognitive import CognitiveLayer, ModelConfig
 

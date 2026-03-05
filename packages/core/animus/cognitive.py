@@ -5,6 +5,7 @@ Handles reasoning, analysis, and response generation.
 Phase 2: Tool use, analysis modes, briefings.
 """
 
+import inspect
 import json
 import os
 import re
@@ -321,8 +322,20 @@ class OllamaModel(ModelInterface):
         self.config = config
         logger.debug(f"OllamaModel initialized with {config.model_name}")
 
-    def generate(self, prompt: str, system: str | None = None) -> str:
-        """Generate using Ollama."""
+    def generate(
+        self,
+        prompt: str,
+        system: str | None = None,
+        stream_callback: Callable[[str], None] | None = None,
+    ) -> str:
+        """Generate using Ollama.
+
+        Args:
+            prompt: The prompt text.
+            system: Optional system prompt.
+            stream_callback: If provided, called with each token chunk as it
+                arrives. The full response is still returned at the end.
+        """
         try:
             import ollama
 
@@ -334,8 +347,20 @@ class OllamaModel(ModelInterface):
             logger.debug(
                 f"Ollama request: model={self.config.model_name}, prompt_len={len(prompt)}"
             )
-            response = ollama.chat(model=self.config.model_name, messages=messages)
-            result = response["message"]["content"]
+
+            if stream_callback:
+                parts: list[str] = []
+                for chunk in ollama.chat(
+                    model=self.config.model_name, messages=messages, stream=True
+                ):
+                    token = chunk["message"]["content"]
+                    parts.append(token)
+                    stream_callback(token)
+                result = "".join(parts)
+            else:
+                response = ollama.chat(model=self.config.model_name, messages=messages)
+                result = response["message"]["content"]
+
             logger.debug(f"Ollama response: len={len(result)}")
             return result
 
@@ -788,12 +813,13 @@ When you have gathered enough information, provide your final answer."""
         tools: "ToolRegistry | None" = None,
         max_iterations: int = 5,
         approval_callback: Callable | None = None,
+        stream_callback: Callable[[str], None] | None = None,
     ) -> str:
         """
         Generate a response with tool use capability.
 
         Dispatches to native Anthropic tool_use when the primary model is
-        AnthropicModel, otherwise falls back to the markdown-based agentic loop.
+        AnthropicModel, otherwise falls back to the constrained agentic loop.
 
         Args:
             prompt: User's input
@@ -803,6 +829,8 @@ When you have gathered enough information, provide your final answer."""
             max_iterations: Maximum tool use iterations
             approval_callback: Function to approve tools that require it
                                (tool_name, params) -> bool
+            stream_callback: If provided, called with each token chunk for
+                             streaming output. Only used with constrained loop.
 
         Returns:
             Final response after tool execution
@@ -815,7 +843,13 @@ When you have gathered enough information, provide your final answer."""
                 prompt, context, mode, tools, max_iterations, approval_callback
             )
         return self._think_with_tools_constrained(
-            prompt, context, mode, tools, max_iterations, approval_callback
+            prompt,
+            context,
+            mode,
+            tools,
+            max_iterations,
+            approval_callback,
+            stream_callback,
         )
 
     def _think_with_tools_anthropic(
@@ -980,6 +1014,7 @@ When you have gathered enough information, provide your final answer."""
         tools: "ToolRegistry | None" = None,
         max_iterations: int = 5,
         approval_callback: Callable | None = None,
+        stream_callback: Callable[[str], None] | None = None,
     ) -> str:
         """Constrained tool loop for local models (Ollama/Mock/OpenAI).
 
@@ -1018,7 +1053,14 @@ Your final answer (after TOOL: 0) should address the user's request directly."""
             if iteration == 0:
                 full_prompt += f"\n\n{constrained_instructions}"
 
-            response = self.primary.generate(full_prompt, system)
+            # Stream tokens if callback provided and model supports it
+            generate_kwargs: dict[str, Any] = {}
+            if stream_callback and hasattr(self.primary, "generate"):
+                sig = inspect.signature(self.primary.generate)
+                if "stream_callback" in sig.parameters:
+                    generate_kwargs["stream_callback"] = stream_callback
+
+            response = self.primary.generate(full_prompt, system, **generate_kwargs)
 
             # Parse constrained tool selection
             tool_selection = self._parse_constrained_tool(response, number_map)

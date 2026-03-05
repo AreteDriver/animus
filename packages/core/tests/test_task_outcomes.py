@@ -359,9 +359,18 @@ class TestTaskOutcomeTrackerPatterns:
 
     def test_detects_repeated_errors(self):
         mems = [
-            _make_memory("[FAILURE] Task A | Error: ImportError no module named foo", ["task_outcome", "failure"]),
-            _make_memory("[FAILURE] Task B | Error: ImportError no module named foo", ["task_outcome", "failure"]),
-            _make_memory("[FAILURE] Task C | Error: ImportError no module named foo", ["task_outcome", "failure"]),
+            _make_memory(
+                "[FAILURE] Task A | Error: ImportError no module named foo",
+                ["task_outcome", "failure"],
+            ),
+            _make_memory(
+                "[FAILURE] Task B | Error: ImportError no module named foo",
+                ["task_outcome", "failure"],
+            ),
+            _make_memory(
+                "[FAILURE] Task C | Error: ImportError no module named foo",
+                ["task_outcome", "failure"],
+            ),
         ]
         mock_memory = MagicMock()
         mock_memory.recall_by_tags.return_value = mems
@@ -397,8 +406,14 @@ class TestTaskOutcomeTrackerPatterns:
 
     def test_pattern_has_suggestion(self):
         mems = [
-            _make_memory("[FAILURE] Lint A | Error: ruff check failed on line 42", ["task_outcome", "failure"]),
-            _make_memory("[FAILURE] Lint B | Error: ruff check failed on line 42", ["task_outcome", "failure"]),
+            _make_memory(
+                "[FAILURE] Lint A | Error: ruff check failed on line 42",
+                ["task_outcome", "failure"],
+            ),
+            _make_memory(
+                "[FAILURE] Lint B | Error: ruff check failed on line 42",
+                ["task_outcome", "failure"],
+            ),
         ]
         mock_memory = MagicMock()
         mock_memory.recall_by_tags.return_value = mems

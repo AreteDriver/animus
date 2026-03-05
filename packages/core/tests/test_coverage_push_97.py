@@ -702,6 +702,27 @@ class TestOllamaModel:
             chunks = asyncio.run(self._collect_stream(model, "hello"))
         assert "".join(chunks) == "streamed"
 
+    def test_ollama_generate_with_stream_callback(self):
+        """stream_callback receives each token chunk."""
+        model = self._make_model()
+        mock_ollama = MagicMock()
+        # Simulate streaming: chat returns an iterable of chunks
+        mock_ollama.chat.return_value = iter(
+            [
+                {"message": {"content": "Hello"}},
+                {"message": {"content": " world"}},
+            ]
+        )
+        received: list[str] = []
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = model.generate("hi", stream_callback=received.append)
+        assert result == "Hello world"
+        assert received == ["Hello", " world"]
+        # Verify stream=True was passed
+        mock_ollama.chat.assert_called_once()
+        _, kwargs = mock_ollama.chat.call_args
+        assert kwargs.get("stream") is True
+
     @staticmethod
     async def _collect_stream(model, prompt):
         chunks = []

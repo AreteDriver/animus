@@ -2507,6 +2507,13 @@ def main():
 
             # Generate response with tool use (agent loop)
             console.print()
+            streamed = False
+
+            def _stream_token(token: str) -> None:
+                nonlocal streamed
+                streamed = True
+                print(token, end="", flush=True)
+
             gorgon_int = integrations.get("gorgon") if GORGON_AVAILABLE else None
             if (
                 gorgon_int
@@ -2536,6 +2543,7 @@ def main():
                         tools=tools,
                         max_iterations=MAX_AGENT_LOOPS,
                         approval_callback=_approval_callback,
+                        stream_callback=_stream_token,
                     )
             else:
                 logger.debug(f"Agent loop with mode={mode.value}")
@@ -2546,12 +2554,16 @@ def main():
                     tools=tools,
                     max_iterations=MAX_AGENT_LOOPS,
                     approval_callback=_approval_callback,
+                    stream_callback=_stream_token,
                 )
 
             # Record assistant response
             conversation.add_message("assistant", response)
 
-            console.print(response)
+            if streamed:
+                print()  # newline after streamed tokens
+            else:
+                console.print(response)
             console.print()
 
             # Record task outcome for learning
