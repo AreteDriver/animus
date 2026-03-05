@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Optional imports — graceful degradation when tools not installed
 try:
-    from signal_audit.analyzers.quality import run_quality_audit
+    from signal_audit.analyzers.quality import audit_file as run_quality_audit
 
     HAS_SIGNAL = True
 except ImportError:
@@ -95,7 +95,18 @@ class AreteToolsHandlerMixin:
         if HAS_SIGNAL:
             result = run_quality_audit(file_path)
         else:
-            result = _run_subprocess(["signal-audit", "audit", file_path, "--format", "json"])
+            raw = _run_subprocess(["signal-audit", "audit", file_path, "--json"])
+            # Normalize CLI output to match executor contract
+            dims = raw.get("dimensions", [])
+            if isinstance(dims, list):
+                dims = {d["dimension"]: round(d["score"] * 10, 1) for d in dims}
+            raw_score = raw.get("overall_score", raw.get("score", 0))
+            result = {
+                "score": round(raw_score * 10, 1) if raw_score <= 10 else raw_score,
+                "grade": raw.get("grade", ""),
+                "dimensions": dims,
+                "flags": raw.get("flags", []),
+            }
 
         score = result.get("score", 0)
         if min_score is not None and score < min_score:
