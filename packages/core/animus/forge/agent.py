@@ -141,6 +141,11 @@ class ForgeAgent:
         """Build the user prompt from inputs and output expectations."""
         parts = []
 
+        # For the first agent (no inputs), include the system prompt directly
+        # so local models get the task description in the user message too
+        if not inputs and self.config.system_prompt:
+            parts.append(f"## Instructions\n{self.config.system_prompt}\n")
+
         if inputs:
             parts.append("## Inputs\n")
             for name, content in inputs.items():

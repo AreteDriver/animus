@@ -1077,8 +1077,7 @@ Your final answer (after TOOL: 0) should address the user's request directly."""
             logger.debug(f"Constrained tool iteration {iteration + 1}/{max_iterations}")
 
             full_prompt = self._format_messages(messages)
-            if iteration == 0:
-                full_prompt += f"\n\n{constrained_instructions}"
+            full_prompt += f"\n\n{constrained_instructions}"
 
             # Stream tokens if callback provided and model supports it
             generate_kwargs: dict[str, Any] = {}
