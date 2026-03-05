@@ -176,7 +176,7 @@ class TestIntelligentRouter:
         memory.recall.assert_awaited_once_with("hello")
         call_kwargs = cognitive.generate_response.call_args
         system = call_kwargs.kwargs["system_prompt"]
-        assert "Relevant Past Conversations" in system
+        assert "Recent Context" in system
         assert "You discussed Python yesterday" in system
         assert "Known Facts" in system
         assert "Alice is a developer" in system
@@ -568,7 +568,7 @@ class TestBuildSystemPrompt:
         router = IntelligentRouter(cognitive=cognitive, session_manager=session_mgr)
         ctx = MemoryContext(episodic=["Past conversation about Python"])
         result = router._build_system_prompt(ctx)
-        assert "## Relevant Past Conversations" in result
+        assert "## Recent Context" in result
         assert "- Past conversation about Python" in result
 
     def test_memory_semantic_adds_section(
@@ -610,7 +610,7 @@ class TestBuildSystemPrompt:
             user_prefs={"editor": "vim"},
         )
         result = router._build_system_prompt(ctx)
-        assert "## Relevant Past Conversations" in result
+        assert "## Recent Context" in result
         assert "## Known Facts" in result
         assert "## How-To Knowledge" in result
         assert "## User Preferences" in result

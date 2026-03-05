@@ -77,8 +77,8 @@ class IntelligentRouter(MessageRouter):
         session = await self._session_manager.get_or_create_session(message)
         await self._session_manager.add_message(session, message)
 
-        # 3. Build context from session history
-        conversation = await self._session_manager.get_context(session)
+        # 3. Build context from session history (cap to prevent prompt bloat)
+        conversation = await self._session_manager.get_context(session, max_messages=6)
 
         # 4. Recall relevant memories
         memory_context: MemoryContext | None = None
@@ -100,6 +100,10 @@ class IntelligentRouter(MessageRouter):
         )
 
         # 6. Cognitive loop (handles tool calls)
+        logger.info(
+            "System prompt: %d chars, %d words, starts with: %s",
+            len(system), len(system.split()), system[:80],
+        )
         response_text = await self._cognitive_loop(conversation, system)
 
         # 7. Store assistant message
@@ -135,40 +139,80 @@ class IntelligentRouter(MessageRouter):
         """Build system prompt enriched with identity, memory context, and persona."""
         parts: list[str] = []
 
-        # 1. Identity files (prepended first — foundational context)
+        # 1. Identity (condensed for local LLMs, full version used by reflection)
+        has_identity = False
         if self._identity_manager:
             try:
-                identity_prompt = self._identity_manager.get_identity_prompt()
+                if hasattr(self._identity_manager, "get_condensed_prompt"):
+                    identity_prompt = self._identity_manager.get_condensed_prompt()
+                else:
+                    identity_prompt = self._identity_manager.get_identity_prompt()
                 if identity_prompt:
                     parts.append(identity_prompt)
+                    has_identity = True
             except Exception:
                 logger.exception("Failed to load identity prompt")
 
-        # 2. Determine base prompt from persona or fallback to system_prompt
-        if persona and self._context_adapter and message:
+        # 2. Persona / system prompt — skip persona base when identity
+        #    already provides grounding (avoids competing "You are..." directives
+        #    that confuse small local LLMs).  Voice/context hints still applied.
+        if has_identity and persona and self._context_adapter and message:
+            # Only add voice + context hints, NOT persona.system_prompt
+            from animus_bootstrap.personas.voice import build_voice_prompt
+
+            voice = build_voice_prompt(persona.voice)
+            if voice:
+                parts.append(voice)
+        elif persona and self._context_adapter and message:
             base = self._context_adapter.adapt_prompt(persona, message, session_history)
+            if base:
+                parts.append(base)
         elif persona:
             base = persona.system_prompt
-        else:
-            base = self._system_prompt
+            if base:
+                parts.append(base)
+        elif self._system_prompt:
+            parts.append(self._system_prompt)
 
-        if base:
-            parts.append(base)
-
+        # Memory context — hard cap at 2000 chars to prevent prompt bloat
+        _MEM_CAP = 2000
         if memory_context:
-            if memory_context.episodic:
-                parts.append("\n## Relevant Past Conversations")
-                parts.extend(f"- {m}" for m in memory_context.episodic)
+            mem_parts: list[str] = []
+            mem_len = 0
             if memory_context.semantic:
-                parts.append("\n## Known Facts")
-                parts.extend(f"- {m}" for m in memory_context.semantic)
-            if memory_context.procedural:
-                parts.append("\n## How-To Knowledge")
-                parts.extend(f"- {m}" for m in memory_context.procedural)
-            if memory_context.user_prefs:
-                parts.append("\n## User Preferences")
+                mem_parts.append("\n## Known Facts")
+                for m in memory_context.semantic:
+                    entry = f"- {m[:200]}"
+                    if mem_len + len(entry) > _MEM_CAP:
+                        break
+                    mem_parts.append(entry)
+                    mem_len += len(entry)
+            if memory_context.procedural and mem_len < _MEM_CAP:
+                mem_parts.append("\n## How-To Knowledge")
+                for m in memory_context.procedural:
+                    entry = f"- {m[:200]}"
+                    if mem_len + len(entry) > _MEM_CAP:
+                        break
+                    mem_parts.append(entry)
+                    mem_len += len(entry)
+            if memory_context.user_prefs and mem_len < _MEM_CAP:
+                mem_parts.append("\n## User Preferences")
                 for k, v in memory_context.user_prefs.items():
-                    parts.append(f"- {k}: {v}")
+                    entry = f"- {k}: {v}"
+                    if mem_len + len(entry) > _MEM_CAP:
+                        break
+                    mem_parts.append(entry)
+                    mem_len += len(entry)
+            # Episodic last and heavily capped — these are full conversations
+            if memory_context.episodic and mem_len < _MEM_CAP:
+                mem_parts.append("\n## Recent Context")
+                for m in memory_context.episodic:
+                    entry = f"- {m[:150]}"
+                    if mem_len + len(entry) > _MEM_CAP:
+                        break
+                    mem_parts.append(entry)
+                    mem_len += len(entry)
+            parts.extend(mem_parts)
 
         return "\n".join(parts) if parts else ""
 

@@ -146,9 +146,13 @@ class OllamaBackend:
         self,
         model: str = "llama3.1:8b",
         host: str = "http://localhost:11434",
+        temperature: float = 0.3,
+        repeat_penalty: float = 1.2,
     ) -> None:
         self._model = model
         self._host = host.rstrip("/")
+        self._temperature = temperature
+        self._repeat_penalty = repeat_penalty
 
     async def generate_response(
         self,
@@ -167,7 +171,11 @@ class OllamaBackend:
             "model": self._model,
             "messages": ollama_messages,
             "stream": False,
-            "options": {"num_predict": max_tokens},
+            "options": {
+                "num_predict": max_tokens,
+                "temperature": self._temperature,
+                "repeat_penalty": self._repeat_penalty,
+            },
         }
 
         async with httpx.AsyncClient() as client:
@@ -193,6 +201,82 @@ class OllamaBackend:
             messages, system_prompt=system_prompt, max_tokens=max_tokens
         )
         return CognitiveResponse(text=text)
+
+
+class DualOllamaBackend:
+    """Dual-model Ollama backend — conversation model + code specialist.
+
+    Routes to the code model when the user message contains code-related
+    keywords (write, debug, refactor, implement, function, class, etc.).
+    Falls back to conversation model for everything else.
+    """
+
+    _CODE_KEYWORDS = frozenset({
+        "code", "function", "class", "debug", "refactor", "implement",
+        "write", "fix", "bug", "error", "test", "compile", "build",
+        "syntax", "import", "module", "deploy", "api", "endpoint",
+        "database", "query", "sql", "schema", "migration", "dockerfile",
+        "script", "lint", "type", "variable", "loop", "async", "await",
+        "exception", "traceback", "stacktrace", "coverage", "pytest",
+        "cargo", "rust", "python", "typescript", "javascript",
+    })
+
+    def __init__(
+        self,
+        chat_model: str = "qwen2.5:14b",
+        code_model: str = "deepseek-coder-v2",
+        host: str = "http://localhost:11434",
+        temperature: float = 0.3,
+        repeat_penalty: float = 1.2,
+    ) -> None:
+        self._chat = OllamaBackend(
+            model=chat_model, host=host,
+            temperature=temperature, repeat_penalty=repeat_penalty,
+        )
+        self._code = OllamaBackend(
+            model=code_model, host=host,
+            temperature=0.2, repeat_penalty=repeat_penalty,
+        )
+        self._chat_model = chat_model
+        self._code_model = code_model
+
+    def _pick_backend(self, messages: list[dict]) -> OllamaBackend:
+        """Select backend based on message content."""
+        last_user = ""
+        for msg in reversed(messages):
+            if msg.get("role") == "user":
+                last_user = msg.get("content", "").lower()
+                break
+
+        words = set(last_user.split())
+        if words & self._CODE_KEYWORDS:
+            logger.info("Routing to code model: %s", self._code_model)
+            return self._code
+        logger.info("Routing to chat model: %s", self._chat_model)
+        return self._chat
+
+    async def generate_response(
+        self,
+        messages: list[dict],
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+    ) -> str:
+        backend = self._pick_backend(messages)
+        return await backend.generate_response(
+            messages, system_prompt=system_prompt, max_tokens=max_tokens
+        )
+
+    async def generate_structured(
+        self,
+        messages: list[dict],
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        tools: list[dict] | None = None,
+    ) -> CognitiveResponse:
+        backend = self._pick_backend(messages)
+        return await backend.generate_structured(
+            messages, system_prompt=system_prompt, max_tokens=max_tokens, tools=tools
+        )
 
 
 class ForgeBackend:

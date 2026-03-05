@@ -152,7 +152,7 @@ async def lifespan(app: FastAPI):
     def create_supervisor(backend=None):
         """Factory function to create Supervisor agent."""
         try:
-            provider = create_agent_provider("anthropic")
+            provider = create_agent_provider(os.environ.get("DEFAULT_PROVIDER", "ollama"))
             try:
                 from animus_forge.agents.convergence import create_checker
 

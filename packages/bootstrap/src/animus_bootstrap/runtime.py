@@ -220,6 +220,27 @@ class AnimusRuntime:
             if restored:
                 logger.info("Restored %d timers from persistent store", restored)
 
+        # 9b. Persistent task store
+        if self._config.intelligence.enabled:
+            from animus_bootstrap.intelligence.tools.builtin.task_ctl import (
+                set_task_store as set_task_ctl_store,
+            )
+            from animus_bootstrap.intelligence.tools.builtin.task_store import (
+                TaskStore,
+            )
+
+            tasks_db = data_dir / "tasks.db"
+            self._task_store = TaskStore(tasks_db)
+            set_task_ctl_store(self._task_store)
+
+            # Wire task nudge checker to the store
+            from animus_bootstrap.intelligence.proactive.checks.tasks import (
+                set_task_store as set_task_nudge_store,
+            )
+
+            set_task_nudge_store(self._task_store)
+            logger.info("Task store initialized: %s", tasks_db)
+
         # 10. Feedback store
         from animus_bootstrap.intelligence.feedback import FeedbackStore
 
@@ -249,6 +270,10 @@ class AnimusRuntime:
         if self.automation_engine is not None:
             self.automation_engine.close()
             logger.info("Automation engine closed")
+
+        if hasattr(self, "_task_store") and self._task_store is not None:
+            self._task_store.close()
+            logger.info("Task store closed")
 
         if hasattr(self, "_timer_store") and self._timer_store is not None:
             self._timer_store.close()
@@ -288,13 +313,21 @@ class AnimusRuntime:
             return AnthropicBackend(api_key=anthropic_key)
 
         if backend_type == "ollama":
+            ollama_cfg = self._config.ollama
+            host = f"http://{ollama_cfg.host}:{ollama_cfg.port}"
+
+            if ollama_cfg.code_model:
+                from animus_bootstrap.gateway.cognitive import DualOllamaBackend
+
+                return DualOllamaBackend(
+                    chat_model=ollama_cfg.model,
+                    code_model=ollama_cfg.code_model,
+                    host=host,
+                )
+
             from animus_bootstrap.gateway.cognitive import OllamaBackend
 
-            ollama_cfg = self._config.ollama
-            return OllamaBackend(
-                model=ollama_cfg.model,
-                host=f"http://{ollama_cfg.host}:{ollama_cfg.port}",
-            )
+            return OllamaBackend(model=ollama_cfg.model, host=host)
 
         if backend_type == "forge" and self._config.forge.enabled:
             from animus_bootstrap.gateway.cognitive import ForgeBackend
@@ -306,17 +339,25 @@ class AnimusRuntime:
             )
 
         # Fallback to Ollama (always available locally)
-        from animus_bootstrap.gateway.cognitive import OllamaBackend
-
         logger.warning(
             "Backend '%s' not configured, falling back to Ollama",
             backend_type,
         )
         ollama_cfg = self._config.ollama
-        return OllamaBackend(
-            model=ollama_cfg.model,
-            host=f"http://{ollama_cfg.host}:{ollama_cfg.port}",
-        )
+        host = f"http://{ollama_cfg.host}:{ollama_cfg.port}"
+
+        if ollama_cfg.code_model:
+            from animus_bootstrap.gateway.cognitive import DualOllamaBackend
+
+            return DualOllamaBackend(
+                chat_model=ollama_cfg.model,
+                code_model=ollama_cfg.code_model,
+                host=host,
+            )
+
+        from animus_bootstrap.gateway.cognitive import OllamaBackend
+
+        return OllamaBackend(model=ollama_cfg.model, host=host)
 
     def _create_memory_manager(self) -> Any:
         """Create memory manager based on config."""

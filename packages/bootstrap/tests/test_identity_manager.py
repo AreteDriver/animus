@@ -199,6 +199,76 @@ class TestGenerateFromTemplates:
         assert "Sovereignty" in content
 
 
+class TestBuildCompactPrompt:
+    """Tests for get_condensed_prompt (compact LLM system prompt)."""
+
+    def test_empty_files_returns_prompt(self, manager):
+        result = manager.get_condensed_prompt()
+        assert "Animus" in result
+        assert "sovereign" in result.lower() or "Arete" in result
+
+    def test_extracts_name_from_identity(self, manager):
+        manager.write("IDENTITY.md", "# Identity\n**Name:** TestUser\n")
+        result = manager.get_condensed_prompt()
+        assert "TestUser" in result
+
+    def test_fallback_name_when_no_identity(self, manager):
+        result = manager.get_condensed_prompt()
+        assert "Arete" in result
+
+    def test_extracts_anti_patterns(self, manager):
+        manager.write("PREFERENCES.md", "# Prefs\n## Anti-Patterns\n- Never do X\n- Never do Y\n")
+        result = manager.get_condensed_prompt()
+        assert "Never do X" in result
+
+    def test_extracts_what_i_am(self, manager):
+        manager.write("CONTEXT.md", "# Context\n## What I Am\nAn exocortex\nRunning locally\n## Other\n")
+        result = manager.get_condensed_prompt()
+        assert "exocortex" in result
+
+    def test_extracts_operating_principle(self, manager):
+        manager.write("IDENTITY.md", "**Operating principle**: Ship fast\n")
+        result = manager.get_condensed_prompt()
+        assert "Ship fast" in result
+
+    def test_includes_rules(self, manager):
+        result = manager.get_condensed_prompt()
+        assert "RULES" in result
+        assert "direct" in result.lower()
+
+    def test_anti_patterns_section_ends_at_heading(self, manager):
+        manager.write("PREFERENCES.md", "## Anti-Patterns\n- X\n# Next Section\n- Y\n")
+        result = manager.get_condensed_prompt()
+        assert "X" in result
+        # Y is after the heading so should not be included
+        lines = result.split("\n")
+        anti_lines = [l for l in lines if "- Y" in l]
+        assert not anti_lines
+
+    def test_what_i_am_section_ends_at_heading(self, manager):
+        manager.write("CONTEXT.md", "## What I Am\nLine1\n## Other Section\nLine2\n")
+        result = manager.get_condensed_prompt()
+        assert "Line1" in result
+
+    def test_never_do_heading_variant(self, manager):
+        manager.write("PREFERENCES.md", "## Never Do\n- Bad thing\n")
+        result = manager.get_condensed_prompt()
+        assert "Bad thing" in result
+
+    def test_limits_anti_patterns_to_five(self, manager):
+        items = "\n".join(f"- Item {i}" for i in range(10))
+        manager.write("PREFERENCES.md", f"## Anti-Patterns\n{items}\n")
+        result = manager.get_condensed_prompt()
+        assert "Item 4" in result
+        assert "Item 5" not in result
+
+    def test_limits_what_i_am_to_eight(self, manager):
+        items = "\n".join(f"Line {i}" for i in range(15))
+        manager.write("CONTEXT.md", f"## What I Am\n{items}\n")
+        result = manager.get_condensed_prompt()
+        assert "Line 7" in result
+
+
 class TestConstants:
     """Verify class-level constants."""
 

@@ -488,8 +488,7 @@ class TestMemoryManager:
         self, manager: MemoryManager, mock_backend: MagicMock
     ) -> None:
         await manager.store_conversation("session-2", [])
-        mock_backend.store.assert_awaited_once()
-        assert mock_backend.store.call_args.args[2]["message_count"] == 0
+        mock_backend.store.assert_not_awaited()
 
     # -- store_fact --
 

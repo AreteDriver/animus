@@ -23,10 +23,25 @@ class AnimusSection(BaseModel):
 
 
 class ApiSection(BaseModel):
-    """API key configuration."""
+    """API key configuration.
+
+    Keys are resolved in order: env var > config file > empty default.
+    Env vars: ANTHROPIC_API_KEY, OPENAI_API_KEY.
+    """
 
     anthropic_key: str = ""
     openai_key: str = ""
+
+    def model_post_init(self, __context: object) -> None:
+        """Override with environment variables when present."""
+        import os
+
+        env_anthropic = os.environ.get("ANTHROPIC_API_KEY", "")
+        if env_anthropic:
+            self.anthropic_key = env_anthropic
+        env_openai = os.environ.get("OPENAI_API_KEY", "")
+        if env_openai:
+            self.openai_key = env_openai
 
 
 class ForgeSection(BaseModel):
@@ -62,6 +77,7 @@ class OllamaSection(BaseModel):
     host: str = "localhost"
     port: int = 11434
     model: str = "llama3.2"
+    code_model: str = ""
     autoinstall: bool = True
 
 

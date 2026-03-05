@@ -10,6 +10,7 @@ from animus_bootstrap.intelligence.tools.builtin.identity_tools import get_ident
 from animus_bootstrap.intelligence.tools.builtin.memory_tools import get_memory_tools
 from animus_bootstrap.intelligence.tools.builtin.self_improve import get_self_improve_tools
 from animus_bootstrap.intelligence.tools.builtin.system import get_system_tools
+from animus_bootstrap.intelligence.tools.builtin.task_ctl import get_task_tools
 from animus_bootstrap.intelligence.tools.builtin.timer_ctl import get_timer_tools
 from animus_bootstrap.intelligence.tools.builtin.web import get_web_tools
 from animus_bootstrap.intelligence.tools.executor import ToolDefinition
@@ -25,6 +26,7 @@ def get_all_builtin_tools() -> list[ToolDefinition]:
     tools.extend(get_memory_tools())
     tools.extend(get_code_edit_tools())
     tools.extend(get_forge_tools())
+    tools.extend(get_task_tools())
     tools.extend(get_timer_tools())
     tools.extend(get_self_improve_tools())
     tools.extend(get_identity_tools())

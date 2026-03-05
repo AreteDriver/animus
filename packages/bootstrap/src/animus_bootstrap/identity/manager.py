@@ -156,6 +156,79 @@ class IdentityFileManager:
 
         return "\n".join(parts) if parts else ""
 
+    def get_condensed_prompt(self) -> str:
+        """Build a short, directive system prompt for local LLMs.
+
+        Full identity files are too long for small models to follow.
+        This extracts key constraints into ~200 words that a 14B model
+        can reliably obey.
+        """
+        # Extract key facts from identity files
+        identity = self.read("IDENTITY.md") or ""
+        context = self.read("CONTEXT.md") or ""
+        prefs = self.read("PREFERENCES.md") or ""
+
+        # Pull name from identity
+        name_line = ""
+        for line in identity.splitlines():
+            if line.startswith("**Name:**"):
+                name_line = line.split("**Name:**")[1].strip()
+                break
+
+        # Pull anti-patterns from preferences
+        anti_patterns: list[str] = []
+        in_anti = False
+        for line in prefs.splitlines():
+            if "Anti-Pattern" in line or "Never Do" in line:
+                in_anti = True
+                continue
+            if in_anti and line.startswith("- "):
+                anti_patterns.append(line[2:].strip())
+            elif in_anti and line.startswith("#"):
+                break
+
+        # Pull "What I Am" section from context
+        what_i_am: list[str] = []
+        in_what = False
+        for line in context.splitlines():
+            if "What I Am" in line:
+                in_what = True
+                continue
+            if in_what and line.startswith("##"):
+                break
+            if in_what and line.strip():
+                what_i_am.append(line.strip())
+
+        parts = [
+            f"You are Animus, sovereign AI exocortex for {name_line or 'Arete'}.",
+            "You are ALREADY BUILT — 13,188 tests, 4 packages, production code.",
+            "You run locally on Ollama. No data leaves this machine.",
+        ]
+
+        if what_i_am:
+            parts.append("\n".join(what_i_am[:8]))
+
+        # Pull key interaction rules from identity
+        for line in identity.splitlines():
+            if line.startswith("**Operating principle"):
+                parts.append(line)
+                break
+
+        parts.append(
+            "\nRULES (OBEY STRICTLY):\n"
+            "- Be direct. No filler, no preamble, no restating the question.\n"
+            "- NEVER propose building things that already exist.\n"
+            "- NEVER generate generic project plans or numbered wishlists.\n"
+            "- NEVER hallucinate commands, repos, or frameworks.\n"
+            "- When unsure about the codebase, say 'I'd need to check' — do NOT guess.\n"
+            "- Treat Arete as expert peer (17+ years ops). No hand-holding."
+        )
+
+        if anti_patterns:
+            parts.append("\nNEVER DO:\n" + "\n".join(f"- {ap}" for ap in anti_patterns[:5]))
+
+        return "\n".join(parts)
+
     def generate_from_templates(self, context: dict) -> None:
         """Generate all identity files from Jinja2 templates.
 

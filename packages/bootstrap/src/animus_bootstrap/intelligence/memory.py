@@ -47,8 +47,25 @@ class MemoryManager:
         )
 
     async def store_conversation(self, session_id: str, messages: list[dict]) -> None:
-        """Store a completed conversation turn as episodic memory."""
-        content = json.dumps(messages)
+        """Store a conversation summary as episodic memory.
+
+        Only stores the last user message and assistant response (not full
+        history) to prevent memory bloat that overwhelms the system prompt.
+        """
+        last_user = ""
+        last_assistant = ""
+        for msg in reversed(messages):
+            if msg.get("role") == "assistant" and not last_assistant:
+                last_assistant = msg.get("content", "")[:500]
+            elif msg.get("role") == "user" and not last_user:
+                last_user = msg.get("content", "")[:200]
+            if last_user and last_assistant:
+                break
+
+        if not last_user:
+            return
+
+        content = f"User asked: {last_user}\nAnimus replied: {last_assistant}"
         metadata = {"session_id": session_id, "message_count": len(messages)}
         await self._backend.store("episodic", content, metadata)
 
