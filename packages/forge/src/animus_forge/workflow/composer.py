@@ -145,6 +145,7 @@ class WorkflowComposer:
             budget_manager=(parent_executor.budget_manager if parent_executor else None),
             feedback_engine=(parent_executor.feedback_engine if parent_executor else None),
             dry_run=parent_executor.dry_run if parent_executor else False,
+            arete_hooks=(parent_executor.arete_hooks if parent_executor else None),
         )
 
         # Register sub_workflow handler on child so nested sub-workflows work

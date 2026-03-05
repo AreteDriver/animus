@@ -802,13 +802,12 @@ class TestWorkflowEngineAdapterAdditional:
             ) as mock_exec_cls:
                 checkpoint_mgr = MagicMock()
                 _ = WorkflowEngineAdapter(checkpoint_manager=checkpoint_mgr)
-                mock_exec_cls.assert_called_once_with(
-                    checkpoint_manager=checkpoint_mgr,
-                    contract_validator=None,
-                    budget_manager=None,
-                    dry_run=False,
-                    execution_manager=None,
-                )
+                call_kwargs = mock_exec_cls.call_args[1]
+                assert call_kwargs["checkpoint_manager"] is checkpoint_mgr
+                assert call_kwargs["contract_validator"] is None
+                assert call_kwargs["budget_manager"] is None
+                assert call_kwargs["dry_run"] is False
+                assert call_kwargs["execution_manager"] is None
 
     def test_adapter_with_contract_validator(self, mock_settings):
         with patch("animus_forge.orchestrator.workflow_engine_adapter.get_settings") as mock_get:

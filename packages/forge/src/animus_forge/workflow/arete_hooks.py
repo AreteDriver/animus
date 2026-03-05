@@ -160,3 +160,43 @@ def _extract_domain(step_id: str) -> str:
     if len(parts) >= 2:
         return parts[0]
     return "general"
+
+
+def get_arete_hooks() -> AreteHooks | None:
+    """Factory: build AreteHooks from available Quorum/Core primitives.
+
+    Returns None when no Arete Tool bridges are installed.
+    """
+    phi_scorer = None
+    stigmergy_field = None
+    memory_layer = None
+
+    try:
+        from convergent.scoring import PhiScorer
+
+        phi_scorer = PhiScorer()
+    except Exception:
+        pass
+
+    try:
+        from convergent.stigmergy import StigmergyField
+
+        stigmergy_field = StigmergyField()
+    except Exception:
+        pass
+
+    try:
+        from animus.memory import MemoryLayer
+
+        memory_layer = MemoryLayer()
+    except Exception:
+        pass
+
+    if phi_scorer is None and stigmergy_field is None and memory_layer is None:
+        return None
+
+    return AreteHooks(
+        phi_scorer=phi_scorer,
+        stigmergy_field=stigmergy_field,
+        memory_layer=memory_layer,
+    )

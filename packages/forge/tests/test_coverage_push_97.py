@@ -2525,6 +2525,7 @@ class TestExecutorCoreBatchTwo:
         ex.execution_manager = None
         ex.memory_manager = None
         ex.feedback_engine = None
+        ex.arete_hooks = None
         ex._execution_id = None
         ex._current_workflow_id = None
         ex._context = {}

@@ -49,6 +49,7 @@ def get_workflow_executor(dry_run: bool = False) -> WorkflowExecutor:
     try:
         from animus_forge.budget import BudgetManager
         from animus_forge.state.checkpoint import CheckpointManager
+        from animus_forge.workflow.arete_hooks import get_arete_hooks
         from animus_forge.workflow.executor import WorkflowExecutor
 
         checkpoint_mgr = CheckpointManager()
@@ -58,6 +59,7 @@ def get_workflow_executor(dry_run: bool = False) -> WorkflowExecutor:
             checkpoint_manager=checkpoint_mgr,
             budget_manager=budget_mgr,
             dry_run=dry_run,
+            arete_hooks=get_arete_hooks(),
         )
     except ImportError as e:
         console.print(f"[red]Missing dependencies:[/red] {e}")

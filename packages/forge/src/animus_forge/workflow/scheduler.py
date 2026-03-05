@@ -400,10 +400,13 @@ class WorkflowScheduler:
             log.steps_total = len(workflow.steps)
 
             # Create executor
+            from animus_forge.workflow.arete_hooks import get_arete_hooks
+
             executor = WorkflowExecutor(
                 checkpoint_manager=self.checkpoint_manager,
                 budget_manager=self.budget_manager,
                 dry_run=config.dry_run,
+                arete_hooks=get_arete_hooks(),
             )
 
             # Execute

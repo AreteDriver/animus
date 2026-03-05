@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import types
 from unittest.mock import MagicMock, patch
 
 from animus_forge.workflow.arete_hooks import (
     AreteHooks,
     _classify_failure,
     _extract_domain,
+    get_arete_hooks,
 )
 
 # ─── AreteHooks.on_step_failure ────────────────────────────────────────
@@ -184,3 +186,51 @@ class TestExtractDomain:
 
     def test_multiple_underscores(self):
         assert _extract_domain("code_quality_check") == "code"
+
+
+# ─── get_arete_hooks factory ─────────────────────────────────────────
+
+
+class TestGetAreteHooks:
+    """Tests for the AreteHooks factory function."""
+
+    def test_returns_none_when_nothing_available(self):
+        with patch.dict("sys.modules", {
+            "convergent.scoring": None,
+            "convergent.stigmergy": None,
+            "animus.memory": None,
+        }):
+            result = get_arete_hooks()
+        assert result is None
+
+    def test_returns_hooks_with_phi_scorer(self):
+        fake_scoring = types.ModuleType("convergent.scoring")
+        fake_scoring.PhiScorer = MagicMock
+        with patch.dict("sys.modules", {
+            "convergent.scoring": fake_scoring,
+            "convergent.stigmergy": None,
+            "animus.memory": None,
+        }):
+            result = get_arete_hooks()
+        assert result is not None
+        assert result._phi_scorer is not None
+        assert result._stigmergy_field is None
+        assert result._memory_layer is None
+
+    def test_returns_hooks_with_all_deps(self):
+        fake_scoring = types.ModuleType("convergent.scoring")
+        fake_scoring.PhiScorer = MagicMock
+        fake_stigmergy = types.ModuleType("convergent.stigmergy")
+        fake_stigmergy.StigmergyField = MagicMock
+        fake_memory = types.ModuleType("animus.memory")
+        fake_memory.MemoryLayer = MagicMock
+        with patch.dict("sys.modules", {
+            "convergent.scoring": fake_scoring,
+            "convergent.stigmergy": fake_stigmergy,
+            "animus.memory": fake_memory,
+        }):
+            result = get_arete_hooks()
+        assert result is not None
+        assert result._phi_scorer is not None
+        assert result._stigmergy_field is not None
+        assert result._memory_layer is not None

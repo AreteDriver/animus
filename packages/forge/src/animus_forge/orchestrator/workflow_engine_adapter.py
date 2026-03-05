@@ -145,12 +145,15 @@ class WorkflowEngineAdapter:
             dry_run: If True, use mock responses
             execution_manager: Optional ExecutionManager for streaming logs
         """
+        from animus_forge.workflow.arete_hooks import get_arete_hooks
+
         self._executor = WorkflowExecutor(
             checkpoint_manager=checkpoint_manager,
             contract_validator=contract_validator,
             budget_manager=budget_manager,
             dry_run=dry_run,
             execution_manager=execution_manager,
+            arete_hooks=get_arete_hooks(),
         )
         logger.info("Using WorkflowEngineAdapter - consider migrating to WorkflowExecutor directly")
 

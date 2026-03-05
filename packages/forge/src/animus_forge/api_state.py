@@ -44,12 +44,13 @@ from animus_forge.api_clients import OpenAIClient  # noqa: E402
 from animus_forge.config import get_settings  # noqa: E402
 from animus_forge.orchestrator.workflow_engine_adapter import WorkflowEngineAdapter  # noqa: E402
 from animus_forge.prompts import PromptTemplateManager  # noqa: E402
+from animus_forge.workflow.arete_hooks import get_arete_hooks  # noqa: E402
 from animus_forge.workflow.executor import WorkflowExecutor  # noqa: E402
 
 workflow_engine = WorkflowEngineAdapter()
 prompt_manager = PromptTemplateManager()
 openai_client = OpenAIClient()
-yaml_workflow_executor = WorkflowExecutor()
+yaml_workflow_executor = WorkflowExecutor(arete_hooks=get_arete_hooks())
 YAML_WORKFLOWS_DIR = get_settings().base_dir / "workflows"
 
 # ---------------------------------------------------------------------------

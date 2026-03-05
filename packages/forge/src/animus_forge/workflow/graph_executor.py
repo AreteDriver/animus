@@ -93,9 +93,12 @@ class ReactFlowExecutor:
     def _get_workflow_executor(self):
         """Get or create the workflow executor."""
         if self._workflow_executor is None:
+            from .arete_hooks import get_arete_hooks
             from .executor import WorkflowExecutor
 
-            self._workflow_executor = WorkflowExecutor()
+            self._workflow_executor = WorkflowExecutor(
+                arete_hooks=get_arete_hooks(),
+            )
         return self._workflow_executor
 
     def execute(
