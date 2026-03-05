@@ -5,6 +5,23 @@ All notable changes to the Animus monorepo will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-03-05
+
+### Added
+- **Dual-model routing** — Claude as brain (planning, code gen) + Ollama as hands (summarization, formatting)
+- **Task classification** — `classify_task()` heuristic routes HEAVY vs LIGHT tasks to appropriate model
+- **Autonomous build pipeline** — 4-agent Forge workflow (planner → coder → verifier → fixer) with quality gates and $2.00 budget cap
+- **Constrained tool selection** — Numbered menu + key:value parsing for reliable Ollama tool use
+- **Task outcome tracking** — Records outcomes in MemoryLayer, recalls similar past tasks, detects failure patterns, tracks success rates
+- **New archetypes** — `planner`, `coder`, `verifier` added to ForgeAgent
+- **New slash commands** — `/build`, `/model`, `/stats` in chat agent
+- **`create_local_think_tool()`** — Lets Claude offload cheap subtasks to Ollama during agentic loop
+- Core test count: 1879 → 2046 (+167 tests)
+
+### Changed
+- `think_with_tools()` dispatch: non-Anthropic models now route to constrained loop instead of markdown loop
+- `chat.py` fully wired to Animus Core (CognitiveLayer, ToolRegistry, MemoryLayer, TaskOutcomeTracker)
+
 ## [2.0.0] - 2026-02-20
 
 ### Added
