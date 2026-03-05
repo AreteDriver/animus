@@ -2,6 +2,7 @@
 
 import asyncio
 import atexit
+import os
 from pathlib import Path
 
 from prompt_toolkit import prompt
@@ -32,8 +33,9 @@ from animus.learning import LearningLayer
 from animus.logging import get_logger, setup_logging
 from animus.memory import Conversation, MemoryLayer, MemoryType
 from animus.proactive import ProactiveEngine
+from animus.task_outcomes import TaskOutcome, TaskOutcomeTracker
 from animus.tasks import TaskTracker
-from animus.tools import create_default_registry, create_memory_tools
+from animus.tools import create_default_registry, create_local_think_tool, create_memory_tools
 from animus.voice import VoiceInterface
 
 # Optional sync module
@@ -71,6 +73,39 @@ except ImportError:
 
 console = Console()
 logger = get_logger("cli")
+
+MAX_AGENT_LOOPS = 8
+
+AGENT_CONTEXT = """\
+You are Animus, an AI agent. You ACT on code — do not explain or advise.
+
+CRITICAL: When asked to do something, MUST use tools. Never describe what you "would" do.
+If you catch yourself writing "you could" or "I would suggest" — STOP. Use a tool instead.
+
+Rules:
+- ALWAYS read a file before editing it
+- ONE change at a time, then verify
+- Paths are relative to the repo root or absolute
+- After edits, run: ruff check packages/ --fix && ruff format packages/
+- Never push to git, never delete files without asking"""
+
+
+def _approval_callback(tool_name: str, params: dict) -> bool:
+    """Terminal approval for sensitive tools."""
+    if os.environ.get("ANIMUS_AUTO_APPROVE", "").lower() in ("1", "true", "yes"):
+        return True
+    console.print(f"  [yellow]Tool: {tool_name}[/yellow]")
+    for k, v in params.items():
+        preview = str(v)[:100]
+        if len(str(v)) > 100:
+            preview += "..."
+        console.print(f"    [dim]{k}: {preview}[/dim]")
+    try:
+        resp = input("  Execute? [Y/n] ").strip().lower()
+        return resp in ("", "y", "yes")
+    except (EOFError, KeyboardInterrupt):
+        console.print()
+        return False
 
 
 def show_help():
@@ -198,8 +233,13 @@ def show_help():
   /forge list              - List all workflows with checkpoints
   /forge pause <name>      - Pause a running workflow
 
+[bold]Agent Mode:[/bold]
+  /build <description>   - Autonomous build pipeline (plan/code/lint/test/fix)
+  /model                 - Show model routing info (dual-model)
+  /auto                  - Toggle auto-approve for tool execution
+
 [bold]Otherwise:[/bold]
-  Just type naturally. Animus will respond.
+  Just type naturally. Animus will use tools to act on your request.
 """
     )
 
@@ -436,8 +476,24 @@ def main():
         proactive = ProactiveEngine(config.data_dir, memory)
         logger.info("Proactive engine initialized")
 
+    # Dual-model routing: if primary is Ollama and ANTHROPIC_API_KEY is set,
+    # use Claude as primary brain and Ollama as local hands (or vice versa).
+    fallback_config: ModelConfig | None = None
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    if model_config.provider.value == "ollama" and anthropic_key:
+        # Swap: Claude becomes primary, Ollama becomes fallback
+        fallback_config = model_config
+        model_config = ModelConfig.anthropic("claude-sonnet-4-20250514")
+        model_config.api_key = anthropic_key
+    elif model_config.provider.value == "anthropic":
+        # Add Ollama fallback for cheap tasks
+        ollama_model = os.environ.get("OLLAMA_MODEL", "deepseek-coder-v2")
+        fallback_config = ModelConfig.ollama(ollama_model)
+        fallback_config.base_url = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+
     cognitive = CognitiveLayer(
         primary_config=model_config,
+        fallback_config=fallback_config,
         learning=learning,
         entity_memory=entity_memory if config.entities.auto_extract else None,
         proactive=proactive,
@@ -447,6 +503,10 @@ def main():
     tools = create_default_registry(security_config=config.tools_security)
     for tool in create_memory_tools(memory):
         tools.register(tool)
+
+    # Register local_think tool when dual models are configured
+    if cognitive.has_dual_models:
+        tools.register(create_local_think_tool(cognitive))
 
     # Autonomous Executor
     executor: AutonomousExecutor | None = None
@@ -470,6 +530,7 @@ def main():
 
     tasks = TaskTracker(config.data_dir)
     decisions = DecisionFramework(cognitive)
+    outcome_tracker = TaskOutcomeTracker(memory)
 
     # Phase 3: API Server and Voice Interface
     api_server: APIServer | None = None
@@ -624,6 +685,96 @@ def main():
 
             if user_input.lower() == "/stats":
                 show_stats(memory)
+                # Also show task outcome stats
+                oc_stats = outcome_tracker.get_success_rate()
+                if oc_stats["total"] > 0:
+                    rate = oc_stats["rate"] * 100
+                    console.print(
+                        f"\n[bold]Task Outcomes:[/bold] {oc_stats['total']} tasks, "
+                        f"{rate:.0f}% success ({oc_stats['successes']} ok, "
+                        f"{oc_stats['failures']} failed)"
+                    )
+                continue
+
+            if user_input.lower() == "/model":
+                p = cognitive.primary_config
+                console.print(f"  [bold]Primary:[/bold] {p.provider.value}/{p.model_name}")
+                if cognitive.fallback_config:
+                    fb = cognitive.fallback_config
+                    console.print(f"  [bold]Local:[/bold]   {fb.provider.value}/{fb.model_name}")
+                    console.print(
+                        "  [dim]Dual-model routing active. "
+                        "Claude plans, Ollama executes cheap tasks.[/dim]"
+                    )
+                else:
+                    console.print(
+                        "  [dim]Single model mode. "
+                        "Set ANTHROPIC_API_KEY for dual-model routing.[/dim]"
+                    )
+                continue
+
+            if user_input.lower() == "/auto":
+                current = os.environ.get("ANIMUS_AUTO_APPROVE", "false")
+                new_val = "false" if current.lower() in ("1", "true", "yes") else "true"
+                os.environ["ANIMUS_AUTO_APPROVE"] = new_val
+                color = "green" if new_val == "true" else "yellow"
+                console.print(f"Auto-approve: [{color}]{new_val.upper()}[/{color}]")
+                if new_val == "true":
+                    console.print("[yellow]  Tools will execute without confirmation.[/yellow]")
+                continue
+
+            if user_input.lower().startswith("/build"):
+                parts = user_input.split(None, 1)
+                task_desc = parts[1].strip() if len(parts) > 1 else ""
+                if not task_desc:
+                    console.print("[yellow]Usage: /build <description>[/yellow]")
+                    console.print("[dim]  Example: /build add a health check endpoint[/dim]")
+                    continue
+                # Import build pipeline from forge
+                from animus.forge import ForgeEngine
+                from animus.forge.loader import load_workflow
+                from animus.forge.models import ForgeError
+
+                build_yaml = (
+                    Path(__file__).parent.parent / "configs" / "examples" / "build_task.yaml"
+                )
+                if not build_yaml.exists():
+                    console.print(f"[yellow]Build workflow not found: {build_yaml}[/yellow]")
+                    continue
+                try:
+                    wf_config = load_workflow(build_yaml)
+                except ForgeError as e:
+                    console.print(f"[yellow]Failed to load: {e}[/yellow]")
+                    continue
+                if wf_config.agents:
+                    existing = wf_config.agents[0].system_prompt or ""
+                    wf_config.agents[0].system_prompt = f"{existing}\n\n## Task\n{task_desc}"
+                cp_dir = config.data_dir / "checkpoints"
+                cp_dir.mkdir(exist_ok=True)
+                engine = ForgeEngine(cognitive=cognitive, checkpoint_dir=cp_dir, tools=tools)
+                console.print(f"[cyan][bold]Build Pipeline[/bold]: {task_desc}[/cyan]")
+                console.print("  Steps: planner → coder → verifier → fixer")
+                console.print(f"  Budget: ${wf_config.max_cost_usd:.2f}")
+                console.print()
+                try:
+                    state = engine.run(wf_config)
+                    color = "green" if state.status == "completed" else "yellow"
+                    console.print(f"\n[{color}]Build {state.status}[/{color}]")
+                    for result in state.results:
+                        indicator = (
+                            "[green]OK[/green]" if result.success else "[yellow]FAIL[/yellow]"
+                        )
+                        console.print(
+                            f"  [{indicator}] {result.agent_name}  "
+                            f"({result.tokens_used} tokens, ${result.cost_usd:.4f})"
+                        )
+                        if result.error:
+                            console.print(f"        [yellow]{result.error}[/yellow]")
+                    console.print(
+                        f"\n  Total: {state.total_tokens} tokens, ${state.total_cost:.4f}"
+                    )
+                except Exception as e:
+                    console.print(f"[yellow]Build failed: {e}[/yellow]")
                 continue
 
             if user_input.lower() == "/history":
@@ -2342,11 +2493,19 @@ def main():
             # Record user message
             conversation.add_message("user", user_input)
 
-            # Get relevant context from memory
+            # Build context: agent personality + memory recall + past outcomes
+            context_parts = [AGENT_CONTEXT]
             context_memories = memory.recall(user_input, limit=3)
-            context = "\n".join(m.content for m in context_memories) if context_memories else None
+            if context_memories:
+                context_parts.append(
+                    "\nRelevant memories:\n" + "\n".join(f"- {m.content}" for m in context_memories)
+                )
+            task_context = outcome_tracker.get_context_for_task(user_input)
+            if task_context:
+                context_parts.append(f"\n{task_context}")
+            context = "\n".join(context_parts)
 
-            # Generate response — delegate to Gorgon when connected + auto_delegate
+            # Generate response with tool use (agent loop)
             console.print()
             gorgon_int = integrations.get("gorgon") if GORGON_AVAILABLE else None
             if (
@@ -2369,17 +2528,44 @@ def main():
                             f"[Gorgon task {t['id'][:8]}] Status: {t.get('status', 'submitted')}"
                         )
                 else:
-                    logger.warning(f"Gorgon delegation failed: {result.error}, using local model")
-                    response = cognitive.think(user_input, context=context, mode=mode)
+                    logger.warning(f"Gorgon delegation failed: {result.error}, using agent loop")
+                    response = cognitive.think_with_tools(
+                        prompt=user_input,
+                        context=context,
+                        mode=mode,
+                        tools=tools,
+                        max_iterations=MAX_AGENT_LOOPS,
+                        approval_callback=_approval_callback,
+                    )
             else:
-                logger.debug(f"Generating response with mode={mode.value}")
-                response = cognitive.think(user_input, context=context, mode=mode)
+                logger.debug(f"Agent loop with mode={mode.value}")
+                response = cognitive.think_with_tools(
+                    prompt=user_input,
+                    context=context,
+                    mode=mode,
+                    tools=tools,
+                    max_iterations=MAX_AGENT_LOOPS,
+                    approval_callback=_approval_callback,
+                )
 
             # Record assistant response
             conversation.add_message("assistant", response)
 
             console.print(response)
             console.print()
+
+            # Record task outcome for learning
+            is_error = response.startswith("[Error") or "failed" in response.lower()[:50]
+            outcome = TaskOutcome(
+                request=user_input[:200],
+                success=not is_error,
+                error=response[:100] if is_error else None,
+                response_summary=response[:200],
+            )
+            try:
+                outcome_tracker.record(outcome)
+            except Exception as e:
+                logger.debug(f"Failed to record outcome: {e}")
 
             # Speak response if TTS enabled
             if voice and voice.response_tts_enabled:

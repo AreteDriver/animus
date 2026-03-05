@@ -1,0 +1,182 @@
+"""MCP server for Animus — exposes memory, tasks, and tools to Claude Code.
+
+Run: python -m animus.mcp_server
+Or add to Claude Code MCP config.
+"""
+
+from __future__ import annotations
+
+import json
+
+from animus.config import AnimusConfig
+from animus.logging import get_logger
+from animus.memory import MemoryLayer, MemoryType
+from animus.tasks import TaskTracker
+
+logger = get_logger("mcp_server")
+
+
+def create_mcp_server():
+    """Create and configure the Animus MCP server."""
+    try:
+        from mcp.server.fastmcp import FastMCP
+    except ImportError as exc:
+        raise ImportError(
+            "MCP server requires the mcp SDK. Install with: pip install 'mcp>=1.0.0'"
+        ) from exc
+
+    config = AnimusConfig.load()
+    config.ensure_dirs()
+    memory = MemoryLayer(config.data_dir, backend=config.memory.backend)
+    tasks = TaskTracker(config.data_dir)
+
+    mcp = FastMCP("animus", instructions="Animus exocortex — persistent memory, tasks, and tools.")
+
+    # -----------------------------------------------------------------------
+    # Memory tools
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_remember(content: str, tags: str = "", memory_type: str = "semantic") -> str:
+        """Store a memory in Animus.
+
+        Args:
+            content: Text to remember (fact, decision, observation, pattern).
+            tags: Comma-separated tags for categorization.
+            memory_type: One of: semantic (facts), episodic (events), procedural (how-tos).
+        """
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
+        try:
+            mt = MemoryType(memory_type)
+        except ValueError:
+            mt = MemoryType.SEMANTIC
+
+        mem = memory.remember(content=content, memory_type=mt, tags=tag_list, source="mcp")
+        return f"Stored memory {mem.id[:8]} ({mt.value}, {len(tag_list)} tags)"
+
+    @mcp.tool()
+    def animus_recall(query: str, limit: int = 5) -> str:
+        """Search Animus memory by semantic similarity.
+
+        Args:
+            query: What to search for.
+            limit: Maximum results to return (default 5).
+        """
+        results = memory.recall(query=query, limit=limit)
+        if not results:
+            return "No matching memories found."
+
+        lines = []
+        for m in results:
+            tags = f" [{', '.join(m.tags)}]" if m.tags else ""
+            lines.append(f"- [{m.id[:8]}] {m.content[:200]}{tags}")
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_search_tags(tags: str, limit: int = 10) -> str:
+        """Find memories by tags.
+
+        Args:
+            tags: Comma-separated tags to filter by (all must match).
+            limit: Maximum results.
+        """
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+        if not tag_list:
+            return "No tags provided."
+
+        results = memory.recall_by_tags(tags=tag_list, limit=limit)
+        if not results:
+            return f"No memories found with tags: {', '.join(tag_list)}"
+
+        lines = []
+        for m in results:
+            lines.append(f"- [{m.id[:8]}] {m.content[:200]}")
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_memory_stats() -> str:
+        """Get Animus memory statistics."""
+        stats = memory.get_statistics()
+        return json.dumps(stats, indent=2, default=str)
+
+    # -----------------------------------------------------------------------
+    # Task tools
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_list_tasks(status: str = "pending") -> str:
+        """List tasks in Animus task tracker.
+
+        Args:
+            status: Filter by status: pending, in_progress, completed, all.
+        """
+        all_tasks = tasks.list_tasks()
+        if status != "all":
+            all_tasks = [t for t in all_tasks if t.status == status]
+
+        if not all_tasks:
+            return f"No {status} tasks."
+
+        lines = []
+        for t in all_tasks:
+            lines.append(f"- [{t.id[:8]}] [{t.status}] {t.description}")
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_create_task(description: str, priority: int = 5) -> str:
+        """Create a new task.
+
+        Args:
+            description: What needs to be done.
+            priority: Priority 1-10 (1=highest, 10=lowest). Default 5.
+        """
+        task = tasks.add_task(description=description, priority=priority)
+        return f"Created task {task.id[:8]}: {description}"
+
+    @mcp.tool()
+    def animus_complete_task(task_id: str) -> str:
+        """Mark a task as completed.
+
+        Args:
+            task_id: Task ID or partial ID prefix.
+        """
+        success = tasks.complete_task(task_id)
+        if success:
+            return f"Task {task_id} marked complete."
+        return f"Task {task_id} not found."
+
+    # -----------------------------------------------------------------------
+    # Brief / context tools
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_brief(topic: str = "") -> str:
+        """Generate a situation briefing from Animus memory.
+
+        Args:
+            topic: Optional topic to focus the briefing on.
+        """
+        query = topic or "recent important context"
+        recent = memory.recall(query=query, limit=10)
+
+        if not recent:
+            return "No relevant context in memory."
+
+        lines = ["## Animus Briefing", ""]
+        for m in recent:
+            prefix = f"[{m.memory_type.value}]" if hasattr(m, "memory_type") else ""
+            lines.append(f"- {prefix} {m.content[:300]}")
+
+        return "\n".join(lines)
+
+    return mcp
+
+
+def main():
+    """Run the MCP server via stdio."""
+    mcp = create_mcp_server()
+    mcp.run()
+
+
+if __name__ == "__main__":
+    main()
