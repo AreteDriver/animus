@@ -11,8 +11,8 @@ Unify entry points, expose Animus as an MCP server, stabilize all packages.
 - [x] Dual-model routing: auto-detect ANTHROPIC_API_KEY, create fallback config
 - [x] Task outcome tracking wired into main loop
 - [x] Agent context (personality + memory recall + past outcomes) for all requests
-- [ ] Make `scripts/chat.py` a thin shim that imports `__main__` (deferred — both work)
-- [ ] Tests for unified CLI entry point (deferred — existing 2046 tests pass)
+- [x] Make `scripts/chat.py` a thin shim that imports `__main__`
+- [x] Tests for unified CLI entry point (23 tests in test_cli_commands.py)
 
 ## Phase 2: MCP Server for Animus ✅
 - [x] `packages/core/animus/mcp_server.py` — FastMCP server with 8 tools
@@ -38,7 +38,7 @@ Unify entry points, expose Animus as an MCP server, stabilize all packages.
 - [x] MEMORY.md updated with new test counts
 
 ## Context
-- Core: 2046 tests, 97% coverage
+- Core: 2103 tests, 97% coverage
 - Forge: 8874 tests, 97% coverage
 - Quorum: 920 tests, 97% coverage
 - Bootstrap: 1697 tests (in venv), 96% coverage
