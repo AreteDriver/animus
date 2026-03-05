@@ -89,7 +89,7 @@ source = ["src/animus_bootstrap"]
 omit = ["*/tests/*"]
 
 [tool.coverage.report]
-fail_under = 96
+fail_under = 97
 show_missing = true
 
 [tool.ruff]

@@ -54,7 +54,7 @@ Unify entry points, expose Animus as an MCP server, stabilize all packages.
 - [x] PyPI publish workflow for Core (publish-core.yml, triggered by core-v* tags)
 - [x] Core README.md for PyPI listing
 - [x] README.md updated with current numbers and MCP quickstart
-- [ ] Bootstrap coverage push (96→97%) — pending analysis
+- [x] Bootstrap coverage push (96→97%) — 1739 tests, 97.01% coverage
 - [ ] Configure PyPI OIDC Trusted Publisher for animus package
 - [ ] Tag core-v2.3.0 to trigger first PyPI publish
 
@@ -62,6 +62,6 @@ Unify entry points, expose Animus as an MCP server, stabilize all packages.
 - Core: 2108 tests, 97% coverage
 - Forge: 8871 tests, 97% coverage
 - Quorum: 926 tests, 97% coverage
-- Bootstrap: 1697 tests (in venv), 96% coverage
+- Bootstrap: 1739 tests (in venv), 97% coverage
 - Chat Agent TODO complete (5/5 phases)
 - Ollama live smoke test passing (deepseek-coder-v2 tool use works)
