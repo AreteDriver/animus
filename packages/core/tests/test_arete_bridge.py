@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -232,7 +232,7 @@ class TestAutoSyncVerdicts:
         mock_store.list_decisions.return_value = []
         mock_store_cls.return_value = mock_store
         memory_layer = MagicMock()
-        since = datetime(2026, 1, 1, tzinfo=UTC)
+        since = datetime(2026, 1, 1, tzinfo=timezone.utc)
         auto_sync_verdicts(memory_layer, since=since)
         mock_store.list_decisions.assert_called_once_with(since=since)
 

@@ -593,7 +593,13 @@ class TestBuiltinChecks:
         assert isinstance(checks, list)
         assert len(checks) == 5
         names = {c.name for c in checks}
-        assert names == {"morning_brief", "task_nudge", "calendar_reminder", "reflection", "verdict_sync"}
+        assert names == {
+            "morning_brief",
+            "task_nudge",
+            "calendar_reminder",
+            "reflection",
+            "verdict_sync",
+        }
 
     def test_get_builtin_checks_all_are_proactive_checks(self) -> None:
         checks = get_builtin_checks()

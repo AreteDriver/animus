@@ -8,8 +8,6 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 
 def _run(coro):
     """Run async coroutine in a fresh event loop."""

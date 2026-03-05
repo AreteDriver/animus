@@ -102,7 +102,9 @@ class IntelligentRouter(MessageRouter):
         # 6. Cognitive loop (handles tool calls)
         logger.info(
             "System prompt: %d chars, %d words, starts with: %s",
-            len(system), len(system.split()), system[:80],
+            len(system),
+            len(system.split()),
+            system[:80],
         )
         response_text = await self._cognitive_loop(conversation, system)
 

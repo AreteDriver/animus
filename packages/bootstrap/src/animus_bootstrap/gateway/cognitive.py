@@ -211,15 +211,52 @@ class DualOllamaBackend:
     Falls back to conversation model for everything else.
     """
 
-    _CODE_KEYWORDS = frozenset({
-        "code", "function", "class", "debug", "refactor", "implement",
-        "write", "fix", "bug", "error", "test", "compile", "build",
-        "syntax", "import", "module", "deploy", "api", "endpoint",
-        "database", "query", "sql", "schema", "migration", "dockerfile",
-        "script", "lint", "type", "variable", "loop", "async", "await",
-        "exception", "traceback", "stacktrace", "coverage", "pytest",
-        "cargo", "rust", "python", "typescript", "javascript",
-    })
+    _CODE_KEYWORDS = frozenset(
+        {
+            "code",
+            "function",
+            "class",
+            "debug",
+            "refactor",
+            "implement",
+            "write",
+            "fix",
+            "bug",
+            "error",
+            "test",
+            "compile",
+            "build",
+            "syntax",
+            "import",
+            "module",
+            "deploy",
+            "api",
+            "endpoint",
+            "database",
+            "query",
+            "sql",
+            "schema",
+            "migration",
+            "dockerfile",
+            "script",
+            "lint",
+            "type",
+            "variable",
+            "loop",
+            "async",
+            "await",
+            "exception",
+            "traceback",
+            "stacktrace",
+            "coverage",
+            "pytest",
+            "cargo",
+            "rust",
+            "python",
+            "typescript",
+            "javascript",
+        }
+    )
 
     def __init__(
         self,
@@ -230,12 +267,16 @@ class DualOllamaBackend:
         repeat_penalty: float = 1.2,
     ) -> None:
         self._chat = OllamaBackend(
-            model=chat_model, host=host,
-            temperature=temperature, repeat_penalty=repeat_penalty,
+            model=chat_model,
+            host=host,
+            temperature=temperature,
+            repeat_penalty=repeat_penalty,
         )
         self._code = OllamaBackend(
-            model=code_model, host=host,
-            temperature=0.2, repeat_penalty=repeat_penalty,
+            model=code_model,
+            host=host,
+            temperature=0.2,
+            repeat_penalty=repeat_penalty,
         )
         self._chat_model = chat_model
         self._code_model = code_model

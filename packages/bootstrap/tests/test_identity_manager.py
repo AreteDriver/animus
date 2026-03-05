@@ -222,7 +222,8 @@ class TestBuildCompactPrompt:
         assert "Never do X" in result
 
     def test_extracts_what_i_am(self, manager):
-        manager.write("CONTEXT.md", "# Context\n## What I Am\nAn exocortex\nRunning locally\n## Other\n")
+        content = "# Context\n## What I Am\nAn exocortex\nRunning locally\n## Other\n"
+        manager.write("CONTEXT.md", content)
         result = manager.get_condensed_prompt()
         assert "exocortex" in result
 
@@ -242,7 +243,7 @@ class TestBuildCompactPrompt:
         assert "X" in result
         # Y is after the heading so should not be included
         lines = result.split("\n")
-        anti_lines = [l for l in lines if "- Y" in l]
+        anti_lines = [line for line in lines if "- Y" in line]
         assert not anti_lines
 
     def test_what_i_am_section_ends_at_heading(self, manager):
