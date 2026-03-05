@@ -1,6 +1,6 @@
 # Animus
 
-*An exocortex architecture for personal cognitive sovereignty.*
+**Multi-agent orchestration framework with budget controls, quality gates, and checkpoint/resume.**
 
 ![CI](https://github.com/AreteDriver/animus/workflows/CI/badge.svg)
 ![CodeQL](https://github.com/AreteDriver/animus/workflows/CodeQL%20Security%20Scan/badge.svg)
@@ -8,9 +8,11 @@
 [![PyPI - convergentAI](https://img.shields.io/pypi/v/convergentAI?label=convergentAI&color=blue)](https://pypi.org/project/convergentAI/)
 ![License](https://img.shields.io/github/license/AreteDriver/animus)
 
-Animus is a framework for sovereign personal AI — persistent, cryptographically owned, model-agnostic, loyal to one user. Not a chatbot. A different kind of cognitive relationship: context that accumulates across sessions, devices, and years, aligned to you rather than a platform's incentives.
+Animus coordinates AI agents across complex workflows — with the operational discipline of a manufacturing line. Every agent has a token budget. Every workflow has a cost ceiling. If a pipeline fails at step 4 of 6, it restarts at step 4, not step 1. Inspired by the Toyota Production System: make cost visible, make waste impossible to ignore.
 
-**[Read the whitepaper](docs/whitepaper.pdf)** | **[Architecture deep dive](docs/ARCHITECTURE.md)** | **[Roadmap](docs/ROADMAP.md)**
+Four independently-installable packages. 13,100+ tests. Zero vendor lock-in (Claude, OpenAI, Ollama).
+
+**[Architecture](docs/ARCHITECTURE.md)** | **[Roadmap](docs/ROADMAP.md)** | **[Whitepaper](docs/whitepaper.pdf)**
 
 ---
 
@@ -38,27 +40,27 @@ Three-layer stack. Each layer solves exactly one problem and is independently us
 
 ## Subsystems
 
-### Forge — Multi-Agent Orchestration
+### Forge — Workflow Orchestration Engine
 
-Production orchestration engine. Declarative YAML workflows, 10 agent archetypes, per-agent token budgets, quality gates, SQLite checkpoint/resume, streaming execution logs, MCP tool execution, and consensus voting. Built on lean manufacturing principles from the Toyota Production System. Proven in production via the Gorgon Media Engine (480 videos/month, 8 languages, zero human bottleneck).
+Production orchestration for AI agent pipelines. Define workflows in YAML, assign token budgets per agent, set quality gates, and checkpoint state to SQLite for automatic resume on failure. Supports 10 agent archetypes, streaming execution logs, MCP tool execution, and consensus voting.
 
 [`packages/forge/`](packages/forge/) | `import animus_forge`
 
 ### Quorum — Agent Coordination Protocol
 
-Decentralized coordination using stigmergy. Agents read a shared intent graph and self-adjust to be compatible with high-stability commitments — no inter-agent messaging, no supervisor bottleneck. Includes triumvirate voting, flocking behaviors, and phi-weighted stability scoring. Optional Rust PyO3 backend for performance.
+Decentralized multi-agent coordination without a supervisor bottleneck. Agents read a shared intent graph and self-adjust based on stability scores — no inter-agent messaging required. Includes triumvirate voting, flocking behaviors, and optional Rust PyO3 backend for performance.
 
 [`packages/quorum/`](packages/quorum/) | `import convergent` | [PyPI: convergentAI](https://pypi.org/project/convergentAI/)
 
-### Core — Personal Exocortex
+### Core — Personal AI Assistant
 
-User-facing layer. Persistent memory (episodic, semantic, procedural via ChromaDB), identity system, 40+ CLI commands, integrations (Google Calendar, Todoist, filesystem, webhooks), and a cognitive layer supporting Anthropic, OpenAI, and Ollama with native tool use.
+Persistent memory (episodic, semantic, procedural via ChromaDB), 40+ CLI commands, integrations (Google Calendar, Todoist, filesystem, webhooks), and a cognitive layer supporting Anthropic, OpenAI, and Ollama with native tool use.
 
 [`packages/core/`](packages/core/) | `import animus`
 
 ### Bootstrap — System Daemon
 
-Install daemon, setup wizard, and ops dashboard for deploying Animus on new machines. One-command install, Rich-based onboarding wizard, FastAPI+HTMX dashboard at localhost:7700, systemd/launchd service management.
+One-command install, Rich-based onboarding wizard, FastAPI+HTMX ops dashboard at localhost:7700, systemd/launchd service management. Deploys Animus on new machines with zero manual configuration.
 
 [`packages/bootstrap/`](packages/bootstrap/) | `import animus_bootstrap`
 
@@ -184,12 +186,12 @@ Active development. Architecture complete. Implementation in progress.
 
 | Component | Version | Tests | Coverage | Stage |
 |-----------|---------|------:|:--------:|-------|
-| Core | 2.0.0 | 1,736 | 95% | Active — CLI, memory, integrations |
-| Forge | 2.0.0 | 6,731 | 85% | Production deployed (systemd service) |
+| Core | 2.0.0 | 1,879 | 97% | Active — CLI, memory, integrations |
+| Forge | 2.0.0 | 8,797 | 97% | Production deployed (systemd service) |
 | Quorum | 1.1.0 | 906 | 97% | [Live on PyPI](https://pypi.org/project/convergentAI/) |
-| Bootstrap | 0.5.0 | 1,115 | 94% | Active — daemon + wizard + dashboard |
+| Bootstrap | 0.5.0 | 1,606 | 96% | Active — daemon + wizard + dashboard |
 
-**Total: 10,488 tests across 4 packages.**
+**Total: 13,188 tests across 4 packages.**
 
 ---
 
