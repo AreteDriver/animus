@@ -37,6 +37,14 @@ Unify entry points, expose Animus as an MCP server, stabilize all packages.
 - [x] GitHub Release created: https://github.com/AreteDriver/animus/releases/tag/v2.2.0
 - [x] MEMORY.md updated with new test counts
 
+## Phase 5: CLI Hardening & v2.3.0 ✅
+- [x] Reconcile test counts across all packages (13,597 total)
+- [x] MCP config validated (9 tools, ~/.claude/mcp.json)
+- [x] Deprecation warning on scripts/chat.py
+- [x] Graceful warnings for missing Ollama/API keys
+- [x] Tag v2.3.0 pushed
+- [x] GitHub Release created: https://github.com/AreteDriver/animus/releases/tag/v2.3.0
+
 ## Context
 - Core: 2103 tests, 97% coverage
 - Forge: 8871 tests, 97% coverage
