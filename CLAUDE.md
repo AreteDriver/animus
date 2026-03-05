@@ -80,7 +80,7 @@ Each package has its own ruff config in its pyproject.toml.
 
 | Package | PyPI Name | Import | Dependencies |
 |---------|-----------|--------|--------------|
-| Core | animus | `import animus` | ollama, chromadb, pyyaml, pydantic, rich |
+| Core | animus-core | `import animus` | ollama, chromadb, pyyaml, pydantic, rich |
 | Forge | animus-forge | `import animus_forge` | openai, anthropic, fastapi, convergentai, ... |
 | Quorum | convergentAI | `import convergent` | zero production deps |
 | Bootstrap | animus-bootstrap | `import animus_bootstrap` | typer, rich, fastapi, httpx, pydantic |

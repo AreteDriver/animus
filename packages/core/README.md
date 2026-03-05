@@ -15,7 +15,7 @@ Personal AI exocortex with persistent memory, multi-model cognitive layer, and M
 ## Install
 
 ```bash
-pip install animus
+pip install animus-core
 ```
 
 With optional providers:
