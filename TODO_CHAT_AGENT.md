@@ -41,10 +41,14 @@ Make Animus work like Claude Code: take ideas, autonomously build them.
 - [x] 26 tests covering menu generation, parsing, strip logic, constrained loop, dispatch
 - [x] Existing tests updated to constrained format (3 tests migrated)
 
-## Phase 5: Memory + Learning
-- [ ] Store task outcomes in MemoryLayer (what worked, what broke)
-- [ ] Recall similar past tasks for context enrichment
-- [ ] Learning system detects patterns across sessions
+## Phase 5: Memory + Learning ✅
+- [x] `TaskOutcome` dataclass with JSON serialization and memory content formatting
+- [x] `TaskPattern` dataclass for detected failure patterns
+- [x] `TaskOutcomeTracker` — record, recall_similar, get_context_for_task, get_failure_patterns, get_success_rate
+- [x] `_suggest_fix()` — pattern-matches common errors to suggest fixes (ruff, import, test, permission, timeout, connection)
+- [x] Chat wiring: context enrichment from past outcomes, outcome recording after each interaction
+- [x] `/stats` slash command for success rate visibility
+- [x] 39 tests covering serialization, tracking, recall, patterns, stats, and fix suggestions
 
 ## Context
 - Animus Core already has: CognitiveLayer, ToolRegistry, MemoryLayer, ForgeEngine, SwarmEngine, 6 integrations, learning system, 40+ CLI commands

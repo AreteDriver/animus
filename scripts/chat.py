@@ -21,8 +21,11 @@ from animus.config import AnimusConfig
 from animus.forge import ForgeEngine
 from animus.forge.loader import load_workflow
 from animus.forge.models import ForgeError
-from animus.logging import setup_logging
+from animus.logging import get_logger, setup_logging
+
+logger = get_logger("chat")
 from animus.memory import Conversation, MemoryLayer
+from animus.task_outcomes import TaskOutcome, TaskOutcomeTracker
 from animus.tools import (
     ToolRegistry,
     create_default_registry,
@@ -229,7 +232,7 @@ def _run_build_task(
     engine = ForgeEngine(cognitive=cognitive, checkpoint_dir=checkpoint_dir, tools=tools)
 
     print(f"{CYAN}{BOLD}Build Pipeline{NC}: {task_description}")
-    print(f"  Steps: planner → coder → verifier → fixer")
+    print("  Steps: planner → coder → verifier → fixer")
     print(f"  Budget: ${config.max_cost_usd:.2f}")
     print()
 
@@ -257,6 +260,7 @@ def handle_slash(
     cognitive: CognitiveLayer,
     conversation: Conversation,
     tools: ToolRegistry | None = None,
+    outcome_tracker: TaskOutcomeTracker | None = None,
 ) -> str | None:
     """Handle slash commands. Returns 'quit', 'clear', or None if not handled."""
     parts = cmd.strip().split(None, 1)
@@ -289,9 +293,33 @@ def handle_slash(
         if cognitive.fallback_config:
             fb = cognitive.fallback_config
             print(f"  {BOLD}Local:{NC}   {fb.provider.value}/{fb.model_name}")
-            print(f"  {DIM}Dual-model routing active. Claude plans, Ollama executes cheap tasks.{NC}")
+            msg = "Dual-model routing active. Claude plans, Ollama executes cheap tasks."
+            print(f"  {DIM}{msg}{NC}")
         else:
             print(f"  {DIM}Single model mode. Set ANTHROPIC_API_KEY for dual-model routing.{NC}")
+        return ""
+
+    if command == "/stats":
+        if outcome_tracker:
+            stats = outcome_tracker.get_success_rate()
+            total = stats["total"]
+            if total == 0:
+                print(f"  {DIM}No task outcomes recorded yet.{NC}")
+            else:
+                rate = stats["rate"] * 100
+                color = GREEN if rate >= 80 else YELLOW
+                print(f"  Tasks: {total}  |  Success: {color}{rate:.0f}%{NC}")
+                print(f"  Successes: {stats['successes']}  |  Failures: {stats['failures']}")
+
+                patterns = outcome_tracker.get_failure_patterns()
+                if patterns:
+                    print(f"\n  {BOLD}Failure patterns:{NC}")
+                    for p in patterns[:3]:
+                        print(f"    {YELLOW}{p.description}{NC}")
+                        if p.suggestion:
+                            print(f"      {DIM}Fix: {p.suggestion}{NC}")
+        else:
+            print(f"  {DIM}Task outcome tracking not available.{NC}")
         return ""
 
     if command == "/auto":
@@ -343,6 +371,7 @@ def handle_slash(
   {CYAN}/build{NC}      Autonomous build pipeline (plan/code/lint/test/fix)
   {CYAN}/status{NC}     Provider, model, and memory info
   {CYAN}/model{NC}      Show model routing (dual-model info)
+  {CYAN}/stats{NC}      Task success rate and failure patterns
   {CYAN}/auto{NC}       Toggle auto-approve for tool execution
   {CYAN}/workflow{NC}   List or run Forge YAML workflows
   {CYAN}/clear{NC}      Save and reset conversation
@@ -397,6 +426,9 @@ def main() -> None:
     if cognitive.has_dual_models:
         tools.register(create_local_think_tool(cognitive))
 
+    # Task outcome tracker — learns from what worked and what broke
+    outcome_tracker = TaskOutcomeTracker(memory)
+
     # Banner
     print(f"{CYAN}{BOLD}Animus{NC} — {primary.provider.value}/{primary.model_name}")
     if fallback:
@@ -420,7 +452,9 @@ def main() -> None:
 
         # Slash commands
         if user_input.startswith("/"):
-            result = handle_slash(user_input, memory, cognitive, conversation, tools)
+            result = handle_slash(
+                user_input, memory, cognitive, conversation, tools, outcome_tracker
+            )
             if result == "quit":
                 save_conversation(memory, conversation)
                 print(f"\n{DIM}Goodbye.{NC}")
@@ -432,13 +466,16 @@ def main() -> None:
             if result is not None:
                 continue
 
-        # Build context: agent personality + file tree + memory recall
+        # Build context: agent personality + file tree + memory recall + past outcomes
         context_parts = [AGENT_CONTEXT, f"\nProject layout:\n{file_tree}"]
         recalled = memory.recall(user_input, limit=3)
         if recalled:
             context_parts.append(
                 "\nRelevant memories:\n" + "\n".join(f"- {m.content}" for m in recalled)
             )
+        task_context = outcome_tracker.get_context_for_task(user_input)
+        if task_context:
+            context_parts.append(f"\n{task_context}")
         context = "\n".join(context_parts)
 
         # Track in conversation
@@ -458,6 +495,19 @@ def main() -> None:
 
         print(response)
         print()
+
+        # Record task outcome for future learning
+        is_error = response.startswith("[Error") or "failed" in response.lower()[:50]
+        outcome = TaskOutcome(
+            request=user_input[:200],
+            success=not is_error,
+            error=response[:100] if is_error else None,
+            response_summary=response[:200],
+        )
+        try:
+            outcome_tracker.record(outcome)
+        except Exception as e:
+            logger.debug(f"Failed to record outcome: {e}")
 
         conversation.add_message("assistant", response)
 
