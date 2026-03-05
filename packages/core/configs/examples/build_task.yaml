@@ -82,5 +82,5 @@ gates:
   - name: lint_test_check
     after: fixer
     type: automated
-    pass_condition: "fix_summary contains PASS"
+    pass_condition: 'fix_summary contains "PASS"'
     on_fail: halt

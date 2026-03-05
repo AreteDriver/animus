@@ -95,7 +95,7 @@ class ForgeAgent:
             if self.config.tools and self.tools:
                 response = self.cognitive.think_with_tools(
                     prompt=user_prompt,
-                    context=None,
+                    context=system_prompt,
                     tools=self.tools,
                 )
             else:
