@@ -19,6 +19,14 @@ import sys
 _script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_script_dir, "..", "packages", "core"))
 
+import warnings  # noqa: E402
+
+warnings.warn(
+    "scripts/chat.py is deprecated. Use 'python -m animus' from packages/core instead.",
+    DeprecationWarning,
+    stacklevel=1,
+)
+
 from animus.__main__ import main  # noqa: E402
 
 if __name__ == "__main__":

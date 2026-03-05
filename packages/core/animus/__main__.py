@@ -436,11 +436,31 @@ def main():
     if config.model.provider == "ollama":
         model_config = ModelConfig.ollama(config.model.name)
         model_config.base_url = config.model.ollama_url
+        # Check Ollama connectivity
+        try:
+            import ollama as _ollama_check
+
+            _ollama_check.list()
+        except Exception:
+            console.print(
+                "[yellow]Warning: Ollama not reachable at "
+                f"{config.model.ollama_url}. Start with 'ollama serve'.[/yellow]"
+            )
     elif config.model.provider == "anthropic":
+        api_key = config.model.anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            console.print(
+                "[yellow]Warning: No ANTHROPIC_API_KEY set. Export it or set in config.[/yellow]"
+            )
         model_config = ModelConfig.anthropic(config.model.name)
         if config.model.anthropic_api_key:
             model_config.api_key = config.model.anthropic_api_key
     elif config.model.provider == "openai":
+        api_key = config.model.openai_api_key or os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            console.print(
+                "[yellow]Warning: No OPENAI_API_KEY set. Export it or set in config.[/yellow]"
+            )
         model_config = ModelConfig.openai(config.model.name)
         if config.model.openai_api_key:
             model_config.api_key = config.model.openai_api_key

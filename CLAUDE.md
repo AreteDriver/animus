@@ -7,7 +7,7 @@
 - **Version**: 2.2.0
 - **Python**: >=3.10 (Core), >=3.11 (Bootstrap), >=3.12 (Forge)
 - **Layout**: Multi-package monorepo under `packages/`
-- **Tests**: 13,560 across 4 packages
+- **Tests**: 13,597 across 4 packages
 - **License**: MIT
 
 ## Monorepo Structure
@@ -21,7 +21,7 @@ animus/
 │   │   └── pyproject.toml
 │   ├── forge/                   # Animus Forge — multi-agent orchestration (was: Gorgon)
 │   │   ├── src/animus_forge/    # Python package: import animus_forge
-│   │   ├── tests/               # 8797 tests, 97% coverage
+│   │   ├── tests/               # 8871 tests, 97% coverage
 │   │   ├── skills/              # Skill definitions (YAML + docs)
 │   │   ├── migrations/          # 14 SQL migrations
 │   │   ├── workflows/           # YAML workflow definitions
@@ -29,7 +29,7 @@ animus/
 │   ├── quorum/                  # Animus Quorum — coordination protocol (was: Convergent)
 │   │   ├── python/convergent/   # Python package: import convergent
 │   │   ├── src/                 # Rust PyO3 (optional)
-│   │   ├── tests/               # 906 tests, 97% coverage
+│   │   ├── tests/               # 926 tests, 97% coverage
 │   │   └── pyproject.toml
 │   └── bootstrap/               # Animus Bootstrap — install daemon, wizard, dashboard + gateway + intelligence
 │       ├── src/animus_bootstrap/ # Python package: import animus_bootstrap

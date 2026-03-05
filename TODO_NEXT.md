@@ -22,7 +22,7 @@ Unify entry points, expose Animus as an MCP server, stabilize all packages.
 - [x] Entry point: `python -m animus.mcp_server`
 - [x] Optional dep: `pip install animus[mcp]`
 - [x] 18 tests (skip gracefully without mcp package)
-- [ ] Add to Claude Code MCP config for live use (needs manual setup)
+- [x] Add to Claude Code MCP config for live use (~/.claude/mcp.json)
 - [x] Expose `animus_run_workflow` (trigger Forge pipelines via MCP)
 
 ## Phase 3: Bootstrap Stabilization ✅
@@ -39,8 +39,8 @@ Unify entry points, expose Animus as an MCP server, stabilize all packages.
 
 ## Context
 - Core: 2103 tests, 97% coverage
-- Forge: 8874 tests, 97% coverage
-- Quorum: 920 tests, 97% coverage
+- Forge: 8871 tests, 97% coverage
+- Quorum: 926 tests, 97% coverage
 - Bootstrap: 1697 tests (in venv), 96% coverage
 - Chat Agent TODO complete (5/5 phases)
 - Ollama live smoke test passing (deepseek-coder-v2 tool use works)
