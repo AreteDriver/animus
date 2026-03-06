@@ -153,15 +153,26 @@ class SelfImproveOrchestrator:
 
             # Stage 2: Create plan
             self._current_stage = WorkflowStage.PLANNING
-            plan = self._create_plan(analysis.suggestions[:5])  # Limit to top 5
+            budget = self.config.max_lines_changed
+            selected = []
+            budget_used = 0
+            for s in analysis.suggestions:
+                # Estimate actual change as ~30% of affected code
+                change_est = max(s.estimated_lines * 3 // 10, 10)
+                if budget_used + change_est <= budget:
+                    selected.append(s)
+                    budget_used += change_est
+                if len(selected) >= 2:
+                    break
+            plan = self._create_plan(selected or analysis.suggestions[:1])
             self._current_plan = plan
 
-            # Check safety violations
+            # Check safety violations (use budget estimate, not raw function lengths)
             violations = self.safety_checker.check_changes(
                 files_modified=plan.estimated_files,
                 files_added=[],
                 files_deleted=[],
-                lines_changed=plan.estimated_lines,
+                lines_changed=budget_used,
                 category=focus_category,
             )
 
@@ -405,13 +416,16 @@ class SelfImproveOrchestrator:
 {files_text}
 
 ## Instructions:
-1. Implement the suggested improvements.
-2. Return COMPLETE file contents (not diffs) for each modified file.
-3. Return ONLY a JSON object mapping file paths to their new complete contents.
-4. Do not modify files beyond what the suggestions require.
+For each file that needs changes, return a JSON object with:
+- "file": the file path
+- "changes": array of objects, each with "old" (exact text to replace) and "new" (replacement text)
 
-Return ONLY valid JSON in this format:
-{{"path/to/file.py": "complete file content here..."}}"""
+Keep changes minimal and focused. Only modify what the suggestions require.
+
+Return ONLY valid JSON:
+{{"file": "path/to/file.py", "changes": [{{"old": "exact old code", "new": "exact new code"}}]}}
+
+If multiple files, return a JSON array of these objects."""
 
         try:
             response = await self.provider.complete(
@@ -421,9 +435,11 @@ Return ONLY valid JSON in this format:
                         "content": "You are a senior Python engineer implementing code improvements. Return only valid JSON.",
                     },
                     {"role": "user", "content": prompt},
-                ]
+                ],
+                max_tokens=16384,
             )
 
+            logger.info(f"AI response length: {len(response)} chars")
             changes = self._parse_changes_response(response)
 
             # Validate: filter out critical files
@@ -444,46 +460,117 @@ Return ONLY valid JSON in this format:
     def _parse_changes_response(self, response: str) -> dict[str, str]:
         """Parse the AI response into a file changes dict.
 
-        Handles raw JSON, markdown code blocks, and partial responses.
+        Supports two formats:
+        1. Diff format: {"file": "path", "changes": [{"old": "...", "new": "..."}]}
+        2. Legacy full-content: {"path/to/file.py": "complete content"}
 
         Args:
             response: Raw AI response string.
 
         Returns:
-            Dict mapping file paths to new content.
+            Dict mapping file paths to new content (for legacy)
+            or to change instructions (for diff format).
         """
         text = response.strip()
 
-        # Strip markdown code fences
+        # Strip markdown code fences wrapping the entire response
         if text.startswith("```"):
             lines = text.split("\n")
-            # Remove first line (```json or ```) and last line (```)
             lines = lines[1:]
             if lines and lines[-1].strip() == "```":
                 lines = lines[:-1]
             text = "\n".join(lines)
 
+        # Fix trailing commas (common LLM output)
+        text = re.sub(r",\s*}", "}", text)
+        text = re.sub(r",\s*]", "]", text)
+
+        # Fix single-quoted strings (LLMs mix quotes in JSON)
+        # Replace 'value' with "value" when used as JSON values
+        text = re.sub(
+            r"""(?<=:\s)'([^']*)'""",
+            r'"\1"',
+            text,
+        )
+
+        parsed = self._try_parse_json(text)
+        if parsed is None:
+            # Fallback: extract outermost JSON structure via regex
+            match = re.search(r"[\[{][\s\S]*[\]}]", text)
+            if match:
+                candidate = match.group()
+                candidate = re.sub(r",\s*}", "}", candidate)
+                candidate = re.sub(r",\s*]", "]", candidate)
+                parsed = self._try_parse_json(candidate)
+
+        if parsed is None:
+            logger.warning("Failed to parse AI response as JSON")
+            return {}
+
+        return self._normalize_parsed_changes(parsed)
+
+    def _try_parse_json(self, text: str):
+        """Attempt JSON parse, return None on failure."""
         try:
-            parsed = json.loads(text)
-            if isinstance(parsed, dict):
-                # Validate all values are strings
-                return {k: str(v) for k, v in parsed.items() if isinstance(k, str)}
+            return json.loads(text)
         except json.JSONDecodeError:
-            pass
+            return None
 
-        # Fallback: extract outermost {...} block via regex
-        # Handles preamble text, trailing explanations, prose around fenced JSON
-        match = re.search(r"\{[\s\S]*\}", text)
-        if match:
-            try:
-                parsed = json.loads(match.group())
-                if isinstance(parsed, dict):
-                    return {k: str(v) for k, v in parsed.items() if isinstance(k, str)}
-            except json.JSONDecodeError:
-                pass
+    def _normalize_parsed_changes(self, parsed) -> dict[str, str]:
+        """Normalize parsed JSON into {file_path: content_or_diff} dict."""
+        # Handle array of file change objects
+        if isinstance(parsed, list):
+            result = {}
+            for item in parsed:
+                if isinstance(item, dict) and "file" in item:
+                    result[item["file"]] = self._apply_diff_changes(item)
+            return result
 
-        logger.warning("Failed to parse AI response as JSON")
+        if isinstance(parsed, dict):
+            # Diff format: {"file": "path", "changes": [...]}
+            if "file" in parsed and "changes" in parsed:
+                return {parsed["file"]: self._apply_diff_changes(parsed)}
+            # Legacy format: {"path": "content"}
+            return {k: str(v) for k, v in parsed.items() if isinstance(k, str)}
+
         return {}
+
+    def _apply_diff_changes(self, item: dict) -> str:
+        """Apply diff changes to the original file content.
+
+        Reads the original file content and applies old→new replacements.
+        Returns the modified content.
+        """
+        file_path = item.get("file", "")
+        changes = item.get("changes", [])
+
+        # Read original file
+        full_path = self.codebase_path / file_path
+        if not full_path.exists():
+            logger.warning(f"File not found for diff: {file_path}")
+            return ""
+
+        try:
+            content = full_path.read_text()
+        except OSError as e:
+            logger.warning(f"Cannot read {file_path}: {e}")
+            return ""
+
+        # Apply each old→new replacement
+        applied = 0
+        for change in changes:
+            if not isinstance(change, dict):
+                continue
+            old = change.get("old", "")
+            new = change.get("new", "")
+            if old and old in content:
+                content = content.replace(old, new, 1)
+                applied += 1
+            else:
+                logger.warning(f"Could not find match in {file_path}: {old[:60]}...")
+
+        logger.info(f"Applied {applied}/{len(changes)} changes to {file_path}")
+        return content
 
     def _apply_changes(self, changes: dict[str, str]) -> None:
         """Apply generated changes to the working tree.

@@ -120,9 +120,15 @@ class TestSelfImproveAnalyze:
         assert result.exit_code == 0
         assert "analyze" in result.output.lower()
 
+    def _make_analysis_result(self, suggestions):
+        """Create a mock AnalysisResult with suggestions attribute."""
+        result = MagicMock()
+        result.suggestions = suggestions
+        return result
+
     def test_analyze_no_suggestions(self):
         mock_analyzer = MagicMock()
-        mock_analyzer.analyze.return_value = []
+        mock_analyzer.analyze.return_value = self._make_analysis_result([])
 
         with patch.dict(
             "sys.modules",
@@ -139,12 +145,12 @@ class TestSelfImproveAnalyze:
     def test_analyze_with_suggestions(self):
         suggestion = MagicMock()
         suggestion.category = "performance"
-        suggestion.file_path = "foo.py"
-        suggestion.description = "Optimize loop"
-        suggestion.priority = "high"
+        suggestion.affected_files = ["foo.py"]
+        suggestion.title = "Optimize loop"
+        suggestion.priority = 3
 
         mock_analyzer = MagicMock()
-        mock_analyzer.analyze.return_value = [suggestion]
+        mock_analyzer.analyze.return_value = self._make_analysis_result([suggestion])
 
         with patch.dict(
             "sys.modules",
@@ -159,11 +165,15 @@ class TestSelfImproveAnalyze:
             assert "performance" in result.output.lower()
 
     def test_analyze_focus_filter(self):
-        s1 = MagicMock(category="security", file_path="a.py", description="x", priority="high")
-        s2 = MagicMock(category="performance", file_path="b.py", description="y", priority="low")
+        s1 = MagicMock(
+            category="security", affected_files=["a.py"], title="x", priority=2
+        )
+        s2 = MagicMock(
+            category="performance", affected_files=["b.py"], title="y", priority=4
+        )
 
         mock_analyzer = MagicMock()
-        mock_analyzer.analyze.return_value = [s1, s2]
+        mock_analyzer.analyze.return_value = self._make_analysis_result([s1, s2])
 
         with patch.dict(
             "sys.modules",

@@ -25,11 +25,16 @@ class AgentProvider:
         if not self.provider._initialized:
             self.provider.initialize()
 
-    async def complete(self, messages: list[dict[str, str]]) -> str:
+    async def complete(
+        self,
+        messages: list[dict[str, str]],
+        max_tokens: int = 4096,
+    ) -> str:
         """Complete a conversation.
 
         Args:
             messages: List of message dicts with 'role' and 'content'.
+            max_tokens: Maximum tokens in response.
 
         Returns:
             The assistant's response.
@@ -53,7 +58,7 @@ class AgentProvider:
             system_prompt=system_prompt or "You are a helpful assistant.",
             messages=filtered_messages,
             temperature=0.7,
-            max_tokens=4096,
+            max_tokens=max_tokens,
         )
 
         response = await self.provider.complete_async(request)
