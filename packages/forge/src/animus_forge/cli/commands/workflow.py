@@ -40,11 +40,11 @@ def list_workflows_table(engine) -> None:
     console.print(table)
 
 
-def _load_workflow_from_source(workflow: str, engine) -> tuple[str, dict, Path | None]:
+def _load_workflow_from_source(workflow: str, engine):
     """Load workflow from file or by ID.
 
     Returns:
-        Tuple of (workflow_id, workflow_data, workflow_path_or_None)
+        Tuple of (workflow_id, workflow_data, workflow_path_or_None, wf_config_or_None)
     """
     workflow_path = Path(workflow)
     if workflow_path.exists() and workflow_path.suffix == ".json":
@@ -53,9 +53,24 @@ def _load_workflow_from_source(workflow: str, engine) -> tuple[str, dict, Path |
                 workflow_data = json.load(f)
             workflow_id = workflow_data.get("id", workflow_path.stem)
             console.print(f"[dim]Loading workflow from:[/dim] {workflow_path}")
-            return workflow_id, workflow_data, workflow_path
+            return workflow_id, workflow_data, workflow_path, None
         except json.JSONDecodeError as e:
             console.print(f"[red]Invalid JSON in workflow file:[/red] {e}")
+            raise typer.Exit(1)
+
+    if workflow_path.exists() and workflow_path.suffix in (".yaml", ".yml"):
+        try:
+            from dataclasses import asdict
+
+            from animus_forge.workflow.loader import load_workflow
+
+            wf_config = load_workflow(workflow_path, validate_path=False)
+            workflow_id = wf_config.name or workflow_path.stem
+            workflow_data = asdict(wf_config)
+            console.print(f"[dim]Loading workflow from:[/dim] {workflow_path}")
+            return workflow_id, workflow_data, workflow_path, wf_config
+        except Exception as e:
+            console.print(f"[red]Failed to load YAML workflow:[/red] {e}")
             raise typer.Exit(1)
 
     loaded = engine.load_workflow(workflow)
@@ -64,7 +79,7 @@ def _load_workflow_from_source(workflow: str, engine) -> tuple[str, dict, Path |
         console.print("\nAvailable workflows:")
         list_workflows_table(engine)
         raise typer.Exit(1)
-    return workflow, loaded.model_dump(), None
+    return workflow, loaded.model_dump(), None, None
 
 
 def _display_workflow_preview(workflow_id: str, workflow_data: dict, variables: dict) -> None:
@@ -107,6 +122,31 @@ def _output_run_results(result, json_output: bool) -> None:
 
     if result.error:
         console.print(f"\n[red]Error:[/red] {result.error}")
+
+
+def _output_yaml_results(result) -> None:
+    """Output results from WorkflowExecutor (YAML workflows)."""
+    status_color = "green" if result.status == "success" else "red"
+    console.print(f"\n[{status_color}]Status: {result.status}[/{status_color}]")
+
+    if result.steps:
+        console.print("\n[dim]Step Results:[/dim]")
+        for step in result.steps:
+            icon = "✓" if step.status.value == "success" else "✗"
+            tokens = f" ({step.tokens_used} tokens)" if step.tokens_used else ""
+            console.print(f"  {icon} {step.step_id}: {step.status.value}{tokens}")
+
+    if result.total_tokens:
+        console.print(f"\n[dim]Total tokens:[/dim] {result.total_tokens}")
+
+    if result.error:
+        console.print(f"\n[red]Error:[/red] {result.error}")
+
+    if result.outputs:
+        console.print("\n[dim]Outputs:[/dim]")
+        for key, value in result.outputs.items():
+            preview = str(value)[:200]
+            console.print(f"  {key}: {preview}")
 
 
 def _validate_cli_required_fields(data: dict) -> tuple[list[str], list[str]]:
@@ -201,7 +241,7 @@ def _output_validation_results(errors: list[str], warnings: list[str], workflow_
 def run(
     workflow: str = typer.Argument(
         ...,
-        help="Workflow ID or path to workflow JSON file",
+        help="Workflow ID or path to workflow file (JSON or YAML)",
     ),
     var: list[str] = typer.Option(
         [],
@@ -221,10 +261,12 @@ def run(
         help="Validate and show workflow without executing",
     ),
 ):
-    """Run a workflow by ID or from a JSON file."""
+    """Run a workflow by ID or from a file (JSON or YAML)."""
     engine = get_workflow_engine()
     variables = _parse_cli_variables(var)
-    workflow_id, workflow_data, workflow_path = _load_workflow_from_source(workflow, engine)
+    workflow_id, workflow_data, workflow_path, wf_config = _load_workflow_from_source(
+        workflow, engine
+    )
 
     _display_workflow_preview(workflow_id, workflow_data, variables)
 
@@ -241,23 +283,35 @@ def run(
         task = progress.add_task("Executing workflow...", total=None)
 
         try:
-            if workflow_path is None:
+            if wf_config is not None:
+                from animus_forge.workflow.executor_core import (
+                    WorkflowExecutor,
+                )
+
+                executor = WorkflowExecutor()
+                result = executor.execute(wf_config, inputs=variables)
+                progress.update(task, description="Complete!")
+            elif workflow_path is None:
                 wf = engine.load_workflow(workflow_id)
                 wf.variables = variables
+                result = engine.execute_workflow(wf)
+                progress.update(task, description="Complete!")
             else:
                 from animus_forge.orchestrator import Workflow
 
                 wf = Workflow(**workflow_data)
                 wf.variables = variables
-
-            result = engine.execute_workflow(wf)
-            progress.update(task, description="Complete!")
+                result = engine.execute_workflow(wf)
+                progress.update(task, description="Complete!")
         except Exception as e:
             progress.stop()
             console.print(f"\n[red]Execution failed:[/red] {e}")
             raise typer.Exit(1)
 
-    _output_run_results(result, json_output)
+    if wf_config is not None:
+        _output_yaml_results(result)
+    else:
+        _output_run_results(result, json_output)
 
 
 def list_workflows(

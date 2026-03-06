@@ -127,16 +127,18 @@ class TestLoadWorkflowFromSource:
         wf_file = tmp_path / "test.json"
         wf_file.write_text(json.dumps({"id": "test_wf", "steps": []}))
         engine = MagicMock()
-        wf_id, data, path = _load_workflow_from_source(str(wf_file), engine)
+        wf_id, data, path, wf_config = _load_workflow_from_source(str(wf_file), engine)
         assert wf_id == "test_wf"
         assert path == wf_file
+        assert wf_config is None
 
     def test_json_file_no_id(self, tmp_path):
         wf_file = tmp_path / "my_workflow.json"
         wf_file.write_text(json.dumps({"steps": []}))
         engine = MagicMock()
-        wf_id, data, path = _load_workflow_from_source(str(wf_file), engine)
+        wf_id, data, path, wf_config = _load_workflow_from_source(str(wf_file), engine)
         assert wf_id == "my_workflow"
+        assert wf_config is None
 
     def test_invalid_json(self, tmp_path):
         wf_file = tmp_path / "bad.json"
@@ -152,9 +154,38 @@ class TestLoadWorkflowFromSource:
         mock_wf = MagicMock()
         mock_wf.model_dump.return_value = {"id": "wf1", "steps": []}
         engine.load_workflow.return_value = mock_wf
-        wf_id, data, path = _load_workflow_from_source("wf1", engine)
+        wf_id, data, path, wf_config = _load_workflow_from_source("wf1", engine)
         assert wf_id == "wf1"
         assert path is None
+        assert wf_config is None
+
+    def test_yaml_file(self, tmp_path):
+        wf_file = tmp_path / "test.yaml"
+        wf_file.write_text(
+            "name: test_wf\n"
+            "version: '1.0'\n"
+            "description: test\n"
+            "steps:\n"
+            "  - id: step1\n"
+            "    type: claude_code\n"
+            "    params:\n"
+            "      prompt: hello\n"
+        )
+        engine = MagicMock()
+        wf_id, data, path, wf_config = _load_workflow_from_source(str(wf_file), engine)
+        assert wf_id == "test_wf"
+        assert path == wf_file
+        assert wf_config is not None
+        assert wf_config.name == "test_wf"
+
+    def test_yaml_file_invalid(self, tmp_path):
+        wf_file = tmp_path / "bad.yaml"
+        wf_file.write_text("steps: not_a_list")
+        engine = MagicMock()
+        import typer
+
+        with pytest.raises(typer.Exit):
+            _load_workflow_from_source(str(wf_file), engine)
 
     def test_by_id_not_found(self):
         engine = MagicMock()
