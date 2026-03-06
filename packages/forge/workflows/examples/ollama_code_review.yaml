@@ -19,13 +19,26 @@ inputs:
     description: Path to the code to review
 
 steps:
+  # Step 0: Read actual file contents from disk
+  - id: read_code
+    type: shell
+    params:
+      command: "find ${target_path} -name '*.py' -type f | sort | head -20 | xargs head -100"
+    outputs:
+      - code_content
+
   - id: analyze_structure
     type: ollama
+    depends_on:
+      - read_code
     params:
       prompt: >
-        Analyze the code structure at ${target_path}.
+        Analyze the code structure of these Python files.
         List the main modules, their responsibilities, and key classes.
         Be concise and factual.
+
+        Code:
+        ${code_content}
       system_prompt: >
         You are a senior software architect. Analyze codebases for structure,
         patterns, and organization. Output structured analysis.
@@ -35,12 +48,17 @@ steps:
 
   - id: review_quality
     type: ollama
+    depends_on:
+      - analyze_structure
     params:
       prompt: >
         Given this structure analysis:
         ${structure_analysis}
 
-        Review the code for quality issues:
+        And the actual code:
+        ${code_content}
+
+        Review for quality issues:
         1. Naming conventions
         2. Error handling patterns
         3. Test coverage gaps
@@ -51,12 +69,14 @@ steps:
         and maintainability. Be direct and specific.
       estimated_tokens: 3000
     depends_on:
-      - analyze_structure
+      - read_code
     outputs:
       - review_findings
 
   - id: summarize
     type: ollama
+    depends_on:
+      - review_quality
     params:
       prompt: >
         Summarize this code review into a brief report:
@@ -67,8 +87,6 @@ steps:
         Format as: Executive Summary, Top Issues (max 5), Recommendations.
       system_prompt: You are a technical writer. Be concise and clear.
       estimated_tokens: 1500
-    depends_on:
-      - review_quality
     outputs:
       - final_report
 
