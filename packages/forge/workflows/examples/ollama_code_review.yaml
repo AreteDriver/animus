@@ -13,7 +13,7 @@ name: ollama_code_review
 description: Local code review pipeline using Ollama
 
 inputs:
-  - name: target_path
+  target_path:
     type: string
     default: ./src
     description: Path to the code to review
