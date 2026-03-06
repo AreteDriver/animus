@@ -55,8 +55,8 @@ Unify entry points, expose Animus as an MCP server, stabilize all packages.
 - [x] Core README.md for PyPI listing
 - [x] README.md updated with current numbers and MCP quickstart
 - [x] Bootstrap coverage push (96→97%) — 1739 tests, 97.01% coverage
-- [ ] Configure PyPI OIDC Trusted Publisher for animus package
-- [ ] Tag core-v2.3.0 to trigger first PyPI publish
+- [x] Configure PyPI OIDC Trusted Publisher for animus-core package
+- [x] Tag core-v2.3.0 to trigger first PyPI publish (pip install animus-core)
 
 ## Context
 - Core: 2108 tests, 97% coverage
