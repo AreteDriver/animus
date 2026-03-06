@@ -94,7 +94,10 @@ class CodebaseAnalyzer:
             for pattern in focus_paths:
                 files.extend(self.codebase_path.glob(pattern))
         else:
+            # Try src/ first, fall back to **/*.py for non-standard layouts
             files = list(self.codebase_path.glob("src/**/*.py"))
+            if not files:
+                files = list(self.codebase_path.glob("**/*.py"))
 
         for file_path in files:
             if self._should_skip_file(file_path):

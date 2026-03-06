@@ -147,8 +147,9 @@ def improve_analyze(
     codebase_path = Path(path) if path else Path.cwd()
 
     with console.status("[cyan]Analyzing codebase..."):
-        analyzer = CodebaseAnalyzer(codebase_path)
-        suggestions = analyzer.analyze()
+        analyzer = CodebaseAnalyzer(codebase_path=codebase_path)
+        result = analyzer.analyze()
+        suggestions = result.suggestions
 
     if focus:
         suggestions = [s for s in suggestions if s.category == focus]
@@ -160,17 +161,19 @@ def improve_analyze(
     table = Table(title=f"Suggestions ({len(suggestions)})", border_style="cyan")
     table.add_column("#", style="dim", width=3)
     table.add_column("Category", style="bold")
-    table.add_column("File")
-    table.add_column("Description")
-    table.add_column("Priority", justify="center")
+    table.add_column("Files")
+    table.add_column("Title")
+    table.add_column("Pri", justify="center", width=3)
 
     for i, s in enumerate(suggestions[:20], 1):
+        cat = s.category.value if hasattr(s.category, "value") else str(s.category)
+        files = ", ".join(s.affected_files[:2]) if s.affected_files else "-"
         table.add_row(
             str(i),
-            s.category,
-            str(s.file_path) if s.file_path else "-",
-            s.description[:60],
-            s.priority,
+            cat,
+            files[:40],
+            s.title[:50],
+            str(s.priority),
         )
 
     console.print()
