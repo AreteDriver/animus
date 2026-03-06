@@ -8,8 +8,8 @@ Animus install daemon, onboarding wizard, and local dashboard
 
 - **Version**: 0.5.0
 - **Language**: Python
-- **Files**: 199 across 3 languages
-- **Lines**: 41,702
+- **Files**: 200 across 3 languages
+- **Lines**: 42,066
 
 ## Architecture
 

@@ -8,14 +8,16 @@ Multi-agent orchestration framework for production AI workflows
 
 - **Version**: 1.3.0
 - **Language**: Python
-- **Files**: 585 across 2 languages
-- **Lines**: 219,446
+- **Files**: 590 across 2 languages
+- **Lines**: 220,318
 
 ## Architecture
 
 ```
 forge/
 ├── .benchmarks/
+├── .gorgon/
+│   └── snapshots/
 ├── config/
 ├── migrations/
 ├── skills/
@@ -31,6 +33,7 @@ forge/
 ├── workflows/
 │   └── examples/
 ├── CLAUDE.md
+├── README.md
 ├── pyproject.toml
 ```
 
@@ -124,6 +127,18 @@ animus_forge.cli:app
 - `AdaptiveRateLimitState`
 - `AgentContext`
 - `AgentContract`
+
+### Domain Terms
+- AI
+- Animus Bootstrap
+- Animus Core
+- Animus Forge Multi
+- Animus Monorepo
+- Animus Quorum
+- Improvement Pipeline The
+- MCP
+- MIT
+- Model Context Protocol
 
 ### API Endpoints
 - `/`

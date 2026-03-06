@@ -9,7 +9,7 @@ Multi-agent coherence and coordination for AI systems
 - **Version**: 1.2.0
 - **Language**: Python
 - **Files**: 79 across 2 languages
-- **Lines**: 26,468
+- **Lines**: 26,474
 
 ## Architecture
 
@@ -67,13 +67,13 @@ pytest --cov=src/ tests/
 
 - Do NOT commit secrets, API keys, or credentials
 - Do NOT skip writing tests for new code
+- Do NOT use `.unwrap()` in production code — use proper error handling
+- Do NOT use `unsafe` without a safety comment
+- Do NOT clone when a reference will do
 - Do NOT use `os.path` — use `pathlib.Path` everywhere
 - Do NOT use bare `except:` — catch specific exceptions
 - Do NOT use mutable default arguments
 - Do NOT use `print()` for logging — use the `logging` module
-- Do NOT use `.unwrap()` in production code — use proper error handling
-- Do NOT use `unsafe` without a safety comment
-- Do NOT clone when a reference will do
 
 ## Dependencies
 
