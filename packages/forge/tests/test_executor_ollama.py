@@ -103,7 +103,7 @@ class TestExecuteOllamaLive:
 
         mock_response = MagicMock()
         mock_response.content = "Ollama response"
-        mock_response.total_tokens = 42
+        mock_response.tokens_used = 42
         mock_response.model = "llama3.2"
 
         mock_provider = MagicMock()
@@ -127,7 +127,7 @@ class TestExecuteOllamaLive:
 
         mock_response = MagicMock()
         mock_response.content = "response"
-        mock_response.total_tokens = 10
+        mock_response.tokens_used = 10
         mock_response.model = "test"
 
         mock_provider = MagicMock()
@@ -148,7 +148,7 @@ class TestExecuteOllamaLive:
 
         mock_response = MagicMock()
         mock_response.content = "done"
-        mock_response.total_tokens = 5
+        mock_response.tokens_used = 5
         mock_response.model = "test"
 
         mock_provider = MagicMock()
@@ -189,7 +189,7 @@ class TestExecuteOllamaLive:
 
         mock_response = MagicMock()
         mock_response.content = "ok"
-        mock_response.total_tokens = 5
+        mock_response.tokens_used = 5
         mock_response.model = "test"
 
         mock_provider = MagicMock()
@@ -211,7 +211,7 @@ class TestExecuteOllamaLive:
 
         mock_response = MagicMock()
         mock_response.content = "A" * 400  # ~100 tokens
-        mock_response.total_tokens = None
+        mock_response.tokens_used = None
         mock_response.model = "test"
 
         mock_provider = MagicMock()

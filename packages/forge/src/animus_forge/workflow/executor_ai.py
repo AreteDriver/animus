@@ -278,7 +278,7 @@ class AIHandlersMixin:
             raise RuntimeError(f"Ollama error: {e}")
 
         response_text = response.content
-        estimated_tokens = response.total_tokens or (len(response_text) // 4 + len(prompt) // 4)
+        estimated_tokens = response.tokens_used or (len(response_text) // 4 + len(prompt) // 4)
 
         output = {
             "model": response.model or model or "ollama",
