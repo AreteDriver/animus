@@ -9,10 +9,10 @@ description: Review multiple code files in parallel using fan-out pattern
 
 # Input variables provided when running the workflow
 inputs:
-  - name: files
+  files:
     type: list
     description: List of file paths to review
-  - name: review_criteria
+  review_criteria:
     type: string
     default: "security, performance, maintainability"
     description: Criteria to evaluate in the review
@@ -63,7 +63,5 @@ steps:
     outputs: [review_summary]
 
 outputs:
-  - name: file_reviews
-    description: Individual review for each file
-  - name: review_summary
-    description: Aggregated summary of all reviews
+  - file_reviews
+  - review_summary

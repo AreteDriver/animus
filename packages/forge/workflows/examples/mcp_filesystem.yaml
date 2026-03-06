@@ -8,10 +8,10 @@ name: mcp_filesystem_analysis
 description: Read project files via MCP and analyze with AI
 
 inputs:
-  - name: project_path
+  project_path:
     type: string
     description: Path to the project directory
-  - name: analysis_focus
+  analysis_focus:
     type: string
     default: "architecture and code quality"
     description: What to focus the analysis on
@@ -60,5 +60,4 @@ steps:
     outputs: [analysis_report]
 
 outputs:
-  - name: analysis_report
-    description: AI-generated project analysis
+  - analysis_report

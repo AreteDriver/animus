@@ -9,10 +9,10 @@ name: mcp_github_pr_review
 description: Fetch PR details via MCP GitHub server and review with AI
 
 inputs:
-  - name: repo
+  repo:
     type: string
     description: "Repository in owner/name format"
-  - name: pr_number
+  pr_number:
     type: string
     description: "Pull request number"
 
@@ -64,5 +64,4 @@ steps:
     outputs: [review_result]
 
 outputs:
-  - name: review_result
-    description: AI-generated PR review
+  - review_result

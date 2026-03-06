@@ -8,10 +8,10 @@ name: map_reduce_log_analysis
 description: Analyze multiple log files using map-reduce pattern
 
 inputs:
-  - name: log_files
+  log_files:
     type: list
     description: List of log file paths to analyze
-  - name: analysis_focus
+  analysis_focus:
     type: string
     default: "errors, performance bottlenecks, security events"
     description: What to look for in the logs
@@ -83,7 +83,5 @@ steps:
     outputs: [alerts]
 
 outputs:
-  - name: analysis_report
-    description: Comprehensive analysis report
-  - name: alerts
-    description: List of alerts for critical issues
+  - analysis_report
+  - alerts

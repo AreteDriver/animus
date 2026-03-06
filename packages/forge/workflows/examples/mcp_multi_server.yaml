@@ -7,10 +7,10 @@ name: mcp_multi_server_pipeline
 description: Chain tools across filesystem, database, and Slack MCP servers
 
 inputs:
-  - name: report_path
+  report_path:
     type: string
     description: Path to the report file
-  - name: slack_channel
+  slack_channel:
     type: string
     default: "#reports"
     description: Slack channel to post results
@@ -51,7 +51,5 @@ steps:
     outputs: [slack_response]
 
 outputs:
-  - name: summary
-    description: Report summary
-  - name: slack_response
-    description: Slack API response
+  - summary
+  - slack_response

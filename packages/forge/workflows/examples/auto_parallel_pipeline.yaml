@@ -13,10 +13,10 @@ settings:
   auto_parallel_max_workers: 4
 
 inputs:
-  - name: codebase_path
+  codebase_path:
     type: string
     description: Path to the codebase to analyze
-  - name: branch
+  branch:
     type: string
     default: main
     description: Git branch to analyze
@@ -149,18 +149,12 @@ steps:
     outputs: [executive_summary]
 
 outputs:
-  - name: security_report
-    description: Security scan findings
-  - name: quality_report
-    description: Code quality metrics
-  - name: architecture_report
-    description: Architecture review
-  - name: risk_assessment
-    description: Combined risk assessment
-  - name: improvement_plan
-    description: Prioritized improvement roadmap
-  - name: executive_summary
-    description: Executive summary for stakeholders
+  - security_report
+  - quality_report
+  - architecture_report
+  - risk_assessment
+  - improvement_plan
+  - executive_summary
 
 # Execution visualization:
 #
