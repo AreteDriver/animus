@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 
-from .executor_clients import _get_claude_client, _get_openai_client
+from .executor_clients import _get_claude_client, _get_ollama_provider, _get_openai_client
 from .loader import StepConfig
 
 logger = logging.getLogger(__name__)
@@ -193,6 +193,95 @@ class AIHandlersMixin:
 
         output = {
             "model": model,
+            "prompt": prompt,
+            "response": response_text,
+            "tokens_used": estimated_tokens,
+        }
+
+        # Store output in memory
+        if self.memory_manager:
+            self.memory_manager.store_output(agent_id, step.id, output)
+
+        return output
+
+    def _execute_ollama(self, step: StepConfig, context: dict) -> dict:
+        """Execute an Ollama step using a local Ollama model.
+
+        Params:
+            prompt: The prompt to send
+            model: Ollama model to use (default: OLLAMA_MODEL env or deepseek-coder-v2)
+            system_prompt: Optional system prompt
+            temperature: Sampling temperature (default: 0.7)
+            max_tokens: Maximum tokens in response (default: 4096)
+            use_memory: Enable memory context injection (default: True)
+        """
+        prompt = step.params.get("prompt", "")
+        model = step.params.get("model")
+        system_prompt = step.params.get("system_prompt")
+        temperature = step.params.get("temperature", 0.7)
+        max_tokens = step.params.get("max_tokens", 4096)
+        use_memory = step.params.get("use_memory", True)
+
+        # Substitute context variables in prompt
+        for key, value in context.items():
+            if isinstance(value, str):
+                prompt = prompt.replace(f"${{{key}}}", value)
+
+        # Inject memory context if available
+        agent_id = f"ollama-{model or 'default'}"
+        if use_memory and self.memory_manager:
+            prompt = self.memory_manager.inject_context(agent_id, prompt)
+
+        # Inject budget context if available
+        budget_mgr = getattr(self, "budget_manager", None)
+        if budget_mgr:
+            budget_ctx = budget_mgr.get_budget_context()
+            if budget_ctx:
+                prompt = prompt + "\n\n" + budget_ctx
+
+        # Dry run mode
+        if self.dry_run:
+            output = {
+                "model": model or "ollama-default",
+                "prompt": prompt,
+                "response": f"[DRY RUN] Ollama would process: {prompt[:100]}...",
+                "tokens_used": step.params.get("estimated_tokens", 1000),
+                "dry_run": True,
+            }
+            if self.memory_manager:
+                self.memory_manager.store_output(agent_id, step.id, output)
+            return output
+
+        # Get Ollama provider
+        provider = _get_ollama_provider()
+        if not provider:
+            raise RuntimeError(
+                "Ollama provider not available. Make sure Ollama is running (ollama serve)."
+            )
+
+        from animus_forge.providers.base import CompletionRequest
+
+        request = CompletionRequest(
+            prompt=prompt,
+            system_prompt=system_prompt or "You are a helpful assistant.",
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+
+        try:
+            response = provider.complete(request)
+        except Exception as e:
+            error_msg = str(e)
+            if self.memory_manager:
+                self.memory_manager.store_error(agent_id, step.id, error_msg)
+            raise RuntimeError(f"Ollama error: {e}")
+
+        response_text = response.content
+        estimated_tokens = response.total_tokens or (len(response_text) // 4 + len(prompt) // 4)
+
+        output = {
+            "model": response.model or model or "ollama",
             "prompt": prompt,
             "response": response_text,
             "tokens_used": estimated_tokens,

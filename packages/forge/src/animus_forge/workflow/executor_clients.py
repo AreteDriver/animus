@@ -81,3 +81,36 @@ def _get_openai_client():
         except Exception:
             _openai_client = False  # Mark as unavailable
     return _openai_client if _openai_client else None
+
+
+# Lazy-loaded Ollama provider
+_ollama_provider = None
+
+
+def _get_ollama_provider():
+    """Get or create OllamaProvider instance for workflow steps.
+
+    Uses OLLAMA_HOST and OLLAMA_MODEL env vars for configuration.
+    Default: http://localhost:11434, deepseek-coder-v2.
+    """
+    global _ollama_provider
+    if _ollama_provider is None:
+        try:
+            import os
+
+            from animus_forge.providers.base import ProviderConfig, ProviderType
+            from animus_forge.providers.ollama_provider import OllamaProvider
+
+            host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+            model = os.environ.get("OLLAMA_MODEL", "deepseek-coder-v2")
+            _ollama_provider = OllamaProvider(
+                config=ProviderConfig(
+                    provider_type=ProviderType.OLLAMA,
+                    base_url=host,
+                    default_model=model,
+                    timeout=600.0,
+                ),
+            )
+        except Exception:
+            _ollama_provider = False  # Mark as unavailable
+    return _ollama_provider if _ollama_provider else None

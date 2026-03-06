@@ -216,7 +216,7 @@ animus/
 │   │   ├── src/animus_forge/    # Executor, agents, API, CLI, TUI, dashboard
 │   │   ├── migrations/          # 16 SQL migrations
 │   │   ├── workflows/           # YAML workflow definitions
-│   │   └── tests/               # 8,880 tests, 97% coverage
+│   │   └── tests/               # 8,894 tests, 97% coverage
 │   ├── quorum/                  # import convergent (PyPI: convergentAI)
 │   │   ├── python/convergent/   # Intent graph, voting, stigmergy, bridge
 │   │   ├── src/                 # Rust PyO3 (optional performance layer)
@@ -237,11 +237,11 @@ Active development. Architecture stable. v2.3.0 released.
 | Component | Version | Tests | Coverage | Stage |
 |-----------|---------|------:|:--------:|-------|
 | Core | 2.3.0 | 2,108 | 97% | [Live on PyPI](https://pypi.org/project/animus-core/) — CLI, memory, MCP server |
-| Forge | 1.3.0 | 8,880 | 97% | Self-improve pipeline, workflow orchestration |
+| Forge | 1.3.0 | 8,894 | 97% | Self-improve pipeline, workflow orchestration |
 | Quorum | 1.1.0 | 926 | 97% | [Live on PyPI](https://pypi.org/project/convergentAI/) |
 | Bootstrap | 0.5.0 | 1,748 | 97% | Daemon + wizard + dashboard + reflection |
 
-**Total: 13,662 tests across 4 packages.**
+**Total: 13,676 tests across 4 packages.**
 
 ---
 

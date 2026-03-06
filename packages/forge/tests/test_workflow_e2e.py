@@ -67,6 +67,7 @@ class TestWorkflowYAMLLoading:
         valid_types = {
             "claude_code",
             "openai",
+            "ollama",
             "shell",
             "parallel",
             "checkpoint",

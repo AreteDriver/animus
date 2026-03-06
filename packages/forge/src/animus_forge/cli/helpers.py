@@ -17,11 +17,18 @@ console = Console()
 
 
 def get_workflow_engine() -> WorkflowEngineAdapter:
-    """Lazy import workflow engine to avoid startup cost."""
+    """Lazy import workflow engine with real managers for production use."""
     try:
+        from animus_forge.budget import BudgetManager
         from animus_forge.orchestrator import WorkflowEngineAdapter
+        from animus_forge.state.checkpoint import CheckpointManager
 
-        return WorkflowEngineAdapter()
+        execution_mgr = _create_cli_execution_manager()
+        return WorkflowEngineAdapter(
+            checkpoint_manager=CheckpointManager(),
+            budget_manager=BudgetManager(),
+            execution_manager=execution_mgr,
+        )
     except ImportError as e:
         console.print(f"[red]Missing dependencies:[/red] {e}")
         console.print("Run: pip install pydantic-settings")

@@ -1,0 +1,76 @@
+# Ollama Code Review Pipeline
+# Runs entirely on local Ollama — no API keys needed.
+#
+# Prerequisites:
+#   - Ollama running: ollama serve
+#   - Model pulled: ollama pull deepseek-coder-v2
+#
+# Usage:
+#   animus-forge run workflows/examples/ollama_code_review.yaml \
+#     --var target_path=./src
+
+name: ollama_code_review
+description: Local code review pipeline using Ollama
+
+inputs:
+  - name: target_path
+    type: string
+    default: ./src
+    description: Path to the code to review
+
+steps:
+  - id: analyze_structure
+    type: ollama
+    params:
+      prompt: >
+        Analyze the code structure at ${target_path}.
+        List the main modules, their responsibilities, and key classes.
+        Be concise and factual.
+      system_prompt: >
+        You are a senior software architect. Analyze codebases for structure,
+        patterns, and organization. Output structured analysis.
+      estimated_tokens: 2000
+    outputs:
+      - structure_analysis
+
+  - id: review_quality
+    type: ollama
+    params:
+      prompt: >
+        Given this structure analysis:
+        ${structure_analysis}
+
+        Review the code for quality issues:
+        1. Naming conventions
+        2. Error handling patterns
+        3. Test coverage gaps
+        4. Potential security concerns
+        Be specific and actionable.
+      system_prompt: >
+        You are a code reviewer. Focus on correctness, security,
+        and maintainability. Be direct and specific.
+      estimated_tokens: 3000
+    depends_on:
+      - analyze_structure
+    outputs:
+      - review_findings
+
+  - id: summarize
+    type: ollama
+    params:
+      prompt: >
+        Summarize this code review into a brief report:
+
+        Structure: ${structure_analysis}
+        Findings: ${review_findings}
+
+        Format as: Executive Summary, Top Issues (max 5), Recommendations.
+      system_prompt: You are a technical writer. Be concise and clear.
+      estimated_tokens: 1500
+    depends_on:
+      - review_quality
+    outputs:
+      - final_report
+
+outputs:
+  - final_report

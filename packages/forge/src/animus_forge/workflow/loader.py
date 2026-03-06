@@ -434,6 +434,7 @@ VALID_STEP_TYPES = frozenset(
     {
         "claude_code",
         "openai",
+        "ollama",
         "shell",
         "parallel",
         "checkpoint",

@@ -93,6 +93,7 @@ class WorkflowExecutor(
             "parallel": self._execute_parallel,
             "claude_code": self._execute_claude_code,
             "openai": self._execute_openai,
+            "ollama": self._execute_ollama,
             "fan_out": self._execute_fan_out,
             "fan_in": self._execute_fan_in,
             "map_reduce": self._execute_map_reduce,
