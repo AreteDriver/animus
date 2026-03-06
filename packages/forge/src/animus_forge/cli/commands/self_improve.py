@@ -106,7 +106,7 @@ def improve_run(
 
     if result.plan:
         table.add_row("Plan", result.plan.title)
-        table.add_row("Changes", str(len(result.plan.changes)))
+        table.add_row("Suggestions", str(len(result.plan.suggestions)))
 
     if result.sandbox_result:
         tests = "passed" if result.sandbox_result.tests_passed else "failed"

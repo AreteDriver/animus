@@ -259,6 +259,86 @@ def create_mcp_server():
         except Exception as e:
             return f"Workflow failed: {e}"
 
+    # -----------------------------------------------------------------------
+    # Self-improvement tools
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_self_improve(
+        codebase_path: str,
+        provider: str = "ollama",
+        focus: str = "",
+        auto_approve: bool = True,
+        api_key: str = "",
+    ) -> str:
+        """Run the Forge self-improvement pipeline on a codebase.
+
+        Analyzes code, generates an improvement plan, tests changes in a sandbox,
+        and creates a PR if everything passes.
+
+        Args:
+            codebase_path: Path to the codebase to improve.
+            provider: AI provider — 'ollama', 'anthropic', or 'openai'.
+            focus: Optional focus category (e.g., 'testing', 'security', 'performance').
+            auto_approve: Auto-approve all stages (default True for MCP use).
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        import asyncio
+        from pathlib import Path
+
+        cpath = Path(codebase_path)
+        if not cpath.exists():
+            return f"Path not found: {codebase_path}"
+
+        try:
+            from animus_forge.agents.provider_wrapper import create_agent_provider
+            from animus_forge.self_improve.orchestrator import SelfImproveOrchestrator
+        except ImportError:
+            return (
+                "Forge not installed. Install with: pip install animus-forge\n"
+                "Or run from the monorepo: pip install -e packages/forge/"
+            )
+
+        try:
+            agent_provider = create_agent_provider(provider)
+        except Exception as e:
+            return f"Failed to create {provider} provider: {e}"
+
+        orchestrator = SelfImproveOrchestrator(
+            codebase_path=cpath,
+            provider=agent_provider,
+        )
+
+        try:
+            result = asyncio.run(
+                orchestrator.run(
+                    focus_category=focus or None,
+                    auto_approve=auto_approve,
+                )
+            )
+        except Exception as e:
+            return f"Self-improve failed: {e}"
+
+        lines = [f"Stage: {result.stage_reached.value}"]
+        lines.append(f"Success: {result.success}")
+        if result.plan:
+            lines.append(f"Plan: {result.plan.title}")
+            lines.append(f"Suggestions: {len(result.plan.suggestions)}")
+            for s in result.plan.suggestions[:5]:
+                lines.append(f"  - {s.description[:80]}")
+        if result.error:
+            lines.append(f"Error: {result.error}")
+        if result.sandbox_result:
+            passed = "passed" if result.sandbox_result.tests_passed else "failed"
+            lines.append(f"Tests: {passed}")
+        if result.pull_request:
+            lines.append(f"PR: {result.pull_request.url or result.pull_request.branch}")
+        return "\n".join(lines)
+
     return mcp
 
 
