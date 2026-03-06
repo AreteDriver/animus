@@ -47,6 +47,9 @@ app.add_typer(automations_app, name="automations")
 personas_app = typer.Typer(help="Manage persona profiles.")
 app.add_typer(personas_app, name="personas")
 
+feedback_app = typer.Typer(help="Record and view feedback on Animus responses.")
+app.add_typer(feedback_app, name="feedback")
+
 logger = logging.getLogger(__name__)
 
 
@@ -580,6 +583,189 @@ def personas_list() -> None:
             ", ".join(profile.knowledge_domains) if profile.knowledge_domains else "General",
             "[dim]No[/dim]",
         )
+
+    console.print()
+    console.print(table)
+    console.print()
+
+
+# ------------------------------------------------------------------
+# animus-bootstrap reflect
+# ------------------------------------------------------------------
+
+
+@app.command()
+def reflect(
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
+) -> None:
+    """Run a reflection cycle — analyze feedback and update LEARNED.md."""
+    import asyncio
+
+    _setup_logging(verbose)
+
+    from animus_bootstrap.config import ConfigManager
+    from animus_bootstrap.identity.manager import IdentityFileManager
+    from animus_bootstrap.intelligence.feedback import FeedbackStore
+    from animus_bootstrap.intelligence.proactive.checks.reflection import (
+        _run_reflection,
+        set_reflection_deps,
+    )
+
+    config_manager = ConfigManager()
+    config = config_manager.load()
+
+    # Wire dependencies
+    identity_dir = config_manager.get_config_path().parent / "identity"
+    identity_manager = IdentityFileManager(identity_dir)
+
+    db_path = config_manager.get_config_path().parent / "feedback.db"
+    feedback_store = FeedbackStore(db_path) if db_path.exists() else None
+
+    # Try to create cognitive backend for AI-powered reflection
+    cognitive_backend = None
+    try:
+        api_key = config.api.anthropic_key
+        if api_key:
+            from animus_bootstrap.gateway.backends import AnthropicBackend
+
+            cognitive_backend = AnthropicBackend(api_key=api_key)
+    except Exception:
+        pass
+
+    if cognitive_backend is None:
+        try:
+            from animus_bootstrap.gateway.backends import OllamaBackend
+
+            cognitive_backend = OllamaBackend(
+                host=getattr(config.api, "ollama_host", "http://localhost:11434"),
+                model=getattr(config.api, "ollama_model", "llama3.2"),
+            )
+        except Exception:
+            pass
+
+    set_reflection_deps(
+        identity_manager=identity_manager,
+        feedback_store=feedback_store,
+        cognitive_backend=cognitive_backend,
+        config=config,
+    )
+
+    console.print("[cyan]Running reflection...[/cyan]")
+    result = asyncio.run(_run_reflection())
+
+    if result:
+        console.print(f"[green]{result}[/green]")
+    else:
+        console.print("[dim]No reflection needed — no feedback data yet.[/dim]")
+        console.print("[dim]Use 'animus-bootstrap feedback add' to record feedback first.[/dim]")
+
+    if feedback_store:
+        feedback_store.close()
+
+
+# ------------------------------------------------------------------
+# animus-bootstrap feedback add / list / stats
+# ------------------------------------------------------------------
+
+
+@feedback_app.command("add")
+def feedback_add(
+    rating: str = typer.Argument(help="Rating: 'up' (positive) or 'down' (negative)"),
+    message: str = typer.Option("", "--message", "-m", help="The message/question that was asked"),
+    response: str = typer.Option("", "--response", "-r", help="The response that was given"),
+    comment: str = typer.Option("", "--comment", "-c", help="Why this was good/bad"),
+) -> None:
+    """Record feedback on an Animus response."""
+    from animus_bootstrap.config import ConfigManager
+    from animus_bootstrap.intelligence.feedback import FeedbackStore
+
+    if rating not in ("up", "down"):
+        console.print("[red]Rating must be 'up' or 'down'[/red]")
+        raise typer.Exit(1)
+
+    config_path = ConfigManager().get_config_path().parent
+    db_path = config_path / "feedback.db"
+    store = FeedbackStore(db_path)
+
+    numeric_rating = 1 if rating == "up" else -1
+    feedback_id = store.record(
+        message_text=message or "(not provided)",
+        response_text=response or "(not provided)",
+        rating=numeric_rating,
+        comment=comment,
+        channel="cli",
+    )
+    store.close()
+
+    icon = "[green]thumbs up[/green]" if rating == "up" else "[red]thumbs down[/red]"
+    console.print(f"Recorded {icon} feedback ({feedback_id[:8]}...)")
+
+
+@feedback_app.command("list")
+def feedback_list(
+    limit: int = typer.Option(10, "--limit", "-n", help="Number of entries to show"),
+) -> None:
+    """Show recent feedback entries."""
+    from animus_bootstrap.config import ConfigManager
+    from animus_bootstrap.intelligence.feedback import FeedbackStore
+
+    config_path = ConfigManager().get_config_path().parent
+    db_path = config_path / "feedback.db"
+
+    if not db_path.exists():
+        console.print("[dim]No feedback recorded yet.[/dim]")
+        return
+
+    store = FeedbackStore(db_path)
+    entries = store.get_recent(limit=limit)
+    store.close()
+
+    if not entries:
+        console.print("[dim]No feedback entries found.[/dim]")
+        return
+
+    table = Table(title="Recent Feedback", border_style="cyan")
+    table.add_column("Time", style="dim", width=16)
+    table.add_column("Rating", justify="center", width=6)
+    table.add_column("Message", max_width=40)
+    table.add_column("Comment", style="dim", max_width=30)
+
+    for entry in entries:
+        ts = entry["timestamp"][:16].replace("T", " ")
+        icon = "[green]+1[/green]" if entry["rating"] > 0 else "[red]-1[/red]"
+        msg = entry["message_text"][:40]
+        cmt = entry.get("comment", "")[:30]
+        table.add_row(ts, icon, msg, cmt)
+
+    console.print()
+    console.print(table)
+    console.print()
+
+
+@feedback_app.command("stats")
+def feedback_stats() -> None:
+    """Show feedback statistics."""
+    from animus_bootstrap.config import ConfigManager
+    from animus_bootstrap.intelligence.feedback import FeedbackStore
+
+    config_path = ConfigManager().get_config_path().parent
+    db_path = config_path / "feedback.db"
+
+    if not db_path.exists():
+        console.print("[dim]No feedback recorded yet.[/dim]")
+        return
+
+    store = FeedbackStore(db_path)
+    stats = store.get_stats()
+    store.close()
+
+    table = Table(title="Feedback Stats", border_style="cyan")
+    table.add_column("Metric", style="bold")
+    table.add_column("Value")
+
+    table.add_row("Total", str(stats["total"]))
+    table.add_row("Positive", f"[green]{stats['positive']}[/green] ({stats['positive_pct']}%)")
+    table.add_row("Negative", f"[red]{stats['negative']}[/red] ({stats['negative_pct']}%)")
 
     console.print()
     console.print(table)

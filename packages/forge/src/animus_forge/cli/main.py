@@ -85,6 +85,7 @@ from .commands.mcp import mcp_app  # noqa: E402
 from .commands.memory import memory_app  # noqa: E402
 from .commands.metrics import metrics_app  # noqa: E402
 from .commands.schedule import schedule_app  # noqa: E402
+from .commands.self_improve import self_improve_app  # noqa: E402
 
 app.add_typer(schedule_app, name="schedule")
 app.add_typer(memory_app, name="memory")
@@ -99,6 +100,7 @@ app.add_typer(mcp_app, name="mcp")
 app.add_typer(graph_app, name="graph")
 app.add_typer(eval_app, name="eval")
 app.add_typer(coordination_app, name="coordination")
+app.add_typer(self_improve_app, name="self-improve")
 
 
 # =============================================================================
