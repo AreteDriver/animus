@@ -2,47 +2,29 @@
 
 ## Project Overview
 
-Animus Bootstrap — install daemon, onboarding wizard, local dashboard, message gateway, intelligence layer, persona system, and identity/self-improvement infrastructure. The first running piece of Animus and the foundation for self-improvement.
+Animus install daemon, onboarding wizard, and local dashboard
 
 ## Current State
 
 - **Version**: 0.5.0
 - **Language**: Python
-- **Files**: 270 across 3 languages
-- **Lines**: ~37,000
-- **Tests**: 1739, 97% coverage (fail_under=97)
-- **Tools**: 31 (8 built-in + 4 identity + MCP bridge)
-- **Dashboard Pages**: 15+ (HTMX, localhost:7700)
+- **Files**: 199 across 3 languages
+- **Lines**: 41,702
 
 ## Architecture
 
 ```
 bootstrap/
-├── src/animus_bootstrap/
-│   ├── config/           # Pydantic config, TOML read/write, chmod 600
-│   ├── daemon/           # OS detection, systemd/launchd, supervisor, updater
-│   │   └── platforms/    # Linux, macOS, Windows service modules
-│   ├── setup/            # Rich TUI wizard (9 steps)
-│   │   └── steps/        # welcome, identity, identity_files, api_keys, forge, memory, device, sovereignty, launch
-│   ├── identity/         # 6 identity files, CORE_VALUES.md lock, Jinja2 templates
-│   │   └── templates/    # *.md.j2 templates for wizard generation
-│   ├── gateway/          # Message gateway (8 channel adapters, cognitive backends)
-│   │   ├── channels/     # telegram, discord, slack, matrix, whatsapp, signal, email, webchat
-│   │   └── middleware/   # auth, rate limiting, logging
-│   ├── intelligence/     # Memory, tools, proactive engine, automations, proposals
-│   │   ├── proposals.py      # Typed Proposal dataclass + IdentityProposalManager
-│   │   ├── memory_backends/  # SQLite FTS5, ChromaDB (with fallback)
-│   │   ├── tools/builtin/    # 31 tools (shell, web, code, memory, identity, etc.)
-│   │   ├── proactive/checks/ # morning_brief, task_nudge, calendar, reflection
-│   │   ├── automations/      # trigger/condition/action pipeline
-│   │   └── feedback.py       # Thumbs up/down store (SQLite WAL)
-│   ├── personas/         # PersonaEngine, voice presets, domain routing
-│   └── dashboard/        # FastAPI + HTMX + Tailwind (dark theme)
-│       ├── routers/      # home, config, memory, logs, tools, identity, proposals, feedback, etc.
-│       ├── templates/    # Jinja2 HTML templates
-│       └── static/css/   # Custom styles
-├── tests/                # 1459 tests
-└── pyproject.toml
+├── .benchmarks/
+├── src/
+│   └── animus_bootstrap/
+├── tests/
+├── CLAUDE.md
+├── PHASE2_GATEWAY.md
+├── PHASE3_INTELLIGENCE.md
+├── PHASE4_PERSONAS.md
+├── README.md
+├── pyproject.toml
 ```
 
 ## Tech Stack
@@ -63,21 +45,23 @@ bootstrap/
 - **Docstrings**: google style
 - **Imports**: absolute
 - **Path Handling**: pathlib
-- **Line Length (p95)**: 75 characters
+- **Line Length (p95)**: 74 characters
 
 ## Common Commands
 
 ```bash
-# test (use venv — has all deps including pytest-asyncio)
-.venv/bin/python -m pytest tests/ -v
-# lint + format
-.venv/bin/python -m ruff check . && .venv/bin/python -m ruff format --check .
-# auto-fix
-.venv/bin/python -m ruff check . --fix && .venv/bin/python -m ruff format .
+# test
+pytest tests/ -v
+# lint
+ruff check src/ tests/
+# format
+ruff format src/ tests/
+# type check
+mypy src/
 # coverage
-.venv/bin/python -m pytest tests/ --cov=src/animus_bootstrap --cov-fail-under=80
-# install dev
-pip install -e ".[dev]"
+pytest --cov=src/ tests/
+# animus-bootstrap
+animus_bootstrap.cli:app
 ```
 
 ## Anti-Patterns (Do NOT Do)
@@ -95,8 +79,11 @@ pip install -e ".[dev]"
 
 ### Core
 - typer
+- 
 - rich
+- 
 - fastapi
+- 
 - uvicorn
 
 ### Dev
@@ -125,22 +112,18 @@ pip install -e ".[dev]"
 - `AutomationEngine`
 - `AutomationResult`
 - `AutomationRule`
-- `IdentityFileManager`
-- `IdentityProposalManager`
-- `ImprovementStore`
-- `Proposal`
 
 ### Domain Terms
 - AI
 - Animus Bootstrap
-- Animus Bootstrap Animus
 - Animus Core
 - Animus Ecosystem
 - Animus Forge
 - Animus Quorum
+- CONTEXT
 - Configuration Config
-- MIT
-- Platform Support
+- Feedback Signal Thumbs
+- GOALS
 
 ### API Endpoints
 - `/`
@@ -158,9 +141,6 @@ pip install -e ".[dev]"
 - `/identity`
 - `/identity/edit/{filename}`
 - `/identity/view/{filename}`
-- `/proposals`
-- `/proposals/{proposal_id}/approve`
-- `/proposals/{proposal_id}/reject`
 
 ### Enums/Constants
 - `API_URL`
@@ -173,14 +153,6 @@ pip install -e ".[dev]"
 - `_DEFAULT_FORGE_HOST`
 - `_DEFAULT_HOST`
 - `_DEFAULT_PATH`
-
-## Critical Design Constraints
-
-- **CORE_VALUES.md is immutable** — Animus can never write to this file. `IdentityFileManager.write()` raises `PermissionError` for locked files. `identity_write` tool returns graceful error (not exception). Only editable via dashboard (`write_locked()`) or wizard.
-- **20% change threshold** — Identity file changes >20% of file size become proposals (not direct writes). Proposals require human approval in dashboard `/proposals` page. Managed by `IdentityProposalManager` (typed `Proposal` dataclass wrapping `ImprovementStore`). Router converts Proposals to template-compatible dicts via `_proposal_to_template()`.
-- **Local-first** — No data leaves machine without explicit user action. No telemetry by default. Single-user architecture. Works offline (Ollama local).
-- **chmod 600 on config** — API keys file-permission protected.
-- **asyncio.run() poisoning** — Test files must use `asyncio.new_event_loop()` + `set_event_loop()` pattern, NOT `asyncio.run()`, or downstream tests using `get_event_loop()` will fail in suite.
 
 ## Git Conventions
 

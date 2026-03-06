@@ -6,10 +6,10 @@ An exocortex architecture for personal cognitive sovereignty
 
 ## Current State
 
-- **Version**: 1.0.0
+- **Version**: 2.3.0
 - **Language**: Python
-- **Files**: 106 across 1 languages
-- **Lines**: 48,110
+- **Files**: 123 across 1 languages
+- **Lines**: 55,523
 
 ## Architecture
 
@@ -27,6 +27,8 @@ core/
 │   ├── examples/
 │   └── media_engine/
 ├── tests/
+├── CLAUDE.md
+├── README.md
 ├── pyproject.toml
 ```
 
@@ -57,13 +59,13 @@ core/
 # test
 pytest tests/ -v
 # lint
-ruff check animus/ tests/
+ruff check src/ tests/
 # format
-ruff format animus/ tests/
+ruff format src/ tests/
 # type check
-mypy animus/
+mypy src/
 # coverage
-pytest --cov=animus/ tests/
+pytest --cov=src/ tests/
 # animus
 animus.__main__:main
 ```
@@ -83,11 +85,16 @@ animus.__main__:main
 
 ### Core
 - ollama
+- 
 - chromadb
 - pyyaml
+- 
 - pydantic
+- 
 - rich
+- 
 - prompt-toolkit
+- 
 
 ### Dev
 - pytest
@@ -109,13 +116,24 @@ animus.__main__:main
 - `ActionStatus`
 - `AgentConfig`
 - `AnimusConfig`
+- `AnimusIdentity`
 - `AnthropicModel`
 - `AppState`
 - `ApprovalManager`
 - `ApprovalRequest`
 - `ApprovalRequirement`
 - `ApprovalStatus`
-- `AuthType`
+
+### Domain Terms
+- AI
+- Animus Bootstrap
+- Animus Core Personal
+- Animus Forge
+- Animus Monorepo
+- Animus Quorum
+- Claude Code
+- MCP
+- MIT
 
 ### API Endpoints
 - `/autonomous/actions`
@@ -138,13 +156,13 @@ animus.__main__:main
 - `ACCESS`
 - `ACT`
 - `ACTIVE`
+- `AGENT_CONTEXT`
 - `ANTHROPIC`
 - `API_KEY`
 - `APPROVE`
 - `APPROVED`
 - `AUTH`
 - `AUTH_FAIL`
-- `AUTH_OK`
 
 ## Git Conventions
 

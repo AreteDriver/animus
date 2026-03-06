@@ -6,11 +6,10 @@ Multi-agent orchestration framework for production AI workflows
 
 ## Current State
 
-- **Version**: 1.2.0
+- **Version**: 1.3.0
 - **Language**: Python
-- **Tests**: 8,797 (97% coverage, fail_under=97)
-- **Files**: 576 across 2 languages
-- **Lines**: 200,965
+- **Files**: 585 across 2 languages
+- **Lines**: 219,446
 
 ## Architecture
 
@@ -31,6 +30,7 @@ forge/
 │   └── tui/
 ├── workflows/
 │   └── examples/
+├── CLAUDE.md
 ├── pyproject.toml
 ```
 
@@ -84,20 +84,20 @@ animus_forge.cli:app
 
 ### Core
 - openai
+- 
 - anthropic
+- 
 - fastapi
+- 
 - uvicorn
+- 
 - streamlit
+- 
 - google-auth
+- 
 - google-auth-oauthlib
+- 
 - google-auth-httplib2
-- google-api-python-client
-- notion-client
-- PyGithub
-- pydantic
-- pydantic-settings
-- python-dotenv
-- aiofiles
 
 ### Dev
 - pytest
@@ -155,7 +155,8 @@ animus_forge.cli:app
 - `ANALYZE`
 
 ### Outstanding Items
-- None
+- **TODO**: fix this bug\n") (`tests/test_self_improve_coverage.py`)
+- **TODO**: handle division by zero\n" (`tests/test_self_improve_ollama_integration.py`)
 
 ## Git Conventions
 
