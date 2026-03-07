@@ -297,3 +297,40 @@ class TestListAndHistory:
 
     def test_history_nonexistent(self, evo):
         assert evo.history("doesnt-exist") == []
+
+    def test_list_workflows_handles_corrupt_yaml(self, evo, workflows_dir):
+        (workflows_dir / "corrupt.yaml").write_text(": :\n  - [bad")
+        workflows = evo.list_workflows()
+        corrupt = [w for w in workflows if w["id"] == "corrupt"]
+        assert len(corrupt) == 1
+        assert corrupt[0].get("error") is True
+
+
+class TestNoAuditLog:
+    def test_propose_without_audit_log(self, workflows_dir):
+        evo = WorkflowEvolution(workflows_dir=workflows_dir, audit_log_path=None)
+        result = evo.propose_patch(_make_patch())
+        assert result.workflow_id == "test-workflow"
+
+    def test_approve_without_audit_log(self, workflows_dir):
+        evo = WorkflowEvolution(workflows_dir=workflows_dir, audit_log_path=None)
+        evo.propose_patch(_make_patch())
+        result = evo.approve("test-workflow")
+        assert result.approved
+
+
+class TestVersionGtEdgeCases:
+    def test_non_numeric_version(self):
+        assert _version_gt("1", "abc")
+
+    def test_steps_not_a_list(self, workflows_dir, audit_log):
+        evo = WorkflowEvolution(workflows_dir=workflows_dir, audit_log_path=audit_log)
+        bad = {"name": "X", "version": "1.1", "steps": "not a list"}
+        content = yaml.dump(bad, default_flow_style=False)
+        with pytest.raises(WorkflowPatchInvalid, match="list"):
+            evo.propose_patch(_make_patch(new_yaml_content=content))
+
+    def test_non_dict_yaml(self, workflows_dir, audit_log):
+        evo = WorkflowEvolution(workflows_dir=workflows_dir, audit_log_path=audit_log)
+        with pytest.raises(WorkflowPatchInvalid, match="mapping"):
+            evo.propose_patch(_make_patch(new_yaml_content="- just a list"))

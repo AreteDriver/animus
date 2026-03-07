@@ -524,6 +524,93 @@ class TestBackgroundLoop:
 # ---------------------------------------------------------------------------
 
 
+class TestEdgeCases:
+    def test_should_reflect_false_when_cannot_allocate(
+        self,
+        mock_provider,
+    ):
+        """Budget can_allocate returns False -> should_reflect False."""
+        budget = BudgetManager(config=BudgetConfig(total_budget=100000))
+        config = ConsciousnessConfig(enabled=True, min_idle_seconds=0, estimated_tokens=200000)
+        bridge = ConsciousnessBridge(
+            provider=mock_provider,
+            budget_manager=budget,
+            config=config,
+        )
+        assert not bridge._should_reflect()
+
+    def test_loop_handles_reflection_error(self, mock_provider, budget_manager):
+        """Background loop swallows exceptions from reflect_once."""
+        config = ConsciousnessConfig(enabled=True, min_idle_seconds=0)
+        bridge = ConsciousnessBridge(
+            provider=mock_provider,
+            budget_manager=budget_manager,
+            config=config,
+        )
+        mock_provider.complete.side_effect = RuntimeError("provider down")
+        # Simulate one loop iteration — should not raise
+        bridge._stop_event.set()
+        bridge._loop()
+
+    def test_gather_input_metrics_exception(self, mock_provider, budget_manager, config):
+        """Metrics store exception is swallowed."""
+        bad_metrics = MagicMock()
+        bad_metrics.get_recent_executions.side_effect = RuntimeError("db gone")
+        bridge = ConsciousnessBridge(
+            provider=mock_provider,
+            budget_manager=budget_manager,
+            config=config,
+            metrics_store=bad_metrics,
+        )
+        output = bridge.reflect_once()
+        assert output.summary != ""
+
+    def test_gather_input_graph_with_intents(self, mock_provider, budget_manager, config):
+        """Graph snapshot with low-stability intents."""
+        mock_graph = MagicMock()
+        intent_mock = MagicMock()
+        intent_mock.stability = 0.2
+        intent_mock.to_dict.return_value = {"id": "test", "stability": 0.2}
+        snapshot = MagicMock()
+        snapshot.intents = [intent_mock]
+        mock_graph.snapshot.return_value = snapshot
+        with patch(
+            "animus_forge.coordination.consciousness_bridge.HAS_CONVERGENT",
+            True,
+        ):
+            bridge = ConsciousnessBridge(
+                provider=mock_provider,
+                budget_manager=budget_manager,
+                config=config,
+                graph=mock_graph,
+            )
+            output = bridge.reflect_once()
+            assert output.summary != ""
+
+    def test_gather_input_graph_exception(self, mock_provider, budget_manager, config):
+        """Graph snapshot exception is swallowed."""
+        mock_graph = MagicMock()
+        mock_graph.snapshot.side_effect = RuntimeError("graph broken")
+        with patch(
+            "animus_forge.coordination.consciousness_bridge.HAS_CONVERGENT",
+            True,
+        ):
+            bridge = ConsciousnessBridge(
+                provider=mock_provider,
+                budget_manager=budget_manager,
+                config=config,
+                graph=mock_graph,
+            )
+            output = bridge.reflect_once()
+            assert output.summary != ""
+
+    def test_regex_fallback_invalid_json(self, bridge, mock_provider):
+        """Regex extracts braces but content is still invalid JSON."""
+        mock_provider.complete.return_value.content = "Look: {not: valid: json:}"
+        output = bridge.reflect_once()
+        assert output.summary == "Parse failure — skipped"
+
+
 class TestStatus:
     def test_status_structure(self, bridge):
         s = bridge.status()
