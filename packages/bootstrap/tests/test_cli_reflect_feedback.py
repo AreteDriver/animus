@@ -51,7 +51,9 @@ def _mock_config_manager(tmp_path):
     mock_cm = MagicMock()
     mock_cm.return_value.load.return_value = MagicMock(
         api=MagicMock(
-            anthropic_key="", ollama_host="http://localhost:11434", ollama_model="llama3.2",
+            anthropic_key="",
+            ollama_host="http://localhost:11434",
+            ollama_model="llama3.2",
         ),
     )
     mock_cm.return_value.get_config_path.return_value = tmp_path / "config.toml"

@@ -77,9 +77,7 @@ class TestSelfImproveRun:
             assert "Failed" in result.output
 
     def test_run_bad_path(self):
-        result = runner.invoke(
-            app, ["self-improve", "run", "--path", "/nonexistent/path/xyz"]
-        )
+        result = runner.invoke(app, ["self-improve", "run", "--path", "/nonexistent/path/xyz"])
         assert result.exit_code == 1
         assert "not found" in result.output.lower()
 
@@ -106,9 +104,7 @@ class TestSelfImproveRun:
                 ),
             },
         ):
-            result = runner.invoke(
-                app, ["self-improve", "run", "--focus", "security"]
-            )
+            result = runner.invoke(app, ["self-improve", "run", "--focus", "security"])
             assert "No suggestions found" in result.output or result.exit_code == 0
 
 
@@ -165,12 +161,8 @@ class TestSelfImproveAnalyze:
             assert "performance" in result.output.lower()
 
     def test_analyze_focus_filter(self):
-        s1 = MagicMock(
-            category="security", affected_files=["a.py"], title="x", priority=2
-        )
-        s2 = MagicMock(
-            category="performance", affected_files=["b.py"], title="y", priority=4
-        )
+        s1 = MagicMock(category="security", affected_files=["a.py"], title="x", priority=2)
+        s2 = MagicMock(category="performance", affected_files=["b.py"], title="y", priority=4)
 
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.return_value = self._make_analysis_result([s1, s2])
