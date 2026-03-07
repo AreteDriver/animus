@@ -10,6 +10,19 @@
 - **Tests**: 13,676 across 4 packages
 - **License**: MIT
 
+## Non-Negotiables
+
+Read these before every session. No exceptions.
+
+1. **Never bypass budget enforcement.** All LLM calls from Forge must pass through `budget/manager.py`. The `BudgetManager` is wired into `WorkflowExecutor` — do not circumvent it with direct provider calls.
+2. **Never modify identity files without approval gates.** Bootstrap's `IdentityProposalManager` (20% change threshold) is the only mutation path. Core's `CORE_VALUES.md` is immutable.
+3. **Never delete memory or identity files.** Deprecate and archive instead. Memory is append-heavy by design.
+4. **Audit log is sacred.** Forge actions emit to structured logs via `monitoring/`. This feeds the reflection loop and is the ground truth for spend tracking.
+5. **Quorum IntentNodes require signed writes.** Use `convergent.intent` APIs — don't write intent state directly.
+6. **No unregistered background threads.** If Forge spawns workers, they must be trackable and cleanly terminable.
+7. **Self-improve targets YAML workflows by default.** Python code changes require the full sandbox + approval + rollback pipeline in `self_improve/orchestrator.py`. YAML evolution is the safe fast path.
+8. **Constitutional principles (P1-P9) constrain all agent behavior.** See `docs/CONSTITUTIONAL_PRINCIPLES.md`. Forge reads these to bound its actions.
+
 ## Monorepo Structure
 
 ```
@@ -121,6 +134,16 @@ Each package has its own ruff config in its pyproject.toml.
 - `packages/quorum/python/convergent/intent.py` — Core Intent model
 - `packages/quorum/python/convergent/triumvirate.py` — Voting engine
 - `packages/quorum/python/convergent/gorgon_bridge.py` — Integration bridge
+
+## Architecture Docs
+
+| File | Purpose |
+|------|---------|
+| `docs/CONSTITUTIONAL_PRINCIPLES.md` | P1-P9 principles that constrain all agent behavior |
+| `docs/CONSCIOUSNESS_QUORUM_BRIDGE.md` | Reflection loop -> Quorum intent graph integration |
+| `docs/WORKFLOW_EVOLUTION_CONSTRAINTS.md` | YAML-only fast path + evolution notes pattern |
+| `docs/ARCHITECTURE.md` | System architecture overview |
+| `docs/SAFETY.md` | Security layer design |
 
 ## Conventions
 
