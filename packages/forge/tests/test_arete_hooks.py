@@ -209,6 +209,7 @@ class TestGetAreteHooks:
     def test_returns_hooks_with_phi_scorer(self):
         fake_scoring = types.ModuleType("convergent.scoring")
         fake_scoring.PhiScorer = MagicMock
+        fake_scoring.ScoreStore = MagicMock
         with patch.dict(
             "sys.modules",
             {
@@ -226,6 +227,7 @@ class TestGetAreteHooks:
     def test_returns_hooks_with_all_deps(self):
         fake_scoring = types.ModuleType("convergent.scoring")
         fake_scoring.PhiScorer = MagicMock
+        fake_scoring.ScoreStore = MagicMock
         fake_stigmergy = types.ModuleType("convergent.stigmergy")
         fake_stigmergy.StigmergyField = MagicMock
         fake_memory = types.ModuleType("animus.memory")

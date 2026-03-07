@@ -77,7 +77,9 @@ from .commands.browser import browser_app  # noqa: E402
 from .commands.budget import budget_app  # noqa: E402
 from .commands.calendar_cmd import calendar_app  # noqa: E402
 from .commands.config import config_app  # noqa: E402
+from .commands.consciousness import consciousness_app  # noqa: E402
 from .commands.coordination import coordination_app  # noqa: E402
+from .commands.evolve import evolve_app  # noqa: E402
 from .commands.eval_cmd import eval_app  # noqa: E402
 from .commands.graph import graph_app  # noqa: E402
 from .commands.history import history_app  # noqa: E402
@@ -101,6 +103,8 @@ app.add_typer(graph_app, name="graph")
 app.add_typer(eval_app, name="eval")
 app.add_typer(coordination_app, name="coordination")
 app.add_typer(self_improve_app, name="self-improve")
+app.add_typer(consciousness_app, name="bg")
+app.add_typer(evolve_app, name="evolve")
 
 
 # =============================================================================

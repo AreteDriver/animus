@@ -147,6 +147,44 @@ async def lifespan(app: FastAPI):
     except Exception:
         state.coordination_event_log = None
 
+    # Initialize consciousness bridge (optional)
+    try:
+        from animus_forge.budget.manager import BudgetManager as _TokenBudgetManager
+        from animus_forge.coordination.consciousness_bridge import (
+            ConsciousnessBridge,
+            ConsciousnessConfig,
+        )
+
+        _cb_provider = None
+        try:
+            from animus_forge.agents import create_agent_provider as _create_provider
+
+            _cb_provider = _create_provider(
+                os.environ.get("DEFAULT_PROVIDER", "ollama"),
+            )
+        except Exception:
+            pass
+
+        if _cb_provider is not None:
+            _cb_config = ConsciousnessConfig(
+                enabled=os.environ.get("ANIMUS_CONSCIOUSNESS", "").lower()
+                in ("1", "true", "on"),
+                reflections_log_path=settings.base_dir / "logs" / "reflections.jsonl",
+                review_queue_path=settings.base_dir
+                / "logs"
+                / "workflow_review_queue.jsonl",
+            )
+            state.consciousness_bridge = ConsciousnessBridge(
+                provider=_cb_provider,
+                budget_manager=_TokenBudgetManager(),
+                config=_cb_config,
+                graph=None,  # Quorum graph wired separately if available
+            )
+            state.consciousness_bridge.start()
+            logger.info("Consciousness bridge initialized")
+    except Exception as e:
+        logger.debug("Consciousness bridge not available: %s", e)
+
     from animus_forge.agents import SupervisorAgent, create_agent_provider
 
     def create_supervisor(backend=None):
@@ -215,6 +253,13 @@ async def lifespan(app: FastAPI):
     # Shutdown WebSocket broadcaster
     if state.ws_broadcaster:
         await state.ws_broadcaster.stop()
+
+    # Stop consciousness bridge
+    if state.consciousness_bridge is not None:
+        try:
+            state.consciousness_bridge.stop()
+        except Exception as e:
+            logger.warning("Failed to stop consciousness bridge: %s", e)
 
     # Close coordination bridge
     if _coordination_bridge is not None:

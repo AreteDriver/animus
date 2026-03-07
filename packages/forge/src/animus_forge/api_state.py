@@ -72,6 +72,7 @@ task_store: TaskStore | None = None
 # ---------------------------------------------------------------------------
 coordination_event_log = None  # convergent.EventLog or None
 coordination_bridge = None  # convergent.GorgonBridge or None
+consciousness_bridge = None  # ConsciousnessBridge or None
 
 # ---------------------------------------------------------------------------
 # WebSocket components (initialized in lifespan)
