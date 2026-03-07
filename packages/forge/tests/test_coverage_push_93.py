@@ -48,10 +48,9 @@ def client(backend, monkeypatch):
         with patch("animus_forge.api.run_migrations", return_value=[]):
             import animus_forge.api_state as api_state
             from animus_forge.api import app
-            from animus_forge.api_state import limiter
             from animus_forge.security.brute_force import get_brute_force_protection
 
-            limiter.enabled = False
+            api_state.limiter.enabled = False
             protection = get_brute_force_protection()
             protection._attempts.clear()
             protection._total_blocked = 0

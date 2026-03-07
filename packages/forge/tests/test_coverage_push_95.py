@@ -2760,8 +2760,10 @@ class TestCacheBackendsCoverage:
 
         cache = MemoryCache()
         await cache.set("k", "v")
-        assert await cache.delete("k") is True
-        assert await cache.delete("k") is False
+        result = await cache.delete("k")
+        assert result is True
+        result2 = await cache.delete("k")
+        assert result2 is False
 
     async def test_memory_cache_clear(self):
         from animus_forge.cache.backends import MemoryCache
@@ -4984,7 +4986,7 @@ class TestExecutorStepCoverage:
         step.condition = MagicMock()
         step.condition.evaluate.return_value = False
         sr = StepResult(step_id="s1", status=StepStatus.PENDING)
-        handler, cb, err = mixin._check_step_preconditions(step, sr)
+        mixin._check_step_preconditions(step, sr)
         assert sr.status == StepStatus.SKIPPED
 
 
@@ -5195,8 +5197,10 @@ class TestCacheBackendsExtendedCoverage:
 
         cache = MemoryCache()
         await cache.set("key1", "value1")
-        assert await cache.delete("key1") is True
-        assert await cache.get("key1") is None
+        deleted = await cache.delete("key1")
+        assert deleted is True
+        val = await cache.get("key1")
+        assert val is None
 
     async def test_memory_cache_exists_async(self):
         from animus_forge.cache.backends import MemoryCache
@@ -5243,7 +5247,8 @@ class TestCacheBackendsExtendedCoverage:
 
         cache = MemoryCache()
         await cache.set("key1", "value1")
-        assert await cache.delete("key1") is True
+        deleted = await cache.delete("key1")
+        assert deleted is True
 
     async def test_memory_cache_async_exists(self):
         from animus_forge.cache.backends import MemoryCache
@@ -5261,7 +5266,7 @@ class TestCacheBackendsExtendedCoverage:
         assert await cache.get("a") is None
 
     def test_get_cache_default(self):
-        import animus_forge.cache.backends as cb
+        from animus_forge.cache import backends as cb
 
         cb._cache = None  # Reset global
         cache = cb.get_cache()
@@ -5269,7 +5274,7 @@ class TestCacheBackendsExtendedCoverage:
         cb._cache = None  # Clean up
 
     def test_get_cache_returns_singleton(self):
-        import animus_forge.cache.backends as cb
+        from animus_forge.cache import backends as cb
 
         cb._cache = None
         c1 = cb.get_cache()
@@ -5809,7 +5814,8 @@ class TestRedisCacheCoverage:
         cache = RedisCache()
         cache._async_client = AsyncMock()
         cache._async_client.delete = AsyncMock(return_value=1)
-        assert await cache.delete("key1") is True
+        deleted = await cache.delete("key1")
+        assert deleted is True
 
     async def test_redis_exists_async(self):
         from animus_forge.cache.backends import RedisCache

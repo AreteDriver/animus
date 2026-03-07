@@ -36,23 +36,21 @@ class TestOllamaClientFactory:
 
     def test_caches_provider(self):
         import animus_forge.workflow.executor_clients as mod
-        from animus_forge.workflow.executor_clients import _get_ollama_provider
 
         mock_provider = MagicMock()
         mod._ollama_provider = mock_provider
 
-        result = _get_ollama_provider()
+        result = mod._get_ollama_provider()
         assert result is mock_provider
 
         mod._ollama_provider = None
 
     def test_returns_none_when_marked_unavailable(self):
         import animus_forge.workflow.executor_clients as mod
-        from animus_forge.workflow.executor_clients import _get_ollama_provider
 
         mod._ollama_provider = False  # marked unavailable
 
-        result = _get_ollama_provider()
+        result = mod._get_ollama_provider()
         assert result is None
 
         mod._ollama_provider = None

@@ -630,7 +630,7 @@ def reflect(
 
             cognitive_backend = AnthropicBackend(api_key=api_key)
     except Exception:
-        pass
+        logger.debug("Anthropic backend unavailable, trying Ollama")
 
     if cognitive_backend is None:
         try:
@@ -641,7 +641,7 @@ def reflect(
                 model=getattr(config.api, "ollama_model", "llama3.2"),
             )
         except Exception:
-            pass
+            logger.debug("Ollama backend unavailable, no cognitive backend")
 
     set_reflection_deps(
         identity_manager=identity_manager,

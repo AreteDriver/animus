@@ -228,6 +228,7 @@ class TestOllamaProviderIntegration:
         # Try direct parse, then regex fallback (same as orchestrator)
         import re
 
+        parsed = None
         try:
             parsed = json.loads(content)
         except json.JSONDecodeError:
@@ -570,7 +571,7 @@ class TestModelPerformance:
                         if isinstance(parsed, dict):
                             successes += 1
                     except json.JSONDecodeError:
-                        pass
+                        continue  # Regex-extracted text was not valid JSON
 
             print(f"  [run {i + 1}/{n_runs}] {elapsed:.1f}s, parsed={successes > i}")
 

@@ -1613,7 +1613,7 @@ class TestLogsRouter:
                         async for event in logs._tail_log():
                             events.append(event)
                     except asyncio.CancelledError:
-                        pass
+                        return events  # Expected: tail cancelled after yielding
                     return events
 
                 events = _run(collect())
@@ -1655,7 +1655,7 @@ class TestLogsRouter:
                         async for event in logs._tail_log():
                             events.append(event)
                     except asyncio.CancelledError:
-                        pass
+                        return events  # Expected: sleep cancelled, no events
                     return events
 
                 events = _run(collect())

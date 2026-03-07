@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # Module-level references, wired at runtime via set_verdict_sync_deps()
 _memory_layer = None
-_last_sync: datetime | None = None
+_sync_state: dict[str, datetime | None] = {"last_sync": None}
 
 
 def set_verdict_sync_deps(
@@ -28,8 +28,6 @@ async def _run_verdict_sync() -> str | None:
     Only syncs decisions created since the last successful sync.
     Returns a nudge message if decisions were synced, None otherwise.
     """
-    global _last_sync  # noqa: PLW0603
-
     if _memory_layer is None:
         logger.debug("Verdict sync skipped — no memory layer")
         return None
@@ -40,11 +38,11 @@ async def _run_verdict_sync() -> str | None:
         logger.debug("Verdict sync skipped — arete_bridge not available")
         return None
 
-    since = _last_sync or (datetime.now(UTC) - timedelta(hours=24))
+    since = _sync_state["last_sync"] or (datetime.now(UTC) - timedelta(hours=24))
 
     try:
         count = auto_sync_verdicts(_memory_layer, since=since)
-        _last_sync = datetime.now(UTC)
+        _sync_state["last_sync"] = datetime.now(UTC)
         if count > 0:
             logger.info("Verdict sync: %d decisions synced to memory", count)
             return f"Synced {count} verdict decisions to episodic memory."

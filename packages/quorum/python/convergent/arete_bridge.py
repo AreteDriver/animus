@@ -17,6 +17,14 @@ try:
 except ImportError:
     HAS_AUTOPSY = False
 
+__all__ = [
+    "HAS_AUTOPSY",
+    "FAILURE_SEVERITY",
+    "autopsy",
+    "record_failure_outcome",
+    "leave_autopsy_marker",
+]
+
 # Maps autopsy failure_type → PhiScorer outcome
 FAILURE_SEVERITY: dict[str, str] = {
     "goal_necrosis": "failed",

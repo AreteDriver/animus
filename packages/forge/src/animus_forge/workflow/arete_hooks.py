@@ -172,25 +172,27 @@ def get_arete_hooks() -> AreteHooks | None:
     memory_layer = None
 
     try:
-        from convergent.scoring import PhiScorer
+        from convergent.scoring import PhiScorer, ScoreStore
 
-        phi_scorer = PhiScorer()
+        phi_scorer = PhiScorer(store=ScoreStore())
     except Exception:
-        pass
+        logger.debug("PhiScorer not available for Arete hooks")
 
     try:
         from convergent.stigmergy import StigmergyField
 
         stigmergy_field = StigmergyField()
     except Exception:
-        pass
+        logger.debug("StigmergyField not available for Arete hooks")
 
     try:
+        from pathlib import Path
+
         from animus.memory import MemoryLayer
 
-        memory_layer = MemoryLayer()
+        memory_layer = MemoryLayer(data_dir=Path.home() / ".animus" / "memory")
     except Exception:
-        pass
+        logger.debug("MemoryLayer not available for Arete hooks")
 
     if phi_scorer is None and stigmergy_field is None and memory_layer is None:
         return None

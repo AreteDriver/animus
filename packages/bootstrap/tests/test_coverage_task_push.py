@@ -101,7 +101,9 @@ class TestDaemonMain:
 
     def test_module_level_import(self):
         """Importing the module sets up logging."""
-        import animus_bootstrap.daemon.__main__  # noqa: F401
+        import importlib
+
+        importlib.import_module("animus_bootstrap.daemon.__main__")
 
 
 # ---------------------------------------------------------------------------

@@ -27,6 +27,15 @@ try:
 except ImportError:
     HAS_CALIBRATE = False
 
+__all__ = [
+    "HAS_VERDICT",
+    "HAS_CALIBRATE",
+    "calibrate",
+    "sync_verdict_to_memory",
+    "sync_calibrate_to_identity",
+    "auto_sync_verdicts",
+]
+
 
 def sync_verdict_to_memory(memory_layer, decision: dict) -> object | None:
     """Store a Verdict decision as episodic memory.

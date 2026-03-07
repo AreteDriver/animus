@@ -1557,7 +1557,7 @@ class TestBroadcaster:
             pass
 
         task = asyncio.ensure_future(noop())
-        await task  # let it complete
+        _ = await task  # let it complete
         bc._task = task
 
         await bc.stop()

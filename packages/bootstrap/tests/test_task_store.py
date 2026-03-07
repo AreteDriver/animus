@@ -112,11 +112,13 @@ class TestComplete:
 class TestDelete:
     def test_delete_existing(self, store):
         task_id = store.create("task")
-        assert store.delete(task_id) is True
+        result = store.delete(task_id)
+        assert result is True
         assert store.get(task_id) is None
 
     def test_delete_nonexistent(self, store):
-        assert store.delete("nope") is False
+        result = store.delete("nope")
+        assert result is False
 
     def test_delete_removes_from_list(self, store):
         task_id = store.create("task")

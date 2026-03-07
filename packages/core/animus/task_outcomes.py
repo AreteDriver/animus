@@ -133,7 +133,7 @@ class TaskOutcomeTracker:
                     outcomes.append(TaskOutcome.from_json(outcome_json))
                     continue
                 except (json.JSONDecodeError, TypeError):
-                    pass
+                    logger.debug("Failed to parse outcome JSON, falling back to content string")
             # Fallback: reconstruct from content string
             outcomes.append(
                 TaskOutcome(

@@ -402,7 +402,8 @@ class TestChromaDelete:
         store = self._make_store(tmp_data_dir)
         mem = _make_memory(content="delete me")
         store.store(mem)
-        assert store.delete(mem.id) is True
+        result = store.delete(mem.id)
+        assert result is True
         assert mem.id not in store._memories
 
     def test_delete_not_in_cache(self, tmp_data_dir):
@@ -410,12 +411,14 @@ class TestChromaDelete:
         mem = _make_memory(content="only in collection")
         store.store(mem)
         del store._memories[mem.id]
-        assert store.delete(mem.id) is True
+        result = store.delete(mem.id)
+        assert result is True
 
     def test_delete_exception(self, tmp_data_dir):
         store = self._make_store(tmp_data_dir)
         store.collection.delete = MagicMock(side_effect=RuntimeError("delete fail"))
-        assert store.delete("some-id") is False
+        result = store.delete("some-id")
+        assert result is False
 
 
 class TestChromaListAllGetTags:

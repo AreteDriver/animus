@@ -974,8 +974,6 @@ class TestTenantsCoverage:
         metadata=None,
     ):
         """Build a mock row tuple matching the SELECT column order."""
-        import json
-
         now = "2026-01-01T00:00:00"
         return (
             org_id,
@@ -1065,8 +1063,6 @@ class TestTenantsCoverage:
         assert result is False
 
     def test_get_user_organizations(self):
-        import json
-
         mgr, backend = self._make_manager()
         now = "2026-01-01T00:00:00"
         # Row has 9 columns: 8 org cols + role
@@ -1089,8 +1085,6 @@ class TestTenantsCoverage:
         assert all(isinstance(r, tuple) for r in results)
 
     def test_get_default_organization(self):
-        import json
-
         mgr, backend = self._make_manager()
         now = "2026-01-01T00:00:00"
         backend.execute.return_value = [
@@ -2667,7 +2661,6 @@ class TestDistributedRateLimiterPaths:
         from animus_forge.workflow.distributed_rate_limiter import SQLiteRateLimiter
 
         limiter = SQLiteRateLimiter(db_path=str(tmp_path / "rl.db"))
-        import asyncio
 
         result = asyncio.run(limiter.acquire("test_key", 10, 60))
         assert result.allowed is True
@@ -2677,7 +2670,6 @@ class TestDistributedRateLimiterPaths:
         from animus_forge.workflow.distributed_rate_limiter import SQLiteRateLimiter
 
         limiter = SQLiteRateLimiter(db_path=str(tmp_path / "rl.db"))
-        import asyncio
 
         async def run():
             for _ in range(5):
@@ -2691,7 +2683,6 @@ class TestDistributedRateLimiterPaths:
         from animus_forge.workflow.distributed_rate_limiter import SQLiteRateLimiter
 
         limiter = SQLiteRateLimiter(db_path=str(tmp_path / "rl.db"))
-        import asyncio
 
         async def run():
             await limiter.acquire("test_key", 10, 60)
@@ -2704,7 +2695,6 @@ class TestDistributedRateLimiterPaths:
         from animus_forge.workflow.distributed_rate_limiter import SQLiteRateLimiter
 
         limiter = SQLiteRateLimiter(db_path=str(tmp_path / "rl.db"))
-        import asyncio
 
         async def run():
             await limiter.acquire("test_key", 10, 60)
@@ -4014,7 +4004,7 @@ class TestHttpClientBatch4:
 
     @pytest.mark.asyncio
     async def test_get_shared_async_client(self):
-        import animus_forge.http.client as http_mod
+        from animus_forge.http import client as http_mod
 
         old = http_mod._async_client
         http_mod._async_client = None
@@ -4028,7 +4018,7 @@ class TestHttpClientBatch4:
 
     @pytest.mark.asyncio
     async def test_close_async_client(self):
-        import animus_forge.http.client as http_mod
+        from animus_forge.http import client as http_mod
 
         old = http_mod._async_client
         http_mod._async_client = MagicMock()
@@ -4712,6 +4702,7 @@ class TestDiscordBotBatch5:
             from animus_forge.messaging.discord_bot import DiscordBot
         except ImportError:
             pytest.skip("discord not installed")
+            return  # unreachable, but satisfies static analysis
         bot = DiscordBot.__new__(DiscordBot)
         bot._client = MagicMock()
         bot._client.user = MagicMock()
@@ -4725,6 +4716,7 @@ class TestDiscordBotBatch5:
             from animus_forge.messaging.discord_bot import DiscordBot
         except ImportError:
             pytest.skip("discord not installed")
+            return  # unreachable, but satisfies static analysis
         bot = DiscordBot.__new__(DiscordBot)
         bot.allowed_guilds = {"123"}
         assert "456" not in bot.allowed_guilds
@@ -5078,11 +5070,12 @@ class TestDevCmdBatch5:
         from pathlib import Path
 
         p = Path("/nonexistent/test_file.py")
+        raised = False
         try:
             p.read_text()
         except Exception:
-            pass
-        assert True
+            raised = True  # Expected: file doesn't exist
+        assert raised
 
 
 class TestWebhookDeliveryBatch5:
@@ -5562,7 +5555,7 @@ class TestHttpClientBatch5:
     @pytest.mark.asyncio
     async def test_get_shared_async_client_creates(self):
         """Lines 186-191: lazy creation of async client."""
-        import animus_forge.http.client as http_mod
+        from animus_forge.http import client as http_mod
 
         original = http_mod._async_client
         http_mod._async_client = None
@@ -5576,7 +5569,7 @@ class TestHttpClientBatch5:
     @pytest.mark.asyncio
     async def test_close_async_client_noop(self):
         """Lines 220-223: close when no client is noop."""
-        import animus_forge.http.client as http_mod
+        from animus_forge.http import client as http_mod
 
         original = http_mod._async_client
         http_mod._async_client = None
@@ -5585,7 +5578,7 @@ class TestHttpClientBatch5:
 
     def test_configure_http_client(self):
         """Line 57: global config assignment."""
-        import animus_forge.http.client as http_mod
+        from animus_forge.http import client as http_mod
 
         original = http_mod._default_config
         try:
@@ -5675,11 +5668,12 @@ class TestPluginInstallerBatch5:
         """Lines 256-257: unregister during update swallows exception."""
         registry = MagicMock()
         registry.unregister.side_effect = RuntimeError("not registered")
+        raised = False
         try:
             registry.unregister("test_plugin")
         except Exception:
-            pass
-        assert True
+            raised = True  # Expected: not registered
+        assert raised
 
     def test_backup_cleanup(self):
         """Line 323: backup cleanup with rmtree."""
@@ -6410,8 +6404,6 @@ class TestExecutorCoreBatch7:
 
     def test_execute_async_tracking_error(self):
         """Lines 571-572: execution tracking init fails."""
-        import asyncio
-
         from animus_forge.workflow.executor_core import WorkflowExecutor
 
         mgr = MagicMock()
@@ -6638,8 +6630,6 @@ class TestProviderManagerBatch8:
 
     def test_try_provider_async_not_found(self):
         """Line 267: async provider not found returns (None, None)."""
-        import asyncio
-
         from animus_forge.providers.manager import ProviderManager
 
         mgr = ProviderManager()
@@ -6655,8 +6645,6 @@ class TestProviderManagerBatch8:
 
     def test_try_provider_async_unexpected_error_fallback(self):
         """Line 286: async unexpected error with fallback."""
-        import asyncio
-
         from animus_forge.providers.manager import ProviderManager
 
         mgr = ProviderManager()
@@ -6775,6 +6763,7 @@ class TestBedrockProviderBatch8:
             )
         except ImportError:
             pytest.skip("bedrock provider unavailable")
+            return  # unreachable, but satisfies static analysis
 
         provider = BedrockProvider.__new__(BedrockProvider)
         provider._initialized = False
@@ -6819,6 +6808,7 @@ class TestBedrockProviderBatch8:
             )
         except ImportError:
             pytest.skip("bedrock/botocore unavailable")
+            return  # unreachable, but satisfies static analysis
 
         provider = BedrockProvider.__new__(BedrockProvider)
         provider._initialized = True
