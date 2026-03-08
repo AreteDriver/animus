@@ -81,10 +81,23 @@ class CompletionRequest:
     # Message history for conversation context
     messages: list[dict] | None = None
 
+    # Tool use support
+    tools: list[dict] | None = None  # Anthropic/OpenAI tool definitions
+    tool_choice: str | None = None  # "auto", "any", "none", or specific tool name
+
     # Tier-based routing fields (used by TierRouter, ignored by providers)
     model_tier: ModelTier | None = None
     agent_id: str | None = None
     workflow_id: str | None = None
+
+
+@dataclass
+class ToolCall:
+    """A tool call requested by the model."""
+
+    id: str
+    name: str
+    arguments: dict
 
 
 @dataclass
@@ -101,6 +114,7 @@ class CompletionResponse:
     latency_ms: float = 0
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     metadata: dict = field(default_factory=dict)
+    tool_calls: list[ToolCall] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""

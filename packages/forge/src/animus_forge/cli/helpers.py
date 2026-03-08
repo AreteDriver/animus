@@ -137,11 +137,21 @@ def get_supervisor():
         except Exception:
             pass
 
+        # Optional: tool registry for builder/tester/reviewer agents
+        tool_registry = None
+        try:
+            from animus_forge.tools.registry import ForgeToolRegistry
+
+            tool_registry = ForgeToolRegistry(enable_shell=True)
+        except Exception:
+            pass
+
         return SupervisorAgent(
             provider,
             convergence_checker=checker,
             coordination_bridge=bridge,
             budget_manager=budget_mgr,
+            tool_registry=tool_registry,
         )
     except Exception as e:
         console.print(f"[red]Could not create supervisor agent:[/red] {e}")

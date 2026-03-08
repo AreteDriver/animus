@@ -111,6 +111,9 @@ class SupervisorAgent:
     # Minimum tokens required to proceed with a delegation
     MIN_DELEGATION_TOKENS = 5000
 
+    # Agent roles that get access to tools for execution
+    TOOL_EQUIPPED_ROLES = {"builder", "tester", "reviewer", "analyst"}
+
     def __init__(
         self,
         provider: BaseProvider,
@@ -120,6 +123,7 @@ class SupervisorAgent:
         coordination_bridge: Any = None,
         budget_manager: BudgetManager | None = None,
         event_log: Any = None,
+        tool_registry: Any = None,
     ):
         """Initialize the Supervisor agent.
 
@@ -131,6 +135,7 @@ class SupervisorAgent:
             coordination_bridge: Optional Convergent GorgonBridge for prompt enrichment.
             budget_manager: Optional BudgetManager for token budget enforcement.
             event_log: Optional Convergent EventLog for coordination event tracking.
+            tool_registry: Optional ForgeToolRegistry for tool-equipped agents.
         """
         self.provider = provider
         self.backend = backend
@@ -139,6 +144,7 @@ class SupervisorAgent:
         self._bridge = coordination_bridge
         self._budget_manager = budget_manager
         self._event_log = event_log
+        self._tool_registry = tool_registry
         self._active_delegations: list[AgentDelegation] = []
 
     def _build_system_prompt(self) -> str:
@@ -257,7 +263,7 @@ class SupervisorAgent:
             agent = delegation.get("agent", "unknown")
             task = delegation.get("task", "")
 
-            tasks.append(self._run_agent(agent, task, context))
+            tasks.append(self._run_agent(agent, task, context, progress_callback))
 
         # Execute all in parallel
         completed = await asyncio.gather(*tasks, return_exceptions=True)
@@ -484,13 +490,19 @@ class SupervisorAgent:
         agent: str,
         task: str,
         context: list[dict[str, str]],
+        progress_callback: Any = None,
     ) -> str:
-        """Run a single sub-agent.
+        """Run a single sub-agent, optionally with tool access.
+
+        Tool-equipped roles (builder, tester, reviewer, analyst) get an
+        iterative tool loop — they can read files, search code, write files,
+        and run commands. Other roles get text-only completion.
 
         Args:
             agent: Agent role name.
             task: Task to perform.
             context: Conversation context.
+            progress_callback: Optional callable(stage, detail) for updates.
 
         Returns:
             Agent's response.
@@ -519,7 +531,21 @@ class SupervisorAgent:
             except Exception:
                 pass  # Budget context is advisory — never break agent execution
 
-        messages = [
+        # Add tool instructions for equipped roles
+        use_tools = (
+            self._tool_registry is not None
+            and agent in self.TOOL_EQUIPPED_ROLES
+        )
+        if use_tools:
+            tool_names = [t.name for t in self._tool_registry.tools]
+            agent_prompt += (
+                "\n\nYou have access to tools for executing your task. "
+                f"Available tools: {', '.join(tool_names)}. "
+                "Use tools to read files, search code, and verify your work. "
+                "When you're done, provide your final response as text."
+            )
+
+        messages: list[dict] = [
             {"role": "system", "content": agent_prompt},
             {
                 "role": "user",
@@ -539,7 +565,14 @@ class SupervisorAgent:
                 )
 
         try:
-            response = await self.provider.complete(messages)
+            if use_tools:
+                response = await self.provider.complete_with_tools(
+                    messages=messages,
+                    tool_registry=self._tool_registry,
+                    progress_callback=progress_callback,
+                )
+            else:
+                response = await self.provider.complete(messages)
             return response
         except Exception as e:
             logger.error(f"Agent {agent} error: {e}")

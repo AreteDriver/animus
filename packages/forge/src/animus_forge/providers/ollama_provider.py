@@ -17,6 +17,7 @@ from .base import (
     ProviderType,
     RateLimitError,
     StreamChunk,
+    ToolCall,
 )
 
 try:
@@ -188,6 +189,9 @@ class OllamaProvider(Provider):
         if request.stop_sequences:
             payload["options"]["stop"] = request.stop_sequences
 
+        if request.tools:
+            payload["tools"] = request.tools
+
         return payload
 
     def complete(self, request: CompletionRequest) -> CompletionResponse:
@@ -219,8 +223,10 @@ class OllamaProvider(Provider):
 
         latency_ms = (time.time() - start_time) * 1000
 
-        # Extract content from response
-        content = data.get("message", {}).get("content", "")
+        # Extract content and tool calls from response
+        message = data.get("message", {})
+        content = message.get("content", "")
+        tool_calls = self._extract_tool_calls(message)
 
         # Extract token counts
         prompt_eval_count = data.get("prompt_eval_count", 0)
@@ -240,6 +246,7 @@ class OllamaProvider(Provider):
                 "load_duration": data.get("load_duration"),
                 "eval_duration": data.get("eval_duration"),
             },
+            tool_calls=tool_calls,
         )
 
     async def complete_async(self, request: CompletionRequest) -> CompletionResponse:
@@ -271,7 +278,9 @@ class OllamaProvider(Provider):
 
         latency_ms = (time.time() - start_time) * 1000
 
-        content = data.get("message", {}).get("content", "")
+        message = data.get("message", {})
+        content = message.get("content", "")
+        tool_calls = self._extract_tool_calls(message)
         prompt_eval_count = data.get("prompt_eval_count", 0)
         eval_count = data.get("eval_count", 0)
 
@@ -289,7 +298,31 @@ class OllamaProvider(Provider):
                 "load_duration": data.get("load_duration"),
                 "eval_duration": data.get("eval_duration"),
             },
+            tool_calls=tool_calls,
         )
+
+    @staticmethod
+    def _extract_tool_calls(message: dict) -> list[ToolCall]:
+        """Extract tool calls from an Ollama chat response message.
+
+        Args:
+            message: The 'message' dict from Ollama's /api/chat response.
+
+        Returns:
+            List of ToolCall objects.
+        """
+        raw_calls = message.get("tool_calls", [])
+        tool_calls: list[ToolCall] = []
+        for i, call in enumerate(raw_calls):
+            fn = call.get("function", {})
+            tool_calls.append(
+                ToolCall(
+                    id=f"ollama_tool_{i}",
+                    name=fn.get("name", ""),
+                    arguments=fn.get("arguments", {}),
+                )
+            )
+        return tool_calls
 
     @property
     def supports_streaming(self) -> bool:

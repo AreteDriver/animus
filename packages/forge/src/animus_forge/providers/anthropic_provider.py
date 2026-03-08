@@ -16,6 +16,7 @@ from .base import (
     ProviderNotConfiguredError,
     ProviderType,
     RateLimitError,
+    ToolCall,
 )
 
 try:
@@ -121,6 +122,8 @@ class AnthropicProvider(Provider):
                 messages=messages,
                 max_tokens=request.max_tokens or 4096,
                 stop_sequences=request.stop_sequences,
+                tools=request.tools,
+                tool_choice=request.tool_choice,
             )
         except AnthropicRateLimitError as e:
             raise RateLimitError(str(e))
@@ -129,9 +132,7 @@ class AnthropicProvider(Provider):
 
         latency_ms = (time.time() - start_time) * 1000
 
-        content = ""
-        if response.content:
-            content = response.content[0].text if response.content else ""
+        content, tool_calls = self._extract_response(response)
 
         return CompletionResponse(
             content=content,
@@ -145,7 +146,36 @@ class AnthropicProvider(Provider):
             finish_reason=response.stop_reason,
             latency_ms=latency_ms,
             metadata={"id": response.id},
+            tool_calls=tool_calls,
         )
+
+    @staticmethod
+    def _extract_response(response: Any) -> tuple[str, list[ToolCall]]:
+        """Extract text content and tool calls from API response.
+
+        Args:
+            response: Anthropic API response object.
+
+        Returns:
+            Tuple of (text_content, tool_calls).
+        """
+        content = ""
+        tool_calls: list[ToolCall] = []
+
+        if response.content:
+            for block in response.content:
+                if hasattr(block, "text"):
+                    content += block.text
+                elif hasattr(block, "type") and block.type == "tool_use":
+                    tool_calls.append(
+                        ToolCall(
+                            id=block.id,
+                            name=block.name,
+                            arguments=block.input if isinstance(block.input, dict) else {},
+                        )
+                    )
+
+        return content, tool_calls
 
     def _build_messages(self, request: CompletionRequest) -> list[dict]:
         """Build message list for API."""
@@ -163,6 +193,8 @@ class AnthropicProvider(Provider):
         messages: list[dict],
         max_tokens: int,
         stop_sequences: list[str] | None,
+        tools: list[dict] | None = None,
+        tool_choice: str | None = None,
     ) -> Any:
         """Make API call with retry logic."""
         kwargs: dict[str, Any] = {
@@ -173,6 +205,10 @@ class AnthropicProvider(Provider):
         }
         if stop_sequences:
             kwargs["stop_sequences"] = stop_sequences
+        if tools:
+            kwargs["tools"] = tools
+        if tool_choice:
+            kwargs["tool_choice"] = {"type": tool_choice}
 
         return self._client.messages.create(**kwargs)
 
@@ -196,6 +232,8 @@ class AnthropicProvider(Provider):
                 messages=messages,
                 max_tokens=request.max_tokens or 4096,
                 stop_sequences=request.stop_sequences,
+                tools=request.tools,
+                tool_choice=request.tool_choice,
             )
         except AnthropicRateLimitError as e:
             raise RateLimitError(str(e))
@@ -204,9 +242,7 @@ class AnthropicProvider(Provider):
 
         latency_ms = (time.time() - start_time) * 1000
 
-        content = ""
-        if response.content:
-            content = response.content[0].text if response.content else ""
+        content, tool_calls = self._extract_response(response)
 
         return CompletionResponse(
             content=content,
@@ -220,6 +256,7 @@ class AnthropicProvider(Provider):
             finish_reason=response.stop_reason,
             latency_ms=latency_ms,
             metadata={"id": response.id},
+            tool_calls=tool_calls,
         )
 
     @async_with_retry(max_retries=3, base_delay=1.0, max_delay=30.0)
@@ -230,6 +267,8 @@ class AnthropicProvider(Provider):
         messages: list[dict],
         max_tokens: int,
         stop_sequences: list[str] | None,
+        tools: list[dict] | None = None,
+        tool_choice: str | None = None,
     ) -> Any:
         """Make async API call with retry logic."""
         kwargs: dict[str, Any] = {
@@ -240,6 +279,10 @@ class AnthropicProvider(Provider):
         }
         if stop_sequences:
             kwargs["stop_sequences"] = stop_sequences
+        if tools:
+            kwargs["tools"] = tools
+        if tool_choice:
+            kwargs["tool_choice"] = {"type": tool_choice}
 
         return await self._async_client.messages.create(**kwargs)
 

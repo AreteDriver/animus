@@ -10,6 +10,7 @@ from animus_forge.tools.models import (
     ToolCallResult,
 )
 from animus_forge.tools.proposals import ProposalManager
+from animus_forge.tools.registry import ForgeToolRegistry, ToolDefinition
 from animus_forge.tools.safety import PathValidator, SecurityError
 
 __all__ = [
@@ -23,4 +24,6 @@ __all__ = [
     "ToolCallResult",
     "FilesystemTools",
     "ProposalManager",
+    "ForgeToolRegistry",
+    "ToolDefinition",
 ]
