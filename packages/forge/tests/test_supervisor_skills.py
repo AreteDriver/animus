@@ -4,12 +4,21 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+import animus_forge.agents.supervisor as supervisor_module
 from animus_forge.agents.supervisor import SupervisorAgent
 from animus_forge.skills.library import SkillLibrary
 from animus_forge.skills.models import (
     SkillDefinition,
     SkillRouting,
 )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_from_file_prompts():
+    """Ensure these tests use hardcoded prompts, not config file."""
+    supervisor_module._agent_prompts_cache = {}
+    yield
+    supervisor_module._agent_prompts_cache = None
 
 
 @pytest.fixture

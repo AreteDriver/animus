@@ -7,12 +7,12 @@ and Documenter.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -25,6 +25,51 @@ if TYPE_CHECKING:
     from animus_forge.state.backends import DatabaseBackend
 
 logger = logging.getLogger(__name__)
+
+# Cached agent prompts loaded from config/agent_prompts.json
+_agent_prompts_cache: dict[str, dict[str, str]] | None = None
+
+_AGENT_PROMPTS_PATH = Path(__file__).resolve().parents[3] / "config" / "agent_prompts.json"
+
+
+def _load_agent_prompts(
+    path: Path | None = None,
+) -> dict[str, dict[str, str]]:
+    """Load agent prompts from JSON config file.
+
+    Reads and caches agent prompt definitions from the config file.
+    Returns an empty dict if the file doesn't exist or is invalid.
+
+    Args:
+        path: Optional path override (for testing). Defaults to
+            config/agent_prompts.json relative to the package root.
+
+    Returns:
+        Dict mapping role names to their prompt definitions.
+    """
+    global _agent_prompts_cache
+    if path is not None:
+        # Explicit path bypasses cache (used in tests)
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.debug("Failed to load agent prompts from %s: %s", path, exc)
+        return {}
+
+    if _agent_prompts_cache is not None:
+        return _agent_prompts_cache
+
+    try:
+        data = json.loads(_AGENT_PROMPTS_PATH.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            _agent_prompts_cache = data
+            return _agent_prompts_cache
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.debug("Failed to load agent prompts from %s: %s", _AGENT_PROMPTS_PATH, exc)
+    _agent_prompts_cache = {}
+    return _agent_prompts_cache
 
 
 class AgentRole(str, Enum):
@@ -263,23 +308,26 @@ class SupervisorAgent:
                     )
                 return results
 
-        # Group by dependency (for now, run all in parallel)
-        tasks = []
-        for delegation in delegations:
-            agent = delegation.get("agent", "unknown")
+        # Execute sequentially so each agent receives prior outputs
+        prior_results: dict[str, str] = {}
+        for i, delegation in enumerate(delegations):
+            agent = delegation.get("agent", f"agent_{i}")
             task = delegation.get("task", "")
 
-            tasks.append(self._run_agent(agent, task, context, progress_callback))
-
-        # Execute all in parallel
-        completed = await asyncio.gather(*tasks, return_exceptions=True)
-
-        for i, result in enumerate(completed):
-            agent = delegations[i].get("agent", f"agent_{i}")
-            if isinstance(result, Exception):
-                results[agent] = f"Error: {str(result)}"
-            else:
+            try:
+                result = await self._run_agent(
+                    agent,
+                    task,
+                    context,
+                    progress_callback,
+                    prior_results=prior_results if prior_results else None,
+                )
                 results[agent] = result
+            except Exception as e:
+                results[agent] = f"Error: {str(e)}"
+
+            # Accumulate for subsequent agents
+            prior_results[agent] = results[agent]
 
         # Record token usage estimates per agent
         if self._budget_manager is not None:
@@ -491,12 +539,16 @@ class SupervisorAgent:
                     {"description": conflict.get("description", "")},
                 )
 
+    # Maximum characters per prior agent output injected into context
+    MAX_PRIOR_RESULT_CHARS = 2000
+
     async def _run_agent(
         self,
         agent: str,
         task: str,
         context: list[dict[str, str]],
         progress_callback: Any = None,
+        prior_results: dict[str, str] | None = None,
     ) -> str:
         """Run a single sub-agent, optionally with tool access.
 
@@ -509,6 +561,9 @@ class SupervisorAgent:
             task: Task to perform.
             context: Conversation context.
             progress_callback: Optional callable(stage, detail) for updates.
+            prior_results: Optional mapping of role_name -> output from
+                previously completed subagents. Injected into the prompt
+                so this agent can build on prior work.
 
         Returns:
             Agent's response.
@@ -538,10 +593,7 @@ class SupervisorAgent:
                 pass  # Budget context is advisory — never break agent execution
 
         # Add tool instructions for equipped roles
-        use_tools = (
-            self._tool_registry is not None
-            and agent in self.TOOL_EQUIPPED_ROLES
-        )
+        use_tools = self._tool_registry is not None and agent in self.TOOL_EQUIPPED_ROLES
         if use_tools:
             tool_names = [t.name for t in self._tool_registry.tools]
             agent_prompt += (
@@ -551,12 +603,23 @@ class SupervisorAgent:
                 "When you're done, provide your final response as text."
             )
 
+        # Build prior agent outputs section if available
+        prior_outputs_section = ""
+        if prior_results:
+            parts = []
+            for role_name, output in prior_results.items():
+                truncated = output[: self.MAX_PRIOR_RESULT_CHARS]
+                parts.append(f"### {role_name}\n{truncated}")
+            prior_outputs_section = "\n\n## Prior Agent Outputs\n\n" + "\n\n".join(parts)
+
+        user_content = f"Task: {task}"
+        if prior_outputs_section:
+            user_content += prior_outputs_section
+        user_content += "\n\nConversation context has been provided. Please complete this task."
+
         messages: list[dict] = [
             {"role": "system", "content": agent_prompt},
-            {
-                "role": "user",
-                "content": f"Task: {task}\n\nConversation context has been provided. Please complete this task.",
-            },
+            {"role": "user", "content": user_content},
         ]
 
         # Add relevant context (last few messages)
@@ -588,12 +651,28 @@ class SupervisorAgent:
     def _get_agent_prompt(self, agent: str) -> str:
         """Get the system prompt for a sub-agent.
 
+        Loads from config/agent_prompts.json first, falling back to
+        hardcoded defaults if the file is missing or the role isn't found.
+
         Args:
             agent: Agent role name.
 
         Returns:
             System prompt for the agent.
         """
+        # Try file-based prompts first
+        file_prompts = _load_agent_prompts()
+        if agent in file_prompts:
+            entry = file_prompts[agent]
+            if isinstance(entry, dict) and "system_prompt" in entry:
+                base_prompt = entry["system_prompt"]
+                if self._skill_library:
+                    skill_context = self._skill_library.build_skill_context(agent)
+                    if skill_context:
+                        base_prompt += "\n\n" + skill_context
+                return base_prompt
+
+        # Hardcoded fallback prompts
         prompts = {
             "planner": """You are a Planning agent. Your role is to:
 - Break down complex requests into actionable steps
@@ -793,14 +872,19 @@ Focus on the most important findings and recommendations.
                 f"Round {round_num + 1}/{max_rounds}: reviewing results...",
             )
             follow_up = await self._get_follow_up_plan(
-                message, plan, results, context,
+                message,
+                plan,
+                results,
+                context,
             )
             if follow_up is None:
                 break  # Supervisor satisfied with results
 
             progress_callback("delegating", f"Round {round_num + 1}: {follow_up.analysis}")
             results = await self._execute_delegations(
-                follow_up.delegations, context, progress_callback,
+                follow_up.delegations,
+                context,
+                progress_callback,
             )
             plan = follow_up
 

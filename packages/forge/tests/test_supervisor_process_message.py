@@ -22,9 +22,7 @@ class TestProcessMessageDirect:
 
     def test_direct_response_no_delegation(self, mock_provider):
         """When LLM doesn't produce a delegation plan, return response directly."""
-        result = asyncio.run(
-            mock_provider_sup(mock_provider).process_message("What is Python?")
-        )
+        result = asyncio.run(mock_provider_sup(mock_provider).process_message("What is Python?"))
         assert result == "Direct response — no delegation needed."
 
     def test_passes_context_to_llm(self, mock_provider):
@@ -70,14 +68,16 @@ class TestProcessMessageDelegation:
 
     def test_delegates_and_synthesizes(self, mock_provider):
         """When LLM returns a delegation plan, executes agents and synthesizes."""
-        delegation_response = json.dumps({
-            "analysis": "This requires planning and building.",
-            "delegations": [
-                {"agent": "planner", "task": "Create implementation plan"},
-                {"agent": "builder", "task": "Implement the feature"},
-            ],
-            "synthesis_approach": "Combine plan with implementation",
-        })
+        delegation_response = json.dumps(
+            {
+                "analysis": "This requires planning and building.",
+                "delegations": [
+                    {"agent": "planner", "task": "Create implementation plan"},
+                    {"agent": "builder", "task": "Implement the feature"},
+                ],
+                "synthesis_approach": "Combine plan with implementation",
+            }
+        )
         # First call: supervisor analysis returns delegation plan
         # Second call: planner agent response
         # Third call: builder agent response
@@ -96,11 +96,13 @@ class TestProcessMessageDelegation:
 
     def test_delegation_progress_stages(self, mock_provider):
         """Progress callback hits all stages during delegation."""
-        delegation_response = json.dumps({
-            "analysis": "Needs analysis.",
-            "delegations": [{"agent": "analyst", "task": "Analyze data"}],
-            "synthesis_approach": "Report findings",
-        })
+        delegation_response = json.dumps(
+            {
+                "analysis": "Needs analysis.",
+                "delegations": [{"agent": "analyst", "task": "Analyze data"}],
+                "synthesis_approach": "Report findings",
+            }
+        )
         mock_provider.complete = AsyncMock(
             side_effect=[
                 f"```json\n{delegation_response}\n```",
@@ -121,11 +123,13 @@ class TestProcessMessageDelegation:
 
     def test_single_agent_delegation(self, mock_provider):
         """Single agent delegation works."""
-        delegation_response = json.dumps({
-            "analysis": "Just needs testing.",
-            "delegations": [{"agent": "tester", "task": "Write tests"}],
-            "synthesis_approach": "Return test results",
-        })
+        delegation_response = json.dumps(
+            {
+                "analysis": "Just needs testing.",
+                "delegations": [{"agent": "tester", "task": "Write tests"}],
+                "synthesis_approach": "Return test results",
+            }
+        )
         mock_provider.complete = AsyncMock(
             side_effect=[
                 f"```json\n{delegation_response}\n```",
@@ -149,11 +153,13 @@ class TestProcessMessageWithBudget:
         bm.remaining = 50000
         bm.get_budget_context.return_value = "Budget: 50K tokens remaining"
 
-        delegation_response = json.dumps({
-            "analysis": "Quick task.",
-            "delegations": [{"agent": "builder", "task": "Build it"}],
-            "synthesis_approach": "Return code",
-        })
+        delegation_response = json.dumps(
+            {
+                "analysis": "Quick task.",
+                "delegations": [{"agent": "builder", "task": "Build it"}],
+                "synthesis_approach": "Return code",
+            }
+        )
         mock_provider.complete = AsyncMock(
             side_effect=[
                 f"```json\n{delegation_response}\n```",
@@ -171,11 +177,13 @@ class TestProcessMessageWithBudget:
         bm.can_allocate.return_value = False
         bm.remaining = 100
 
-        delegation_response = json.dumps({
-            "analysis": "Complex task.",
-            "delegations": [{"agent": "builder", "task": "Build everything"}],
-            "synthesis_approach": "Return code",
-        })
+        delegation_response = json.dumps(
+            {
+                "analysis": "Complex task.",
+                "delegations": [{"agent": "builder", "task": "Build everything"}],
+                "synthesis_approach": "Return code",
+            }
+        )
         mock_provider.complete = AsyncMock(
             side_effect=[
                 f"```json\n{delegation_response}\n```",
@@ -307,3 +315,115 @@ class TestDoTaskAgentMode:
 def mock_provider_sup(provider):
     """Helper to create SupervisorAgent from mock provider."""
     return SupervisorAgent(provider=provider)
+
+
+class TestPriorResultsChaining:
+    """Tests for subagent output-to-context chaining."""
+
+    def test_prior_results_injected_into_subsequent_agents(self, mock_provider):
+        """Second agent receives the first agent's output in its prompt."""
+        delegation_response = json.dumps(
+            {
+                "analysis": "Plan then build.",
+                "delegations": [
+                    {"agent": "planner", "task": "Create a plan"},
+                    {"agent": "builder", "task": "Implement the plan"},
+                ],
+                "synthesis_approach": "Combine results",
+            }
+        )
+        call_messages: list[list[dict]] = []
+
+        async def capture_complete(messages):
+            call_messages.append(messages)
+            if len(call_messages) == 1:
+                # Supervisor analysis
+                return f"```json\n{delegation_response}\n```"
+            if len(call_messages) == 2:
+                # Planner agent
+                return "Plan: step 1, step 2, step 3"
+            if len(call_messages) == 3:
+                # Builder agent
+                return "Code: implemented all steps"
+            # Synthesis
+            return "Final: plan + code delivered."
+
+        mock_provider.complete = AsyncMock(side_effect=capture_complete)
+        sup = SupervisorAgent(provider=mock_provider)
+        asyncio.run(sup.process_message("Build auth feature"))
+
+        # Builder's messages (call_messages[2]) should contain planner output
+        builder_user_msg = call_messages[2][-1]["content"]
+        assert "## Prior Agent Outputs" in builder_user_msg
+        assert "### planner" in builder_user_msg
+        assert "step 1, step 2, step 3" in builder_user_msg
+
+    def test_first_agent_gets_no_prior_results(self, mock_provider):
+        """First agent should not receive any prior results section."""
+        delegation_response = json.dumps(
+            {
+                "analysis": "Just plan.",
+                "delegations": [
+                    {"agent": "planner", "task": "Create a plan"},
+                    {"agent": "builder", "task": "Build it"},
+                ],
+                "synthesis_approach": "Combine",
+            }
+        )
+        call_messages: list[list[dict]] = []
+
+        async def capture_complete(messages):
+            call_messages.append(messages)
+            if len(call_messages) == 1:
+                return f"```json\n{delegation_response}\n```"
+            if len(call_messages) == 2:
+                return "Planner output"
+            if len(call_messages) == 3:
+                return "Builder output"
+            return "Synthesis"
+
+        mock_provider.complete = AsyncMock(side_effect=capture_complete)
+        sup = SupervisorAgent(provider=mock_provider)
+        asyncio.run(sup.process_message("Do it"))
+
+        # Planner's user message (call_messages[1]) should NOT have prior results
+        planner_user_msg = call_messages[1][-1]["content"]
+        assert "## Prior Agent Outputs" not in planner_user_msg
+
+    def test_prior_results_truncated_at_2000_chars(self, mock_provider):
+        """Prior results longer than 2000 chars are truncated."""
+        delegation_response = json.dumps(
+            {
+                "analysis": "Two agents.",
+                "delegations": [
+                    {"agent": "analyst", "task": "Analyze"},
+                    {"agent": "builder", "task": "Build"},
+                ],
+                "synthesis_approach": "Combine",
+            }
+        )
+        long_output = "x" * 3000
+        call_messages: list[list[dict]] = []
+
+        async def capture_complete(messages):
+            call_messages.append(messages)
+            if len(call_messages) == 1:
+                return f"```json\n{delegation_response}\n```"
+            if len(call_messages) == 2:
+                return long_output
+            if len(call_messages) == 3:
+                return "Builder done"
+            return "Synthesis"
+
+        mock_provider.complete = AsyncMock(side_effect=capture_complete)
+        sup = SupervisorAgent(provider=mock_provider)
+        asyncio.run(sup.process_message("Analyze and build"))
+
+        # Builder's user message should have truncated analyst output
+        builder_user_msg = call_messages[2][-1]["content"]
+        assert "## Prior Agent Outputs" in builder_user_msg
+        assert "### analyst" in builder_user_msg
+        # Should be truncated to MAX_PRIOR_RESULT_CHARS (2000)
+        # The full 3000-char output should NOT appear
+        assert "x" * 3000 not in builder_user_msg
+        assert "x" * 2000 in builder_user_msg
