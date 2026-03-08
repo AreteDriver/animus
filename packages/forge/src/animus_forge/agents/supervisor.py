@@ -18,7 +18,9 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
+    from animus_forge.agents.agent_config import AgentConfig
     from animus_forge.agents.convergence import DelegationConvergenceChecker
+    from animus_forge.agents.subagent_manager import SubAgentManager
     from animus_forge.budget.manager import BudgetManager
     from animus_forge.providers.base import BaseProvider
     from animus_forge.skills.library import SkillLibrary
@@ -175,6 +177,8 @@ class SupervisorAgent:
         budget_manager: BudgetManager | None = None,
         event_log: Any = None,
         tool_registry: Any = None,
+        subagent_manager: SubAgentManager | None = None,
+        agent_configs: dict[str, AgentConfig] | None = None,
     ):
         """Initialize the Supervisor agent.
 
@@ -187,6 +191,8 @@ class SupervisorAgent:
             budget_manager: Optional BudgetManager for token budget enforcement.
             event_log: Optional Convergent EventLog for coordination event tracking.
             tool_registry: Optional ForgeToolRegistry for tool-equipped agents.
+            subagent_manager: Optional SubAgentManager for async parallel execution.
+            agent_configs: Optional per-role AgentConfig overrides for isolation.
         """
         self.provider = provider
         self.backend = backend
@@ -196,6 +202,8 @@ class SupervisorAgent:
         self._budget_manager = budget_manager
         self._event_log = event_log
         self._tool_registry = tool_registry
+        self._subagent_manager = subagent_manager
+        self._agent_configs = agent_configs
         self._active_delegations: list[AgentDelegation] = []
 
     def _build_system_prompt(self) -> str:
@@ -308,26 +316,35 @@ class SupervisorAgent:
                     )
                 return results
 
-        # Execute sequentially so each agent receives prior outputs
-        prior_results: dict[str, str] = {}
-        for i, delegation in enumerate(delegations):
-            agent = delegation.get("agent", f"agent_{i}")
-            task = delegation.get("task", "")
+        # Parallel execution via SubAgentManager (if available)
+        if self._subagent_manager is not None:
+            results = await self._execute_delegations_parallel(
+                delegations,
+                context,
+                progress_callback,
+                results,
+            )
+        else:
+            # Sequential fallback: each agent receives prior outputs
+            prior_results: dict[str, str] = {}
+            for i, delegation in enumerate(delegations):
+                agent = delegation.get("agent", f"agent_{i}")
+                task = delegation.get("task", "")
 
-            try:
-                result = await self._run_agent(
-                    agent,
-                    task,
-                    context,
-                    progress_callback,
-                    prior_results=prior_results if prior_results else None,
-                )
-                results[agent] = result
-            except Exception as e:
-                results[agent] = f"Error: {str(e)}"
+                try:
+                    result = await self._run_agent(
+                        agent,
+                        task,
+                        context,
+                        progress_callback,
+                        prior_results=prior_results if prior_results else None,
+                    )
+                    results[agent] = result
+                except Exception as e:
+                    results[agent] = f"Error: {str(e)}"
 
-            # Accumulate for subsequent agents
-            prior_results[agent] = results[agent]
+                # Accumulate for subsequent agents
+                prior_results[agent] = results[agent]
 
         # Record token usage estimates per agent
         if self._budget_manager is not None:
@@ -440,6 +457,87 @@ class SupervisorAgent:
 
         return results
 
+    async def _execute_delegations_parallel(
+        self,
+        delegations: list[dict],
+        context: list[dict[str, str]],
+        progress_callback: Any,
+        results: dict[str, str],
+    ) -> dict[str, str]:
+        """Execute delegations in parallel via SubAgentManager.
+
+        Each agent gets its own AgentConfig controlling isolation,
+        tool access, model routing, and timeouts.
+
+        Args:
+            delegations: List of delegation dicts.
+            context: Conversation context.
+            progress_callback: Optional progress callback.
+            results: Results dict to populate.
+
+        Returns:
+            Populated results dict.
+        """
+        from animus_forge.agents.subagent_manager import RunStatus
+
+        async def agent_executor(agent: str, task: str, config: Any) -> str:
+            """Execute a single agent with per-agent config."""
+            return await self._run_agent(
+                agent,
+                task,
+                context,
+                progress_callback,
+                agent_config=config,
+            )
+
+        runs = await self._subagent_manager.spawn_batch(
+            delegations,
+            agent_executor,
+        )
+
+        for run in runs:
+            if run.status == RunStatus.COMPLETED and run.result is not None:
+                results[run.agent] = run.result
+            elif run.status == RunStatus.TIMED_OUT:
+                results[run.agent] = (
+                    f"Agent {run.agent} timed out after {run.config.timeout_seconds}s"
+                )
+            elif run.status == RunStatus.CANCELLED:
+                results[run.agent] = f"Agent {run.agent} was cancelled"
+            else:
+                results[run.agent] = f"Error: {run.error or 'unknown failure'}"
+
+        return results
+
+    def _get_agent_tool_registry(self, config: Any) -> Any:
+        """Create a per-agent tool registry with filtered access.
+
+        If the agent has allowed_tools or denied_tools, wraps the global
+        registry with a filtered view. Otherwise returns the global one.
+
+        Args:
+            config: AgentConfig for the agent.
+
+        Returns:
+            Tool registry (possibly filtered) or None.
+        """
+        if self._tool_registry is None:
+            return None
+
+        # Check if config specifies tool filtering
+        if not hasattr(config, "allowed_tools") and not hasattr(config, "denied_tools"):
+            return self._tool_registry
+
+        all_tools = [t.name for t in self._tool_registry.tools]
+        effective = config.get_effective_tools(all_tools)
+
+        # If all tools allowed, return global registry
+        if set(effective) == set(all_tools):
+            return self._tool_registry
+
+        # Return a filtered wrapper
+        return _FilteredToolRegistry(self._tool_registry, effective)
+
     def _run_consensus_vote(
         self,
         agent_name: str,
@@ -549,12 +647,16 @@ class SupervisorAgent:
         context: list[dict[str, str]],
         progress_callback: Any = None,
         prior_results: dict[str, str] | None = None,
+        agent_config: AgentConfig | None = None,
     ) -> str:
         """Run a single sub-agent, optionally with tool access.
 
         Tool-equipped roles (builder, tester, reviewer, analyst) get an
         iterative tool loop — they can read files, search code, write files,
         and run commands. Other roles get text-only completion.
+
+        When agent_config is provided, tool access and iteration limits
+        are scoped per-agent for isolation.
 
         Args:
             agent: Agent role name.
@@ -592,10 +694,21 @@ class SupervisorAgent:
             except Exception:
                 pass  # Budget context is advisory — never break agent execution
 
-        # Add tool instructions for equipped roles
-        use_tools = self._tool_registry is not None and agent in self.TOOL_EQUIPPED_ROLES
+        # Determine tool access (per-agent config overrides global)
+        if agent_config is not None:
+            effective_registry = self._get_agent_tool_registry(agent_config)
+            effective_tools = (
+                agent_config.get_effective_tools([t.name for t in self._tool_registry.tools])
+                if self._tool_registry
+                else []
+            )
+            use_tools = effective_registry is not None and len(effective_tools) > 0
+        else:
+            effective_registry = self._tool_registry
+            use_tools = self._tool_registry is not None and agent in self.TOOL_EQUIPPED_ROLES
+
         if use_tools:
-            tool_names = [t.name for t in self._tool_registry.tools]
+            tool_names = [t.name for t in effective_registry.tools] if effective_registry else []
             agent_prompt += (
                 "\n\nYou have access to tools for executing your task. "
                 f"Available tools: {', '.join(tool_names)}. "
@@ -638,11 +751,13 @@ class SupervisorAgent:
         _start_ns = _time.perf_counter_ns()
         try:
             if use_tools:
+                max_iters = agent_config.max_tool_iterations if agent_config else 8
                 response = await self.provider.complete_with_tools(
                     messages=messages,
-                    tool_registry=self._tool_registry,
+                    tool_registry=effective_registry,
                     progress_callback=progress_callback,
                     agent_id=agent,
+                    max_iterations=max_iters,
                 )
             else:
                 response = await self.provider.complete(messages)
@@ -959,3 +1074,26 @@ If there are issues, gaps, or the task needs more work, respond with a new deleg
             return None
 
         return self._parse_delegation(response)
+
+
+class _FilteredToolRegistry:
+    """Wraps a ForgeToolRegistry with a filtered tool list.
+
+    Delegates execution to the real registry but only exposes
+    tools in the allowed set. Used for per-agent tool isolation.
+    """
+
+    def __init__(self, registry: Any, allowed_tools: list[str]):
+        self._registry = registry
+        self._allowed = set(allowed_tools)
+
+    @property
+    def tools(self) -> list:
+        """Return only allowed tools."""
+        return [t for t in self._registry.tools if t.name in self._allowed]
+
+    def execute(self, tool_name: str, arguments: dict, agent_id: str = "") -> str:
+        """Execute a tool if it's in the allowed set."""
+        if tool_name not in self._allowed:
+            return f"Error: Tool '{tool_name}' is not available for this agent."
+        return self._registry.execute(tool_name, arguments, agent_id=agent_id)
