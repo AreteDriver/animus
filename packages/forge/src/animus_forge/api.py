@@ -203,6 +203,16 @@ async def lifespan(app: FastAPI):
                 checker = create_checker()
             except Exception:
                 checker = None
+
+            # Tool registry for builder/tester/reviewer agents
+            tool_registry = None
+            try:
+                from animus_forge.tools.registry import ForgeToolRegistry
+
+                tool_registry = ForgeToolRegistry(enable_shell=True)
+            except Exception:
+                pass
+
             return SupervisorAgent(
                 provider,
                 backend=backend or state._app_state.get("backend"),
@@ -210,6 +220,7 @@ async def lifespan(app: FastAPI):
                 coordination_bridge=_coordination_bridge,
                 budget_manager=state.budget_manager,
                 event_log=state.coordination_event_log,
+                tool_registry=tool_registry,
             )
         except Exception as e:
             logger.warning(f"Could not create supervisor: {e}")

@@ -74,9 +74,22 @@ def improve_run(
         console.print("[dim]Check your API keys or that Ollama is running.[/dim]")
         raise typer.Exit(1) from None
 
+    # Wire tool registry for tool-equipped code generation
+    tool_registry = None
+    try:
+        from animus_forge.tools.registry import ForgeToolRegistry
+
+        tool_registry = ForgeToolRegistry(
+            project_root=codebase_path,
+            enable_shell=True,
+        )
+    except Exception:
+        pass
+
     orchestrator = SelfImproveOrchestrator(
         codebase_path=codebase_path,
         provider=agent_provider,
+        tool_registry=tool_registry,
     )
 
     with console.status("[cyan]Running self-improvement pipeline..."):

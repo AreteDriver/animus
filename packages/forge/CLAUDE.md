@@ -6,7 +6,7 @@ Multi-agent orchestration framework for production AI workflows
 
 ## Current State
 
-- **Version**: 1.4.0
+- **Version**: 1.5.0
 - **Language**: Python
 - **Files**: 590 across 2 languages
 - **Lines**: 220,318

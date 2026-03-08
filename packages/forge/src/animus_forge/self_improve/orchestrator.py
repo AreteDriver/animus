@@ -92,6 +92,7 @@ class SelfImproveOrchestrator:
         codebase_path: Path | str = ".",
         provider: AgentProvider | None = None,
         config: SafetyConfig | None = None,
+        tool_registry: Any = None,
     ):
         """Initialize the orchestrator.
 
@@ -99,10 +100,12 @@ class SelfImproveOrchestrator:
             codebase_path: Path to codebase root.
             provider: Optional AI provider for intelligent improvements.
             config: Safety configuration.
+            tool_registry: Optional ForgeToolRegistry for tool-equipped generation.
         """
         self.codebase_path = Path(codebase_path)
         self.provider = provider
         self.config = config or SafetyConfig.load()
+        self.tool_registry = tool_registry
 
         # Initialize components
         self.safety_checker = SafetyChecker(self.config)
@@ -428,16 +431,26 @@ Return ONLY valid JSON:
 If multiple files, return a JSON array of these objects."""
 
         try:
-            response = await self.provider.complete(
-                [
-                    {
-                        "role": "system",
-                        "content": "You are a senior Python engineer implementing code improvements. Return only valid JSON.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                max_tokens=16384,
-            )
+            messages = [
+                {
+                    "role": "system",
+                    "content": "You are a senior Python engineer implementing code improvements. "
+                    "Use tools to read files and understand the codebase before making changes. "
+                    "Return only valid JSON in your final response.",
+                },
+                {"role": "user", "content": prompt},
+            ]
+
+            if self.tool_registry is not None and hasattr(self.provider, "complete_with_tools"):
+                logger.info("Using tool-equipped generation")
+                response = await self.provider.complete_with_tools(
+                    messages=messages,
+                    tool_registry=self.tool_registry,
+                    max_iterations=6,
+                    max_tokens=16384,
+                )
+            else:
+                response = await self.provider.complete(messages, max_tokens=16384)
 
             logger.info(f"AI response length: {len(response)} chars")
             changes = self._parse_changes_response(response)

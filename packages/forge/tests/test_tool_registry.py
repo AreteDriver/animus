@@ -638,3 +638,217 @@ class TestAgentProviderMessageBuilding:
         msg = AgentProvider._build_tool_result_message(tc, "file content", "ollama")
         assert msg["role"] == "tool"
         assert msg["content"] == "file content"
+
+
+# --- Model routing and text-based fallback tests ---
+
+
+class TestModelRouting:
+    """Tests for dual-model routing (tool model vs reasoning model)."""
+
+    def test_resolve_tool_model_anthropic_returns_none(self):
+        """Anthropic always supports tools — no model switch needed."""
+        from animus_forge.agents.provider_wrapper import AgentProvider
+
+        mock_provider = MagicMock()
+        mock_provider._initialized = True
+        mock_provider.name = "anthropic"
+
+        agent = AgentProvider(mock_provider)
+        assert agent._resolve_tool_model() is None
+
+    def test_resolve_tool_model_ollama_with_tool_capable_model(self):
+        """Ollama with qwen2.5:14b — already supports tools."""
+        from animus_forge.agents.provider_wrapper import AgentProvider
+
+        mock_provider = MagicMock()
+        mock_provider._initialized = True
+        mock_provider.name = "ollama"
+        mock_provider.default_model = "qwen2.5:14b"
+
+        agent = AgentProvider(mock_provider)
+        assert agent._resolve_tool_model() is None
+
+    def test_resolve_tool_model_ollama_no_tool_support_returns_none(self):
+        """Ollama with deepseek-coder-v2 and no explicit tool_model — returns None (text fallback)."""
+        from animus_forge.agents.provider_wrapper import AgentProvider
+
+        mock_provider = MagicMock()
+        mock_provider._initialized = True
+        mock_provider.name = "ollama"
+        mock_provider.default_model = "deepseek-coder-v2"
+
+        agent = AgentProvider(mock_provider)
+        assert agent._resolve_tool_model() is None
+        assert not agent.supports_native_tools
+
+    def test_resolve_tool_model_explicit_override(self):
+        """Explicit tool_model overrides everything."""
+        from animus_forge.agents.provider_wrapper import AgentProvider
+
+        mock_provider = MagicMock()
+        mock_provider._initialized = True
+        mock_provider.name = "ollama"
+        mock_provider.default_model = "qwen2.5:14b"
+
+        agent = AgentProvider(mock_provider, tool_model="llama3.1:8b")
+        assert agent._resolve_tool_model() == "llama3.1:8b"
+
+    def test_tool_model_passed_in_request(self):
+        """Tool model override is passed in CompletionRequest.model."""
+        from animus_forge.agents.provider_wrapper import AgentProvider
+        from animus_forge.providers.base import CompletionResponse
+
+        mock_provider = MagicMock()
+        mock_provider._initialized = True
+        mock_provider.name = "ollama"
+        mock_provider.default_model = "deepseek-coder-v2"
+
+        captured_requests = []
+
+        async def capture_complete(request):
+            captured_requests.append(request)
+            return CompletionResponse(content="done", model="test", provider="test")
+
+        mock_provider.complete_async = capture_complete
+
+        agent = AgentProvider(mock_provider, tool_model="qwen2.5:14b")
+        registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
+
+        asyncio.run(agent.complete_with_tools(
+            messages=[{"role": "user", "content": "test"}],
+            tool_registry=registry,
+        ))
+        assert captured_requests[0].model == "qwen2.5:14b"
+
+    def test_create_agent_provider_ollama_sets_tool_model(self):
+        """create_agent_provider for ollama sets tool_model."""
+        from animus_forge.agents.provider_wrapper import DEFAULT_TOOL_MODEL, create_agent_provider
+
+        with patch("animus_forge.providers.ollama_provider.OllamaProvider") as MockOllama:
+            mock_instance = MagicMock()
+            mock_instance._initialized = True
+            MockOllama.return_value = mock_instance
+
+            provider = create_agent_provider("ollama")
+            assert provider._tool_model == DEFAULT_TOOL_MODEL
+
+
+class TestTextToolFallback:
+    """Tests for text-based tool parsing fallback."""
+
+    def test_build_text_tool_prompt(self):
+        """Text prompt includes tool descriptions."""
+        from animus_forge.agents.provider_wrapper import AgentProvider
+
+        registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
+        prompt = AgentProvider._build_text_tool_prompt(registry)
+        assert "read_file" in prompt
+        assert "list_files" in prompt
+        assert "tool_call" in prompt
+
+    def test_parse_tool_call_block(self):
+        """Parse ```tool_call JSON block."""
+        from animus_forge.agents.provider_wrapper import AgentProvider
+
+        registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
+        text = '''Let me read the file.
+```tool_call
+{"tool": "read_file", "arguments": {"path": "test.py"}}
+```'''
+        calls = AgentProvider._parse_text_tool_calls(text, registry)
+        assert len(calls) == 1
+        assert calls[0][0] == "read_file"
+        assert calls[0][1] == {"path": "test.py"}
+
+    def test_parse_json_block_with_tool(self):
+        """Parse ```json block containing tool call."""
+        from animus_forge.agents.provider_wrapper import AgentProvider
+
+        registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
+        text = '''I'll search for it.
+```json
+{"tool": "search_code", "arguments": {"pattern": "def main"}}
+```'''
+        calls = AgentProvider._parse_text_tool_calls(text, registry)
+        assert len(calls) == 1
+        assert calls[0][0] == "search_code"
+
+    def test_parse_bare_json_tool_call(self):
+        """Parse bare JSON object with tool key."""
+        from animus_forge.agents.provider_wrapper import AgentProvider
+
+        registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
+        text = 'I will use {"tool": "list_files", "arguments": {"path": "."}} to check.'
+        calls = AgentProvider._parse_text_tool_calls(text, registry)
+        assert len(calls) == 1
+        assert calls[0][0] == "list_files"
+
+    def test_parse_no_tool_calls(self):
+        """No tool calls in text — returns empty list."""
+        from animus_forge.agents.provider_wrapper import AgentProvider
+
+        registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
+        text = "Just a normal response without any tools."
+        calls = AgentProvider._parse_text_tool_calls(text, registry)
+        assert calls == []
+
+    def test_parse_unknown_tool_ignored(self):
+        """Tool not in registry is ignored."""
+        from animus_forge.agents.provider_wrapper import AgentProvider
+
+        registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
+        text = '```tool_call\n{"tool": "hack_mainframe", "arguments": {}}\n```'
+        calls = AgentProvider._parse_text_tool_calls(text, registry)
+        assert calls == []
+
+    def test_parse_malformed_json_ignored(self):
+        """Malformed JSON is silently skipped."""
+        from animus_forge.agents.provider_wrapper import AgentProvider
+
+        registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
+        text = '```tool_call\n{not valid json}\n```'
+        calls = AgentProvider._parse_text_tool_calls(text, registry)
+        assert calls == []
+
+    def test_text_tool_loop_executes(self):
+        """Full text-based tool loop: parse, execute, feed back."""
+        from animus_forge.agents.provider_wrapper import AgentProvider
+        from animus_forge.providers.base import CompletionResponse
+
+        tmpdir = tempfile.mkdtemp()
+        Path(tmpdir, "main.py").write_text("x = 42\n")
+
+        mock_provider = MagicMock()
+        mock_provider._initialized = True
+        mock_provider.name = "ollama"
+        mock_provider.default_model = "codellama"  # No tool support
+
+        responses = iter([
+            # First: model outputs a text tool call
+            CompletionResponse(
+                content='```tool_call\n{"tool": "read_file", "arguments": {"path": "main.py"}}\n```',
+                model="codellama",
+                provider="ollama",
+            ),
+            # Second: model responds with final answer
+            CompletionResponse(
+                content="The file contains x = 42",
+                model="codellama",
+                provider="ollama",
+            ),
+        ])
+
+        async def mock_complete(request):
+            return next(responses)
+
+        mock_provider.complete_async = mock_complete
+        agent = AgentProvider(mock_provider)
+
+        registry = ForgeToolRegistry(project_root=tmpdir)
+
+        result = asyncio.run(agent.complete_with_tools(
+            messages=[{"role": "user", "content": "read main.py"}],
+            tool_registry=registry,
+        ))
+        assert "x = 42" in result
