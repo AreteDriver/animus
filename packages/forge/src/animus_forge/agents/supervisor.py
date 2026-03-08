@@ -20,6 +20,8 @@ from pydantic import BaseModel, Field
 if TYPE_CHECKING:
     from animus_forge.agents.agent_config import AgentConfig
     from animus_forge.agents.convergence import DelegationConvergenceChecker
+    from animus_forge.agents.message_bus import AgentMessageBus
+    from animus_forge.agents.process_registry import ProcessRegistry
     from animus_forge.agents.subagent_manager import SubAgentManager
     from animus_forge.budget.manager import BudgetManager
     from animus_forge.providers.base import BaseProvider
@@ -179,6 +181,7 @@ class SupervisorAgent:
         tool_registry: Any = None,
         subagent_manager: SubAgentManager | None = None,
         agent_configs: dict[str, AgentConfig] | None = None,
+        message_bus: AgentMessageBus | None = None,
     ):
         """Initialize the Supervisor agent.
 
@@ -193,6 +196,7 @@ class SupervisorAgent:
             tool_registry: Optional ForgeToolRegistry for tool-equipped agents.
             subagent_manager: Optional SubAgentManager for async parallel execution.
             agent_configs: Optional per-role AgentConfig overrides for isolation.
+            message_bus: Optional AgentMessageBus for inter-agent messaging.
         """
         self.provider = provider
         self.backend = backend
@@ -204,7 +208,28 @@ class SupervisorAgent:
         self._tool_registry = tool_registry
         self._subagent_manager = subagent_manager
         self._agent_configs = agent_configs
+        self._message_bus = message_bus
         self._active_delegations: list[AgentDelegation] = []
+
+    @property
+    def message_bus(self) -> AgentMessageBus | None:
+        """The agent message bus, if configured."""
+        return self._message_bus
+
+    @property
+    def process_registry(self) -> ProcessRegistry | None:
+        """Build a ProcessRegistry from available managers.
+
+        Lazily constructs a ProcessRegistry aggregating all
+        registered background task systems.
+        """
+        from animus_forge.agents.process_registry import ProcessRegistry
+
+        if not any([self._subagent_manager, self._budget_manager]):
+            return None
+        return ProcessRegistry(
+            subagent_manager=self._subagent_manager,
+        )
 
     def _build_system_prompt(self) -> str:
         """Build the system prompt based on capabilities."""
@@ -316,6 +341,16 @@ class SupervisorAgent:
                     )
                 return results
 
+        # Publish delegation start to message bus
+        if self._message_bus is not None:
+            for d in delegations:
+                agent_name = d.get("agent", "unknown")
+                self._message_bus.publish(
+                    topic="delegation.started",
+                    sender="supervisor",
+                    payload={"agent": agent_name, "task": d.get("task", "")[:200]},
+                )
+
         # Parallel execution via SubAgentManager (if available)
         if self._subagent_manager is not None:
             results = await self._execute_delegations_parallel(
@@ -359,6 +394,22 @@ class SupervisorAgent:
                     )
                 except Exception as e:
                     logger.warning("Budget recording failed for %s: %s", agent_name, e)
+
+        # Publish delegation completions to message bus
+        if self._message_bus is not None:
+            for agent_name, agent_result in results.items():
+                is_error = agent_result.startswith("Error:") or (
+                    agent_result.startswith("Agent ") and "error:" in agent_result
+                )
+                self._message_bus.publish(
+                    topic="delegation.completed" if not is_error else "delegation.failed",
+                    sender="supervisor",
+                    payload={
+                        "agent": agent_name,
+                        "success": not is_error,
+                        "result_length": len(agent_result),
+                    },
+                )
 
         # Consensus voting: for consensus-gated delegations, collect votes
         if self._bridge is not None:
