@@ -633,6 +633,9 @@ class SupervisorAgent:
                     },
                 )
 
+        import time as _time
+
+        _start_ns = _time.perf_counter_ns()
         try:
             if use_tools:
                 response = await self.provider.complete_with_tools(
@@ -643,6 +646,22 @@ class SupervisorAgent:
                 )
             else:
                 response = await self.provider.complete(messages)
+
+            # Trace to ChainLog (fire-and-forget, never blocks)
+            _duration = (_time.perf_counter_ns() - _start_ns) // 1_000_000
+            try:
+                from animus_forge.agents.chainlog_bridge import trace_agent_action
+
+                await trace_agent_action(
+                    agent_id=agent,
+                    action_type="delegation",
+                    input_data={"task": task[:500]},
+                    output=response[:500] if isinstance(response, str) else str(response)[:500],
+                    duration_ms=_duration,
+                )
+            except Exception:
+                pass  # ChainLog tracing is advisory — never break agent execution
+
             return response
         except Exception as e:
             logger.error(f"Agent {agent} error: {e}")
