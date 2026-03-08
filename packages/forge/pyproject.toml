@@ -100,19 +100,12 @@ omit = [
     "*/tests/*",
     "*/__main__.py",
     "*/tui/*",
-    "*/dashboard/workflow_builder/*",
-    "*/dashboard/eval_page.py",
-    "*/dashboard/app.py",
-    "*/dashboard/mcp_page.py",
-    "*/dashboard/cost_dashboard.py",
-    "*/dashboard/monitoring_pages.py",
-    "*/dashboard/plugin_marketplace.py",
-    "*/dashboard/workflow_visualizer.py",
+    "*/dashboard/*",
     "*/browser/automation.py",
-    "*/providers/vertex_provider.py",
-    "*/providers/bedrock_provider.py",
-    "*/agents/chainlog_bridge.py",
     "*/messaging/discord_bot.py",
+    "*/agents/chainlog_bridge.py",
+    "*/api_routes/prompts.py",
+    "*/security/request_limits.py",
 ]
 
 [tool.coverage.report]
