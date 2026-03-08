@@ -17,6 +17,7 @@ from .executor_approval import ApprovalHandlerMixin
 from .executor_arete import AreteToolsHandlerMixin
 from .executor_error import ErrorHandlerMixin
 from .executor_integrations import IntegrationHandlersMixin
+from .executor_loop import LoopHandlerMixin
 from .executor_mcp import MCPHandlersMixin
 from .executor_parallel_exec import ParallelGroupMixin
 from .executor_patterns import DistributionPatternsMixin
@@ -36,6 +37,7 @@ class WorkflowExecutor(
     MCPHandlersMixin,
     DistributionPatternsMixin,
     ApprovalHandlerMixin,
+    LoopHandlerMixin,
     AreteToolsHandlerMixin,
 ):
     """Executes workflows with contract validation and state persistence.
@@ -101,6 +103,8 @@ class WorkflowExecutor(
             "mcp_tool": self._execute_mcp_tool,
             # Approval gate
             "approval": self._execute_approval,
+            # Loop
+            "loop": self._execute_loop,
             # Integration handlers
             "github": self._execute_github,
             "notion": self._execute_notion,
