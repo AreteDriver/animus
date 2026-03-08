@@ -30,7 +30,10 @@ class TestDoTaskStreamingProgress:
         mock_supervisor.process_message = AsyncMock(return_value="Done")
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp", "language": "python"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp", "language": "python"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev.get_supervisor", return_value=mock_supervisor),
             patch("animus_forge.cli.commands.dev.console"),
@@ -65,12 +68,22 @@ class TestDoTaskStreamingProgress:
         mock_supervisor.process_message = AsyncMock(return_value="Done")
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp", "language": "python"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp", "language": "python"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev.get_supervisor", return_value=mock_supervisor),
             patch("animus_forge.cli.commands.dev.console"),
         ):
-            do_task(task="test", workflow=None, dry_run=False, json_output=True, live=False, verify=False)
+            do_task(
+                task="test",
+                workflow=None,
+                dry_run=False,
+                json_output=True,
+                live=False,
+                verify=False,
+            )
 
         output = capsys.readouterr().out
         data = json.loads(output)
@@ -85,12 +98,22 @@ class TestDoTaskStreamingProgress:
         from animus_forge.cli.commands.dev import do_task
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev.console"),
             pytest.raises(Exit),
         ):
-            do_task(task="test", workflow=None, dry_run=True, json_output=False, live=False, verify=False)
+            do_task(
+                task="test",
+                workflow=None,
+                dry_run=True,
+                json_output=False,
+                live=False,
+                verify=False,
+            )
 
 
 class TestDoTaskPersistence:
@@ -105,17 +128,30 @@ class TestDoTaskPersistence:
         mock_store = MagicMock()
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev.get_supervisor", return_value=mock_supervisor),
             patch("animus_forge.cli.commands.dev.console"),
             patch("animus_forge.db.get_task_store", return_value=mock_store),
         ):
-            do_task(task="build feature", workflow=None, dry_run=False, json_output=False, live=False, verify=False)
+            do_task(
+                task="build feature",
+                workflow=None,
+                dry_run=False,
+                json_output=False,
+                live=False,
+                verify=False,
+            )
 
         mock_store.record_task.assert_called_once()
         call_kwargs = mock_store.record_task.call_args
-        assert call_kwargs.kwargs.get("workflow_id") == "supervisor" or call_kwargs[1].get("workflow_id") == "supervisor"
+        assert (
+            call_kwargs.kwargs.get("workflow_id") == "supervisor"
+            or call_kwargs[1].get("workflow_id") == "supervisor"
+        )
 
     def test_persistence_failure_is_silent(self):
         """If TaskStore raises, do_task still completes."""
@@ -125,14 +161,24 @@ class TestDoTaskPersistence:
         mock_supervisor.process_message = AsyncMock(return_value="Done")
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev.get_supervisor", return_value=mock_supervisor),
             patch("animus_forge.cli.commands.dev.console"),
             patch("animus_forge.db.get_task_store", side_effect=ImportError("no db")),
         ):
             # Should not raise
-            do_task(task="test", workflow=None, dry_run=False, json_output=False, live=False, verify=False)
+            do_task(
+                task="test",
+                workflow=None,
+                dry_run=False,
+                json_output=False,
+                live=False,
+                verify=False,
+            )
 
 
 class TestRunSingleAgent:
@@ -158,7 +204,10 @@ class TestRunSingleAgent:
         mock_client.execute_agent.return_value = {"success": True, "output": "client result"}
 
         with (
-            patch("animus_forge.cli.commands.dev.get_supervisor", side_effect=RuntimeError("no supervisor")),
+            patch(
+                "animus_forge.cli.commands.dev.get_supervisor",
+                side_effect=RuntimeError("no supervisor"),
+            ),
             patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
         ):
             result = _run_single_agent("builder", "build it")
@@ -173,7 +222,9 @@ class TestRunSingleAgent:
         mock_client.execute_agent.return_value = {"success": False, "error": "rate limit"}
 
         with (
-            patch("animus_forge.cli.commands.dev.get_supervisor", side_effect=RuntimeError("no sup")),
+            patch(
+                "animus_forge.cli.commands.dev.get_supervisor", side_effect=RuntimeError("no sup")
+            ),
             patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
         ):
             result = _run_single_agent("builder", "build it")
@@ -185,8 +236,13 @@ class TestRunSingleAgent:
         from animus_forge.cli.commands.dev import _run_single_agent
 
         with (
-            patch("animus_forge.cli.commands.dev.get_supervisor", side_effect=RuntimeError("no sup")),
-            patch("animus_forge.cli.commands.dev.get_claude_client", side_effect=RuntimeError("no client")),
+            patch(
+                "animus_forge.cli.commands.dev.get_supervisor", side_effect=RuntimeError("no sup")
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.get_claude_client",
+                side_effect=RuntimeError("no client"),
+            ),
         ):
             result = _run_single_agent("builder", "build it")
 
@@ -287,7 +343,10 @@ class TestDevCommands:
         from animus_forge.cli.commands.dev import plan
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev._run_single_agent", return_value="Step 1\nStep 2"),
             patch("animus_forge.cli.commands.dev.console"),
@@ -306,9 +365,14 @@ class TestDevCommands:
         plan_file.write_text("1. Create module\n2. Add tests")
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": str(tmp_path)}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": str(tmp_path)},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
-            patch("animus_forge.cli.commands.dev._run_single_agent", return_value="Built") as mock_agent,
+            patch(
+                "animus_forge.cli.commands.dev._run_single_agent", return_value="Built"
+            ) as mock_agent,
             patch("animus_forge.cli.commands.dev.console"),
         ):
             build(description="auth module", plan=str(plan_file), json_output=False)
@@ -322,9 +386,14 @@ class TestDevCommands:
         from animus_forge.cli.commands.dev import build
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
-            patch("animus_forge.cli.commands.dev._run_single_agent", return_value="Built") as mock_agent,
+            patch(
+                "animus_forge.cli.commands.dev._run_single_agent", return_value="Built"
+            ) as mock_agent,
             patch("animus_forge.cli.commands.dev.console"),
         ):
             build(description="auth", plan="step 1: create", json_output=False)
@@ -337,9 +406,14 @@ class TestDevCommands:
         from animus_forge.cli.commands.dev import build
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
-            patch("animus_forge.cli.commands.dev._run_single_agent", return_value="def auth(): pass"),
+            patch(
+                "animus_forge.cli.commands.dev._run_single_agent", return_value="def auth(): pass"
+            ),
             patch("animus_forge.cli.commands.dev.console"),
         ):
             build(description="auth", plan=None, json_output=True)
@@ -355,9 +429,15 @@ class TestDevCommands:
         src.write_text("def login(): pass")
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": str(tmp_path)}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": str(tmp_path)},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
-            patch("animus_forge.cli.commands.dev._run_single_agent", return_value="def test_login(): assert True") as mock_agent,
+            patch(
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="def test_login(): assert True",
+            ) as mock_agent,
             patch("animus_forge.cli.commands.dev.console"),
         ):
             test(target=str(src), json_output=False)
@@ -370,7 +450,10 @@ class TestDevCommands:
         from animus_forge.cli.commands.dev import test
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev._run_single_agent", return_value="tests"),
             patch("animus_forge.cli.commands.dev.console"),
@@ -385,7 +468,10 @@ class TestDevCommands:
         from animus_forge.cli.commands.dev import review
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev._run_single_agent", return_value="Score: 9"),
             patch("animus_forge.cli.commands.dev.console"),
@@ -400,7 +486,10 @@ class TestDevCommands:
         from animus_forge.cli.commands.dev import ask
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev._run_single_agent", return_value="It uses JWT"),
             patch("animus_forge.cli.commands.dev.console"),
@@ -428,14 +517,24 @@ class TestRunYamlWorkflow:
         mock_wf.steps = [mock_step]
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev.console"),
             patch("animus_forge.workflow.loader.load_workflow", return_value=mock_wf),
             patch("pathlib.Path.exists", return_value=True),
             pytest.raises(Exit),
         ):
-            do_task(task="test", workflow="my_workflow", dry_run=True, json_output=False, live=False, verify=False)
+            do_task(
+                task="test",
+                workflow="my_workflow",
+                dry_run=True,
+                json_output=False,
+                live=False,
+                verify=False,
+            )
 
     def test_workflow_json_output(self, capsys):
         """Workflow execution with --json outputs results."""
@@ -456,14 +555,26 @@ class TestRunYamlWorkflow:
         mock_wf.steps = []
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev.console"),
             patch("animus_forge.workflow.loader.load_workflow", return_value=mock_wf),
-            patch("animus_forge.cli.commands.dev.get_workflow_executor", return_value=mock_executor),
+            patch(
+                "animus_forge.cli.commands.dev.get_workflow_executor", return_value=mock_executor
+            ),
             patch("pathlib.Path.exists", return_value=True),
         ):
-            do_task(task="test", workflow="my_wf", dry_run=False, json_output=True, live=False, verify=False)
+            do_task(
+                task="test",
+                workflow="my_wf",
+                dry_run=False,
+                json_output=True,
+                live=False,
+                verify=False,
+            )
 
         data = json.loads(capsys.readouterr().out)
         assert data["status"] == "success"
@@ -492,14 +603,26 @@ class TestRunYamlWorkflow:
         mock_wf.steps = []
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev.console") as mock_console,
             patch("animus_forge.workflow.loader.load_workflow", return_value=mock_wf),
-            patch("animus_forge.cli.commands.dev.get_workflow_executor", return_value=mock_executor),
+            patch(
+                "animus_forge.cli.commands.dev.get_workflow_executor", return_value=mock_executor
+            ),
             patch("pathlib.Path.exists", return_value=True),
         ):
-            do_task(task="test", workflow="wf", dry_run=False, json_output=False, live=False, verify=False)
+            do_task(
+                task="test",
+                workflow="wf",
+                dry_run=False,
+                json_output=False,
+                live=False,
+                verify=False,
+            )
 
         # Verify error was printed
         printed = " ".join(str(c) for c in mock_console.print.call_args_list)

@@ -107,18 +107,24 @@ class TestForgeToolRegistry:
         assert "test.py" in result
 
     def test_execute_write_file(self):
-        result = self.registry.execute("write_file", {
-            "path": "new_file.txt",
-            "content": "new content",
-        })
+        result = self.registry.execute(
+            "write_file",
+            {
+                "path": "new_file.txt",
+                "content": "new content",
+            },
+        )
         assert "Written" in result
         assert (Path(self.tmpdir) / "new_file.txt").read_text() == "new content"
 
     def test_execute_write_file_creates_subdirs(self):
-        result = self.registry.execute("write_file", {
-            "path": "sub/dir/file.txt",
-            "content": "deep content",
-        })
+        result = self.registry.execute(
+            "write_file",
+            {
+                "path": "sub/dir/file.txt",
+                "content": "deep content",
+            },
+        )
         assert "Written" in result
         assert (Path(self.tmpdir) / "sub/dir/file.txt").read_text() == "deep content"
 
@@ -182,10 +188,13 @@ class TestForgeToolRegistryShell:
         assert "Empty command" in result
 
     def test_run_command_timeout(self):
-        result = self.registry.execute("run_command", {
-            "command": "python3 -c \"import time; time.sleep(10)\"",
-            "timeout": 1,
-        })
+        result = self.registry.execute(
+            "run_command",
+            {
+                "command": 'python3 -c "import time; time.sleep(10)"',
+                "timeout": 1,
+            },
+        )
         assert "timed out" in result
 
 
@@ -215,15 +224,19 @@ class TestAgentProviderToolLoop:
         """Model responds with text only — no tool loop."""
         from animus_forge.providers.base import CompletionResponse
 
-        agent = self._make_provider([
-            CompletionResponse(content="Just text", model="test", provider="test"),
-        ])
+        agent = self._make_provider(
+            [
+                CompletionResponse(content="Just text", model="test", provider="test"),
+            ]
+        )
         registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
 
-        result = asyncio.run(agent.complete_with_tools(
-            messages=[{"role": "user", "content": "hello"}],
-            tool_registry=registry,
-        ))
+        result = asyncio.run(
+            agent.complete_with_tools(
+                messages=[{"role": "user", "content": "hello"}],
+                tool_registry=registry,
+            )
+        )
         assert result == "Just text"
 
     def test_complete_with_tools_single_iteration(self):
@@ -233,29 +246,33 @@ class TestAgentProviderToolLoop:
         tmpdir = tempfile.mkdtemp()
         Path(tmpdir, "main.py").write_text("x = 1\n")
 
-        agent = self._make_provider([
-            # First call: tool use
-            CompletionResponse(
-                content="Let me check",
-                model="test",
-                provider="test",
-                tool_calls=[
-                    ToolCall(id="tc1", name="read_file", arguments={"path": "main.py"}),
-                ],
-            ),
-            # Second call: text response
-            CompletionResponse(
-                content="The file contains x = 1",
-                model="test",
-                provider="test",
-            ),
-        ])
+        agent = self._make_provider(
+            [
+                # First call: tool use
+                CompletionResponse(
+                    content="Let me check",
+                    model="test",
+                    provider="test",
+                    tool_calls=[
+                        ToolCall(id="tc1", name="read_file", arguments={"path": "main.py"}),
+                    ],
+                ),
+                # Second call: text response
+                CompletionResponse(
+                    content="The file contains x = 1",
+                    model="test",
+                    provider="test",
+                ),
+            ]
+        )
         registry = ForgeToolRegistry(project_root=tmpdir)
 
-        result = asyncio.run(agent.complete_with_tools(
-            messages=[{"role": "user", "content": "read main.py"}],
-            tool_registry=registry,
-        ))
+        result = asyncio.run(
+            agent.complete_with_tools(
+                messages=[{"role": "user", "content": "read main.py"}],
+                tool_registry=registry,
+            )
+        )
         assert "x = 1" in result
 
     def test_complete_with_tools_multiple_iterations(self):
@@ -266,25 +283,35 @@ class TestAgentProviderToolLoop:
         Path(tmpdir, "a.py").write_text("a = 1\n")
         Path(tmpdir, "b.py").write_text("b = 2\n")
 
-        agent = self._make_provider([
-            CompletionResponse(
-                content="", model="test", provider="test",
-                tool_calls=[ToolCall(id="t1", name="read_file", arguments={"path": "a.py"})],
-            ),
-            CompletionResponse(
-                content="", model="test", provider="test",
-                tool_calls=[ToolCall(id="t2", name="read_file", arguments={"path": "b.py"})],
-            ),
-            CompletionResponse(
-                content="a=1, b=2", model="test", provider="test",
-            ),
-        ])
+        agent = self._make_provider(
+            [
+                CompletionResponse(
+                    content="",
+                    model="test",
+                    provider="test",
+                    tool_calls=[ToolCall(id="t1", name="read_file", arguments={"path": "a.py"})],
+                ),
+                CompletionResponse(
+                    content="",
+                    model="test",
+                    provider="test",
+                    tool_calls=[ToolCall(id="t2", name="read_file", arguments={"path": "b.py"})],
+                ),
+                CompletionResponse(
+                    content="a=1, b=2",
+                    model="test",
+                    provider="test",
+                ),
+            ]
+        )
         registry = ForgeToolRegistry(project_root=tmpdir)
 
-        result = asyncio.run(agent.complete_with_tools(
-            messages=[{"role": "user", "content": "read both files"}],
-            tool_registry=registry,
-        ))
+        result = asyncio.run(
+            agent.complete_with_tools(
+                messages=[{"role": "user", "content": "read both files"}],
+                tool_registry=registry,
+            )
+        )
         assert "a=1" in result
 
     def test_complete_with_tools_max_iterations(self):
@@ -296,23 +323,25 @@ class TestAgentProviderToolLoop:
         # 3 tool responses (one per iteration) + 1 forced final text response
         responses = [
             CompletionResponse(
-                content="", model="test", provider="test",
+                content="",
+                model="test",
+                provider="test",
                 tool_calls=[ToolCall(id=f"t{i}", name="list_files", arguments={})],
             )
             for i in range(3)
         ]
-        responses.append(
-            CompletionResponse(content="forced final", model="test", provider="test")
-        )
+        responses.append(CompletionResponse(content="forced final", model="test", provider="test"))
 
         agent = self._make_provider(responses)
         registry = ForgeToolRegistry(project_root=tmpdir)
 
-        result = asyncio.run(agent.complete_with_tools(
-            messages=[{"role": "user", "content": "loop forever"}],
-            tool_registry=registry,
-            max_iterations=3,
-        ))
+        result = asyncio.run(
+            agent.complete_with_tools(
+                messages=[{"role": "user", "content": "loop forever"}],
+                tool_registry=registry,
+                max_iterations=3,
+            )
+        )
         assert "forced final" in result
 
     def test_complete_with_tools_progress_callback(self):
@@ -325,39 +354,51 @@ class TestAgentProviderToolLoop:
         def cb(stage, detail=""):
             progress_calls.append((stage, detail))
 
-        agent = self._make_provider([
-            CompletionResponse(
-                content="", model="test", provider="test",
-                tool_calls=[ToolCall(id="t1", name="list_files", arguments={})],
-            ),
-            CompletionResponse(content="done", model="test", provider="test"),
-        ])
+        agent = self._make_provider(
+            [
+                CompletionResponse(
+                    content="",
+                    model="test",
+                    provider="test",
+                    tool_calls=[ToolCall(id="t1", name="list_files", arguments={})],
+                ),
+                CompletionResponse(content="done", model="test", provider="test"),
+            ]
+        )
         registry = ForgeToolRegistry(project_root=tmpdir)
 
-        asyncio.run(agent.complete_with_tools(
-            messages=[{"role": "user", "content": "test"}],
-            tool_registry=registry,
-            progress_callback=cb,
-        ))
+        asyncio.run(
+            agent.complete_with_tools(
+                messages=[{"role": "user", "content": "test"}],
+                tool_registry=registry,
+                progress_callback=cb,
+            )
+        )
         assert any("tools" in call[0] for call in progress_calls)
 
     def test_complete_with_tools_unknown_tool_handled(self):
         """Tool not in registry returns error string, doesn't crash."""
         from animus_forge.providers.base import CompletionResponse, ToolCall
 
-        agent = self._make_provider([
-            CompletionResponse(
-                content="", model="test", provider="test",
-                tool_calls=[ToolCall(id="t1", name="nonexistent_tool", arguments={})],
-            ),
-            CompletionResponse(content="handled gracefully", model="test", provider="test"),
-        ])
+        agent = self._make_provider(
+            [
+                CompletionResponse(
+                    content="",
+                    model="test",
+                    provider="test",
+                    tool_calls=[ToolCall(id="t1", name="nonexistent_tool", arguments={})],
+                ),
+                CompletionResponse(content="handled gracefully", model="test", provider="test"),
+            ]
+        )
         registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
 
-        result = asyncio.run(agent.complete_with_tools(
-            messages=[{"role": "user", "content": "test"}],
-            tool_registry=registry,
-        ))
+        result = asyncio.run(
+            agent.complete_with_tools(
+                messages=[{"role": "user", "content": "test"}],
+                tool_registry=registry,
+            )
+        )
         assert "handled gracefully" in result
 
 
@@ -401,7 +442,9 @@ class TestSupervisorToolEquipped:
             tool_registry=registry,
         )
 
-        with patch.object(supervisor.provider, "complete_with_tools", new_callable=AsyncMock) as mock_tools:
+        with patch.object(
+            supervisor.provider, "complete_with_tools", new_callable=AsyncMock
+        ) as mock_tools:
             mock_tools.return_value = "built with tools"
             result = asyncio.run(supervisor._run_agent("builder", "build something", []))
             mock_tools.assert_called_once()
@@ -432,7 +475,9 @@ class TestSupervisorToolEquipped:
             tool_registry=registry,
         )
 
-        with patch.object(supervisor.provider, "complete_with_tools", new_callable=AsyncMock) as mock_tools:
+        with patch.object(
+            supervisor.provider, "complete_with_tools", new_callable=AsyncMock
+        ) as mock_tools:
             mock_tools.return_value = "tested with tools"
             asyncio.run(supervisor._run_agent("tester", "test something", []))
             mock_tools.assert_called_once()
@@ -709,10 +754,12 @@ class TestModelRouting:
         agent = AgentProvider(mock_provider, tool_model="qwen2.5:14b")
         registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
 
-        asyncio.run(agent.complete_with_tools(
-            messages=[{"role": "user", "content": "test"}],
-            tool_registry=registry,
-        ))
+        asyncio.run(
+            agent.complete_with_tools(
+                messages=[{"role": "user", "content": "test"}],
+                tool_registry=registry,
+            )
+        )
         assert captured_requests[0].model == "qwen2.5:14b"
 
     def test_create_agent_provider_ollama_sets_tool_model(self):
@@ -746,10 +793,10 @@ class TestTextToolFallback:
         from animus_forge.agents.provider_wrapper import AgentProvider
 
         registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
-        text = '''Let me read the file.
+        text = """Let me read the file.
 ```tool_call
 {"tool": "read_file", "arguments": {"path": "test.py"}}
-```'''
+```"""
         calls = AgentProvider._parse_text_tool_calls(text, registry)
         assert len(calls) == 1
         assert calls[0][0] == "read_file"
@@ -760,10 +807,10 @@ class TestTextToolFallback:
         from animus_forge.agents.provider_wrapper import AgentProvider
 
         registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
-        text = '''I'll search for it.
+        text = """I'll search for it.
 ```json
 {"tool": "search_code", "arguments": {"pattern": "def main"}}
-```'''
+```"""
         calls = AgentProvider._parse_text_tool_calls(text, registry)
         assert len(calls) == 1
         assert calls[0][0] == "search_code"
@@ -801,7 +848,7 @@ class TestTextToolFallback:
         from animus_forge.agents.provider_wrapper import AgentProvider
 
         registry = ForgeToolRegistry(project_root=tempfile.mkdtemp())
-        text = '```tool_call\n{not valid json}\n```'
+        text = "```tool_call\n{not valid json}\n```"
         calls = AgentProvider._parse_text_tool_calls(text, registry)
         assert calls == []
 
@@ -818,20 +865,22 @@ class TestTextToolFallback:
         mock_provider.name = "ollama"
         mock_provider.default_model = "codellama"  # No tool support
 
-        responses = iter([
-            # First: model outputs a text tool call
-            CompletionResponse(
-                content='```tool_call\n{"tool": "read_file", "arguments": {"path": "main.py"}}\n```',
-                model="codellama",
-                provider="ollama",
-            ),
-            # Second: model responds with final answer
-            CompletionResponse(
-                content="The file contains x = 42",
-                model="codellama",
-                provider="ollama",
-            ),
-        ])
+        responses = iter(
+            [
+                # First: model outputs a text tool call
+                CompletionResponse(
+                    content='```tool_call\n{"tool": "read_file", "arguments": {"path": "main.py"}}\n```',
+                    model="codellama",
+                    provider="ollama",
+                ),
+                # Second: model responds with final answer
+                CompletionResponse(
+                    content="The file contains x = 42",
+                    model="codellama",
+                    provider="ollama",
+                ),
+            ]
+        )
 
         async def mock_complete(request):
             return next(responses)
@@ -841,10 +890,12 @@ class TestTextToolFallback:
 
         registry = ForgeToolRegistry(project_root=tmpdir)
 
-        result = asyncio.run(agent.complete_with_tools(
-            messages=[{"role": "user", "content": "read main.py"}],
-            tool_registry=registry,
-        ))
+        result = asyncio.run(
+            agent.complete_with_tools(
+                messages=[{"role": "user", "content": "read main.py"}],
+                tool_registry=registry,
+            )
+        )
         assert "x = 42" in result
 
 
@@ -898,10 +949,13 @@ class TestToolAuditLogging:
     def test_audit_sanitizes_content(self):
         """File content is not logged — only size."""
         with patch("animus_forge.tools.registry.audit_logger") as mock_audit:
-            self.registry.execute("write_file", {
-                "path": "out.txt",
-                "content": "secret data here",
-            })
+            self.registry.execute(
+                "write_file",
+                {
+                    "path": "out.txt",
+                    "content": "secret data here",
+                },
+            )
             entry = json.loads(mock_audit.info.call_args[0][0])
             assert "secret data" not in json.dumps(entry)
             assert "(16 chars)" in json.dumps(entry)
@@ -929,32 +983,51 @@ class TestWriteApprovalGate:
 
     def test_write_queued_not_applied(self):
         """With approval gate on, write_file queues instead of writing."""
-        result = self.registry.execute("write_file", {
-            "path": "test.txt",
-            "content": "hello",
-        })
+        result = self.registry.execute(
+            "write_file",
+            {
+                "path": "test.txt",
+                "content": "hello",
+            },
+        )
         assert "queued for approval" in result
         assert not (Path(self.tmpdir) / "test.txt").exists()
 
     def test_pending_writes_tracked(self):
         """Pending writes are accessible via property."""
-        self.registry.execute("write_file", {
-            "path": "a.txt", "content": "aaa",
-        })
-        self.registry.execute("write_file", {
-            "path": "b.txt", "content": "bbb",
-        })
+        self.registry.execute(
+            "write_file",
+            {
+                "path": "a.txt",
+                "content": "aaa",
+            },
+        )
+        self.registry.execute(
+            "write_file",
+            {
+                "path": "b.txt",
+                "content": "bbb",
+            },
+        )
         assert len(self.registry.pending_writes) == 2
         assert self.registry.pending_writes[0]["path"] == "a.txt"
 
     def test_approve_single_write(self):
         """Approve a specific pending write by index."""
-        self.registry.execute("write_file", {
-            "path": "a.txt", "content": "aaa",
-        })
-        self.registry.execute("write_file", {
-            "path": "b.txt", "content": "bbb",
-        })
+        self.registry.execute(
+            "write_file",
+            {
+                "path": "a.txt",
+                "content": "aaa",
+            },
+        )
+        self.registry.execute(
+            "write_file",
+            {
+                "path": "b.txt",
+                "content": "bbb",
+            },
+        )
         result = self.registry.approve_write(0)
         assert "Approved" in result
         assert (Path(self.tmpdir) / "a.txt").read_text() == "aaa"
@@ -968,12 +1041,20 @@ class TestWriteApprovalGate:
 
     def test_approve_all_writes(self):
         """Approve all pending writes at once."""
-        self.registry.execute("write_file", {
-            "path": "x.txt", "content": "xxx",
-        })
-        self.registry.execute("write_file", {
-            "path": "y.txt", "content": "yyy",
-        })
+        self.registry.execute(
+            "write_file",
+            {
+                "path": "x.txt",
+                "content": "xxx",
+            },
+        )
+        self.registry.execute(
+            "write_file",
+            {
+                "path": "y.txt",
+                "content": "yyy",
+            },
+        )
         results = self.registry.approve_all_writes()
         assert len(results) == 2
         assert (Path(self.tmpdir) / "x.txt").read_text() == "xxx"
@@ -982,9 +1063,13 @@ class TestWriteApprovalGate:
 
     def test_reject_all_writes(self):
         """Reject discards all pending writes."""
-        self.registry.execute("write_file", {
-            "path": "a.txt", "content": "aaa",
-        })
+        self.registry.execute(
+            "write_file",
+            {
+                "path": "a.txt",
+                "content": "aaa",
+            },
+        )
         count = self.registry.reject_all_writes()
         assert count == 1
         assert len(self.registry.pending_writes) == 0
@@ -1025,7 +1110,8 @@ class TestToolBudgetGate:
         """Tool executes when budget has capacity."""
         bm = self._make_budget(can_allocate=True)
         reg = ForgeToolRegistry(
-            project_root=self.tmpdir, budget_manager=bm,
+            project_root=self.tmpdir,
+            budget_manager=bm,
         )
         result = reg.execute("read_file", {"path": "test.py"}, agent_id="builder")
         assert "x = 1" in result
@@ -1035,7 +1121,8 @@ class TestToolBudgetGate:
         """Tool blocked when budget exceeded."""
         bm = self._make_budget(can_allocate=False, remaining=0)
         reg = ForgeToolRegistry(
-            project_root=self.tmpdir, budget_manager=bm,
+            project_root=self.tmpdir,
+            budget_manager=bm,
         )
         result = reg.execute("read_file", {"path": "test.py"}, agent_id="builder")
         assert "Budget exceeded" in result
@@ -1061,7 +1148,8 @@ class TestToolBudgetGate:
         bm = self._make_budget()
         bm.record_usage.side_effect = RuntimeError("db error")
         reg = ForgeToolRegistry(
-            project_root=self.tmpdir, budget_manager=bm,
+            project_root=self.tmpdir,
+            budget_manager=bm,
         )
         result = reg.execute("read_file", {"path": "test.py"})
         assert "x = 1" in result
@@ -1076,7 +1164,8 @@ class TestToolBudgetGate:
         """Budget block emits an audit entry."""
         bm = self._make_budget(can_allocate=False, remaining=0)
         reg = ForgeToolRegistry(
-            project_root=self.tmpdir, budget_manager=bm,
+            project_root=self.tmpdir,
+            budget_manager=bm,
         )
         with patch("animus_forge.tools.registry.audit_logger") as mock_audit:
             reg.execute("read_file", {"path": "test.py"})
@@ -1138,11 +1227,14 @@ class TestEditFileTool:
 
     def test_edit_replaces_unique_string(self):
         """Replaces a unique string in the file."""
-        result = self.registry.execute("edit_file", {
-            "path": "example.py",
-            "old_string": "return 'hello'",
-            "new_string": "return 'hi'",
-        })
+        result = self.registry.execute(
+            "edit_file",
+            {
+                "path": "example.py",
+                "old_string": "return 'hello'",
+                "new_string": "return 'hi'",
+            },
+        )
         assert "Edited" in result
         content = (Path(self.tmpdir) / "example.py").read_text()
         assert "return 'hi'" in content
@@ -1150,51 +1242,67 @@ class TestEditFileTool:
 
     def test_edit_not_found(self):
         """Error when old_string not in file."""
-        result = self.registry.execute("edit_file", {
-            "path": "example.py",
-            "old_string": "nonexistent string",
-            "new_string": "replacement",
-        })
+        result = self.registry.execute(
+            "edit_file",
+            {
+                "path": "example.py",
+                "old_string": "nonexistent string",
+                "new_string": "replacement",
+            },
+        )
         assert "not found" in result
 
     def test_edit_multiple_matches_rejected(self):
         """Error when old_string appears more than once."""
         Path(self.tmpdir, "dup.py").write_text("x = 1\nx = 1\n")
-        result = self.registry.execute("edit_file", {
-            "path": "dup.py",
-            "old_string": "x = 1",
-            "new_string": "x = 2",
-        })
+        result = self.registry.execute(
+            "edit_file",
+            {
+                "path": "dup.py",
+                "old_string": "x = 1",
+                "new_string": "x = 2",
+            },
+        )
         assert "found 2 times" in result
 
     def test_edit_file_not_found(self):
         """Error when file doesn't exist."""
-        result = self.registry.execute("edit_file", {
-            "path": "nonexistent.py",
-            "old_string": "x",
-            "new_string": "y",
-        })
+        result = self.registry.execute(
+            "edit_file",
+            {
+                "path": "nonexistent.py",
+                "old_string": "x",
+                "new_string": "y",
+            },
+        )
         assert "not found" in result
 
     def test_edit_empty_old_string(self):
         """Error when old_string is empty."""
-        result = self.registry.execute("edit_file", {
-            "path": "example.py",
-            "old_string": "",
-            "new_string": "something",
-        })
+        result = self.registry.execute(
+            "edit_file",
+            {
+                "path": "example.py",
+                "old_string": "",
+                "new_string": "something",
+            },
+        )
         assert "must not be empty" in result
 
     def test_edit_with_approval_gate(self):
         """With approval gate, edit queues instead of applying."""
         reg = ForgeToolRegistry(
-            project_root=self.tmpdir, require_write_approval=True,
+            project_root=self.tmpdir,
+            require_write_approval=True,
         )
-        result = reg.execute("edit_file", {
-            "path": "example.py",
-            "old_string": "return 'hello'",
-            "new_string": "return 'hi'",
-        })
+        result = reg.execute(
+            "edit_file",
+            {
+                "path": "example.py",
+                "old_string": "return 'hello'",
+                "new_string": "return 'hi'",
+            },
+        )
         assert "queued for approval" in result
         # File unchanged
         content = (Path(self.tmpdir) / "example.py").read_text()
@@ -1202,11 +1310,14 @@ class TestEditFileTool:
 
     def test_edit_multiline(self):
         """Can replace multiline strings."""
-        result = self.registry.execute("edit_file", {
-            "path": "example.py",
-            "old_string": "def hello():\n    return 'hello'",
-            "new_string": "def greet(name):\n    return f'hello {name}'",
-        })
+        result = self.registry.execute(
+            "edit_file",
+            {
+                "path": "example.py",
+                "old_string": "def hello():\n    return 'hello'",
+                "new_string": "def greet(name):\n    return f'hello {name}'",
+            },
+        )
         assert "Edited" in result
         content = (Path(self.tmpdir) / "example.py").read_text()
         assert "def greet(name):" in content
@@ -1239,10 +1350,12 @@ class TestMultiRoundSupervisor:
         """max_rounds=1 is single-pass (no verification)."""
         from animus_forge.providers.base import CompletionResponse
 
-        supervisor = self._make_supervisor([
-            # Supervisor analysis — direct response
-            CompletionResponse(content="Direct answer", model="test", provider="test"),
-        ])
+        supervisor = self._make_supervisor(
+            [
+                # Supervisor analysis — direct response
+                CompletionResponse(content="Direct answer", model="test", provider="test"),
+            ]
+        )
         result = asyncio.run(supervisor.process_message("hello", max_rounds=1))
         assert result == "Direct answer"
 
@@ -1250,24 +1363,29 @@ class TestMultiRoundSupervisor:
         """Supervisor says SATISFIED — no second delegation."""
         from animus_forge.providers.base import CompletionResponse
 
-        delegation_json = json.dumps({
-            "analysis": "Need to check code",
-            "delegations": [{"agent": "reviewer", "task": "review the code"}],
-            "synthesis_approach": "summarize findings",
-        })
-        supervisor = self._make_supervisor([
-            # Round 1: supervisor delegates
-            CompletionResponse(
-                content=f"```json\n{delegation_json}\n```",
-                model="test", provider="test",
-            ),
-            # Round 1: reviewer agent result
-            CompletionResponse(content="Code looks good", model="test", provider="test"),
-            # Follow-up check: satisfied
-            CompletionResponse(content="SATISFIED", model="test", provider="test"),
-            # Synthesis
-            CompletionResponse(content="All good", model="test", provider="test"),
-        ])
+        delegation_json = json.dumps(
+            {
+                "analysis": "Need to check code",
+                "delegations": [{"agent": "reviewer", "task": "review the code"}],
+                "synthesis_approach": "summarize findings",
+            }
+        )
+        supervisor = self._make_supervisor(
+            [
+                # Round 1: supervisor delegates
+                CompletionResponse(
+                    content=f"```json\n{delegation_json}\n```",
+                    model="test",
+                    provider="test",
+                ),
+                # Round 1: reviewer agent result
+                CompletionResponse(content="Code looks good", model="test", provider="test"),
+                # Follow-up check: satisfied
+                CompletionResponse(content="SATISFIED", model="test", provider="test"),
+                # Synthesis
+                CompletionResponse(content="All good", model="test", provider="test"),
+            ]
+        )
 
         result = asyncio.run(supervisor.process_message("review code", max_rounds=2))
         assert "good" in result.lower()
@@ -1276,34 +1394,42 @@ class TestMultiRoundSupervisor:
         """Supervisor requests follow-up delegation."""
         from animus_forge.providers.base import CompletionResponse
 
-        delegation1 = json.dumps({
-            "analysis": "Build feature",
-            "delegations": [{"agent": "builder", "task": "build it"}],
-            "synthesis_approach": "deliver",
-        })
-        delegation2 = json.dumps({
-            "analysis": "Fix issues found",
-            "delegations": [{"agent": "tester", "task": "test it"}],
-            "synthesis_approach": "verify",
-        })
-        supervisor = self._make_supervisor([
-            # Round 1: delegate to builder
-            CompletionResponse(
-                content=f"```json\n{delegation1}\n```",
-                model="test", provider="test",
-            ),
-            # Builder result
-            CompletionResponse(content="Built it", model="test", provider="test"),
-            # Follow-up: not satisfied, delegate to tester
-            CompletionResponse(
-                content=f"```json\n{delegation2}\n```",
-                model="test", provider="test",
-            ),
-            # Tester result
-            CompletionResponse(content="Tests pass", model="test", provider="test"),
-            # Synthesis
-            CompletionResponse(content="Built and tested", model="test", provider="test"),
-        ])
+        delegation1 = json.dumps(
+            {
+                "analysis": "Build feature",
+                "delegations": [{"agent": "builder", "task": "build it"}],
+                "synthesis_approach": "deliver",
+            }
+        )
+        delegation2 = json.dumps(
+            {
+                "analysis": "Fix issues found",
+                "delegations": [{"agent": "tester", "task": "test it"}],
+                "synthesis_approach": "verify",
+            }
+        )
+        supervisor = self._make_supervisor(
+            [
+                # Round 1: delegate to builder
+                CompletionResponse(
+                    content=f"```json\n{delegation1}\n```",
+                    model="test",
+                    provider="test",
+                ),
+                # Builder result
+                CompletionResponse(content="Built it", model="test", provider="test"),
+                # Follow-up: not satisfied, delegate to tester
+                CompletionResponse(
+                    content=f"```json\n{delegation2}\n```",
+                    model="test",
+                    provider="test",
+                ),
+                # Tester result
+                CompletionResponse(content="Tests pass", model="test", provider="test"),
+                # Synthesis
+                CompletionResponse(content="Built and tested", model="test", provider="test"),
+            ]
+        )
 
         result = asyncio.run(supervisor.process_message("build and test", max_rounds=2))
         assert "tested" in result.lower()
@@ -1320,11 +1446,13 @@ class TestMultiRoundSupervisor:
     def test_follow_up_error_returns_none(self):
         """_get_follow_up_plan returns None when LLM call raises."""
 
-        delegation_json = json.dumps({
-            "analysis": "Check code",
-            "delegations": [{"agent": "reviewer", "task": "review"}],
-            "synthesis_approach": "summarize",
-        })
+        delegation_json = json.dumps(
+            {
+                "analysis": "Check code",
+                "delegations": [{"agent": "reviewer", "task": "review"}],
+                "synthesis_approach": "summarize",
+            }
+        )
 
         call_count = 0
 
@@ -1366,8 +1494,11 @@ class TestRegistryCoverageGaps:
         fs = registry._get_fs()
         mock_entry = MagicMock(path="a.py", is_dir=False, size_bytes=10)
         mock_result = MagicMock(
-            path=str(tmp_path), entries=[mock_entry],
-            total_files=100, total_dirs=5, truncated=True,
+            path=str(tmp_path),
+            entries=[mock_entry],
+            total_files=100,
+            total_dirs=5,
+            truncated=True,
         )
         with patch.object(fs, "list_files", return_value=mock_result):
             output = registry.execute("list_files", {"path": "."})
@@ -1379,8 +1510,10 @@ class TestRegistryCoverageGaps:
         fs = registry._get_fs()
         mock_match = MagicMock(path="a.py", line_number=1, line_content="match")
         mock_result = MagicMock(
-            matches=[mock_match], total_matches=100,
-            files_searched=50, truncated=True,
+            matches=[mock_match],
+            total_matches=100,
+            files_searched=50,
+            truncated=True,
         )
         with patch.object(fs, "search_code", return_value=mock_result):
             output = registry.execute("search_code", {"pattern": "test"})
@@ -1392,11 +1525,14 @@ class TestRegistryCoverageGaps:
         bad_file.write_bytes(b"\x80\x81\x82" * 100)
 
         registry = ForgeToolRegistry(project_root=str(tmp_path))
-        result = registry.execute("edit_file", {
-            "path": "bad.bin",
-            "old_string": "hello",
-            "new_string": "world",
-        })
+        result = registry.execute(
+            "edit_file",
+            {
+                "path": "bad.bin",
+                "old_string": "hello",
+                "new_string": "world",
+            },
+        )
         assert "Error" in result
 
     def test_run_command_stderr_and_nonzero(self, tmp_path):
@@ -1404,10 +1540,15 @@ class TestRegistryCoverageGaps:
         import subprocess as sp
 
         registry = ForgeToolRegistry(
-            project_root=str(tmp_path), enable_shell=True, allowed_commands=["bash"],
+            project_root=str(tmp_path),
+            enable_shell=True,
+            allowed_commands=["bash"],
         )
         mock_result = sp.CompletedProcess(
-            args="bash -c 'exit 1'", returncode=1, stdout="", stderr="something failed",
+            args="bash -c 'exit 1'",
+            returncode=1,
+            stdout="",
+            stderr="something failed",
         )
         with patch("subprocess.run", return_value=mock_result):
             result = registry.execute("run_command", {"command": "bash -c 'exit 1'"})
@@ -1419,7 +1560,9 @@ class TestRegistryCoverageGaps:
         import subprocess
 
         registry = ForgeToolRegistry(
-            project_root=str(tmp_path), enable_shell=True, allowed_commands=["sleep"],
+            project_root=str(tmp_path),
+            enable_shell=True,
+            allowed_commands=["sleep"],
         )
         with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("sleep", 30)):
             result = registry.execute("run_command", {"command": "sleep 999"})
@@ -1428,7 +1571,9 @@ class TestRegistryCoverageGaps:
     def test_run_command_general_exception(self, tmp_path):
         """run_command handles unexpected exceptions."""
         registry = ForgeToolRegistry(
-            project_root=str(tmp_path), enable_shell=True, allowed_commands=["echo"],
+            project_root=str(tmp_path),
+            enable_shell=True,
+            allowed_commands=["echo"],
         )
         with patch("subprocess.run", side_effect=OSError("no such file")):
             result = registry.execute("run_command", {"command": "echo hi"})

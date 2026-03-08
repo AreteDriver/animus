@@ -20,7 +20,6 @@ sys.path.insert(0, "src")
 
 from typer.testing import CliRunner
 
-
 # ---------------------------------------------------------------------------
 # consciousness CLI — use CliRunner with patched lazy imports
 # ---------------------------------------------------------------------------
@@ -51,7 +50,6 @@ class TestConsciousnessCLI:
 
     def test_status_with_bridge_available(self):
         """status reads from state.consciousness_bridge when available."""
-        import animus_forge.cli.commands.consciousness as cons_mod
 
         # Directly test the status function by intercepting the lazy import
         mock_bridge = MagicMock()
@@ -175,18 +173,22 @@ class TestConsciousnessCLI:
         log_dir.mkdir()
         log_file = log_dir / "reflections.jsonl"
         records = [
-            json.dumps({
-                "timestamp": "2026-03-08T01:00:00Z",
-                "model": "ollama/llama3",
-                "tokens_used": 150,
-                "output": {"summary": "First reflection summary"},
-            }),
-            json.dumps({
-                "timestamp": "2026-03-08T02:00:00Z",
-                "model": "ollama/llama3",
-                "tokens_used": 200,
-                "output": {"summary": "A" * 100},
-            }),
+            json.dumps(
+                {
+                    "timestamp": "2026-03-08T01:00:00Z",
+                    "model": "ollama/llama3",
+                    "tokens_used": 150,
+                    "output": {"summary": "First reflection summary"},
+                }
+            ),
+            json.dumps(
+                {
+                    "timestamp": "2026-03-08T02:00:00Z",
+                    "model": "ollama/llama3",
+                    "tokens_used": 200,
+                    "output": {"summary": "A" * 100},
+                }
+            ),
             "not-json-line",
         ]
         log_file.write_text("\n".join(records))
@@ -237,12 +239,14 @@ class TestConsciousnessCLI:
         log_dir = tmp_path / "logs"
         log_dir.mkdir()
         entries = [
-            json.dumps({
-                "workflow_id": "wf-build",
-                "flagged_by": "consciousness",
-                "timestamp": "2026-03-08T01:00:00Z",
-                "cycle": 3,
-            }),
+            json.dumps(
+                {
+                    "workflow_id": "wf-build",
+                    "flagged_by": "consciousness",
+                    "timestamp": "2026-03-08T01:00:00Z",
+                    "cycle": 3,
+                }
+            ),
             "bad-json",
         ]
         (log_dir / "workflow_review_queue.jsonl").write_text("\n".join(entries))
@@ -438,8 +442,18 @@ class TestEvolveCLI:
         runner = CliRunner()
         mock_evo = MagicMock()
         mock_evo.history.return_value = [
-            {"version": "1.0", "date": "2026-03-01", "change": "Initial version", "proposed_by": "human"},
-            {"version": "1.1", "date": "2026-03-05", "change": "Added caching step", "proposed_by": "consciousness"},
+            {
+                "version": "1.0",
+                "date": "2026-03-01",
+                "change": "Initial version",
+                "proposed_by": "human",
+            },
+            {
+                "version": "1.1",
+                "date": "2026-03-05",
+                "change": "Added caching step",
+                "proposed_by": "consciousness",
+            },
         ]
 
         with patch("animus_forge.cli.commands.evolve._get_evolution", return_value=mock_evo):
@@ -510,14 +524,18 @@ class TestDevHelpers:
     def test_gather_review_code_context_git_ref(self, tmp_path):
         from animus_forge.cli.commands.dev import _gather_review_code_context
 
-        with patch("animus_forge.cli.commands.dev._get_git_diff_context", return_value="diff output"):
+        with patch(
+            "animus_forge.cli.commands.dev._get_git_diff_context", return_value="diff output"
+        ):
             result = _gather_review_code_context("HEAD~1", {"path": tmp_path})
             assert result == "diff output"
 
     def test_gather_review_code_context_origin_ref(self, tmp_path):
         from animus_forge.cli.commands.dev import _gather_review_code_context
 
-        with patch("animus_forge.cli.commands.dev._get_git_diff_context", return_value="origin diff"):
+        with patch(
+            "animus_forge.cli.commands.dev._get_git_diff_context", return_value="origin diff"
+        ):
             result = _gather_review_code_context("origin/main", {"path": tmp_path})
             assert result == "origin diff"
 
@@ -563,7 +581,9 @@ class TestDevHelpers:
         mock_client.execute_agent.return_value = {"success": True, "output": "claude result"}
 
         with (
-            patch("animus_forge.cli.commands.dev.get_supervisor", side_effect=RuntimeError("no sup")),
+            patch(
+                "animus_forge.cli.commands.dev.get_supervisor", side_effect=RuntimeError("no sup")
+            ),
             patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
         ):
             result = _run_single_agent("planner", "do something")
@@ -576,7 +596,9 @@ class TestDevHelpers:
         mock_client.execute_agent.return_value = {"success": False, "error": "bad input"}
 
         with (
-            patch("animus_forge.cli.commands.dev.get_supervisor", side_effect=RuntimeError("no sup")),
+            patch(
+                "animus_forge.cli.commands.dev.get_supervisor", side_effect=RuntimeError("no sup")
+            ),
             patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
         ):
             result = _run_single_agent("planner", "do something")
@@ -586,8 +608,12 @@ class TestDevHelpers:
         from animus_forge.cli.commands.dev import _run_single_agent
 
         with (
-            patch("animus_forge.cli.commands.dev.get_supervisor", side_effect=RuntimeError("no sup")),
-            patch("animus_forge.cli.commands.dev.get_claude_client", side_effect=RuntimeError("no cc")),
+            patch(
+                "animus_forge.cli.commands.dev.get_supervisor", side_effect=RuntimeError("no sup")
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.get_claude_client", side_effect=RuntimeError("no cc")
+            ),
         ):
             result = _run_single_agent("planner", "do something")
             assert "No LLM provider" in result
@@ -669,8 +695,12 @@ class TestExecutorClients:
 
         mock_provider = MagicMock()
         with (
-            patch("animus_forge.providers.ollama_provider.OllamaProvider", return_value=mock_provider),
-            patch.dict("os.environ", {"OLLAMA_HOST": "http://test:11434", "OLLAMA_MODEL": "llama3"}),
+            patch(
+                "animus_forge.providers.ollama_provider.OllamaProvider", return_value=mock_provider
+            ),
+            patch.dict(
+                "os.environ", {"OLLAMA_HOST": "http://test:11434", "OLLAMA_MODEL": "llama3"}
+            ),
         ):
             result = ec._get_ollama_provider()
             assert result is mock_provider

@@ -479,6 +479,7 @@ app.add_exception_handler(APIException, api_exception_handler)
 # ---------------------------------------------------------------------------
 
 from animus_forge.api_routes import (  # noqa: E402
+    agents,
     auth,
     budgets,
     coordination,
@@ -512,6 +513,7 @@ v1_router.include_router(dashboard.router)
 v1_router.include_router(history.router)
 v1_router.include_router(graph.router)
 v1_router.include_router(coordination.router)
+v1_router.include_router(agents.router)
 
 app.include_router(v1_router)
 app.include_router(health.router)

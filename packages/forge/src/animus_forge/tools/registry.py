@@ -88,10 +88,25 @@ class ForgeToolRegistry:
         self._fs: FilesystemTools | None = None
         self._project_root = Path(project_root) if project_root else Path.cwd()
         self._enable_shell = enable_shell
-        self._allowed_commands = set(allowed_commands or [
-            "python", "python3", "pytest", "ruff", "git", "ls", "cat", "grep", "find",
-            "pip", "poetry", "cargo", "npm", "node",
-        ])
+        self._allowed_commands = set(
+            allowed_commands
+            or [
+                "python",
+                "python3",
+                "pytest",
+                "ruff",
+                "git",
+                "ls",
+                "cat",
+                "grep",
+                "find",
+                "pip",
+                "poetry",
+                "cargo",
+                "npm",
+                "node",
+            ]
+        )
         self._require_write_approval = require_write_approval
         self._pending_writes: list[dict] = []
         self._budget_manager = budget_manager
@@ -110,115 +125,162 @@ class ForgeToolRegistry:
 
     def _register_filesystem_tools(self) -> None:
         """Register all filesystem tools."""
-        self.register(ToolDefinition(
-            name="read_file",
-            description="Read a file's content. Returns numbered lines.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "path": {"type": "string", "description": "File path (relative to project root)"},
-                    "start_line": {"type": "integer", "description": "Start line (1-indexed, optional)"},
-                    "end_line": {"type": "integer", "description": "End line (1-indexed, optional)"},
+        self.register(
+            ToolDefinition(
+                name="read_file",
+                description="Read a file's content. Returns numbered lines.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "File path (relative to project root)",
+                        },
+                        "start_line": {
+                            "type": "integer",
+                            "description": "Start line (1-indexed, optional)",
+                        },
+                        "end_line": {
+                            "type": "integer",
+                            "description": "End line (1-indexed, optional)",
+                        },
+                    },
+                    "required": ["path"],
                 },
-                "required": ["path"],
-            },
-            handler=self._handle_read_file,
-        ))
+                handler=self._handle_read_file,
+            )
+        )
 
-        self.register(ToolDefinition(
-            name="list_files",
-            description="List files in a directory.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "path": {"type": "string", "description": "Directory path (default: '.')"},
-                    "pattern": {"type": "string", "description": "Glob pattern to filter"},
-                    "recursive": {"type": "boolean", "description": "List recursively (default: false)"},
+        self.register(
+            ToolDefinition(
+                name="list_files",
+                description="List files in a directory.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string", "description": "Directory path (default: '.')"},
+                        "pattern": {"type": "string", "description": "Glob pattern to filter"},
+                        "recursive": {
+                            "type": "boolean",
+                            "description": "List recursively (default: false)",
+                        },
+                    },
+                    "required": [],
                 },
-                "required": [],
-            },
-            handler=self._handle_list_files,
-        ))
+                handler=self._handle_list_files,
+            )
+        )
 
-        self.register(ToolDefinition(
-            name="search_code",
-            description="Search for a regex pattern in project files.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "pattern": {"type": "string", "description": "Regex pattern to search for"},
-                    "path": {"type": "string", "description": "Directory to search (default: '.')"},
-                    "file_pattern": {"type": "string", "description": "Glob to filter files (e.g. '*.py')"},
+        self.register(
+            ToolDefinition(
+                name="search_code",
+                description="Search for a regex pattern in project files.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "pattern": {"type": "string", "description": "Regex pattern to search for"},
+                        "path": {
+                            "type": "string",
+                            "description": "Directory to search (default: '.')",
+                        },
+                        "file_pattern": {
+                            "type": "string",
+                            "description": "Glob to filter files (e.g. '*.py')",
+                        },
+                    },
+                    "required": ["pattern"],
                 },
-                "required": ["pattern"],
-            },
-            handler=self._handle_search_code,
-        ))
+                handler=self._handle_search_code,
+            )
+        )
 
-        self.register(ToolDefinition(
-            name="get_project_structure",
-            description="Get a tree overview of the project structure.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "max_depth": {"type": "integer", "description": "Max tree depth (default: 3)"},
+        self.register(
+            ToolDefinition(
+                name="get_project_structure",
+                description="Get a tree overview of the project structure.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "max_depth": {
+                            "type": "integer",
+                            "description": "Max tree depth (default: 3)",
+                        },
+                    },
+                    "required": [],
                 },
-                "required": [],
-            },
-            handler=self._handle_get_structure,
-        ))
+                handler=self._handle_get_structure,
+            )
+        )
 
-        self.register(ToolDefinition(
-            name="write_file",
-            description="Write content to a file. Creates the file if it doesn't exist.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "path": {"type": "string", "description": "File path (relative to project root)"},
-                    "content": {"type": "string", "description": "Content to write"},
+        self.register(
+            ToolDefinition(
+                name="write_file",
+                description="Write content to a file. Creates the file if it doesn't exist.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "File path (relative to project root)",
+                        },
+                        "content": {"type": "string", "description": "Content to write"},
+                    },
+                    "required": ["path", "content"],
                 },
-                "required": ["path", "content"],
-            },
-            handler=self._handle_write_file,
-        ))
+                handler=self._handle_write_file,
+            )
+        )
 
-        self.register(ToolDefinition(
-            name="edit_file",
-            description=(
-                "Edit a file by replacing an exact string match with new content. "
-                "The old_string must appear exactly once in the file. "
-                "Use this for surgical edits instead of rewriting the entire file."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "path": {"type": "string", "description": "File path (relative to project root)"},
-                    "old_string": {"type": "string", "description": "Exact string to find (must be unique in the file)"},
-                    "new_string": {"type": "string", "description": "Replacement string"},
+        self.register(
+            ToolDefinition(
+                name="edit_file",
+                description=(
+                    "Edit a file by replacing an exact string match with new content. "
+                    "The old_string must appear exactly once in the file. "
+                    "Use this for surgical edits instead of rewriting the entire file."
+                ),
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "File path (relative to project root)",
+                        },
+                        "old_string": {
+                            "type": "string",
+                            "description": "Exact string to find (must be unique in the file)",
+                        },
+                        "new_string": {"type": "string", "description": "Replacement string"},
+                    },
+                    "required": ["path", "old_string", "new_string"],
                 },
-                "required": ["path", "old_string", "new_string"],
-            },
-            handler=self._handle_edit_file,
-        ))
+                handler=self._handle_edit_file,
+            )
+        )
 
     def _register_shell_tool(self) -> None:
         """Register the shell command tool."""
-        self.register(ToolDefinition(
-            name="run_command",
-            description=(
-                "Run a shell command in the project directory. "
-                f"Allowed commands: {', '.join(sorted(self._allowed_commands))}"
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "command": {"type": "string", "description": "Shell command to execute"},
-                    "timeout": {"type": "integer", "description": "Timeout in seconds (default: 30)"},
+        self.register(
+            ToolDefinition(
+                name="run_command",
+                description=(
+                    "Run a shell command in the project directory. "
+                    f"Allowed commands: {', '.join(sorted(self._allowed_commands))}"
+                ),
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "command": {"type": "string", "description": "Shell command to execute"},
+                        "timeout": {
+                            "type": "integer",
+                            "description": "Timeout in seconds (default: 30)",
+                        },
+                    },
+                    "required": ["command"],
                 },
-                "required": ["command"],
-            },
-            handler=self._handle_run_command,
-        ))
+                handler=self._handle_run_command,
+            )
+        )
 
     def register(self, tool: ToolDefinition) -> None:
         """Register a tool."""
@@ -263,10 +325,15 @@ class ForgeToolRegistry:
         # Budget gate — reject if budget exhausted
         if self._budget_manager is not None:
             if not self._budget_manager.can_allocate(
-                self._budget_tokens_per_call, agent_id=agent_id or None,
+                self._budget_tokens_per_call,
+                agent_id=agent_id or None,
             ):
                 self._emit_audit(
-                    tool_name, arguments, agent_id, False, "budget_exceeded",
+                    tool_name,
+                    arguments,
+                    agent_id,
+                    False,
+                    "budget_exceeded",
                 )
                 return (
                     f"Error: Budget exceeded — cannot execute {tool_name}. "
@@ -293,15 +360,23 @@ class ForgeToolRegistry:
                     pass  # Budget recording is advisory
 
             self._emit_audit(
-                tool_name, arguments, agent_id, True, duration_ms=duration_ms,
+                tool_name,
+                arguments,
+                agent_id,
+                True,
+                duration_ms=duration_ms,
             )
             return result
         except Exception as e:
             duration_ms = (time.monotonic() - start) * 1000
             logger.warning("Tool %s execution failed: %s", tool_name, e)
             self._emit_audit(
-                tool_name, arguments, agent_id, False,
-                error=str(e), duration_ms=duration_ms,
+                tool_name,
+                arguments,
+                agent_id,
+                False,
+                error=str(e),
+                duration_ms=duration_ms,
             )
             return f"Error executing {tool_name}: {e}"
 
@@ -368,9 +443,14 @@ class ForgeToolRegistry:
         path = args.get("path", ".")
         file_pattern = args.get("file_pattern")
         result = self._get_fs().search_code(
-            pattern=pattern, path=path, file_pattern=file_pattern, max_results=50,
+            pattern=pattern,
+            path=path,
+            file_pattern=file_pattern,
+            max_results=50,
         )
-        lines = [f"Search: '{pattern}' — {result.total_matches} matches in {result.files_searched} files"]
+        lines = [
+            f"Search: '{pattern}' — {result.total_matches} matches in {result.files_searched} files"
+        ]
         for m in result.matches:
             lines.append(f"  {m.path}:{m.line_number}: {m.line_content}")
         if result.truncated:
@@ -387,11 +467,13 @@ class ForgeToolRegistry:
         content = args.get("content", "")
 
         if self._require_write_approval:
-            self._pending_writes.append({
-                "path": path,
-                "content": content,
-                "timestamp": datetime.now(UTC).isoformat(),
-            })
+            self._pending_writes.append(
+                {
+                    "path": path,
+                    "content": content,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                }
+            )
             return (
                 f"Write to {path} ({len(content)} bytes) queued for approval. "
                 f"Total pending writes: {len(self._pending_writes)}. "
@@ -431,11 +513,13 @@ class ForgeToolRegistry:
 
         if self._require_write_approval:
             new_content = content.replace(old_string, new_string, 1)
-            self._pending_writes.append({
-                "path": path,
-                "content": new_content,
-                "timestamp": datetime.now(UTC).isoformat(),
-            })
+            self._pending_writes.append(
+                {
+                    "path": path,
+                    "content": new_content,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                }
+            )
             return (
                 f"Edit to {path} queued for approval. "
                 f"Total pending writes: {len(self._pending_writes)}."
@@ -508,7 +592,9 @@ class ForgeToolRegistry:
 
         base_cmd = Path(cmd_parts[0]).name
         if base_cmd not in self._allowed_commands:
-            return f"Error: Command '{base_cmd}' not in allowed list: {sorted(self._allowed_commands)}"
+            return (
+                f"Error: Command '{base_cmd}' not in allowed list: {sorted(self._allowed_commands)}"
+            )
 
         try:
             result = subprocess.run(

@@ -106,6 +106,8 @@ class StepConfig:
         "loop",
         "mcp_tool",
         "approval",
+        "autonomy",
+        "handoff",
     ]
     params: dict = field(default_factory=dict)
     condition: ConditionConfig | None = None
@@ -449,6 +451,9 @@ VALID_STEP_TYPES = frozenset(
         "signal_audit",
         "autopsy_analyze",
         "verdict_capture",
+        # Agent step types
+        "autonomy",
+        "handoff",
     }
 )
 VALID_OPERATORS = frozenset(

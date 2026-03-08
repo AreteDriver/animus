@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 
 from animus_forge.state.agent_context import MemoryConfig, WorkflowMemoryManager
 
+from .executor_agents import AgentStepHandlerMixin
 from .executor_ai import AIHandlersMixin
 from .executor_approval import ApprovalHandlerMixin
 from .executor_arete import AreteToolsHandlerMixin
@@ -39,6 +40,7 @@ class WorkflowExecutor(
     ApprovalHandlerMixin,
     LoopHandlerMixin,
     AreteToolsHandlerMixin,
+    AgentStepHandlerMixin,
 ):
     """Executes workflows with contract validation and state persistence.
 
@@ -61,6 +63,7 @@ class WorkflowExecutor(
         feedback_engine=None,
         execution_manager=None,
         arete_hooks=None,
+        agent_memory=None,
     ):
         """Initialize executor.
 
@@ -76,6 +79,7 @@ class WorkflowExecutor(
             feedback_engine: Optional FeedbackEngine for outcome tracking and learning
             execution_manager: Optional ExecutionManager for streaming execution logs
             arete_hooks: Optional AreteHooks for Arete Tool bridge integration
+            agent_memory: Optional AgentMemory for persistent cross-workflow agent memory
         """
         self.checkpoint_manager = checkpoint_manager
         self.contract_validator = contract_validator
@@ -88,6 +92,7 @@ class WorkflowExecutor(
         self.feedback_engine = feedback_engine
         self.execution_manager = execution_manager
         self.arete_hooks = arete_hooks
+        self.agent_memory = agent_memory
         self._execution_id: str | None = None
         self._handlers: dict[str, StepHandler] = {
             "shell": self._execute_shell,
@@ -116,6 +121,9 @@ class WorkflowExecutor(
             "signal_audit": self._execute_signal_audit,
             "autopsy_analyze": self._execute_autopsy_analyze,
             "verdict_capture": self._execute_verdict_capture,
+            # Agent handlers
+            "autonomy": self._execute_autonomy,
+            "handoff": self._execute_handoff,
         }
         self._context: dict = {}
         self._current_workflow_id: str | None = None

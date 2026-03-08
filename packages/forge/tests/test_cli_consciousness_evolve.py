@@ -132,7 +132,11 @@ class TestConsciousnessHistory:
         mock_settings.base_dir = Path("/nonexistent")
 
         with (
-            patch("animus_forge.cli.commands.consciousness.get_settings", return_value=mock_settings, create=True),
+            patch(
+                "animus_forge.cli.commands.consciousness.get_settings",
+                return_value=mock_settings,
+                create=True,
+            ),
             patch("animus_forge.config.get_settings", return_value=mock_settings),
             patch("animus_forge.cli.commands.consciousness.console"),
             pytest.raises(Exit),
@@ -147,8 +151,18 @@ class TestConsciousnessHistory:
         log_dir.mkdir()
         log_file = log_dir / "reflections.jsonl"
         records = [
-            {"timestamp": "2026-03-07T12:00:00Z", "model": "ollama", "tokens_used": 100, "output": {"summary": "All good"}},
-            {"timestamp": "2026-03-07T13:00:00Z", "model": "ollama", "tokens_used": 200, "output": {"summary": "A" * 100}},
+            {
+                "timestamp": "2026-03-07T12:00:00Z",
+                "model": "ollama",
+                "tokens_used": 100,
+                "output": {"summary": "All good"},
+            },
+            {
+                "timestamp": "2026-03-07T13:00:00Z",
+                "model": "ollama",
+                "tokens_used": 200,
+                "output": {"summary": "A" * 100},
+            },
         ]
         log_file.write_text("\n".join(json.dumps(r) for r in records))
 
@@ -168,7 +182,7 @@ class TestConsciousnessHistory:
         log_dir = tmp_path / "logs"
         log_dir.mkdir()
         log_file = log_dir / "reflections.jsonl"
-        log_file.write_text("not json\n{\"timestamp\": \"now\"}\n")
+        log_file.write_text('not json\n{"timestamp": "now"}\n')
 
         mock_settings = MagicMock()
         mock_settings.base_dir = tmp_path
@@ -222,9 +236,16 @@ class TestConsciousnessReviews:
         log_dir = tmp_path / "logs"
         log_dir.mkdir()
         records = [
-            {"workflow_id": "wf1", "flagged_by": "reflection", "timestamp": "2026-03-07T12:00:00Z", "cycle": 3},
+            {
+                "workflow_id": "wf1",
+                "flagged_by": "reflection",
+                "timestamp": "2026-03-07T12:00:00Z",
+                "cycle": 3,
+            },
         ]
-        (log_dir / "workflow_review_queue.jsonl").write_text("\n".join(json.dumps(r) for r in records))
+        (log_dir / "workflow_review_queue.jsonl").write_text(
+            "\n".join(json.dumps(r) for r in records)
+        )
 
         mock_settings = MagicMock()
         mock_settings.base_dir = tmp_path
@@ -241,7 +262,9 @@ class TestConsciousnessReviews:
 
         log_dir = tmp_path / "logs"
         log_dir.mkdir()
-        (log_dir / "workflow_review_queue.jsonl").write_text("bad\n{\"workflow_id\": \"wf1\", \"flagged_by\": \"r\", \"timestamp\": \"2026-01-01T00:00:00Z\", \"cycle\": 1}\n")
+        (log_dir / "workflow_review_queue.jsonl").write_text(
+            'bad\n{"workflow_id": "wf1", "flagged_by": "r", "timestamp": "2026-01-01T00:00:00Z", "cycle": 1}\n'
+        )
 
         mock_settings = MagicMock()
         mock_settings.base_dir = tmp_path
@@ -374,8 +397,22 @@ class TestEvolveList:
 
         mock_evo = MagicMock()
         mock_evo.list_workflows.return_value = [
-            {"id": "wf1", "name": "Build", "version": "1.0", "steps": 3, "last_evolved": "2026-03-07", "has_pending": True},
-            {"id": "wf2", "name": "Test", "version": "2.0", "steps": 5, "last_evolved": None, "has_pending": False},
+            {
+                "id": "wf1",
+                "name": "Build",
+                "version": "1.0",
+                "steps": 3,
+                "last_evolved": "2026-03-07",
+                "has_pending": True,
+            },
+            {
+                "id": "wf2",
+                "name": "Test",
+                "version": "2.0",
+                "steps": 5,
+                "last_evolved": None,
+                "has_pending": False,
+            },
         ]
 
         with (
@@ -473,7 +510,12 @@ class TestEvolveHistory:
         mock_evo = MagicMock()
         mock_evo.history.return_value = [
             {"version": "1.0", "date": "2026-03-01", "change": "Initial", "proposed_by": "system"},
-            {"version": "1.1", "date": "2026-03-07", "change": "Added step", "proposed_by": "reflection"},
+            {
+                "version": "1.1",
+                "date": "2026-03-07",
+                "change": "Added step",
+                "proposed_by": "reflection",
+            },
         ]
 
         with (

@@ -79,8 +79,8 @@ from .commands.calendar_cmd import calendar_app  # noqa: E402
 from .commands.config import config_app  # noqa: E402
 from .commands.consciousness import consciousness_app  # noqa: E402
 from .commands.coordination import coordination_app  # noqa: E402
-from .commands.evolve import evolve_app  # noqa: E402
 from .commands.eval_cmd import eval_app  # noqa: E402
+from .commands.evolve import evolve_app  # noqa: E402
 from .commands.graph import graph_app  # noqa: E402
 from .commands.history import history_app  # noqa: E402
 from .commands.mcp import mcp_app  # noqa: E402

@@ -18,6 +18,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 if TYPE_CHECKING:
+    from animus_forge.agents.process_registry import ProcessRegistry
     from animus_forge.budget import PersistentBudgetManager
     from animus_forge.db import TaskStore
     from animus_forge.executions import ExecutionManager
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
     from animus_forge.mcp import MCPConnectorManager
     from animus_forge.scheduler import ScheduleManager
     from animus_forge.settings import SettingsManager
+    from animus_forge.state.agent_memory import AgentMemory
     from animus_forge.webhooks import WebhookManager
     from animus_forge.webhooks.webhook_delivery import WebhookDeliveryManager
     from animus_forge.websocket import Broadcaster, ConnectionManager
@@ -70,6 +72,12 @@ task_store: TaskStore | None = None
 # ---------------------------------------------------------------------------
 # Coordination (initialized in lifespan, optional)
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Agent infrastructure (initialized in lifespan, optional)
+# ---------------------------------------------------------------------------
+agent_memory: AgentMemory | None = None
+process_registry: ProcessRegistry | None = None
+
 coordination_event_log = None  # convergent.EventLog or None
 coordination_bridge = None  # convergent.GorgonBridge or None
 consciousness_bridge = None  # ConsciousnessBridge or None

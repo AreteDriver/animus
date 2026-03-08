@@ -238,12 +238,17 @@ Codebase context:
         pass  # Task persistence is advisory
 
     if json_output:
-        print(json.dumps({
-            "task_id": task_id,
-            "task": task,
-            "result": result,
-            "duration_ms": duration_ms,
-        }, indent=2))
+        print(
+            json.dumps(
+                {
+                    "task_id": task_id,
+                    "task": task,
+                    "result": result,
+                    "duration_ms": duration_ms,
+                },
+                indent=2,
+            )
+        )
         return
 
     console.print(f"\n[bold]Result[/bold] [dim]({task_id}, {duration_ms}ms)[/dim]\n")

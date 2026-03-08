@@ -87,7 +87,12 @@ class TestBudgetHistory:
         from animus_forge.cli.commands.budget import budget_history
 
         mock_record = MagicMock()
-        mock_record.__dict__ = {"agent_id": "builder", "tokens": 100, "timestamp": "now", "operation": "tool:read"}
+        mock_record.__dict__ = {
+            "agent_id": "builder",
+            "tokens": 100,
+            "timestamp": "now",
+            "operation": "tool:read",
+        }
         mock_manager = MagicMock()
         mock_manager.get_usage_history.return_value = [mock_record]
 
@@ -134,7 +139,13 @@ class TestBudgetDaily:
 
         mock_store = MagicMock()
         mock_store.get_daily_budget.return_value = [
-            {"date": "2026-03-07", "agent_role": "builder", "task_count": 5, "total_tokens": 1000, "total_cost_usd": 0.01},
+            {
+                "date": "2026-03-07",
+                "agent_role": "builder",
+                "task_count": 5,
+                "total_tokens": 1000,
+                "total_cost_usd": 0.01,
+            },
         ]
 
         with (
@@ -283,11 +294,21 @@ class TestDevProgressCallback:
         mock_supervisor.process_message = capture_process_message
 
         with (
-            patch("animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "/tmp"}),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value={"path": "/tmp"},
+            ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev.get_supervisor", return_value=mock_supervisor),
             patch("animus_forge.cli.commands.dev.console"),
         ):
-            do_task(task="test", workflow=None, dry_run=False, json_output=False, live=False, verify=False)
+            do_task(
+                task="test",
+                workflow=None,
+                dry_run=False,
+                json_output=False,
+                live=False,
+                verify=False,
+            )
 
         assert captured_callback is not None

@@ -77,6 +77,8 @@ class TestWorkflowYAMLLoading:
             "signal_audit",
             "autopsy_analyze",
             "verdict_capture",
+            "autonomy",
+            "handoff",
         }
         wf = load_workflow(workflow_path, trusted_dir=WORKFLOWS_DIR)
         for step in wf.steps:

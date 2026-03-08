@@ -493,7 +493,9 @@ class TestRunCommand:
 class TestAgentCommands:
     """Tests for interactive agent commands."""
 
-    @patch("animus_forge.cli.commands.dev._run_single_agent", return_value="1. Step one\n2. Step two")
+    @patch(
+        "animus_forge.cli.commands.dev._run_single_agent", return_value="1. Step one\n2. Step two"
+    )
     @patch("animus_forge.cli.commands.dev.detect_codebase_context")
     def test_plan_command(self, mock_context, mock_agent):
         """Plan command calls planner agent."""
@@ -528,7 +530,10 @@ class TestAgentCommands:
         assert "Builder" in result.output
         assert mock_agent.call_args[0][0] == "builder"
 
-    @patch("animus_forge.cli.commands.dev._run_single_agent", return_value="def test_auth(): assert True")
+    @patch(
+        "animus_forge.cli.commands.dev._run_single_agent",
+        return_value="def test_auth(): assert True",
+    )
     @patch("animus_forge.cli.commands.dev.detect_codebase_context")
     def test_test_command(self, mock_context, mock_agent):
         """Test command calls tester agent."""
@@ -562,7 +567,10 @@ class TestAgentCommands:
         assert "Reviewer" in result.output
         assert mock_agent.call_args[0][0] == "reviewer"
 
-    @patch("animus_forge.cli.commands.dev._run_single_agent", return_value="The auth system uses JWT tokens.")
+    @patch(
+        "animus_forge.cli.commands.dev._run_single_agent",
+        return_value="The auth system uses JWT tokens.",
+    )
     @patch("animus_forge.cli.commands.dev.detect_codebase_context")
     def test_ask_command(self, mock_context, mock_agent):
         """Ask command answers questions about codebase."""
@@ -579,7 +587,10 @@ class TestAgentCommands:
         assert "Question" in result.output
         mock_agent.assert_called_once()
 
-    @patch("animus_forge.cli.commands.dev._run_single_agent", return_value="Error: API rate limit exceeded")
+    @patch(
+        "animus_forge.cli.commands.dev._run_single_agent",
+        return_value="Error: API rate limit exceeded",
+    )
     @patch("animus_forge.cli.commands.dev.detect_codebase_context")
     def test_agent_error_handling(self, mock_context, mock_agent):
         """Agent commands handle errors gracefully."""
