@@ -163,7 +163,7 @@ async def lifespan(app: FastAPI):
                 os.environ.get("DEFAULT_PROVIDER", "ollama"),
             )
         except Exception:
-            pass
+            pass  # Provider not configured — consciousness bridge disabled
 
         if _cb_provider is not None:
             _cb_config = ConsciousnessConfig(
@@ -202,23 +202,25 @@ async def lifespan(app: FastAPI):
 
                 checker = create_checker()
             except Exception:
-                checker = None
+                checker = None  # Convergence not available
 
             # Tool registry for builder/tester/reviewer agents
             tool_registry = None
             try:
                 from animus_forge.tools.registry import ForgeToolRegistry
 
-                require_approval = os.environ.get(
-                    "FORGE_WRITE_APPROVAL", ""
-                ).lower() in ("1", "true", "on")
+                require_approval = os.environ.get("FORGE_WRITE_APPROVAL", "").lower() in (
+                    "1",
+                    "true",
+                    "on",
+                )
                 tool_registry = ForgeToolRegistry(
                     enable_shell=True,
                     require_write_approval=require_approval,
                     budget_manager=state.budget_manager,
                 )
             except Exception:
-                pass
+                pass  # Tool registry not available — supervisor runs without tools
 
             return SupervisorAgent(
                 provider,

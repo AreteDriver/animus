@@ -34,7 +34,7 @@ try:
 
     HAS_CONVERGENT = True
 except ImportError:
-    pass
+    pass  # Quorum not installed — bridge degrades gracefully
 
 # Default principles — loaded from file at runtime, this is the fallback
 _DEFAULT_PRINCIPLES = [

@@ -117,7 +117,7 @@ def get_supervisor():
 
             budget_mgr = BudgetManager()
         except Exception:
-            pass
+            pass  # Budget module not available — run without budget tracking
 
         # Optional: convergence checker
         checker = None
@@ -126,7 +126,7 @@ def get_supervisor():
 
             checker = create_checker()
         except Exception:
-            pass
+            pass  # Convergence module not installed — run without convergence
 
         # Optional: coordination bridge
         bridge = None
@@ -135,23 +135,25 @@ def get_supervisor():
 
             bridge = getattr(api_state, "coordination_bridge", None)
         except Exception:
-            pass
+            pass  # API state not initialized — run without coordination
 
         # Optional: tool registry for builder/tester/reviewer agents
         tool_registry = None
         try:
             from animus_forge.tools.registry import ForgeToolRegistry
 
-            require_approval = os.environ.get(
-                "FORGE_WRITE_APPROVAL", ""
-            ).lower() in ("1", "true", "on")
+            require_approval = os.environ.get("FORGE_WRITE_APPROVAL", "").lower() in (
+                "1",
+                "true",
+                "on",
+            )
             tool_registry = ForgeToolRegistry(
                 enable_shell=True,
                 require_write_approval=require_approval,
                 budget_manager=budget_mgr,
             )
         except Exception:
-            pass
+            pass  # Tool registry not available — run without tools
 
         return SupervisorAgent(
             provider,

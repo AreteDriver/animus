@@ -85,7 +85,7 @@ def improve_run(
             require_write_approval=not auto_approve,
         )
     except Exception:
-        pass
+        pass  # Tool registry not available — orchestrator runs without tools
 
     orchestrator = SelfImproveOrchestrator(
         codebase_path=codebase_path,

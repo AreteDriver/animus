@@ -19,11 +19,21 @@ MAX_TOOL_ITERATIONS = 8
 
 # Models known to support native Ollama tool calling
 OLLAMA_TOOL_MODELS = {
-    "qwen2.5:14b", "qwen2.5:7b", "qwen2.5:32b", "qwen2.5:72b",
-    "qwen2.5-coder", "qwen2.5-coder:latest", "qwen2.5-coder:7b",
-    "llama3.1:8b", "llama3.1", "llama3.1:70b",
-    "llama3.3", "llama3.3:latest",
-    "mistral", "mistral:latest", "mistral-nemo",
+    "qwen2.5:14b",
+    "qwen2.5:7b",
+    "qwen2.5:32b",
+    "qwen2.5:72b",
+    "qwen2.5-coder",
+    "qwen2.5-coder:latest",
+    "qwen2.5-coder:7b",
+    "llama3.1:8b",
+    "llama3.1",
+    "llama3.1:70b",
+    "llama3.3",
+    "llama3.3:latest",
+    "mistral",
+    "mistral:latest",
+    "mistral-nemo",
 }
 
 # Default model for tool-equipped agents when primary model lacks tool support
@@ -152,8 +162,12 @@ class AgentProvider:
 
         if use_text_fallback:
             return await self._complete_with_text_tools(
-                system_prompt, filtered_messages, tool_registry,
-                max_iterations, max_tokens, progress_callback,
+                system_prompt,
+                filtered_messages,
+                tool_registry,
+                max_iterations,
+                max_tokens,
+                progress_callback,
                 agent_id=agent_id,
             )
 
@@ -185,14 +199,14 @@ class AgentProvider:
                 )
 
             # Add assistant message with tool use
-            working_messages.append(
-                self._build_assistant_tool_message(response, provider_name)
-            )
+            working_messages.append(self._build_assistant_tool_message(response, provider_name))
 
             # Execute each tool and add results
             for tool_call in response.tool_calls:
                 result = tool_registry.execute(
-                    tool_call.name, tool_call.arguments, agent_id=agent_id,
+                    tool_call.name,
+                    tool_call.arguments,
+                    agent_id=agent_id,
                 )
                 working_messages.append(
                     self._build_tool_result_message(tool_call, result, provider_name)
@@ -235,7 +249,9 @@ class AgentProvider:
         from animus_forge.providers.base import CompletionRequest
 
         tool_instructions = self._build_text_tool_prompt(tool_registry)
-        enhanced_system = (system_prompt or "You are a helpful assistant.") + "\n\n" + tool_instructions
+        enhanced_system = (
+            (system_prompt or "You are a helpful assistant.") + "\n\n" + tool_instructions
+        )
 
         working_messages = list(filtered_messages)
 
@@ -271,7 +287,12 @@ class AgentProvider:
 
             # Add assistant response and tool results back
             working_messages.append({"role": "assistant", "content": text})
-            working_messages.append({"role": "user", "content": f"Tool results:{results_text}\n\nContinue with your task based on these results."})
+            working_messages.append(
+                {
+                    "role": "user",
+                    "content": f"Tool results:{results_text}\n\nContinue with your task based on these results.",
+                }
+            )
 
             logger.debug(
                 "Text tool iteration %d: executed %d tools",
@@ -305,14 +326,14 @@ class AgentProvider:
         ]
         for tool in tool_registry.tools:
             params = tool.parameters.get("properties", {})
-            param_list = ", ".join(
-                f"{k}: {v.get('type', 'any')}" for k, v in params.items()
-            )
+            param_list = ", ".join(f"{k}: {v.get('type', 'any')}" for k, v in params.items())
             lines.append(f"- **{tool.name}**({param_list}): {tool.description}")
 
         lines.append("")
         lines.append("Call tools when you need to read files, search code, etc.")
-        lines.append("When you're done, respond with your final answer without any tool_call blocks.")
+        lines.append(
+            "When you're done, respond with your final answer without any tool_call blocks."
+        )
         return "\n".join(lines)
 
     @staticmethod
@@ -338,7 +359,7 @@ class AgentProvider:
                 if tool_registry.get(name):
                     calls.append((name, args))
             except (json.JSONDecodeError, AttributeError):
-                pass
+                pass  # Malformed tool_call block — skip and try next match
 
         if calls:
             return calls
@@ -353,14 +374,13 @@ class AgentProvider:
                     if tool_registry.get(name):
                         calls.append((name, args))
             except (json.JSONDecodeError, AttributeError):
-                pass
+                pass  # Malformed JSON block — skip and try next match
 
         if calls:
             return calls
 
         # Pattern 3: bare JSON object with "tool" key (may contain nested braces)
         for match in re.finditer(r'\{[^{}]*"tool"\s*:\s*"[^"]+?"[^}]*\}', text):
-            raw = match.group(0)
             # Ensure balanced braces by extending to next closing brace if needed
             depth = 0
             end = match.start()
@@ -372,7 +392,7 @@ class AgentProvider:
                     if depth == 0:
                         end = i + 1
                         break
-            raw = text[match.start():end]
+            raw = text[match.start() : end]
             try:
                 data = json.loads(raw)
                 name = data.get("tool", "")
@@ -380,7 +400,7 @@ class AgentProvider:
                 if tool_registry.get(name):
                     calls.append((name, args))
             except (json.JSONDecodeError, AttributeError):
-                pass
+                pass  # Malformed bare JSON — skip and try next match
 
         return calls
 
@@ -436,12 +456,14 @@ class AgentProvider:
         if response.content:
             content_blocks.append({"type": "text", "text": response.content})
         for tc in response.tool_calls:
-            content_blocks.append({
-                "type": "tool_use",
-                "id": tc.id,
-                "name": tc.name,
-                "input": tc.arguments,
-            })
+            content_blocks.append(
+                {
+                    "type": "tool_use",
+                    "id": tc.id,
+                    "name": tc.name,
+                    "input": tc.arguments,
+                }
+            )
         return {"role": "assistant", "content": content_blocks}
 
     @staticmethod
