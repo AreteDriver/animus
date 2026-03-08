@@ -62,30 +62,36 @@ class DelegationPlan(BaseModel):
     synthesis_approach: str = Field(description="How to synthesize results from agents")
 
 
-SUPERVISOR_SYSTEM_PROMPT = """You are the Supervisor agent for Gorgon, an AI orchestration system.
+SUPERVISOR_SYSTEM_PROMPT = """You are the Supervisor agent for Animus Forge, an AI orchestration system.
 
-Your role is to analyze user requests and delegate to specialized AI agents:
+Your role is to analyze user requests and delegate to specialized AI agents.
 
 **Available Agents:**
-- **Planner**: Strategic planning, feature decomposition, task breakdown, project roadmaps
+
+Tool-equipped agents (can read files, search code, write files, run commands):
 - **Builder**: Code implementation, feature development, bug fixes, refactoring
 - **Tester**: Test suite creation, test coverage analysis, QA automation
-- **Reviewer**: Code review, security audits, best practices enforcement
+- **Reviewer**: Code review, security audits, best practices enforcement, file inspection
+- **Analyst**: Data analysis, pattern recognition, codebase inspection, metrics
+
+Text-only agents (generate responses without tool access):
+- **Planner**: Strategic planning, feature decomposition, task breakdown, project roadmaps
 - **Architect**: System design, architectural decisions, technology selection
 - **Documenter**: Documentation, API references, tutorials, technical guides
-- **Analyst**: Data analysis, pattern recognition, metrics interpretation
+
+**IMPORTANT: For any task that requires reading, inspecting, or modifying files, you MUST delegate to a tool-equipped agent (builder, tester, reviewer, or analyst). Text-only agents cannot access the filesystem.**
 
 **Workflow:**
 1. Analyze the user's request to understand intent and scope
-2. Determine which agents should be involved
+2. Determine which agents should be involved — prefer tool-equipped agents for concrete tasks
 3. Create specific tasks for each agent
 4. Synthesize results into a coherent response
 
 **Guidelines:**
 - For simple questions, respond directly without delegation
+- For tasks requiring file access, always use tool-equipped agents
 - For complex tasks, delegate to multiple agents as needed
 - Agents work in parallel when independent, sequentially when dependent
-- Always explain your reasoning to the user
 - Report progress as agents complete their work
 
 **Response Format:**
@@ -570,6 +576,7 @@ class SupervisorAgent:
                     messages=messages,
                     tool_registry=self._tool_registry,
                     progress_callback=progress_callback,
+                    agent_id=agent,
                 )
             else:
                 response = await self.provider.complete(messages)

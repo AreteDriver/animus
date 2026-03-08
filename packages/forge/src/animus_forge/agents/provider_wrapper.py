@@ -115,6 +115,7 @@ class AgentProvider:
         max_iterations: int = MAX_TOOL_ITERATIONS,
         max_tokens: int = 4096,
         progress_callback: Any = None,
+        agent_id: str = "",
     ) -> str:
         """Complete with iterative tool use.
 
@@ -128,6 +129,7 @@ class AgentProvider:
             max_iterations: Maximum tool loop iterations.
             max_tokens: Maximum tokens per LLM call.
             progress_callback: Optional callable(stage, detail) for updates.
+            agent_id: Agent identifier for audit logging and budget tracking.
 
         Returns:
             Final text response after all tool iterations.
@@ -152,6 +154,7 @@ class AgentProvider:
             return await self._complete_with_text_tools(
                 system_prompt, filtered_messages, tool_registry,
                 max_iterations, max_tokens, progress_callback,
+                agent_id=agent_id,
             )
 
         working_messages = list(filtered_messages)
@@ -188,7 +191,9 @@ class AgentProvider:
 
             # Execute each tool and add results
             for tool_call in response.tool_calls:
-                result = tool_registry.execute(tool_call.name, tool_call.arguments)
+                result = tool_registry.execute(
+                    tool_call.name, tool_call.arguments, agent_id=agent_id,
+                )
                 working_messages.append(
                     self._build_tool_result_message(tool_call, result, provider_name)
                 )
@@ -220,6 +225,7 @@ class AgentProvider:
         max_iterations: int,
         max_tokens: int,
         progress_callback: Any,
+        agent_id: str = "",
     ) -> str:
         """Text-based tool loop for models without native tool support.
 
@@ -260,7 +266,7 @@ class AgentProvider:
             # Execute parsed tool calls
             results_text = ""
             for tool_name, tool_args in parsed_calls:
-                result = tool_registry.execute(tool_name, tool_args)
+                result = tool_registry.execute(tool_name, tool_args, agent_id=agent_id)
                 results_text += f"\n\n[Tool Result: {tool_name}]\n{result}"
 
             # Add assistant response and tool results back

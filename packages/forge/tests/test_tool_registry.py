@@ -852,3 +852,274 @@ class TestTextToolFallback:
             tool_registry=registry,
         ))
         assert "x = 42" in result
+
+
+# --- Tool audit logging tests ---
+
+
+class TestToolAuditLogging:
+    """Tests for structured audit log emission on tool execution."""
+
+    def setup_method(self):
+        self.tmpdir = tempfile.mkdtemp()
+        Path(self.tmpdir, "test.py").write_text("x = 1\n")
+        self.registry = ForgeToolRegistry(project_root=self.tmpdir)
+
+    def test_audit_emitted_on_success(self):
+        """Successful tool execution emits an audit log entry."""
+        with patch("animus_forge.tools.registry.audit_logger") as mock_audit:
+            self.registry.execute("read_file", {"path": "test.py"})
+            mock_audit.info.assert_called_once()
+            entry = json.loads(mock_audit.info.call_args[0][0])
+            assert entry["event"] == "tool_execution"
+            assert entry["tool"] == "read_file"
+            assert entry["success"] is True
+            assert "duration_ms" in entry
+
+    def test_audit_emitted_on_failure(self):
+        """Failed tool execution emits audit with error."""
+        with patch("animus_forge.tools.registry.audit_logger") as mock_audit:
+            self.registry.execute("read_file", {"path": "nonexistent.py"})
+            mock_audit.info.assert_called_once()
+            entry = json.loads(mock_audit.info.call_args[0][0])
+            assert entry["success"] is False
+            assert "error" in entry
+
+    def test_audit_emitted_on_unknown_tool(self):
+        """Unknown tool emits audit with error."""
+        with patch("animus_forge.tools.registry.audit_logger") as mock_audit:
+            self.registry.execute("fake_tool", {})
+            mock_audit.info.assert_called_once()
+            entry = json.loads(mock_audit.info.call_args[0][0])
+            assert entry["success"] is False
+            assert entry["error"] == "unknown_tool"
+
+    def test_audit_includes_agent_id(self):
+        """Agent ID is recorded in audit entries."""
+        with patch("animus_forge.tools.registry.audit_logger") as mock_audit:
+            self.registry.execute("list_files", {}, agent_id="builder")
+            entry = json.loads(mock_audit.info.call_args[0][0])
+            assert entry["agent_id"] == "builder"
+
+    def test_audit_sanitizes_content(self):
+        """File content is not logged — only size."""
+        with patch("animus_forge.tools.registry.audit_logger") as mock_audit:
+            self.registry.execute("write_file", {
+                "path": "out.txt",
+                "content": "secret data here",
+            })
+            entry = json.loads(mock_audit.info.call_args[0][0])
+            assert "secret data" not in json.dumps(entry)
+            assert "(16 chars)" in json.dumps(entry)
+
+    def test_audit_never_breaks_execution(self):
+        """Audit logger error doesn't break tool execution."""
+        with patch("animus_forge.tools.registry.audit_logger") as mock_audit:
+            mock_audit.info.side_effect = RuntimeError("logger broken")
+            result = self.registry.execute("list_files", {})
+            assert "Error" not in result
+
+
+# --- Write file approval gate tests ---
+
+
+class TestWriteApprovalGate:
+    """Tests for the write_file approval gate."""
+
+    def setup_method(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.registry = ForgeToolRegistry(
+            project_root=self.tmpdir,
+            require_write_approval=True,
+        )
+
+    def test_write_queued_not_applied(self):
+        """With approval gate on, write_file queues instead of writing."""
+        result = self.registry.execute("write_file", {
+            "path": "test.txt",
+            "content": "hello",
+        })
+        assert "queued for approval" in result
+        assert not (Path(self.tmpdir) / "test.txt").exists()
+
+    def test_pending_writes_tracked(self):
+        """Pending writes are accessible via property."""
+        self.registry.execute("write_file", {
+            "path": "a.txt", "content": "aaa",
+        })
+        self.registry.execute("write_file", {
+            "path": "b.txt", "content": "bbb",
+        })
+        assert len(self.registry.pending_writes) == 2
+        assert self.registry.pending_writes[0]["path"] == "a.txt"
+
+    def test_approve_single_write(self):
+        """Approve a specific pending write by index."""
+        self.registry.execute("write_file", {
+            "path": "a.txt", "content": "aaa",
+        })
+        self.registry.execute("write_file", {
+            "path": "b.txt", "content": "bbb",
+        })
+        result = self.registry.approve_write(0)
+        assert "Approved" in result
+        assert (Path(self.tmpdir) / "a.txt").read_text() == "aaa"
+        assert not (Path(self.tmpdir) / "b.txt").exists()
+        assert len(self.registry.pending_writes) == 1
+
+    def test_approve_invalid_index(self):
+        """Invalid index returns error."""
+        result = self.registry.approve_write(99)
+        assert "Invalid" in result
+
+    def test_approve_all_writes(self):
+        """Approve all pending writes at once."""
+        self.registry.execute("write_file", {
+            "path": "x.txt", "content": "xxx",
+        })
+        self.registry.execute("write_file", {
+            "path": "y.txt", "content": "yyy",
+        })
+        results = self.registry.approve_all_writes()
+        assert len(results) == 2
+        assert (Path(self.tmpdir) / "x.txt").read_text() == "xxx"
+        assert (Path(self.tmpdir) / "y.txt").read_text() == "yyy"
+        assert len(self.registry.pending_writes) == 0
+
+    def test_reject_all_writes(self):
+        """Reject discards all pending writes."""
+        self.registry.execute("write_file", {
+            "path": "a.txt", "content": "aaa",
+        })
+        count = self.registry.reject_all_writes()
+        assert count == 1
+        assert len(self.registry.pending_writes) == 0
+        assert not (Path(self.tmpdir) / "a.txt").exists()
+
+    def test_read_not_affected_by_approval_gate(self):
+        """Read operations work normally with approval gate on."""
+        Path(self.tmpdir, "existing.py").write_text("code\n")
+        result = self.registry.execute("read_file", {"path": "existing.py"})
+        assert "code" in result
+
+    def test_write_without_approval_gate(self):
+        """Without the gate, writes apply immediately."""
+        reg = ForgeToolRegistry(project_root=self.tmpdir)
+        reg.execute("write_file", {"path": "direct.txt", "content": "direct"})
+        assert (Path(self.tmpdir) / "direct.txt").read_text() == "direct"
+
+
+# --- Budget gate for tool calls tests ---
+
+
+class TestToolBudgetGate:
+    """Tests for budget enforcement in tool execution."""
+
+    def setup_method(self):
+        self.tmpdir = tempfile.mkdtemp()
+        Path(self.tmpdir, "test.py").write_text("x = 1\n")
+
+    def _make_budget(self, can_allocate=True, remaining=50000):
+        """Create a mock BudgetManager."""
+        bm = MagicMock()
+        bm.can_allocate.return_value = can_allocate
+        bm.remaining = remaining
+        bm.record_usage = MagicMock()
+        return bm
+
+    def test_budget_allows_execution(self):
+        """Tool executes when budget has capacity."""
+        bm = self._make_budget(can_allocate=True)
+        reg = ForgeToolRegistry(
+            project_root=self.tmpdir, budget_manager=bm,
+        )
+        result = reg.execute("read_file", {"path": "test.py"}, agent_id="builder")
+        assert "x = 1" in result
+        bm.record_usage.assert_called_once()
+
+    def test_budget_blocks_execution(self):
+        """Tool blocked when budget exceeded."""
+        bm = self._make_budget(can_allocate=False, remaining=0)
+        reg = ForgeToolRegistry(
+            project_root=self.tmpdir, budget_manager=bm,
+        )
+        result = reg.execute("read_file", {"path": "test.py"}, agent_id="builder")
+        assert "Budget exceeded" in result
+        bm.record_usage.assert_not_called()
+
+    def test_budget_records_custom_tokens_per_call(self):
+        """Custom tokens_per_call is recorded."""
+        bm = self._make_budget()
+        reg = ForgeToolRegistry(
+            project_root=self.tmpdir,
+            budget_manager=bm,
+            budget_tokens_per_call=200,
+        )
+        reg.execute("list_files", {}, agent_id="analyst")
+        bm.record_usage.assert_called_once_with(
+            agent_id="analyst",
+            tokens=200,
+            operation="tool:list_files",
+        )
+
+    def test_budget_recording_failure_doesnt_break_execution(self):
+        """Budget recording error doesn't break tool execution."""
+        bm = self._make_budget()
+        bm.record_usage.side_effect = RuntimeError("db error")
+        reg = ForgeToolRegistry(
+            project_root=self.tmpdir, budget_manager=bm,
+        )
+        result = reg.execute("read_file", {"path": "test.py"})
+        assert "x = 1" in result
+
+    def test_no_budget_manager_executes_normally(self):
+        """Without budget manager, everything works normally."""
+        reg = ForgeToolRegistry(project_root=self.tmpdir)
+        result = reg.execute("read_file", {"path": "test.py"})
+        assert "x = 1" in result
+
+    def test_budget_gate_emits_audit_on_block(self):
+        """Budget block emits an audit entry."""
+        bm = self._make_budget(can_allocate=False, remaining=0)
+        reg = ForgeToolRegistry(
+            project_root=self.tmpdir, budget_manager=bm,
+        )
+        with patch("animus_forge.tools.registry.audit_logger") as mock_audit:
+            reg.execute("read_file", {"path": "test.py"})
+            entry = json.loads(mock_audit.info.call_args[0][0])
+            assert entry["success"] is False
+            assert entry["error"] == "budget_exceeded"
+
+
+# --- Supervisor prompt improvement tests ---
+
+
+class TestSupervisorPromptImprovement:
+    """Tests for the improved supervisor system prompt."""
+
+    def test_prompt_mentions_tool_equipped_agents(self):
+        from animus_forge.agents.supervisor import SUPERVISOR_SYSTEM_PROMPT
+
+        assert "Tool-equipped agents" in SUPERVISOR_SYSTEM_PROMPT
+        assert "Builder" in SUPERVISOR_SYSTEM_PROMPT
+        assert "Tester" in SUPERVISOR_SYSTEM_PROMPT
+        assert "Reviewer" in SUPERVISOR_SYSTEM_PROMPT
+        assert "Analyst" in SUPERVISOR_SYSTEM_PROMPT
+
+    def test_prompt_mentions_text_only_agents(self):
+        from animus_forge.agents.supervisor import SUPERVISOR_SYSTEM_PROMPT
+
+        assert "Text-only agents" in SUPERVISOR_SYSTEM_PROMPT
+        assert "Planner" in SUPERVISOR_SYSTEM_PROMPT
+        assert "Architect" in SUPERVISOR_SYSTEM_PROMPT
+        assert "Documenter" in SUPERVISOR_SYSTEM_PROMPT
+
+    def test_prompt_instructs_file_access_via_tools(self):
+        from animus_forge.agents.supervisor import SUPERVISOR_SYSTEM_PROMPT
+
+        assert "MUST delegate to a tool-equipped agent" in SUPERVISOR_SYSTEM_PROMPT
+
+    def test_prompt_names_animus_forge(self):
+        from animus_forge.agents.supervisor import SUPERVISOR_SYSTEM_PROMPT
+
+        assert "Animus Forge" in SUPERVISOR_SYSTEM_PROMPT
