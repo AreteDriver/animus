@@ -652,3 +652,73 @@ Focus on the most important findings and recommendations.
             logger.error(f"Synthesis error: {e}")
             # Fall back to simple concatenation
             return "\n\n".join(f"**{agent}:** {result}" for agent, result in results.items())
+
+    async def process_message(
+        self,
+        message: str,
+        context: list[dict[str, str]] | None = None,
+        progress_callback: Any = None,
+    ) -> str:
+        """Process a user message through intelligent agent delegation.
+
+        This is the main public entry point. Analyzes the message via the
+        supervisor LLM, decides whether to delegate to sub-agents or respond
+        directly, executes delegations in parallel, and synthesizes results.
+
+        Args:
+            message: The user's task or question.
+            context: Optional conversation history.
+            progress_callback: Optional callable(stage, detail) for progress updates.
+
+        Returns:
+            Final synthesized response from agent delegation, or direct LLM response.
+        """
+        if context is None:
+            context = []
+        if progress_callback is None:
+
+            def progress_callback(stage: str, detail: str = "") -> None:
+                pass
+
+        # Build messages for the supervisor LLM call
+        system_prompt = self._build_system_prompt()
+        messages: list[dict[str, str]] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": message},
+        ]
+
+        # Add recent context
+        for msg in context[-5:]:
+            if msg["role"] != "system":
+                messages.insert(
+                    1,
+                    {
+                        "role": msg["role"],
+                        "content": f"[Context] {msg['content'][:500]}",
+                    },
+                )
+
+        # Get supervisor's analysis
+        progress_callback("analyzing", "Supervisor analyzing task...")
+        try:
+            response = await self.provider.complete(messages)
+        except Exception as e:
+            logger.error("Supervisor LLM call failed: %s", e)
+            return f"Error: Supervisor could not analyze the task: {e}"
+
+        # Check if supervisor wants to delegate
+        plan = self._parse_delegation(response)
+
+        if plan is None:
+            # Direct response — supervisor handled it without delegation
+            return response
+
+        # Execute delegations
+        progress_callback("delegating", plan.analysis)
+        results = await self._execute_delegations(plan.delegations, context, progress_callback)
+
+        # Synthesize results
+        progress_callback("synthesizing", "Combining agent results...")
+        synthesis = await self._synthesize_results(plan, results, context)
+
+        return synthesis

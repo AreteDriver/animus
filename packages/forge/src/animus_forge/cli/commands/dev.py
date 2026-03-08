@@ -10,7 +10,7 @@ import typer
 from rich.panel import Panel
 
 from ..detection import detect_codebase_context, format_context_for_prompt
-from ..helpers import console, get_claude_client, get_workflow_executor
+from ..helpers import console, get_claude_client, get_supervisor, get_workflow_executor
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -83,11 +83,11 @@ def do_task(
         ...,
         help="Natural language description of what you want to do",
     ),
-    workflow: str = typer.Option(
-        "feature-build",
+    workflow: str | None = typer.Option(
+        None,
         "--workflow",
         "-w",
-        help="Workflow to use (feature-build, bug-fix, refactor)",
+        help="Use a specific YAML workflow instead of agent delegation",
     ),
     dry_run: bool = typer.Option(
         False,
@@ -106,23 +106,89 @@ def do_task(
         help="Show real-time execution progress with a Rich Live table",
     ),
 ):
-    """Execute a development task using your agent army.
+    """Execute a development task using intelligent agent delegation.
+
+    By default, the Supervisor agent analyzes your task and delegates to
+    specialized sub-agents (planner, builder, tester, reviewer, etc.).
+
+    Use --workflow to run a specific YAML workflow instead.
 
     Examples:
-        gorgon do "add user authentication"
-        gorgon do "fix the login bug" --workflow bug-fix
-        gorgon do "refactor the database module" --workflow refactor
+        animus do "add user authentication"
+        animus do "fix the login bug"
+        animus do "refactor the database module" --workflow refactor
     """
-    from animus_forge.workflow.loader import load_workflow
+    import asyncio
 
     # Detect codebase context
     context = detect_codebase_context()
     context_str = format_context_for_prompt(context)
 
+    # If --workflow is specified, use the YAML workflow path
+    if workflow is not None:
+        _run_yaml_workflow(task, workflow, context, context_str, dry_run, json_output, live)
+        return
+
+    # Default: intelligent agent delegation via SupervisorAgent
     console.print(
         Panel(
             f"[bold]{task}[/bold]\n\n[dim]{context_str}[/dim]",
-            title="🐍 Gorgon Task",
+            title="Animus Supervisor",
+            border_style="cyan",
+        )
+    )
+
+    if dry_run:
+        console.print(
+            "\n[yellow]Dry run — Supervisor would analyze and delegate this task.[/yellow]"
+        )
+        console.print("Agents available: planner, builder, tester, reviewer, architect, documenter")
+        raise typer.Exit(0)
+
+    supervisor = get_supervisor()
+
+    # Build the full prompt with codebase context
+    full_message = f"""{task}
+
+Codebase context:
+{context_str}"""
+
+    def _progress(stage: str, detail: str = "") -> None:
+        if detail:
+            console.print(f"  [dim][{stage}][/dim] {detail}")
+
+    with console.status("[bold cyan]Supervisor analyzing task...", spinner="dots"):
+        result = asyncio.run(
+            supervisor.process_message(
+                full_message,
+                progress_callback=_progress,
+            )
+        )
+
+    if json_output:
+        print(json.dumps({"task": task, "result": result}, indent=2))
+        return
+
+    console.print("\n[bold]Result:[/bold]\n")
+    console.print(result)
+
+
+def _run_yaml_workflow(
+    task: str,
+    workflow: str,
+    context: dict,
+    context_str: str,
+    dry_run: bool,
+    json_output: bool,
+    live: bool,
+) -> None:
+    """Execute a task via a fixed YAML workflow (legacy path)."""
+    from animus_forge.workflow.loader import load_workflow
+
+    console.print(
+        Panel(
+            f"[bold]{task}[/bold]\n\n[dim]{context_str}[/dim]",
+            title="Animus Workflow",
             border_style="cyan",
         )
     )

@@ -33,7 +33,7 @@ class TestDoTaskLiveFlag:
         mock_exec.return_value.execute.return_value = mock_result
 
         with patch.object(Path, "exists", return_value=True):
-            result = runner.invoke(app, ["do", "test task", "--live"])
+            result = runner.invoke(app, ["do", "test task", "--live", "-w", "feature-build"])
 
         assert result.exit_code == 0
 
@@ -63,7 +63,7 @@ class TestDoTaskLiveFlag:
             with patch("animus_forge.cli.helpers._create_cli_execution_manager") as mock_create_em:
                 mock_em = MagicMock()
                 mock_create_em.return_value = mock_em
-                result = runner.invoke(app, ["do", "test task", "--live"])
+                result = runner.invoke(app, ["do", "test task", "--live", "-w", "feature-build"])
 
         assert result.exit_code == 0
         # Verify execution_manager was set on the executor
@@ -90,7 +90,7 @@ class TestDoTaskLiveFlag:
         mock_exec.return_value.execute.return_value = mock_result
 
         with patch.object(Path, "exists", return_value=True):
-            result = runner.invoke(app, ["do", "test task"])
+            result = runner.invoke(app, ["do", "test task", "-w", "feature-build"])
 
         assert result.exit_code == 0
 

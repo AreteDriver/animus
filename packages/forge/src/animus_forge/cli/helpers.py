@@ -100,6 +100,55 @@ def get_tracker() -> ExecutionTracker | None:
         return None
 
 
+def get_supervisor():
+    """Create a SupervisorAgent with provider, budget, and coordination."""
+    try:
+        import os
+
+        from animus_forge.agents import SupervisorAgent, create_agent_provider
+
+        provider_type = os.environ.get("DEFAULT_PROVIDER", "ollama")
+        provider = create_agent_provider(provider_type)
+
+        # Optional: budget manager
+        budget_mgr = None
+        try:
+            from animus_forge.budget import BudgetManager
+
+            budget_mgr = BudgetManager()
+        except Exception:
+            pass
+
+        # Optional: convergence checker
+        checker = None
+        try:
+            from animus_forge.agents.convergence import create_checker
+
+            checker = create_checker()
+        except Exception:
+            pass
+
+        # Optional: coordination bridge
+        bridge = None
+        try:
+            from animus_forge import api_state
+
+            bridge = getattr(api_state, "coordination_bridge", None)
+        except Exception:
+            pass
+
+        return SupervisorAgent(
+            provider,
+            convergence_checker=checker,
+            coordination_bridge=bridge,
+            budget_manager=budget_mgr,
+        )
+    except Exception as e:
+        console.print(f"[red]Could not create supervisor agent:[/red] {e}")
+        console.print("Ensure a provider is available (Ollama running, or ANTHROPIC_API_KEY set).")
+        raise typer.Exit(1)
+
+
 def _parse_cli_variables(var: list[str]) -> dict:
     """Parse CLI variables in key=value format."""
     variables = {}
