@@ -8,8 +8,8 @@ Multi-agent orchestration framework for production AI workflows
 
 - **Version**: 1.5.0
 - **Language**: Python
-- **Files**: 590 across 2 languages
-- **Lines**: 220,318
+- **Files**: 601 across 2 languages
+- **Lines**: 225,475
 
 ## Architecture
 
@@ -172,6 +172,18 @@ animus_forge.cli:app
 ### Outstanding Items
 - **TODO**: fix this bug\n") (`tests/test_self_improve_coverage.py`)
 - **TODO**: handle division by zero\n" (`tests/test_self_improve_ollama_integration.py`)
+
+## AI Skills
+
+**Installed**: 117 skills in `~/.claude/skills/`
+- `a11y`, `accessibility-checker`, `agent-teams-orchestrator`, `align-debug`, `api-client`, `api-docs`, `api-tester`, `apple-dev-best-practices`, `arch`, `backup`, `build`, `changelog`, `ci`, `cicd-pipeline`, `code-builder`
+- ... and 102 more
+
+**Recommended bundles**: `api-integration`, `full-stack-dev`
+
+**Recommended skills** (not yet installed):
+- `api-integration`
+- `full-stack-dev`
 
 ## Git Conventions
 

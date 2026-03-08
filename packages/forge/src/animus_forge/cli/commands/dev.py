@@ -137,6 +137,11 @@ def do_task(
         "--live",
         help="Show real-time execution progress with a Rich Live table",
     ),
+    verify: bool = typer.Option(
+        False,
+        "--verify",
+        help="Run a second pass to verify and fix results",
+    ),
 ):
     """Execute a development task using intelligent agent delegation.
 
@@ -144,10 +149,11 @@ def do_task(
     specialized sub-agents (planner, builder, tester, reviewer, etc.).
 
     Use --workflow to run a specific YAML workflow instead.
+    Use --verify to run a verification pass after the initial delegation.
 
     Examples:
         animus do "add user authentication"
-        animus do "fix the login bug"
+        animus do "fix the login bug" --verify
         animus do "refactor the database module" --workflow refactor
     """
     import asyncio
@@ -177,6 +183,9 @@ def do_task(
         console.print("Agents available: planner, builder, tester, reviewer, architect, documenter")
         raise typer.Exit(0)
 
+    import time
+    import uuid
+
     supervisor = get_supervisor()
 
     # Build the full prompt with codebase context
@@ -185,23 +194,59 @@ def do_task(
 Codebase context:
 {context_str}"""
 
-    def _progress(stage: str, detail: str = "") -> None:
-        if detail:
-            console.print(f"  [dim][{stage}][/dim] {detail}")
+    task_id = str(uuid.uuid4())[:8]
+    start_time = time.monotonic()
 
-    with console.status("[bold cyan]Supervisor analyzing task...", spinner="dots"):
-        result = asyncio.run(
-            supervisor.process_message(
-                full_message,
-                progress_callback=_progress,
-            )
+    def _progress(stage: str, detail: str = "") -> None:
+        elapsed = time.monotonic() - start_time
+        prefix = f"[dim]{elapsed:5.1f}s[/dim]"
+        if stage == "tools":
+            console.print(f"  {prefix} [cyan][{stage}][/cyan] {detail}")
+        elif stage == "delegating":
+            console.print(f"  {prefix} [yellow][{stage}][/yellow] {detail}")
+        elif stage == "synthesizing":
+            console.print(f"  {prefix} [green][{stage}][/green] {detail}")
+        elif detail:
+            console.print(f"  {prefix} [dim][{stage}][/dim] {detail}")
+
+    max_rounds = 2 if verify else 1
+    console.print()
+    result = asyncio.run(
+        supervisor.process_message(
+            full_message,
+            progress_callback=_progress,
+            max_rounds=max_rounds,
         )
+    )
+    duration_ms = int((time.monotonic() - start_time) * 1000)
+
+    # Persist task result to history
+    try:
+        from animus_forge.db import get_task_store
+
+        store = get_task_store()
+        if store:
+            store.record_task(
+                job_id=task_id,
+                workflow_id="supervisor",
+                status="completed",
+                agent_role="supervisor",
+                duration_ms=duration_ms,
+                metadata={"task": task, "result": result[:2000]},
+            )
+    except Exception:
+        pass  # Task persistence is advisory
 
     if json_output:
-        print(json.dumps({"task": task, "result": result}, indent=2))
+        print(json.dumps({
+            "task_id": task_id,
+            "task": task,
+            "result": result,
+            "duration_ms": duration_ms,
+        }, indent=2))
         return
 
-    console.print("\n[bold]Result:[/bold]\n")
+    console.print(f"\n[bold]Result[/bold] [dim]({task_id}, {duration_ms}ms)[/dim]\n")
     console.print(result)
 
 

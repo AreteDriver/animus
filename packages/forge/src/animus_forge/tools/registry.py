@@ -182,6 +182,25 @@ class ForgeToolRegistry:
             handler=self._handle_write_file,
         ))
 
+        self.register(ToolDefinition(
+            name="edit_file",
+            description=(
+                "Edit a file by replacing an exact string match with new content. "
+                "The old_string must appear exactly once in the file. "
+                "Use this for surgical edits instead of rewriting the entire file."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "File path (relative to project root)"},
+                    "old_string": {"type": "string", "description": "Exact string to find (must be unique in the file)"},
+                    "new_string": {"type": "string", "description": "Replacement string"},
+                },
+                "required": ["path", "old_string", "new_string"],
+            },
+            handler=self._handle_edit_file,
+        ))
+
     def _register_shell_tool(self) -> None:
         """Register the shell command tool."""
         self.register(ToolDefinition(
@@ -383,6 +402,48 @@ class ForgeToolRegistry:
         resolved.parent.mkdir(parents=True, exist_ok=True)
         resolved.write_text(content, encoding="utf-8")
         return f"Written {len(content)} bytes to {path}"
+
+    def _handle_edit_file(self, args: dict) -> str:
+        path = args.get("path", "")
+        old_string = args.get("old_string", "")
+        new_string = args.get("new_string", "")
+
+        if not old_string:
+            return "Error: old_string must not be empty"
+
+        resolved = self._project_root / path
+        if not resolved.is_file():
+            return f"Error: File not found: {path}"
+
+        try:
+            content = resolved.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as e:
+            return f"Error reading {path}: {e}"
+
+        count = content.count(old_string)
+        if count == 0:
+            return f"Error: old_string not found in {path}"
+        if count > 1:
+            return (
+                f"Error: old_string found {count} times in {path}. "
+                "It must be unique. Provide more surrounding context."
+            )
+
+        if self._require_write_approval:
+            new_content = content.replace(old_string, new_string, 1)
+            self._pending_writes.append({
+                "path": path,
+                "content": new_content,
+                "timestamp": datetime.now(UTC).isoformat(),
+            })
+            return (
+                f"Edit to {path} queued for approval. "
+                f"Total pending writes: {len(self._pending_writes)}."
+            )
+
+        new_content = content.replace(old_string, new_string, 1)
+        resolved.write_text(new_content, encoding="utf-8")
+        return f"Edited {path}: replaced {len(old_string)} chars with {len(new_string)} chars"
 
     @property
     def pending_writes(self) -> list[dict]:

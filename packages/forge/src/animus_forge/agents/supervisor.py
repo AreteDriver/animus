@@ -722,6 +722,7 @@ Focus on the most important findings and recommendations.
         message: str,
         context: list[dict[str, str]] | None = None,
         progress_callback: Any = None,
+        max_rounds: int = 1,
     ) -> str:
         """Process a user message through intelligent agent delegation.
 
@@ -729,10 +730,14 @@ Focus on the most important findings and recommendations.
         supervisor LLM, decides whether to delegate to sub-agents or respond
         directly, executes delegations in parallel, and synthesizes results.
 
+        When max_rounds > 1, after the first round the supervisor reviews the
+        results and may delegate a verification/fix pass to catch issues.
+
         Args:
             message: The user's task or question.
             context: Optional conversation history.
             progress_callback: Optional callable(stage, detail) for progress updates.
+            max_rounds: Maximum delegation rounds (1 = single pass, 2+ = verify/fix loop).
 
         Returns:
             Final synthesized response from agent delegation, or direct LLM response.
@@ -781,8 +786,73 @@ Focus on the most important findings and recommendations.
         progress_callback("delegating", plan.analysis)
         results = await self._execute_delegations(plan.delegations, context, progress_callback)
 
+        # Multi-round loop: verify and fix
+        for round_num in range(1, max_rounds):
+            progress_callback(
+                "verifying",
+                f"Round {round_num + 1}/{max_rounds}: reviewing results...",
+            )
+            follow_up = await self._get_follow_up_plan(
+                message, plan, results, context,
+            )
+            if follow_up is None:
+                break  # Supervisor satisfied with results
+
+            progress_callback("delegating", f"Round {round_num + 1}: {follow_up.analysis}")
+            results = await self._execute_delegations(
+                follow_up.delegations, context, progress_callback,
+            )
+            plan = follow_up
+
         # Synthesize results
         progress_callback("synthesizing", "Combining agent results...")
         synthesis = await self._synthesize_results(plan, results, context)
 
         return synthesis
+
+    async def _get_follow_up_plan(
+        self,
+        original_message: str,
+        plan: DelegationPlan,
+        results: dict[str, str],
+        context: list[dict[str, str]],
+    ) -> DelegationPlan | None:
+        """Ask supervisor if follow-up delegation is needed.
+
+        Reviews the results from the first round and decides whether
+        to delegate additional work (e.g., verification, fixes).
+
+        Returns:
+            A new DelegationPlan if follow-up needed, None if satisfied.
+        """
+        results_summary = "\n".join(
+            f"- {agent}: {result[:500]}" for agent, result in results.items()
+        )
+        follow_up_prompt = f"""Review the results from the previous round of delegation.
+
+**Original task:** {original_message}
+
+**Previous plan:** {plan.analysis}
+
+**Agent results:**
+{results_summary}
+
+If the results are complete and correct, respond with just "SATISFIED".
+
+If there are issues, gaps, or the task needs more work, respond with a new delegation plan in the same JSON format to fix the issues. Use tool-equipped agents (builder, tester, reviewer, analyst) for any follow-up that requires file access."""
+
+        messages = [
+            {"role": "system", "content": self._build_system_prompt()},
+            {"role": "user", "content": follow_up_prompt},
+        ]
+
+        try:
+            response = await self.provider.complete(messages)
+        except Exception as e:
+            logger.warning("Follow-up analysis failed: %s", e)
+            return None
+
+        if "SATISFIED" in response.upper():
+            return None
+
+        return self._parse_delegation(response)

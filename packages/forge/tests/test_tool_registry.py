@@ -4,19 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
 
 from animus_forge.tools.registry import (
     MAX_TOOL_OUTPUT_CHARS,
     ForgeToolRegistry,
     ToolDefinition,
 )
-
 
 # --- ForgeToolRegistry unit tests ---
 
@@ -202,7 +198,6 @@ class TestAgentProviderToolLoop:
     def _make_provider(self, responses):
         """Create a mock AgentProvider with predefined responses."""
         from animus_forge.agents.provider_wrapper import AgentProvider
-        from animus_forge.providers.base import CompletionResponse, ToolCall
 
         mock_provider = MagicMock()
         mock_provider._initialized = True
@@ -376,7 +371,6 @@ class TestSupervisorToolEquipped:
         """Create a SupervisorAgent with mock provider."""
         from animus_forge.agents.provider_wrapper import AgentProvider
         from animus_forge.agents.supervisor import SupervisorAgent
-        from animus_forge.providers.base import CompletionResponse
 
         mock_provider = MagicMock()
         mock_provider._initialized = True
@@ -425,7 +419,7 @@ class TestSupervisorToolEquipped:
 
         with patch.object(supervisor.provider, "complete", new_callable=AsyncMock) as mock_complete:
             mock_complete.return_value = "planned"
-            result = asyncio.run(supervisor._run_agent("planner", "plan something", []))
+            asyncio.run(supervisor._run_agent("planner", "plan something", []))
             mock_complete.assert_called_once()
 
     def test_tester_gets_tools(self):
@@ -440,7 +434,7 @@ class TestSupervisorToolEquipped:
 
         with patch.object(supervisor.provider, "complete_with_tools", new_callable=AsyncMock) as mock_tools:
             mock_tools.return_value = "tested with tools"
-            result = asyncio.run(supervisor._run_agent("tester", "test something", []))
+            asyncio.run(supervisor._run_agent("tester", "test something", []))
             mock_tools.assert_called_once()
 
     def test_no_registry_falls_back_to_text(self):
@@ -1123,3 +1117,202 @@ class TestSupervisorPromptImprovement:
         from animus_forge.agents.supervisor import SUPERVISOR_SYSTEM_PROMPT
 
         assert "Animus Forge" in SUPERVISOR_SYSTEM_PROMPT
+
+
+# --- edit_file tool tests ---
+
+
+class TestEditFileTool:
+    """Tests for the edit_file search-and-replace tool."""
+
+    def setup_method(self):
+        self.tmpdir = tempfile.mkdtemp()
+        Path(self.tmpdir, "example.py").write_text(
+            "def hello():\n    return 'hello'\n\ndef goodbye():\n    return 'bye'\n"
+        )
+        self.registry = ForgeToolRegistry(project_root=self.tmpdir)
+
+    def test_edit_file_registered(self):
+        """edit_file tool is registered by default."""
+        assert self.registry.get("edit_file") is not None
+
+    def test_edit_replaces_unique_string(self):
+        """Replaces a unique string in the file."""
+        result = self.registry.execute("edit_file", {
+            "path": "example.py",
+            "old_string": "return 'hello'",
+            "new_string": "return 'hi'",
+        })
+        assert "Edited" in result
+        content = (Path(self.tmpdir) / "example.py").read_text()
+        assert "return 'hi'" in content
+        assert "return 'hello'" not in content
+
+    def test_edit_not_found(self):
+        """Error when old_string not in file."""
+        result = self.registry.execute("edit_file", {
+            "path": "example.py",
+            "old_string": "nonexistent string",
+            "new_string": "replacement",
+        })
+        assert "not found" in result
+
+    def test_edit_multiple_matches_rejected(self):
+        """Error when old_string appears more than once."""
+        Path(self.tmpdir, "dup.py").write_text("x = 1\nx = 1\n")
+        result = self.registry.execute("edit_file", {
+            "path": "dup.py",
+            "old_string": "x = 1",
+            "new_string": "x = 2",
+        })
+        assert "found 2 times" in result
+
+    def test_edit_file_not_found(self):
+        """Error when file doesn't exist."""
+        result = self.registry.execute("edit_file", {
+            "path": "nonexistent.py",
+            "old_string": "x",
+            "new_string": "y",
+        })
+        assert "not found" in result
+
+    def test_edit_empty_old_string(self):
+        """Error when old_string is empty."""
+        result = self.registry.execute("edit_file", {
+            "path": "example.py",
+            "old_string": "",
+            "new_string": "something",
+        })
+        assert "must not be empty" in result
+
+    def test_edit_with_approval_gate(self):
+        """With approval gate, edit queues instead of applying."""
+        reg = ForgeToolRegistry(
+            project_root=self.tmpdir, require_write_approval=True,
+        )
+        result = reg.execute("edit_file", {
+            "path": "example.py",
+            "old_string": "return 'hello'",
+            "new_string": "return 'hi'",
+        })
+        assert "queued for approval" in result
+        # File unchanged
+        content = (Path(self.tmpdir) / "example.py").read_text()
+        assert "return 'hello'" in content
+
+    def test_edit_multiline(self):
+        """Can replace multiline strings."""
+        result = self.registry.execute("edit_file", {
+            "path": "example.py",
+            "old_string": "def hello():\n    return 'hello'",
+            "new_string": "def greet(name):\n    return f'hello {name}'",
+        })
+        assert "Edited" in result
+        content = (Path(self.tmpdir) / "example.py").read_text()
+        assert "def greet(name):" in content
+
+
+# --- Multi-round supervisor loop tests ---
+
+
+class TestMultiRoundSupervisor:
+    """Tests for the multi-round delegation loop."""
+
+    def _make_supervisor(self, responses, tool_registry=None):
+        from animus_forge.agents.provider_wrapper import AgentProvider
+        from animus_forge.agents.supervisor import SupervisorAgent
+
+        mock_provider = MagicMock()
+        mock_provider._initialized = True
+        mock_provider.name = "test"
+
+        response_iter = iter(responses)
+
+        async def mock_complete_async(request):
+            return next(response_iter)
+
+        mock_provider.complete_async = mock_complete_async
+        agent_provider = AgentProvider(mock_provider)
+        return SupervisorAgent(provider=agent_provider, tool_registry=tool_registry)
+
+    def test_single_round_default(self):
+        """max_rounds=1 is single-pass (no verification)."""
+        from animus_forge.providers.base import CompletionResponse
+
+        supervisor = self._make_supervisor([
+            # Supervisor analysis — direct response
+            CompletionResponse(content="Direct answer", model="test", provider="test"),
+        ])
+        result = asyncio.run(supervisor.process_message("hello", max_rounds=1))
+        assert result == "Direct answer"
+
+    def test_multi_round_satisfied(self):
+        """Supervisor says SATISFIED — no second delegation."""
+        from animus_forge.providers.base import CompletionResponse
+
+        delegation_json = json.dumps({
+            "analysis": "Need to check code",
+            "delegations": [{"agent": "reviewer", "task": "review the code"}],
+            "synthesis_approach": "summarize findings",
+        })
+        supervisor = self._make_supervisor([
+            # Round 1: supervisor delegates
+            CompletionResponse(
+                content=f"```json\n{delegation_json}\n```",
+                model="test", provider="test",
+            ),
+            # Round 1: reviewer agent result
+            CompletionResponse(content="Code looks good", model="test", provider="test"),
+            # Follow-up check: satisfied
+            CompletionResponse(content="SATISFIED", model="test", provider="test"),
+            # Synthesis
+            CompletionResponse(content="All good", model="test", provider="test"),
+        ])
+
+        result = asyncio.run(supervisor.process_message("review code", max_rounds=2))
+        assert "good" in result.lower()
+
+    def test_multi_round_follow_up(self):
+        """Supervisor requests follow-up delegation."""
+        from animus_forge.providers.base import CompletionResponse
+
+        delegation1 = json.dumps({
+            "analysis": "Build feature",
+            "delegations": [{"agent": "builder", "task": "build it"}],
+            "synthesis_approach": "deliver",
+        })
+        delegation2 = json.dumps({
+            "analysis": "Fix issues found",
+            "delegations": [{"agent": "tester", "task": "test it"}],
+            "synthesis_approach": "verify",
+        })
+        supervisor = self._make_supervisor([
+            # Round 1: delegate to builder
+            CompletionResponse(
+                content=f"```json\n{delegation1}\n```",
+                model="test", provider="test",
+            ),
+            # Builder result
+            CompletionResponse(content="Built it", model="test", provider="test"),
+            # Follow-up: not satisfied, delegate to tester
+            CompletionResponse(
+                content=f"```json\n{delegation2}\n```",
+                model="test", provider="test",
+            ),
+            # Tester result
+            CompletionResponse(content="Tests pass", model="test", provider="test"),
+            # Synthesis
+            CompletionResponse(content="Built and tested", model="test", provider="test"),
+        ])
+
+        result = asyncio.run(supervisor.process_message("build and test", max_rounds=2))
+        assert "tested" in result.lower()
+
+    def test_process_message_has_max_rounds_param(self):
+        """process_message accepts max_rounds parameter."""
+        import inspect
+
+        from animus_forge.agents.supervisor import SupervisorAgent
+
+        sig = inspect.signature(SupervisorAgent.process_message)
+        assert "max_rounds" in sig.parameters
