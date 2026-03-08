@@ -142,7 +142,14 @@ def get_supervisor():
         try:
             from animus_forge.tools.registry import ForgeToolRegistry
 
-            tool_registry = ForgeToolRegistry(enable_shell=True)
+            require_approval = os.environ.get(
+                "FORGE_WRITE_APPROVAL", ""
+            ).lower() in ("1", "true", "on")
+            tool_registry = ForgeToolRegistry(
+                enable_shell=True,
+                require_write_approval=require_approval,
+                budget_manager=budget_mgr,
+            )
         except Exception:
             pass
 

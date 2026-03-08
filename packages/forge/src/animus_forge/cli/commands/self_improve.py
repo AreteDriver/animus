@@ -82,6 +82,7 @@ def improve_run(
         tool_registry = ForgeToolRegistry(
             project_root=codebase_path,
             enable_shell=True,
+            require_write_approval=not auto_approve,
         )
     except Exception:
         pass

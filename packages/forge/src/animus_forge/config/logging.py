@@ -120,3 +120,40 @@ def configure_logging(
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("apscheduler").setLevel(logging.WARNING)
+
+    # Configure tool audit logger — writes JSONL to logs/forge_audit.jsonl
+    _configure_tool_audit_logger()
+
+
+def _configure_tool_audit_logger() -> None:
+    """Set up the forge.tool_audit logger with a JSONL file handler.
+
+    Writes one JSON object per line to logs/forge_audit.jsonl.
+    The logger is independent from the root logger — audit entries
+    do not appear in console output.
+    """
+    from pathlib import Path
+
+    audit_logger = logging.getLogger("forge.tool_audit")
+    audit_logger.setLevel(logging.INFO)
+    audit_logger.propagate = False  # Don't echo to console
+
+    # Skip if already configured (e.g. multiple configure_logging calls)
+    if audit_logger.handlers:
+        return
+
+    try:
+        from animus_forge.config.settings import get_settings
+
+        logs_dir = get_settings().logs_dir
+    except Exception:
+        logs_dir = Path("logs")
+
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    audit_path = logs_dir / "forge_audit.jsonl"
+
+    file_handler = logging.FileHandler(str(audit_path), encoding="utf-8")
+    file_handler.setLevel(logging.INFO)
+    # Raw passthrough — the audit logger already gets pre-formatted JSON
+    file_handler.setFormatter(logging.Formatter("%(message)s"))
+    audit_logger.addHandler(file_handler)
