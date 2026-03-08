@@ -19,6 +19,8 @@ from slowapi.util import get_remote_address
 
 if TYPE_CHECKING:
     from animus_forge.agents.process_registry import ProcessRegistry
+    from animus_forge.agents.subagent_manager import SubAgentManager
+    from animus_forge.agents.task_runner import AgentTaskRunner
     from animus_forge.budget import PersistentBudgetManager
     from animus_forge.db import TaskStore
     from animus_forge.executions import ExecutionManager
@@ -77,6 +79,8 @@ task_store: TaskStore | None = None
 # ---------------------------------------------------------------------------
 agent_memory: AgentMemory | None = None
 process_registry: ProcessRegistry | None = None
+subagent_manager: SubAgentManager | None = None
+task_runner: AgentTaskRunner | None = None
 
 coordination_event_log = None  # convergent.EventLog or None
 coordination_bridge = None  # convergent.GorgonBridge or None

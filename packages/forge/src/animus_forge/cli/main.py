@@ -73,6 +73,7 @@ def main(
 # =============================================================================
 
 from .commands.admin import plugins_app  # noqa: E402
+from .commands.agents import agent_app  # noqa: E402
 from .commands.browser import browser_app  # noqa: E402
 from .commands.budget import budget_app  # noqa: E402
 from .commands.calendar_cmd import calendar_app  # noqa: E402
@@ -89,6 +90,7 @@ from .commands.metrics import metrics_app  # noqa: E402
 from .commands.schedule import schedule_app  # noqa: E402
 from .commands.self_improve import self_improve_app  # noqa: E402
 
+app.add_typer(agent_app, name="agent")
 app.add_typer(schedule_app, name="schedule")
 app.add_typer(memory_app, name="memory")
 app.add_typer(budget_app, name="budget")

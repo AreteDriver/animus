@@ -165,6 +165,111 @@ def forget_agent_memory(
 
 
 # ---------------------------------------------------------------------------
+# Task runner
+# ---------------------------------------------------------------------------
+
+
+@router.post("/run", responses=AUTH_RESPONSES)
+async def run_agent_task(
+    agent: str = Query(..., description="Agent role (builder, tester, etc.)"),
+    task: str = Query(..., description="Task description"),
+    use_tools: bool = Query(default=True),
+    provider: str = Query(default="ollama"),
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    """Submit and execute an agent task. Returns the result."""
+    verify_auth(authorization)
+
+    runner = _get_task_runner()
+    if runner is None:
+        # Create an ad-hoc runner
+        try:
+            from animus_forge.agents.provider_wrapper import create_agent_provider
+            from animus_forge.agents.task_runner import AgentTaskRunner
+
+            agent_provider = create_agent_provider(provider)
+            tool_registry = None
+            if use_tools:
+                try:
+                    from animus_forge.tools.registry import ForgeToolRegistry
+
+                    tool_registry = ForgeToolRegistry()
+                except Exception:
+                    pass
+
+            runner = AgentTaskRunner(
+                provider=agent_provider,
+                tool_registry=tool_registry,
+                agent_memory=_get_agent_memory(),
+            )
+        except Exception as e:
+            return {"error": str(e), "status": "failed"}
+
+    result = await runner.run(agent, task, use_tools=use_tools)
+    return result.to_dict()
+
+
+@router.get("/runs", responses=AUTH_RESPONSES)
+def list_agent_runs(
+    status: str | None = None,
+    limit: int = Query(default=50, le=200),
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    """List recent agent runs from SubAgentManager."""
+    verify_auth(authorization)
+
+    sam = _get_subagent_manager()
+    if sam is None:
+        return {"runs": [], "total": 0, "message": "SubAgentManager not available"}
+
+    try:
+        from animus_forge.agents.subagent_manager import RunStatus
+
+        status_filter = RunStatus(status) if status else None
+        runs = sam.list_runs(status=status_filter)
+        entries = [r.to_dict() for r in runs[:limit]]
+        return {"runs": entries, "total": len(entries)}
+    except (ValueError, KeyError) as e:
+        return {"runs": [], "total": 0, "error": str(e)}
+
+
+@router.get("/runs/{run_id}", responses=AUTH_RESPONSES)
+def get_agent_run(
+    run_id: str,
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    """Get a specific agent run by ID."""
+    verify_auth(authorization)
+
+    sam = _get_subagent_manager()
+    if sam is None:
+        raise not_found("SubAgentManager", "unavailable")
+
+    run = sam.get_run(run_id)
+    if run is None:
+        raise not_found("Agent run", run_id)
+
+    return run.to_dict()
+
+
+@router.post("/runs/{run_id}/cancel", responses=AUTH_RESPONSES)
+async def cancel_agent_run(
+    run_id: str,
+    cascade: bool = Query(default=True),
+    authorization: str | None = Header(None),
+) -> dict[str, Any]:
+    """Cancel a running agent."""
+    verify_auth(authorization)
+
+    sam = _get_subagent_manager()
+    if sam is None:
+        raise not_found("SubAgentManager", "unavailable")
+
+    cancelled = await sam.cancel(run_id, cascade=cascade)
+    return {"run_id": run_id, "cancelled": cancelled}
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -177,6 +282,16 @@ def _get_process_registry():
 def _get_agent_memory():
     """Get agent memory from api_state, if available."""
     return getattr(state, "agent_memory", None)
+
+
+def _get_subagent_manager():
+    """Get subagent manager from api_state, if available."""
+    return getattr(state, "subagent_manager", None)
+
+
+def _get_task_runner():
+    """Get task runner from api_state, if available."""
+    return getattr(state, "task_runner", None)
 
 
 def _memory_to_dict(entry) -> dict[str, Any]:

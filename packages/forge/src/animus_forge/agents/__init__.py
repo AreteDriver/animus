@@ -13,6 +13,7 @@ from .provider_wrapper import AgentProvider, create_agent_provider
 from .run_store import AgentRunStore
 from .subagent_manager import AgentRun, RunStatus, SubAgentManager
 from .supervisor import AgentDelegation, SupervisorAgent
+from .task_runner import AgentTaskRunner, TaskResult
 
 __all__ = [
     "AgentConfig",
@@ -22,6 +23,7 @@ __all__ = [
     "AgentProvider",
     "AgentRun",
     "AgentRunStore",
+    "AgentTaskRunner",
     "AutonomyLoop",
     "AutonomyResult",
     "ConvergenceResult",
@@ -38,6 +40,7 @@ __all__ = [
     "StopReason",
     "SubAgentManager",
     "SupervisorAgent",
+    "TaskResult",
     "create_agent_provider",
     "get_agent_config",
 ]
