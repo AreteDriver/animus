@@ -523,3 +523,57 @@ class TestLoggingIntegration:
 
         assert "Debug message" not in output
         assert "Info message" in output
+
+
+class TestToolAuditLoggerConfig:
+    """Tests for _configure_tool_audit_logger."""
+
+    def test_audit_logger_configured_on_logging_init(self):
+        """configure_logging sets up the forge.tool_audit logger."""
+        from unittest.mock import patch
+
+        with patch("animus_forge.config.logging._configure_tool_audit_logger") as mock_cfg:
+            configure_logging(level="INFO", format="text")
+            mock_cfg.assert_called_once()
+
+    def test_audit_logger_fallback_logs_dir(self):
+        """Falls back to Path('logs') when get_settings raises."""
+        import tempfile
+        from unittest.mock import patch
+
+        from animus_forge.config.logging import _configure_tool_audit_logger
+
+        # Clear existing handlers so it runs fresh
+        audit_logger = logging.getLogger("forge.tool_audit")
+        audit_logger.handlers.clear()
+
+        with (
+            patch(
+                "animus_forge.config.settings.get_settings",
+                side_effect=RuntimeError("no settings"),
+            ),
+            tempfile.TemporaryDirectory(),
+            patch("logging.FileHandler") as mock_fh,
+        ):
+            mock_fh.return_value = logging.NullHandler()
+            _configure_tool_audit_logger()
+
+        # Logger should have been configured (handler added via fallback path)
+        assert len(audit_logger.handlers) > 0
+        audit_logger.handlers.clear()
+
+    def test_audit_logger_skips_if_handlers_exist(self):
+        """Does not add duplicate handlers."""
+        from animus_forge.config.logging import _configure_tool_audit_logger
+
+        audit_logger = logging.getLogger("forge.tool_audit")
+        audit_logger.handlers.clear()
+        fake_handler = logging.NullHandler()
+        audit_logger.addHandler(fake_handler)
+
+        _configure_tool_audit_logger()
+
+        # Should still have exactly the one handler we added
+        assert len(audit_logger.handlers) == 1
+        assert audit_logger.handlers[0] is fake_handler
+        audit_logger.handlers.clear()

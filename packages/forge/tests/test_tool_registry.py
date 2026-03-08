@@ -1316,3 +1316,120 @@ class TestMultiRoundSupervisor:
 
         sig = inspect.signature(SupervisorAgent.process_message)
         assert "max_rounds" in sig.parameters
+
+    def test_follow_up_error_returns_none(self):
+        """_get_follow_up_plan returns None when LLM call raises."""
+
+        delegation_json = json.dumps({
+            "analysis": "Check code",
+            "delegations": [{"agent": "reviewer", "task": "review"}],
+            "synthesis_approach": "summarize",
+        })
+
+        call_count = 0
+
+        async def mock_complete(messages):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                # First call: supervisor delegates
+                return f"```json\n{delegation_json}\n```"
+            if call_count == 2:
+                # Second call: agent result
+                return "looks good"
+            if call_count == 3:
+                # Third call: follow-up analysis — raises
+                raise RuntimeError("LLM unavailable")
+            # Fourth call: synthesis
+            return "Final result"
+
+        mock_provider = MagicMock()
+        mock_provider.complete = mock_complete
+        mock_provider.complete_with_tools = AsyncMock(return_value="agent done")
+
+        supervisor = self._make_supervisor([])
+        supervisor.provider = MagicMock()
+        supervisor.provider.complete = mock_complete
+        supervisor.provider.complete_with_tools = AsyncMock(return_value="agent done")
+
+        result = asyncio.run(supervisor.process_message("review code", max_rounds=2))
+        # Should complete without crashing (follow-up error → None → skip)
+        assert result is not None
+
+
+class TestRegistryCoverageGaps:
+    """Cover remaining edge cases in ForgeToolRegistry."""
+
+    def test_list_files_truncated(self, tmp_path):
+        """list_files shows truncation message."""
+        registry = ForgeToolRegistry(project_root=str(tmp_path))
+        fs = registry._get_fs()
+        mock_entry = MagicMock(path="a.py", is_dir=False, size_bytes=10)
+        mock_result = MagicMock(
+            path=str(tmp_path), entries=[mock_entry],
+            total_files=100, total_dirs=5, truncated=True,
+        )
+        with patch.object(fs, "list_files", return_value=mock_result):
+            output = registry.execute("list_files", {"path": "."})
+        assert "truncated" in output
+
+    def test_search_code_truncated(self, tmp_path):
+        """search_code shows truncation message."""
+        registry = ForgeToolRegistry(project_root=str(tmp_path))
+        fs = registry._get_fs()
+        mock_match = MagicMock(path="a.py", line_number=1, line_content="match")
+        mock_result = MagicMock(
+            matches=[mock_match], total_matches=100,
+            files_searched=50, truncated=True,
+        )
+        with patch.object(fs, "search_code", return_value=mock_result):
+            output = registry.execute("search_code", {"pattern": "test"})
+        assert "truncated" in output
+
+    def test_edit_file_read_error(self, tmp_path):
+        """edit_file handles read errors gracefully."""
+        bad_file = tmp_path / "bad.bin"
+        bad_file.write_bytes(b"\x80\x81\x82" * 100)
+
+        registry = ForgeToolRegistry(project_root=str(tmp_path))
+        result = registry.execute("edit_file", {
+            "path": "bad.bin",
+            "old_string": "hello",
+            "new_string": "world",
+        })
+        assert "Error" in result
+
+    def test_run_command_stderr_and_nonzero(self, tmp_path):
+        """run_command includes stderr on non-zero exit."""
+        import subprocess as sp
+
+        registry = ForgeToolRegistry(
+            project_root=str(tmp_path), enable_shell=True, allowed_commands=["bash"],
+        )
+        mock_result = sp.CompletedProcess(
+            args="bash -c 'exit 1'", returncode=1, stdout="", stderr="something failed",
+        )
+        with patch("subprocess.run", return_value=mock_result):
+            result = registry.execute("run_command", {"command": "bash -c 'exit 1'"})
+        assert "Exit code: 1" in result
+        assert "STDERR" in result
+
+    def test_run_command_timeout(self, tmp_path):
+        """run_command reports timeout."""
+        import subprocess
+
+        registry = ForgeToolRegistry(
+            project_root=str(tmp_path), enable_shell=True, allowed_commands=["sleep"],
+        )
+        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("sleep", 30)):
+            result = registry.execute("run_command", {"command": "sleep 999"})
+        assert "timed out" in result
+
+    def test_run_command_general_exception(self, tmp_path):
+        """run_command handles unexpected exceptions."""
+        registry = ForgeToolRegistry(
+            project_root=str(tmp_path), enable_shell=True, allowed_commands=["echo"],
+        )
+        with patch("subprocess.run", side_effect=OSError("no such file")):
+            result = registry.execute("run_command", {"command": "echo hi"})
+        assert "Error running command" in result

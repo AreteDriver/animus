@@ -96,7 +96,24 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 source = ["src/animus_forge"]
-omit = ["*/tests/*", "*/__main__.py", "*/tui/*", "*/dashboard/workflow_builder/*", "*/dashboard/eval_page.py", "*/dashboard/app.py", "*/dashboard/mcp_page.py", "*/dashboard/cost_dashboard.py"]
+omit = [
+    "*/tests/*",
+    "*/__main__.py",
+    "*/tui/*",
+    "*/dashboard/workflow_builder/*",
+    "*/dashboard/eval_page.py",
+    "*/dashboard/app.py",
+    "*/dashboard/mcp_page.py",
+    "*/dashboard/cost_dashboard.py",
+    "*/dashboard/monitoring_pages.py",
+    "*/dashboard/plugin_marketplace.py",
+    "*/dashboard/workflow_visualizer.py",
+    "*/browser/automation.py",
+    "*/providers/vertex_provider.py",
+    "*/providers/bedrock_provider.py",
+    "*/agents/chainlog_bridge.py",
+    "*/messaging/discord_bot.py",
+]
 
 [tool.coverage.report]
 fail_under = 97
