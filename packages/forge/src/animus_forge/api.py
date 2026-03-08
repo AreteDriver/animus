@@ -167,18 +167,24 @@ async def lifespan(app: FastAPI):
 
         if _cb_provider is not None:
             _cb_config = ConsciousnessConfig(
-                enabled=os.environ.get("ANIMUS_CONSCIOUSNESS", "").lower()
-                in ("1", "true", "on"),
+                enabled=os.environ.get("ANIMUS_CONSCIOUSNESS", "").lower() in ("1", "true", "on"),
                 reflections_log_path=settings.base_dir / "logs" / "reflections.jsonl",
-                review_queue_path=settings.base_dir
-                / "logs"
-                / "workflow_review_queue.jsonl",
+                review_queue_path=settings.base_dir / "logs" / "workflow_review_queue.jsonl",
             )
+            # Try to create a VersionedGraph for Quorum integration
+            _cb_graph = None
+            try:
+                from convergent import VersionedGraph
+
+                _cb_graph = VersionedGraph()
+            except Exception:
+                pass  # Quorum not installed — consciousness runs without intent publishing
+
             state.consciousness_bridge = ConsciousnessBridge(
                 provider=_cb_provider,
                 budget_manager=_TokenBudgetManager(),
                 config=_cb_config,
-                graph=None,  # Quorum graph wired separately if available
+                graph=_cb_graph,
             )
             state.consciousness_bridge.start()
             logger.info("Consciousness bridge initialized")

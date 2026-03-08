@@ -35,3 +35,5 @@ steps:
       category: "${category}"
     outputs:
       - verdict_result
+
+evolution_notes: []

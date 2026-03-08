@@ -2919,20 +2919,16 @@ class TestDevCommands:
 
         return CliRunner()
 
-    def _mock_client_and_context(self):
-        mock_client = MagicMock()
-        mock_client.execute_agent.return_value = {"success": True, "output": "Done!"}
-        mock_client.generate_completion.return_value = "Answer here"
-        mock_client.is_configured.return_value = True
-        mock_context = {"path": "/tmp/test", "language": "python", "framework": "fastapi"}
-        return mock_client, mock_context
+    def _mock_context(self):
+        return {"path": "/tmp/test", "language": "python", "framework": "fastapi"}
 
     def test_plan_success(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
+            patch("animus_forge.cli.commands.dev._run_single_agent", return_value="Done!"),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
@@ -2941,24 +2937,31 @@ class TestDevCommands:
             assert "Done!" in result.output
 
     def test_plan_json(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
+            patch("animus_forge.cli.commands.dev._run_single_agent", return_value="plan result"),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
             result = runner.invoke(dev_app, ["plan", "add auth", "--json"])
             assert result.exit_code == 0
+            assert '"task"' in result.output
+            assert '"result"' in result.output
+            assert "plan result" in result.output
 
     def test_plan_error(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
-        mock_client.execute_agent.return_value = {"success": False, "error": "oops"}
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="Error: oops",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
@@ -2967,11 +2970,12 @@ class TestDevCommands:
             assert "oops" in result.output
 
     def test_build_success(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
+            patch("animus_forge.cli.commands.dev._run_single_agent", return_value="Done!"),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
@@ -2980,13 +2984,17 @@ class TestDevCommands:
             assert "Done!" in result.output
 
     def test_build_with_plan_file(self, runner, dev_app, tmp_path):
-        mock_client, mock_context = self._mock_client_and_context()
+        mock_context = self._mock_context()
         plan_file = tmp_path / "plan.md"
         plan_file.write_text("1. Create route\n2. Add validation")
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="built it",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
@@ -2994,11 +3002,15 @@ class TestDevCommands:
             assert result.exit_code == 0
 
     def test_build_with_inline_plan(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="built it",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
@@ -3006,24 +3018,34 @@ class TestDevCommands:
             assert result.exit_code == 0
 
     def test_build_json(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="build result",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
             result = runner.invoke(dev_app, ["build", "endpoint", "--json"])
             assert result.exit_code == 0
+            assert '"task"' in result.output
+            assert '"result"' in result.output
+            assert "build result" in result.output
 
     def test_build_error(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
-        mock_client.execute_agent.return_value = {"success": False, "error": "build fail"}
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="Error: build fail",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
@@ -3031,11 +3053,15 @@ class TestDevCommands:
             assert "build fail" in result.output
 
     def test_test_command_success(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="tests generated",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
@@ -3043,13 +3069,17 @@ class TestDevCommands:
             assert result.exit_code == 0
 
     def test_test_command_with_file(self, runner, dev_app, tmp_path):
-        mock_client, mock_context = self._mock_client_and_context()
+        mock_context = self._mock_context()
         f = tmp_path / "code.py"
         f.write_text("def foo(): pass")
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="tests generated",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
@@ -3057,24 +3087,34 @@ class TestDevCommands:
             assert result.exit_code == 0
 
     def test_test_command_json(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="test result",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
             result = runner.invoke(dev_app, ["test", ".", "--json"])
             assert result.exit_code == 0
+            assert '"target"' in result.output
+            assert '"result"' in result.output
+            assert "test result" in result.output
 
     def test_test_command_error(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
-        mock_client.execute_agent.return_value = {"success": False, "error": "test err"}
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="Error: test err",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
@@ -3082,11 +3122,15 @@ class TestDevCommands:
             assert "test err" in result.output
 
     def test_review_success(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="review done",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev._gather_review_code_context", return_value="code"),
@@ -3095,25 +3139,35 @@ class TestDevCommands:
             assert result.exit_code == 0
 
     def test_review_json(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="review result",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev._gather_review_code_context", return_value=""),
         ):
             result = runner.invoke(dev_app, ["review", ".", "--json"])
             assert result.exit_code == 0
+            assert '"target"' in result.output
+            assert '"result"' in result.output
+            assert "review result" in result.output
 
     def test_review_error(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
-        mock_client.execute_agent.return_value = {"success": False, "error": "bad code"}
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="Error: bad code",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
             patch("animus_forge.cli.commands.dev._gather_review_code_context", return_value=""),
@@ -3122,11 +3176,15 @@ class TestDevCommands:
             assert "bad code" in result.output
 
     def test_ask_success(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="Answer here",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
@@ -3135,29 +3193,36 @@ class TestDevCommands:
             assert "Answer here" in result.output
 
     def test_ask_json(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev._run_single_agent",
+                return_value="the answer",
+            ),
+            patch(
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
             result = runner.invoke(dev_app, ["ask", "what is this?", "--json"])
             assert result.exit_code == 0
+            assert '"question"' in result.output
+            assert '"answer"' in result.output
+            assert "the answer" in result.output
 
-    def test_ask_no_response(self, runner, dev_app):
-        mock_client, mock_context = self._mock_client_and_context()
-        mock_client.generate_completion.return_value = ""
+    def test_ask_empty_response(self, runner, dev_app):
+        mock_context = self._mock_context()
         with (
-            patch("animus_forge.cli.commands.dev.get_claude_client", return_value=mock_client),
+            patch("animus_forge.cli.commands.dev._run_single_agent", return_value=""),
             patch(
-                "animus_forge.cli.commands.dev.detect_codebase_context", return_value=mock_context
+                "animus_forge.cli.commands.dev.detect_codebase_context",
+                return_value=mock_context,
             ),
             patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value="ctx"),
         ):
             result = runner.invoke(dev_app, ["ask", "what is this?"])
-            assert "No response" in result.output
+            assert result.exit_code == 0
 
 
 # =============================================================================

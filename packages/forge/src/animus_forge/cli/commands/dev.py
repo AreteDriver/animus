@@ -12,6 +12,38 @@ from rich.panel import Panel
 from ..detection import detect_codebase_context, format_context_for_prompt
 from ..helpers import console, get_claude_client, get_supervisor, get_workflow_executor
 
+
+def _run_single_agent(role: str, prompt: str) -> str:
+    """Run a single agent role via SupervisorAgent's provider.
+
+    Falls back to ClaudeCodeClient if supervisor creation fails.
+
+    Args:
+        role: Agent role (planner, builder, tester, reviewer, etc.)
+        prompt: The task prompt for the agent.
+
+    Returns:
+        Agent response text.
+    """
+    import asyncio
+
+    try:
+        supervisor = get_supervisor()
+        # Use the supervisor's internal agent runner directly for targeted calls
+        result = asyncio.run(supervisor._run_agent(role, prompt, []))
+        return result
+    except (SystemExit, Exception):
+        # Fallback to ClaudeCodeClient if supervisor not available
+        try:
+            client = get_claude_client()
+            result = client.execute_agent(role=role, task=prompt, context="")
+            if result.get("success"):
+                return result.get("output", "No output")
+            return f"Error: {result.get('error', 'Unknown error')}"
+        except (SystemExit, Exception) as e:
+            return f"Error: No LLM provider available — {e}"
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -325,16 +357,15 @@ def plan(
     """Run the Planner agent to break down a task.
 
     Example:
-        gorgon plan "add OAuth2 authentication to the API"
+        animus plan "add OAuth2 authentication to the API"
     """
-    client = get_claude_client()
     context = detect_codebase_context()
     context_str = format_context_for_prompt(context)
 
     console.print(
         Panel(
             f"[bold]Planning:[/bold] {task}",
-            title="🗺️ Planner Agent",
+            title="Planner Agent",
             border_style="blue",
         )
     )
@@ -353,21 +384,14 @@ Provide:
 5. Success criteria for the implementation"""
 
     with console.status("[bold blue]Planner thinking...", spinner="dots"):
-        result = client.execute_agent(
-            role="planner",
-            task=prompt,
-            context=context_str,
-        )
+        result = _run_single_agent("planner", prompt)
 
     if json_output:
-        print(json.dumps(result, indent=2))
+        print(json.dumps({"task": task, "result": result}, indent=2))
         return
 
-    if result.get("success"):
-        console.print("\n[bold]Implementation Plan:[/bold]\n")
-        console.print(result.get("output", "No output"))
-    else:
-        console.print(f"\n[red]Error:[/red] {result.get('error', 'Unknown error')}")
+    console.print("\n[bold]Implementation Plan:[/bold]\n")
+    console.print(result)
 
 
 def build(
@@ -391,17 +415,16 @@ def build(
     """Run the Builder agent to implement code.
 
     Example:
-        gorgon build "user authentication module"
-        gorgon build "login endpoint" --plan "1. Create route 2. Add validation"
+        animus build "user authentication module"
+        animus build "login endpoint" --plan "1. Create route 2. Add validation"
     """
-    client = get_claude_client()
     context = detect_codebase_context()
     context_str = format_context_for_prompt(context)
 
     console.print(
         Panel(
             f"[bold]Building:[/bold] {description}",
-            title="🔨 Builder Agent",
+            title="Builder Agent",
             border_style="green",
         )
     )
@@ -435,21 +458,14 @@ Write production-quality code with:
 - Following existing project patterns"""
 
     with console.status("[bold green]Builder coding...", spinner="dots"):
-        result = client.execute_agent(
-            role="builder",
-            task=prompt,
-            context=context_str,
-        )
+        result = _run_single_agent("builder", prompt)
 
     if json_output:
-        print(json.dumps(result, indent=2))
+        print(json.dumps({"task": description, "result": result}, indent=2))
         return
 
-    if result.get("success"):
-        console.print("\n[bold]Implementation:[/bold]\n")
-        console.print(result.get("output", "No output"))
-    else:
-        console.print(f"\n[red]Error:[/red] {result.get('error', 'Unknown error')}")
+    console.print("\n[bold]Implementation:[/bold]\n")
+    console.print(result)
 
 
 def test(
@@ -467,10 +483,9 @@ def test(
     """Run the Tester agent to create tests.
 
     Example:
-        gorgon test src/auth/login.py
-        gorgon test "the new user registration flow"
+        animus test src/auth/login.py
+        animus test "the new user registration flow"
     """
-    client = get_claude_client()
     context = detect_codebase_context()
     context_str = format_context_for_prompt(context)
 
@@ -486,7 +501,7 @@ def test(
     console.print(
         Panel(
             f"[bold]Testing:[/bold] {target}",
-            title="🧪 Tester Agent",
+            title="Tester Agent",
             border_style="yellow",
         )
     )
@@ -506,21 +521,14 @@ Write tests that include:
 - Following the project's existing test patterns (pytest for Python)"""
 
     with console.status("[bold yellow]Tester analyzing...", spinner="dots"):
-        result = client.execute_agent(
-            role="tester",
-            task=prompt,
-            context=context_str,
-        )
+        result = _run_single_agent("tester", prompt)
 
     if json_output:
-        print(json.dumps(result, indent=2))
+        print(json.dumps({"target": target, "result": result}, indent=2))
         return
 
-    if result.get("success"):
-        console.print("\n[bold]Generated Tests:[/bold]\n")
-        console.print(result.get("output", "No output"))
-    else:
-        console.print(f"\n[red]Error:[/red] {result.get('error', 'Unknown error')}")
+    console.print("\n[bold]Generated Tests:[/bold]\n")
+    console.print(result)
 
 
 def review(
@@ -538,10 +546,9 @@ def review(
     """Run the Reviewer agent for code review.
 
     Example:
-        gorgon review src/auth/
-        gorgon review HEAD~1  # Review last commit
+        animus review src/auth/
+        animus review HEAD~1  # Review last commit
     """
-    client = get_claude_client()
     context = detect_codebase_context()
     context_str = format_context_for_prompt(context)
     code_context = _gather_review_code_context(target, context)
@@ -549,7 +556,7 @@ def review(
     console.print(
         Panel(
             f"[bold]Reviewing:[/bold] {target}",
-            title="🔍 Reviewer Agent",
+            title="Reviewer Agent",
             border_style="magenta",
         )
     )
@@ -576,21 +583,14 @@ Provide:
 - Actionable improvement suggestions"""
 
     with console.status("[bold magenta]Reviewer analyzing...", spinner="dots"):
-        result = client.execute_agent(
-            role="reviewer",
-            task=prompt,
-            context=context_str,
-        )
+        result = _run_single_agent("reviewer", prompt)
 
     if json_output:
-        print(json.dumps(result, indent=2))
+        print(json.dumps({"target": target, "result": result}, indent=2))
         return
 
-    if result.get("success"):
-        console.print("\n[bold]Code Review:[/bold]\n")
-        console.print(result.get("output", "No output"))
-    else:
-        console.print(f"\n[red]Error:[/red] {result.get('error', 'Unknown error')}")
+    console.print("\n[bold]Code Review:[/bold]\n")
+    console.print(result)
 
 
 def ask(
@@ -608,17 +608,16 @@ def ask(
     """Ask a question about your codebase.
 
     Example:
-        gorgon ask "how does the authentication system work?"
-        gorgon ask "what are the main API endpoints?"
+        animus ask "how does the authentication system work?"
+        animus ask "what are the main API endpoints?"
     """
-    client = get_claude_client()
     context = detect_codebase_context()
     context_str = format_context_for_prompt(context)
 
     console.print(
         Panel(
             f"[bold]{question}[/bold]",
-            title="❓ Question",
+            title="Question",
             border_style="cyan",
         )
     )
@@ -633,17 +632,11 @@ Provide a clear, helpful answer based on the codebase context.
 If you need to reference specific files or code, mention them explicitly."""
 
     with console.status("[bold cyan]Thinking...", spinner="dots"):
-        result = client.generate_completion(
-            prompt=prompt,
-            system_prompt="You are a helpful assistant analyzing a software codebase. Be concise and specific.",
-        )
+        result = _run_single_agent("analyst", prompt)
 
     if json_output:
         print(json.dumps({"question": question, "answer": result}, indent=2))
         return
 
-    if result:
-        console.print("\n[bold]Answer:[/bold]\n")
-        console.print(result)
-    else:
-        console.print("[red]No response received[/red]")
+    console.print("\n[bold]Answer:[/bold]\n")
+    console.print(result)

@@ -493,9 +493,9 @@ class TestRunCommand:
 class TestAgentCommands:
     """Tests for interactive agent commands."""
 
-    @patch("animus_forge.cli.commands.dev.get_claude_client")
+    @patch("animus_forge.cli.commands.dev._run_single_agent", return_value="1. Step one\n2. Step two")
     @patch("animus_forge.cli.commands.dev.detect_codebase_context")
-    def test_plan_command(self, mock_context, mock_get_client):
+    def test_plan_command(self, mock_context, mock_agent):
         """Plan command calls planner agent."""
         mock_context.return_value = {
             "path": "/test",
@@ -503,24 +503,17 @@ class TestAgentCommands:
             "framework": None,
             "structure": [],
         }
-        mock_client = MagicMock()
-        mock_client.execute_agent.return_value = {
-            "success": True,
-            "output": "1. Step one\n2. Step two",
-        }
-        mock_get_client.return_value = mock_client
 
         result = runner.invoke(app, ["plan", "add authentication"])
 
         assert result.exit_code == 0
         assert "Planner" in result.output
-        mock_client.execute_agent.assert_called_once()
-        call_kwargs = mock_client.execute_agent.call_args[1]
-        assert call_kwargs["role"] == "planner"
+        mock_agent.assert_called_once()
+        assert mock_agent.call_args[0][0] == "planner"
 
-    @patch("animus_forge.cli.commands.dev.get_claude_client")
+    @patch("animus_forge.cli.commands.dev._run_single_agent", return_value="def auth(): pass")
     @patch("animus_forge.cli.commands.dev.detect_codebase_context")
-    def test_build_command(self, mock_context, mock_get_client):
+    def test_build_command(self, mock_context, mock_agent):
         """Build command calls builder agent."""
         mock_context.return_value = {
             "path": "/test",
@@ -528,23 +521,16 @@ class TestAgentCommands:
             "framework": None,
             "structure": [],
         }
-        mock_client = MagicMock()
-        mock_client.execute_agent.return_value = {
-            "success": True,
-            "output": "def auth(): pass",
-        }
-        mock_get_client.return_value = mock_client
 
         result = runner.invoke(app, ["build", "auth module"])
 
         assert result.exit_code == 0
         assert "Builder" in result.output
-        call_kwargs = mock_client.execute_agent.call_args[1]
-        assert call_kwargs["role"] == "builder"
+        assert mock_agent.call_args[0][0] == "builder"
 
-    @patch("animus_forge.cli.commands.dev.get_claude_client")
+    @patch("animus_forge.cli.commands.dev._run_single_agent", return_value="def test_auth(): assert True")
     @patch("animus_forge.cli.commands.dev.detect_codebase_context")
-    def test_test_command(self, mock_context, mock_get_client):
+    def test_test_command(self, mock_context, mock_agent):
         """Test command calls tester agent."""
         mock_context.return_value = {
             "path": "/test",
@@ -552,23 +538,16 @@ class TestAgentCommands:
             "framework": None,
             "structure": [],
         }
-        mock_client = MagicMock()
-        mock_client.execute_agent.return_value = {
-            "success": True,
-            "output": "def test_auth(): assert True",
-        }
-        mock_get_client.return_value = mock_client
 
         result = runner.invoke(app, ["test", "auth.py"])
 
         assert result.exit_code == 0
         assert "Tester" in result.output
-        call_kwargs = mock_client.execute_agent.call_args[1]
-        assert call_kwargs["role"] == "tester"
+        assert mock_agent.call_args[0][0] == "tester"
 
-    @patch("animus_forge.cli.commands.dev.get_claude_client")
+    @patch("animus_forge.cli.commands.dev._run_single_agent", return_value="Score: 8/10\nApproved")
     @patch("animus_forge.cli.commands.dev.detect_codebase_context")
-    def test_review_command(self, mock_context, mock_get_client):
+    def test_review_command(self, mock_context, mock_agent):
         """Review command calls reviewer agent."""
         mock_context.return_value = {
             "path": "/test",
@@ -576,23 +555,16 @@ class TestAgentCommands:
             "framework": None,
             "structure": [],
         }
-        mock_client = MagicMock()
-        mock_client.execute_agent.return_value = {
-            "success": True,
-            "output": "Score: 8/10\nApproved",
-        }
-        mock_get_client.return_value = mock_client
 
         result = runner.invoke(app, ["review", "src/"])
 
         assert result.exit_code == 0
         assert "Reviewer" in result.output
-        call_kwargs = mock_client.execute_agent.call_args[1]
-        assert call_kwargs["role"] == "reviewer"
+        assert mock_agent.call_args[0][0] == "reviewer"
 
-    @patch("animus_forge.cli.commands.dev.get_claude_client")
+    @patch("animus_forge.cli.commands.dev._run_single_agent", return_value="The auth system uses JWT tokens.")
     @patch("animus_forge.cli.commands.dev.detect_codebase_context")
-    def test_ask_command(self, mock_context, mock_get_client):
+    def test_ask_command(self, mock_context, mock_agent):
         """Ask command answers questions about codebase."""
         mock_context.return_value = {
             "path": "/test",
@@ -600,19 +572,16 @@ class TestAgentCommands:
             "framework": None,
             "structure": [],
         }
-        mock_client = MagicMock()
-        mock_client.generate_completion.return_value = "The auth system uses JWT tokens."
-        mock_get_client.return_value = mock_client
 
         result = runner.invoke(app, ["ask", "how does auth work?"])
 
         assert result.exit_code == 0
         assert "Question" in result.output
-        mock_client.generate_completion.assert_called_once()
+        mock_agent.assert_called_once()
 
-    @patch("animus_forge.cli.commands.dev.get_claude_client")
+    @patch("animus_forge.cli.commands.dev._run_single_agent", return_value="Error: API rate limit exceeded")
     @patch("animus_forge.cli.commands.dev.detect_codebase_context")
-    def test_agent_error_handling(self, mock_context, mock_get_client):
+    def test_agent_error_handling(self, mock_context, mock_agent):
         """Agent commands handle errors gracefully."""
         mock_context.return_value = {
             "path": "/test",
@@ -620,21 +589,15 @@ class TestAgentCommands:
             "framework": None,
             "structure": [],
         }
-        mock_client = MagicMock()
-        mock_client.execute_agent.return_value = {
-            "success": False,
-            "error": "API rate limit exceeded",
-        }
-        mock_get_client.return_value = mock_client
 
         result = runner.invoke(app, ["plan", "something"])
 
         assert result.exit_code == 0
         assert "Error" in result.output
 
-    @patch("animus_forge.cli.commands.dev.get_claude_client")
+    @patch("animus_forge.cli.commands.dev._run_single_agent", return_value="Plan here")
     @patch("animus_forge.cli.commands.dev.detect_codebase_context")
-    def test_agent_json_output(self, mock_context, mock_get_client):
+    def test_agent_json_output(self, mock_context, mock_agent):
         """Agent commands support JSON output."""
         mock_context.return_value = {
             "path": "/test",
@@ -642,12 +605,6 @@ class TestAgentCommands:
             "framework": None,
             "structure": [],
         }
-        mock_client = MagicMock()
-        mock_client.execute_agent.return_value = {
-            "success": True,
-            "output": "Plan here",
-        }
-        mock_get_client.return_value = mock_client
 
         result = runner.invoke(app, ["plan", "test", "--json"])
 
@@ -658,7 +615,8 @@ class TestAgentCommands:
         json_start = output.find("{")
         assert json_start >= 0, f"No JSON found in output: {output}"
         data = json.loads(output[json_start:])
-        assert data["success"] is True
+        assert data["task"] == "test"
+        assert data["result"] == "Plan here"
 
 
 class TestDoCommand:
