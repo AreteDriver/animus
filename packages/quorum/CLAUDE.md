@@ -92,6 +92,15 @@ pytest --cov=src/ tests/
 - ruff
 - mypy
 
+## Protocol Invariants
+
+- IntentNodes have: `id`, `agent_id`, `intent_type`, `payload`, `timestamp`, `signature`, `stability_score`
+- Signatures use ed25519 — never change signing algorithm
+- StabilityScorer input: recent consensus rate, alignment score, separation distance
+- IntentResolver reads the top-N stable nodes — N is configurable, default 5
+- Rust core with Python bindings via PyO3 — keep hot path in Rust
+- Never couple agent identity to a single model version — model IDs are metadata, not architecture
+
 ## Domain Context
 
 ### Key Models/Classes

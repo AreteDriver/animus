@@ -76,6 +76,7 @@ logs/
 *.key
 secrets.yaml
 config/local.yaml
+token.json
 
 # Benchmarks
 .benchmarks/
