@@ -81,6 +81,7 @@ agent_memory: AgentMemory | None = None
 process_registry: ProcessRegistry | None = None
 subagent_manager: SubAgentManager | None = None
 task_runner: AgentTaskRunner | None = None
+agent_configs: dict | None = None  # dict[str, AgentConfig] from config_loader
 
 coordination_event_log = None  # convergent.EventLog or None
 coordination_bridge = None  # convergent.GorgonBridge or None

@@ -238,6 +238,88 @@ async def lifespan(app: FastAPI):
     state.supervisor_factory = create_supervisor
     logger.info("Supervisor factory initialized")
 
+    # Initialize agent infrastructure (optional — never blocks startup)
+    try:
+        from animus_forge.state.agent_memory import AgentMemory
+
+        state.agent_memory = AgentMemory()
+        logger.info("Agent memory initialized")
+    except Exception as e:
+        logger.debug("Agent memory not available: %s", e)
+
+    try:
+        from animus_forge.agents.subagent_manager import SubAgentManager
+
+        state.subagent_manager = SubAgentManager(max_concurrent=8)
+        logger.info("SubAgentManager initialized")
+    except Exception as e:
+        logger.debug("SubAgentManager not available: %s", e)
+
+    try:
+        from animus_forge.agents.process_registry import ProcessRegistry
+
+        state.process_registry = ProcessRegistry(
+            subagent_manager=state.subagent_manager,
+        )
+        logger.info("Process registry initialized")
+    except Exception as e:
+        logger.debug("Process registry not available: %s", e)
+
+    try:
+        from animus_forge.agents.task_runner import AgentTaskRunner
+
+        _tr_provider = create_agent_provider(
+            os.environ.get("DEFAULT_PROVIDER", "ollama")
+        )
+        _tr_registry = None
+        try:
+            from animus_forge.tools.registry import ForgeToolRegistry
+
+            _tr_registry = ForgeToolRegistry(
+                enable_shell=True,
+                budget_manager=state.budget_manager,
+            )
+        except Exception:
+            pass
+
+        state.task_runner = AgentTaskRunner(
+            provider=_tr_provider,
+            tool_registry=_tr_registry,
+            subagent_manager=state.subagent_manager,
+            broadcaster=state.ws_broadcaster,
+            agent_memory=state.agent_memory,
+            budget_manager=state.budget_manager,
+        )
+        logger.info("AgentTaskRunner initialized")
+    except Exception as e:
+        logger.debug("AgentTaskRunner not available: %s", e)
+
+    # Load agent YAML configs (optional)
+    state.agent_configs = None
+    try:
+        from animus_forge.agents.config_loader import load_agent_configs
+
+        state.agent_configs = load_agent_configs(base_dir=settings.base_dir)
+        logger.info("Agent configs loaded (%d agents)", len(state.agent_configs))
+    except Exception as e:
+        logger.debug("Agent config loader not available: %s", e)
+
+    # Wire TaskRunner into Supervisor factory so delegated agents get
+    # tools, memory, and result tracking automatically
+    _original_create_supervisor = create_supervisor
+
+    def _create_supervisor_with_runner(backend=None):
+        sup = _original_create_supervisor(backend)
+        if sup is not None:
+            if state.task_runner is not None:
+                sup.set_task_runner(state.task_runner)
+            if state.agent_configs is not None:
+                sup._agent_configs = state.agent_configs
+        return sup
+
+    state.supervisor_factory = _create_supervisor_with_runner
+    logger.info("Supervisor factory wired with TaskRunner")
+
     # Migrate existing workflows (one-time)
     try:
         workflows_dir = settings.workflows_dir

@@ -23,6 +23,8 @@ class TestDoTaskStreamingProgress:
             "json_output": False,
             "live": False,
             "verify": False,
+            "runner": False,
+            "role": "builder",
         }
         defaults.update(kwargs)
 
@@ -83,6 +85,8 @@ class TestDoTaskStreamingProgress:
                 json_output=True,
                 live=False,
                 verify=False,
+                runner=False,
+                role="builder",
             )
 
         output = capsys.readouterr().out
@@ -113,6 +117,8 @@ class TestDoTaskStreamingProgress:
                 json_output=False,
                 live=False,
                 verify=False,
+                runner=False,
+                role="builder",
             )
 
 
@@ -144,6 +150,8 @@ class TestDoTaskPersistence:
                 json_output=False,
                 live=False,
                 verify=False,
+                runner=False,
+                role="builder",
             )
 
         mock_store.record_task.assert_called_once()

@@ -209,7 +209,20 @@ class SupervisorAgent:
         self._subagent_manager = subagent_manager
         self._agent_configs = agent_configs
         self._message_bus = message_bus
+        self._task_runner = None  # Set via set_task_runner()
         self._active_delegations: list[AgentDelegation] = []
+
+    def set_task_runner(self, runner: Any) -> None:
+        """Set the AgentTaskRunner for delegated agent execution.
+
+        When set, _run_agent() uses the TaskRunner instead of direct
+        provider calls. This gives delegated agents tool access, memory
+        injection, broadcaster integration, and result tracking.
+
+        Args:
+            runner: An AgentTaskRunner instance.
+        """
+        self._task_runner = runner
 
     @property
     def message_bus(self) -> AgentMessageBus | None:
@@ -798,6 +811,34 @@ class SupervisorAgent:
                 )
 
         import time as _time
+
+        # Use TaskRunner when available — gives delegated agents memory,
+        # result tracking, and broadcaster integration
+        if self._task_runner is not None:
+            try:
+                # Build context string from prior results
+                context_parts = []
+                if agent_prompt:
+                    context_parts.append(agent_prompt)
+                if prior_outputs_section:
+                    context_parts.append(prior_outputs_section)
+                ctx_str = "\n\n".join(context_parts)
+
+                max_iters = agent_config.max_tool_iterations if agent_config else 8
+                result = await self._task_runner.run(
+                    agent=agent,
+                    task=task,
+                    use_tools=use_tools,
+                    config=agent_config,
+                    context=ctx_str,
+                    max_iterations=max_iters,
+                )
+                if result.status == "completed":
+                    return result.output
+                return f"Agent {agent} failed: {result.error}"
+            except Exception as e:
+                logger.error("TaskRunner fallback for %s: %s", agent, e)
+                # Fall through to direct provider path
 
         _start_ns = _time.perf_counter_ns()
         try:

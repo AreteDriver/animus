@@ -191,6 +191,94 @@ class TestProcessRegistrySmoke:
         assert len(agents) > initial_count
 
 
+class TestTaskRunnerSmoke:
+    """Smoke test full pipeline: TaskRunner → builder with tools → result."""
+
+    @pytest.mark.asyncio
+    async def test_task_runner_with_tools(self, agent_provider):
+        """TaskRunner executes a builder task with tool access."""
+        from animus_forge.agents.task_runner import AgentTaskRunner
+
+        tool_registry = None
+        try:
+            from animus_forge.tools.registry import ForgeToolRegistry
+
+            tool_registry = ForgeToolRegistry(enable_shell=True)
+        except Exception:
+            pytest.skip("ForgeToolRegistry not available")
+
+        runner = AgentTaskRunner(
+            provider=agent_provider,
+            tool_registry=tool_registry,
+        )
+
+        result = await runner.run(
+            agent="builder",
+            task="List the files in the current directory using the list_files tool.",
+            use_tools=True,
+        )
+
+        assert result.status == "completed"
+        assert result.output is not None
+        assert len(result.output) > 0
+        assert result.duration_ms > 0
+
+    @pytest.mark.asyncio
+    async def test_supervisor_with_task_runner(self, agent_provider):
+        """Supervisor delegates to builder via TaskRunner bridge."""
+        from animus_forge.agents.message_bus import AgentMessageBus
+        from animus_forge.agents.supervisor import SupervisorAgent
+        from animus_forge.agents.task_runner import AgentTaskRunner
+
+        tool_registry = None
+        try:
+            from animus_forge.tools.registry import ForgeToolRegistry
+
+            tool_registry = ForgeToolRegistry(enable_shell=True)
+        except Exception:
+            pytest.skip("ForgeToolRegistry not available")
+
+        bus = AgentMessageBus()
+        runner = AgentTaskRunner(
+            provider=agent_provider,
+            tool_registry=tool_registry,
+        )
+
+        sup = SupervisorAgent(
+            provider=agent_provider,
+            message_bus=bus,
+            tool_registry=tool_registry,
+        )
+        sup.set_task_runner(runner)
+
+        # Direct agent run through supervisor with TaskRunner bridge
+        result = await sup._run_agent(
+            agent="builder",
+            task="What is 3 + 4? Answer with just the number.",
+            context=[],
+        )
+
+        assert result is not None
+        assert len(result) > 0
+
+    @pytest.mark.asyncio
+    async def test_task_runner_no_tools(self, agent_provider):
+        """TaskRunner executes a planner task without tools."""
+        from animus_forge.agents.task_runner import AgentTaskRunner
+
+        runner = AgentTaskRunner(provider=agent_provider)
+
+        result = await runner.run(
+            agent="planner",
+            task="List 3 steps to make coffee.",
+            use_tools=False,
+        )
+
+        assert result.status == "completed"
+        assert result.output is not None
+        assert len(result.output) > 0
+
+
 class TestRunStoreSmoke:
     """Smoke test agent run persistence."""
 

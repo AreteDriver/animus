@@ -155,13 +155,44 @@ def get_supervisor():
         except Exception:
             pass  # Tool registry not available — run without tools
 
-        return SupervisorAgent(
+        # Load agent configs from YAML if available
+        agent_configs = None
+        try:
+            from animus_forge.agents.config_loader import load_agent_configs
+
+            agent_configs = load_agent_configs()
+        except Exception:
+            pass
+
+        sup = SupervisorAgent(
             provider,
             convergence_checker=checker,
             coordination_bridge=bridge,
             budget_manager=budget_mgr,
             tool_registry=tool_registry,
+            agent_configs=agent_configs,
         )
+
+        # Wire TaskRunner so delegated agents get tools + memory
+        try:
+            from animus_forge.agents.task_runner import AgentTaskRunner
+
+            runner = AgentTaskRunner(
+                provider=provider,
+                tool_registry=tool_registry,
+            )
+            # Add agent memory if available
+            try:
+                from animus_forge.state.agent_memory import AgentMemory
+
+                runner.agent_memory = AgentMemory()
+            except Exception:
+                pass
+            sup.set_task_runner(runner)
+        except Exception:
+            pass  # TaskRunner not available — supervisor runs with direct provider
+
+        return sup
     except Exception as e:
         console.print(f"[red]Could not create supervisor agent:[/red] {e}")
         console.print("Ensure a provider is available (Ollama running, or ANTHROPIC_API_KEY set).")

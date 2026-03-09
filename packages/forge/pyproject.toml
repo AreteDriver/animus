@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "animus-forge"
-version = "1.6.0"
+version = "1.7.0"
 description = "Multi-agent orchestration framework for production AI workflows"
 readme = "README.md"
 license = {text = "MIT"}

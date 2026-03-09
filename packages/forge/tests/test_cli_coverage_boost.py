@@ -309,6 +309,8 @@ class TestDevProgressCallback:
                 json_output=False,
                 live=False,
                 verify=False,
+                runner=False,
+                role="builder",
             )
 
         assert captured_callback is not None

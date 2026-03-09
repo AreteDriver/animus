@@ -142,6 +142,17 @@ def do_task(
         "--verify",
         help="Run a second pass to verify and fix results",
     ),
+    runner: bool = typer.Option(
+        False,
+        "--runner",
+        help="Use AgentTaskRunner for direct tool-equipped execution (bypasses Supervisor)",
+    ),
+    role: str = typer.Option(
+        "builder",
+        "--role",
+        "-r",
+        help="Agent role when using --runner (builder, tester, reviewer, analyst, planner).",
+    ),
 ):
     """Execute a development task using intelligent agent delegation.
 
@@ -150,11 +161,13 @@ def do_task(
 
     Use --workflow to run a specific YAML workflow instead.
     Use --verify to run a verification pass after the initial delegation.
+    Use --runner to go straight through AgentTaskRunner with tools.
 
     Examples:
         animus do "add user authentication"
         animus do "fix the login bug" --verify
         animus do "refactor the database module" --workflow refactor
+        animus do "add login endpoint" --runner --role builder
     """
     import asyncio
 
@@ -165,6 +178,11 @@ def do_task(
     # If --workflow is specified, use the YAML workflow path
     if workflow is not None:
         _run_yaml_workflow(task, workflow, context, context_str, dry_run, json_output, live)
+        return
+
+    # --runner: direct TaskRunner path (tool-equipped, no Supervisor overhead)
+    if runner:
+        _run_via_task_runner(task, context_str, role, dry_run, json_output)
         return
 
     # Default: intelligent agent delegation via SupervisorAgent
@@ -253,6 +271,101 @@ Codebase context:
 
     console.print(f"\n[bold]Result[/bold] [dim]({task_id}, {duration_ms}ms)[/dim]\n")
     console.print(result)
+
+
+def _run_via_task_runner(
+    task: str,
+    context_str: str,
+    role: str,
+    dry_run: bool,
+    json_output: bool,
+) -> None:
+    """Execute a task directly via AgentTaskRunner with tool access."""
+    import asyncio
+    import json as _json
+    import os
+    import time
+
+    from rich.panel import Panel as _Panel
+
+    console.print(
+        _Panel(
+            f"[bold]{task}[/bold]\n\n[dim]Role: {role} | Tools: enabled[/dim]",
+            title="AgentTaskRunner",
+            border_style="green",
+        )
+    )
+
+    if dry_run:
+        console.print(f"\n[yellow]Dry run — {role} agent would execute with tools.[/yellow]")
+        raise typer.Exit(0)
+
+    try:
+        from animus_forge.agents.provider_wrapper import create_agent_provider
+        from animus_forge.agents.task_runner import AgentTaskRunner
+    except ImportError as e:
+        console.print(f"[red]Missing dependencies:[/red] {e}")
+        raise typer.Exit(1)
+
+    try:
+        provider = create_agent_provider(os.environ.get("DEFAULT_PROVIDER", "ollama"))
+    except Exception as e:
+        console.print(f"[red]Failed to create provider:[/red] {e}")
+        raise typer.Exit(1)
+
+    tool_registry = None
+    try:
+        from animus_forge.tools.registry import ForgeToolRegistry
+
+        tool_registry = ForgeToolRegistry(enable_shell=True)
+    except Exception:
+        console.print("[yellow]Warning: Tool registry unavailable, running without tools.[/yellow]")
+
+    agent_memory = None
+    try:
+        from animus_forge.state.agent_memory import AgentMemory
+
+        agent_memory = AgentMemory()
+    except Exception:
+        pass
+
+    runner = AgentTaskRunner(
+        provider=provider,
+        tool_registry=tool_registry,
+        agent_memory=agent_memory,
+    )
+
+    start_time = time.monotonic()
+    with console.status(f"[bold green]{role} agent working...", spinner="dots"):
+        result = asyncio.run(runner.run(role, task, use_tools=True, context=context_str))
+    duration_ms = int((time.monotonic() - start_time) * 1000)
+
+    if json_output:
+        print(
+            _json.dumps(
+                {
+                    "task_id": result.task_id,
+                    "agent": result.agent,
+                    "task": task,
+                    "result": result.output,
+                    "status": result.status,
+                    "tool_calls": result.tool_calls,
+                    "duration_ms": duration_ms,
+                },
+                indent=2,
+            )
+        )
+        return
+
+    if result.status == "completed":
+        console.print(
+            f"\n[bold green]{role}[/bold green] completed "
+            f"({result.task_id}, {duration_ms}ms, {result.tool_calls} tool calls)\n"
+        )
+        console.print(result.output)
+    else:
+        console.print(f"\n[bold red]{role}[/bold red] failed: {result.error}")
+        raise typer.Exit(1)
 
 
 def _run_yaml_workflow(
