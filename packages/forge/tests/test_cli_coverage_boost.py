@@ -258,7 +258,7 @@ class TestWorkflowCLI:
             patch("pathlib.Path.exists", return_value=True),
         ):
             try:
-                validate(workflow="test")
+                validate(workflow_file="test")
             except (Exit, Exception):
                 pass
 

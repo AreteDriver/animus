@@ -131,5 +131,5 @@ def reset_chainlog() -> None:
         try:
             _chainlog_instance.close()
         except Exception:
-            pass
+            logger.debug("ChainLog close failed", exc_info=True)
     _chainlog_instance = None

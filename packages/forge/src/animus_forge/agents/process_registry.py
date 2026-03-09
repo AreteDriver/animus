@@ -172,7 +172,7 @@ class ProcessRegistry:
                 if job:
                     return self._job_to_process(job)
             except Exception:
-                pass
+                logger.debug("Failed to get job %s", process_id, exc_info=True)
 
         # Check schedules
         if self._schedule_manager:
@@ -181,7 +181,7 @@ class ProcessRegistry:
                 if schedule:
                     return self._schedule_to_process(schedule)
             except Exception:
-                pass
+                logger.debug("Failed to get schedule %s", process_id, exc_info=True)
 
         return None
 
@@ -209,7 +209,7 @@ class ProcessRegistry:
                 if result:
                     return True
             except Exception:
-                pass
+                logger.debug("Failed to cancel job %s", process_id, exc_info=True)
 
         # Try schedules (pause = cancel)
         if self._schedule_manager:
@@ -218,7 +218,7 @@ class ProcessRegistry:
                 if result:
                     return True
             except Exception:
-                pass
+                logger.debug("Failed to cancel schedule %s", process_id, exc_info=True)
 
         return False
 

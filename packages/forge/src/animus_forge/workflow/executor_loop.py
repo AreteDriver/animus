@@ -93,7 +93,6 @@ class LoopHandlerMixin:
 
         all_results = []
         total_tokens = 0
-        break_reason = "max_iterations"
 
         for iteration in range(max_iterations):
             iter_start = time.time()

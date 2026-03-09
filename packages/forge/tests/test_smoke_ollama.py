@@ -293,7 +293,8 @@ class TestRunStoreSmoke:
 
         conn = sqlite3.connect(":memory:")
         conn.row_factory = sqlite3.Row
-        conn.executescript(open("migrations/017_agent_runs.sql").read())
+        with open("migrations/017_agent_runs.sql") as f:
+            conn.executescript(f.read())
 
         class SimpleBackend:
             placeholder = "?"
