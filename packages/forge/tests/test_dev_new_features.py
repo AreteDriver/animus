@@ -186,6 +186,8 @@ class TestDoTaskPersistence:
                 json_output=False,
                 live=False,
                 verify=False,
+                runner=False,
+                role="builder",
             )
 
 
