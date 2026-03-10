@@ -1,0 +1,95 @@
+.personas-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+.personas-loading,
+.personas-empty {
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 32px;
+  font-size: 14px;
+}
+
+.personas-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.personas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.persona-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.persona-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.persona-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.persona-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.persona-desc {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.persona-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.persona-tone,
+.persona-domains {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-dim);
+}
+
+.persona-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.persona-delete {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: rgba(248, 113, 113, 0.1);
+  color: var(--danger);
+  transition: background 0.15s;
+}
+
+.persona-delete:hover {
+  background: rgba(248, 113, 113, 0.2);
+}

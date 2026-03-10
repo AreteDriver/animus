@@ -1,0 +1,66 @@
+.status-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+.status-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.status-value {
+  color: var(--text-dim);
+  font-size: 14px;
+  font-family: monospace;
+}
+
+.status-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge--ok {
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--success);
+}
+
+.status-badge--error {
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--danger);
+}
+
+.status-badge--loading {
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--warning);
+}
+
+.status-error {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: rgba(248, 113, 113, 0.1);
+  color: var(--danger);
+  font-size: 13px;
+  line-height: 1.5;
+}

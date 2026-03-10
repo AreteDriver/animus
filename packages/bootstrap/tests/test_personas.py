@@ -984,3 +984,198 @@ class TestPersonaStorage:
         assert v.tone == "mentor"
         assert v.max_response_length == "brief"
         assert v.custom_instructions == "Teach."
+
+
+# ================================================================== #
+# TestPersonaEngineDomainRouting
+# ================================================================== #
+
+
+class TestPersonaEngineDomainRouting:
+    """Tests for KnowledgeDomainRouter integration in PersonaEngine."""
+
+    def test_domain_routing_selects_expert(self) -> None:
+        router = KnowledgeDomainRouter()
+        engine = PersonaEngine(domain_router=router)
+        coder = _make_persona(
+            persona_id="p-coder",
+            name="Coder",
+            knowledge_domains=["coding"],
+        )
+        writer = _make_persona(
+            persona_id="p-writer",
+            name="Writer",
+            knowledge_domains=["writing"],
+        )
+        engine.register_persona(coder)
+        engine.register_persona(writer)
+        msg = _make_msg(text="Help me debug this Python function")
+        result = engine.get_persona_for_message(msg)
+        assert result is coder
+
+    def test_domain_routing_writing(self) -> None:
+        router = KnowledgeDomainRouter()
+        engine = PersonaEngine(domain_router=router)
+        coder = _make_persona(
+            persona_id="p-coder",
+            name="Coder",
+            knowledge_domains=["coding"],
+        )
+        writer = _make_persona(
+            persona_id="p-writer",
+            name="Writer",
+            knowledge_domains=["writing"],
+        )
+        engine.register_persona(coder)
+        engine.register_persona(writer)
+        msg = _make_msg(text="Write me a blog article about cooking")
+        result = engine.get_persona_for_message(msg)
+        assert result is writer
+
+    def test_domain_routing_falls_back_to_default(self) -> None:
+        router = KnowledgeDomainRouter()
+        engine = PersonaEngine(domain_router=router)
+        default = _make_persona(
+            persona_id="p-default",
+            name="Default",
+            is_default=True,
+        )
+        coder = _make_persona(
+            persona_id="p-coder",
+            name="Coder",
+            knowledge_domains=["coding"],
+        )
+        engine.register_persona(default)
+        engine.register_persona(coder)
+        msg = _make_msg(text="What time is it?")
+        result = engine.get_persona_for_message(msg)
+        assert result is default
+
+    def test_channel_binding_beats_domain_routing(self) -> None:
+        router = KnowledgeDomainRouter()
+        engine = PersonaEngine(domain_router=router)
+        slack_bot = _make_persona(
+            persona_id="p-slack",
+            name="SlackBot",
+            channel_bindings={"slack": True},
+        )
+        coder = _make_persona(
+            persona_id="p-coder",
+            name="Coder",
+            knowledge_domains=["coding"],
+        )
+        engine.register_persona(slack_bot)
+        engine.register_persona(coder)
+        msg = _make_msg(text="Help me debug Python", channel="slack")
+        result = engine.get_persona_for_message(msg)
+        assert result is slack_bot
+
+    def test_explicit_command_beats_domain_routing(self) -> None:
+        router = KnowledgeDomainRouter()
+        engine = PersonaEngine(domain_router=router)
+        writer = _make_persona(
+            persona_id="p-writer",
+            name="Writer",
+            knowledge_domains=["writing"],
+        )
+        coder = _make_persona(
+            persona_id="p-coder",
+            name="Coder",
+            knowledge_domains=["coding"],
+        )
+        engine.register_persona(writer)
+        engine.register_persona(coder)
+        msg = _make_msg(text="/persona Writer")
+        result = engine.get_persona_for_message(msg)
+        assert result is writer
+
+    def test_no_domain_router_skips_domain_step(self) -> None:
+        engine = PersonaEngine()
+        default = _make_persona(is_default=True)
+        engine.register_persona(default)
+        msg = _make_msg(text="Help me debug Python")
+        result = engine.get_persona_for_message(msg)
+        assert result is default
+
+
+# ================================================================== #
+# TestPersonaEngineCRUD
+# ================================================================== #
+
+
+class TestPersonaEngineCRUD:
+    """Tests for new CRUD methods on PersonaEngine."""
+
+    def test_update_persona(self) -> None:
+        engine = PersonaEngine()
+        p = _make_persona(persona_id="p-1", name="OldName")
+        engine.register_persona(p)
+        p.name = "NewName"
+        engine.update_persona(p)
+        assert engine.get_persona("p-1").name == "NewName"
+
+    def test_update_persona_not_found(self) -> None:
+        engine = PersonaEngine()
+        p = _make_persona(persona_id="p-1")
+        with pytest.raises(ValueError, match="not found"):
+            engine.update_persona(p)
+
+    def test_get_persona_by_name(self) -> None:
+        engine = PersonaEngine()
+        p = _make_persona(name="Sage")
+        engine.register_persona(p)
+        assert engine.get_persona_by_name("Sage") is p
+        assert engine.get_persona_by_name("sage") is p
+        assert engine.get_persona_by_name("SAGE") is p
+
+    def test_get_persona_by_name_not_found(self) -> None:
+        engine = PersonaEngine()
+        assert engine.get_persona_by_name("nope") is None
+
+    def test_storage_persists_on_register(self, tmp_path) -> None:
+        storage = PersonaStorage(tmp_path / "test.db")
+        engine = PersonaEngine(storage=storage)
+        p = _make_persona(persona_id="p-1", name="Sage")
+        engine.register_persona(p)
+        loaded = storage.load("p-1")
+        assert loaded is not None
+        assert loaded.name == "Sage"
+        storage.close()
+
+    def test_storage_deletes_on_unregister(self, tmp_path) -> None:
+        storage = PersonaStorage(tmp_path / "test.db")
+        engine = PersonaEngine(storage=storage)
+        p = _make_persona(persona_id="p-1")
+        engine.register_persona(p)
+        engine.unregister_persona("p-1")
+        assert storage.load("p-1") is None
+        storage.close()
+
+    def test_storage_updates_on_update(self, tmp_path) -> None:
+        storage = PersonaStorage(tmp_path / "test.db")
+        engine = PersonaEngine(storage=storage)
+        p = _make_persona(persona_id="p-1", name="Old")
+        engine.register_persona(p)
+        p.name = "New"
+        engine.update_persona(p)
+        loaded = storage.load("p-1")
+        assert loaded.name == "New"
+        storage.close()
+
+    def test_load_from_storage(self, tmp_path) -> None:
+        storage = PersonaStorage(tmp_path / "test.db")
+        p1 = _make_persona(persona_id="p-1", name="A", is_default=True)
+        p2 = _make_persona(persona_id="p-2", name="B")
+        storage.save(p1)
+        storage.save(p2)
+
+        engine = PersonaEngine(storage=storage)
+        count = engine.load_from_storage()
+        assert count == 2
+        assert engine.persona_count == 2
+        assert engine.get_default().name == "A"
+        storage.close()
+
+    def test_load_from_storage_no_storage(self) -> None:
+        engine = PersonaEngine()
+        assert engine.load_from_storage() == 0

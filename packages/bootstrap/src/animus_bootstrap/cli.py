@@ -561,6 +561,7 @@ def personas_list() -> None:
     config = ConfigManager().load()
 
     table = Table(title="Persona Profiles", border_style="cyan")
+    table.add_column("ID", style="dim", max_width=12)
     table.add_column("Name", style="bold")
     table.add_column("Tone")
     table.add_column("Domains", style="dim")
@@ -569,24 +570,150 @@ def personas_list() -> None:
     # Show default persona
     cfg = config.personas
     table.add_row(
+        "(config)",
         cfg.default_name,
         cfg.default_tone,
         "General",
         "[green]Yes[/green]",
     )
 
-    # Show profiles
+    # Show profiles from config
     for name, profile in cfg.profiles.items():
         table.add_row(
+            "(config)",
             profile.name or name,
             profile.tone,
             ", ".join(profile.knowledge_domains) if profile.knowledge_domains else "General",
             "[dim]No[/dim]",
         )
 
+    # Show personas from storage
+    storage = _get_persona_storage()
+    if storage:
+        for persona in storage.load_all():
+            table.add_row(
+                persona.id[:12],
+                persona.name,
+                persona.voice.tone,
+                ", ".join(persona.knowledge_domains) if persona.knowledge_domains else "General",
+                "[green]Yes[/green]" if persona.is_default else "[dim]No[/dim]",
+            )
+        storage.close()
+
     console.print()
     console.print(table)
     console.print()
+
+
+def _get_persona_storage():
+    """Get PersonaStorage instance from config path."""
+    from animus_bootstrap.config import ConfigManager
+    from animus_bootstrap.personas.storage import PersonaStorage
+
+    config_path = ConfigManager().get_config_path().parent
+    db_path = config_path / "personas.db"
+    return PersonaStorage(db_path)
+
+
+@personas_app.command("add")
+def personas_add(
+    name: str = typer.Argument(help="Persona name"),
+    description: str = typer.Option("", "--description", "-d", help="Short description"),
+    tone: str = typer.Option(
+        "balanced",
+        "--tone",
+        "-t",
+        help="Voice tone (formal/casual/technical/mentor/creative/balanced)",
+    ),
+    domains: str = typer.Option("", "--domains", help="Comma-separated knowledge domains"),
+    system_prompt: str = typer.Option("", "--prompt", "-p", help="System prompt"),
+    default: bool = typer.Option(False, "--default", help="Set as default persona"),
+) -> None:
+    """Create a new persona profile."""
+    from animus_bootstrap.personas.engine import PersonaProfile
+    from animus_bootstrap.personas.voice import VoiceConfig
+
+    valid_tones = ("formal", "casual", "technical", "mentor", "creative", "balanced")
+    if tone not in valid_tones:
+        console.print(f"[red]Invalid tone: {tone}. Must be one of: {', '.join(valid_tones)}[/red]")
+        raise typer.Exit(1)
+
+    voice = VoiceConfig(tone=tone)
+    domain_list = [d.strip() for d in domains.split(",") if d.strip()] if domains else []
+
+    persona = PersonaProfile(
+        name=name,
+        description=description or f"{name} persona",
+        system_prompt=system_prompt or f"You are {name}, a personal AI assistant.",
+        voice=voice,
+        knowledge_domains=domain_list,
+        is_default=default,
+    )
+
+    storage = _get_persona_storage()
+    storage.save(persona)
+    storage.close()
+
+    console.print(f"[green]Created persona '{name}' ({persona.id[:12]}...)[/green]")
+    if domain_list:
+        console.print(f"  Domains: {', '.join(domain_list)}")
+    if default:
+        console.print("  [cyan]Set as default[/cyan]")
+
+
+@personas_app.command("delete")
+def personas_delete(
+    name: str = typer.Argument(help="Persona name to delete"),
+) -> None:
+    """Delete a persona profile."""
+    storage = _get_persona_storage()
+    personas = storage.load_all()
+
+    target = None
+    for p in personas:
+        if p.name.lower() == name.lower():
+            target = p
+            break
+
+    if not target:
+        storage.close()
+        console.print(f"[red]Persona '{name}' not found[/red]")
+        raise typer.Exit(1)
+
+    storage.delete(target.id)
+    storage.close()
+    console.print(f"[yellow]Deleted persona '{target.name}'[/yellow]")
+
+
+@personas_app.command("set-default")
+def personas_set_default(
+    name: str = typer.Argument(help="Persona name to set as default"),
+) -> None:
+    """Set a persona as the default."""
+    storage = _get_persona_storage()
+    personas = storage.load_all()
+
+    target = None
+    for p in personas:
+        if p.name.lower() == name.lower():
+            target = p
+            break
+
+    if not target:
+        storage.close()
+        console.print(f"[red]Persona '{name}' not found[/red]")
+        raise typer.Exit(1)
+
+    # Clear old defaults
+    for p in personas:
+        if p.is_default and p.id != target.id:
+            p.is_default = False
+            storage.save(p)
+
+    target.is_default = True
+    storage.save(target)
+    storage.close()
+    console.print(f"[green]'{target.name}' is now the default persona[/green]")
 
 
 # ------------------------------------------------------------------

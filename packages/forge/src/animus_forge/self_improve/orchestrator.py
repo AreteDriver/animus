@@ -93,6 +93,7 @@ class SelfImproveOrchestrator:
         provider: AgentProvider | None = None,
         config: SafetyConfig | None = None,
         tool_registry: Any = None,
+        db_path: Path | str | None = None,
     ):
         """Initialize the orchestrator.
 
@@ -101,16 +102,22 @@ class SelfImproveOrchestrator:
             provider: Optional AI provider for intelligent improvements.
             config: Safety configuration.
             tool_registry: Optional ForgeToolRegistry for tool-equipped generation.
+            db_path: Path to SQLite database for persistent approvals and
+                checkpoints. Defaults to ``<codebase>/.gorgon/self_improve.db``.
         """
         self.codebase_path = Path(codebase_path)
         self.provider = provider
         self.config = config or SafetyConfig.load()
         self.tool_registry = tool_registry
 
+        # Persistent state
+        self._db_path = Path(db_path) if db_path else self.codebase_path / ".gorgon/self_improve.db"
+        approval_backend = self._create_backend()
+
         # Initialize components
         self.safety_checker = SafetyChecker(self.config)
         self.analyzer = CodebaseAnalyzer(provider, self.codebase_path)
-        self.approval_gate = ApprovalGate()
+        self.approval_gate = ApprovalGate(backend=approval_backend)
         self.rollback_manager = RollbackManager(
             self.codebase_path / ".gorgon/snapshots",
             self.config.max_snapshots,
@@ -119,6 +126,17 @@ class SelfImproveOrchestrator:
 
         self._current_stage = WorkflowStage.IDLE
         self._current_plan: ImprovementPlan | None = None
+
+    def _create_backend(self):
+        """Create a SQLite backend for persistent state."""
+        try:
+            from animus_forge.state.backends import SQLiteBackend
+
+            self._db_path.parent.mkdir(parents=True, exist_ok=True)
+            return SQLiteBackend(str(self._db_path))
+        except Exception:
+            logger.debug("SQLite backend unavailable, using in-memory approvals")
+            return None
 
     @property
     def current_stage(self) -> WorkflowStage:
@@ -661,4 +679,38 @@ If multiple files, return a JSON array of these objects."""
             "current_plan": self._current_plan.title if self._current_plan else None,
             "pending_approvals": len(self.approval_gate.get_pending()),
             "snapshots_available": len(self.rollback_manager.list_snapshots()),
+            "persistent": self._db_path.exists() if self._db_path else False,
         }
+
+    def get_pending_approvals(self, stage: ApprovalStage | None = None) -> list:
+        """Get pending approval requests, including those persisted to database.
+
+        This allows resuming after process restarts — pending approvals are
+        recovered from SQLite.
+
+        Args:
+            stage: Optional filter by approval stage.
+
+        Returns:
+            List of pending ApprovalRequest objects.
+        """
+        return self.approval_gate.get_pending(stage)
+
+    def get_approval_history(self, limit: int = 50) -> list:
+        """Get historical approval decisions from persistent storage.
+
+        Args:
+            limit: Max items to return.
+
+        Returns:
+            List of ApprovalRequest objects.
+        """
+        return self.approval_gate.get_history(limit=limit)
+
+    def list_snapshots(self) -> list:
+        """List available rollback snapshots.
+
+        Returns:
+            List of Snapshot objects.
+        """
+        return self.rollback_manager.list_snapshots()

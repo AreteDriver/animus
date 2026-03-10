@@ -5,9 +5,14 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from animus_bootstrap.gateway.models import GatewayMessage
 from animus_bootstrap.personas.voice import VoiceConfig
+
+if TYPE_CHECKING:
+    from animus_bootstrap.personas.knowledge import KnowledgeDomainRouter
+    from animus_bootstrap.personas.storage import PersonaStorage
 
 logger = logging.getLogger(__name__)
 
@@ -31,21 +36,59 @@ class PersonaProfile:
 class PersonaEngine:
     """Registry of persona profiles. Routes messages to the right persona."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        domain_router: KnowledgeDomainRouter | None = None,
+        storage: PersonaStorage | None = None,
+    ) -> None:
         self._personas: dict[str, PersonaProfile] = {}
         self._default_id: str | None = None
+        self._domain_router = domain_router
+        self._storage = storage
 
     def register_persona(self, persona: PersonaProfile) -> None:
         """Register a persona. If is_default, set as default."""
         self._personas[persona.id] = persona
         if persona.is_default:
             self._default_id = persona.id
+        if self._storage:
+            self._storage.save(persona)
 
     def unregister_persona(self, persona_id: str) -> None:
         """Remove a persona."""
         self._personas.pop(persona_id, None)
         if self._default_id == persona_id:
             self._default_id = None
+        if self._storage:
+            self._storage.delete(persona_id)
+
+    def update_persona(self, persona: PersonaProfile) -> None:
+        """Update an existing persona in registry and storage."""
+        if persona.id not in self._personas:
+            raise ValueError(f"Persona '{persona.id}' not found")
+        self._personas[persona.id] = persona
+        if persona.is_default:
+            self._default_id = persona.id
+        if self._storage:
+            self._storage.save(persona)
+
+    def get_persona_by_name(self, name: str) -> PersonaProfile | None:
+        """Find a persona by name (case-insensitive)."""
+        for persona in self._personas.values():
+            if persona.name.lower() == name.lower():
+                return persona
+        return None
+
+    def load_from_storage(self) -> int:
+        """Load all personas from storage. Returns count loaded."""
+        if not self._storage:
+            return 0
+        personas = self._storage.load_all()
+        for p in personas:
+            self._personas[p.id] = p
+            if p.is_default:
+                self._default_id = p.id
+        return len(personas)
 
     def get_persona(self, persona_id: str) -> PersonaProfile | None:
         """Get a persona by ID."""
@@ -80,7 +123,8 @@ class PersonaEngine:
         Priority:
         1. Explicit /persona command in message text
         2. Channel-bound persona
-        3. Default persona
+        3. Knowledge domain match (via KnowledgeDomainRouter)
+        4. Default persona
         """
         # 1. Check for /persona command
         if message.text.startswith("/persona "):
@@ -97,7 +141,15 @@ class PersonaEngine:
                 if persona.channel_bindings[message.channel]:
                     return persona
 
-        # 3. Fall back to default
+        # 3. Knowledge domain routing
+        if self._domain_router:
+            topics = self._domain_router.classify_topic(message.text)
+            if topics and topics != ["general"]:
+                best = self._domain_router.find_best_persona(topics, list(self._personas.values()))
+                if best:
+                    return best
+
+        # 4. Fall back to default
         return self.get_default()
 
     @property
