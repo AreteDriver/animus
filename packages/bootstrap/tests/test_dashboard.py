@@ -511,7 +511,9 @@ class TestAppStructure:
         assert app.title == "Animus Dashboard"
 
     def test_app_version(self) -> None:
-        assert app.version == "0.4.0"
+        from animus_bootstrap import __version__
+
+        assert app.version == __version__
 
     def test_static_mount_exists(self) -> None:
         """The /static mount should be present."""

@@ -1,6 +1,6 @@
 """AI Workflow Orchestrator - A unified automation layer for AI-powered workflows."""
 
-__version__ = "1.2.0"
+__version__ = "1.7.0"
 
 from .auth import TokenAuth, create_access_token, verify_token
 from .config import Settings, get_settings

@@ -683,7 +683,9 @@ class TestHealthEndpoint:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ok"
-        assert data["version"] == "0.4.0"
+        from animus_bootstrap import __version__
+
+        assert data["version"] == __version__
         assert data["components"]["memory"] is True
         assert data["components"]["tools"] is True
         assert data["components"]["automations"] is True
