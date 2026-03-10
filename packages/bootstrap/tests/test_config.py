@@ -15,9 +15,14 @@ from animus_bootstrap.config.manager import _deep_merge
 from animus_bootstrap.config.schema import (
     AnimusSection,
     ApiSection,
+    ChannelsSection,
+    DiscordChannelConfig,
+    EmailChannelConfig,
     ForgeSection,
+    GatewaySection,
     IdentitySection,
     IntelligenceSection,
+    MatrixChannelConfig,
     MCPConfig,
     MemorySection,
     PersonaProfileConfig,
@@ -26,6 +31,8 @@ from animus_bootstrap.config.schema import (
     ProactiveCheckConfig,
     ProactiveSection,
     ServicesSection,
+    SlackChannelConfig,
+    TelegramChannelConfig,
 )
 
 # ------------------------------------------------------------------
@@ -520,3 +527,135 @@ class TestPersonasSectionDefaults:
         assert s.profiles["coder"].tone == "technical"
         assert s.profiles["coder"].knowledge_domains == ["python", "rust"]
         assert s.profiles["coder"].channel_bindings == {"discord": True}
+
+
+# ------------------------------------------------------------------
+# validate_secrets — fail-fast secret checking
+# ------------------------------------------------------------------
+
+
+class TestValidateSecrets:
+    """Verify validate_secrets catches missing credentials."""
+
+    def test_no_warnings_with_defaults(self) -> None:
+        """Default config (ollama backend, no channels) has no warnings."""
+        cfg = AnimusConfig(gateway=GatewaySection(default_backend="ollama"))
+        assert cfg.validate_secrets() == []
+
+    def test_anthropic_backend_without_key_warns(self) -> None:
+        cfg = AnimusConfig(
+            gateway=GatewaySection(default_backend="anthropic"),
+            api=ApiSection(anthropic_key=""),
+        )
+        warnings = cfg.validate_secrets()
+        assert len(warnings) == 1
+        assert "ANTHROPIC_API_KEY" in warnings[0]
+
+    def test_anthropic_backend_with_key_no_warning(self) -> None:
+        cfg = AnimusConfig(
+            gateway=GatewaySection(default_backend="anthropic"),
+            api=ApiSection(anthropic_key="x" * 50),
+        )
+        warnings = cfg.validate_secrets()
+        assert len(warnings) == 0
+
+    def test_forge_backend_without_key_warns(self) -> None:
+        cfg = AnimusConfig(
+            gateway=GatewaySection(default_backend="forge"),
+            forge=ForgeSection(enabled=True, api_key=""),
+        )
+        warnings = cfg.validate_secrets()
+        assert len(warnings) == 1
+        assert "forge.api_key" in warnings[0]
+
+    def test_forge_backend_disabled_no_warning(self) -> None:
+        cfg = AnimusConfig(
+            gateway=GatewaySection(default_backend="forge"),
+            forge=ForgeSection(enabled=False, api_key=""),
+        )
+        assert cfg.validate_secrets() == []
+
+    def test_telegram_enabled_without_token_warns(self) -> None:
+        cfg = AnimusConfig(
+            gateway=GatewaySection(default_backend="ollama"),
+            channels=ChannelsSection(
+                telegram=TelegramChannelConfig(enabled=True, bot_token=""),
+            ),
+        )
+        warnings = cfg.validate_secrets()
+        assert len(warnings) == 1
+        assert "Telegram" in warnings[0]
+
+    def test_telegram_disabled_no_warning(self) -> None:
+        cfg = AnimusConfig(
+            gateway=GatewaySection(default_backend="ollama"),
+            channels=ChannelsSection(
+                telegram=TelegramChannelConfig(enabled=False, bot_token=""),
+            ),
+        )
+        assert cfg.validate_secrets() == []
+
+    def test_discord_enabled_without_token_warns(self) -> None:
+        cfg = AnimusConfig(
+            gateway=GatewaySection(default_backend="ollama"),
+            channels=ChannelsSection(
+                discord=DiscordChannelConfig(enabled=True, bot_token=""),
+            ),
+        )
+        warnings = cfg.validate_secrets()
+        assert any("Discord" in w for w in warnings)
+
+    def test_slack_enabled_without_token_warns(self) -> None:
+        cfg = AnimusConfig(
+            gateway=GatewaySection(default_backend="ollama"),
+            channels=ChannelsSection(
+                slack=SlackChannelConfig(enabled=True, bot_token=""),
+            ),
+        )
+        warnings = cfg.validate_secrets()
+        assert any("Slack" in w for w in warnings)
+
+    def test_matrix_enabled_without_token_warns(self) -> None:
+        cfg = AnimusConfig(
+            gateway=GatewaySection(default_backend="ollama"),
+            channels=ChannelsSection(
+                matrix=MatrixChannelConfig(enabled=True, access_token=""),
+            ),
+        )
+        warnings = cfg.validate_secrets()
+        assert any("Matrix" in w for w in warnings)
+
+    def test_email_enabled_without_creds_warns(self) -> None:
+        cfg = AnimusConfig(
+            gateway=GatewaySection(default_backend="ollama"),
+            channels=ChannelsSection(
+                email=EmailChannelConfig(enabled=True, username="", password=""),
+            ),
+        )
+        warnings = cfg.validate_secrets()
+        assert any("Email" in w for w in warnings)
+
+    def test_email_enabled_with_creds_no_warning(self) -> None:
+        cfg = AnimusConfig(
+            gateway=GatewaySection(default_backend="ollama"),
+            channels=ChannelsSection(
+                email=EmailChannelConfig(
+                    enabled=True, username="user", password="pass",
+                    imap_host="imap.example.com", smtp_host="smtp.example.com",
+                ),
+            ),
+        )
+        warnings = cfg.validate_secrets()
+        assert not any("Email" in w for w in warnings)
+
+    def test_multiple_issues_all_reported(self) -> None:
+        cfg = AnimusConfig(
+            gateway=GatewaySection(default_backend="anthropic"),
+            api=ApiSection(anthropic_key=""),
+            channels=ChannelsSection(
+                telegram=TelegramChannelConfig(enabled=True, bot_token=""),
+                discord=DiscordChannelConfig(enabled=True, bot_token=""),
+            ),
+        )
+        warnings = cfg.validate_secrets()
+        assert len(warnings) == 3  # anthropic + telegram + discord

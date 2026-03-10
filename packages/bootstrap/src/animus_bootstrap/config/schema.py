@@ -288,3 +288,47 @@ class AnimusConfig(BaseSettings):
     def get_memory_path(self) -> Path:
         """Return the resolved memory database path."""
         return Path(self.memory.path).expanduser()
+
+    def validate_secrets(self) -> list[str]:
+        """Check that secrets required by enabled features are present.
+
+        Returns a list of warning messages for missing secrets.
+        Designed for fail-fast startup — call this before runtime.start().
+        """
+        warnings: list[str] = []
+
+        backend = self.gateway.default_backend
+
+        if backend == "anthropic" and not self.api.anthropic_key:
+            warnings.append(
+                "Gateway backend is 'anthropic' but ANTHROPIC_API_KEY "
+                "is not set (env var or config file). "
+                "Will fall back to Ollama."
+            )
+
+        if backend == "forge" and self.forge.enabled and not self.forge.api_key:
+            warnings.append(
+                "Forge is enabled as gateway backend but forge.api_key "
+                "is not configured."
+            )
+
+        # Channel tokens — only warn for enabled channels
+        channel_checks = [
+            (self.channels.telegram, "bot_token", "Telegram"),
+            (self.channels.discord, "bot_token", "Discord"),
+            (self.channels.slack, "bot_token", "Slack"),
+            (self.channels.matrix, "access_token", "Matrix"),
+        ]
+        for channel_cfg, secret_field, name in channel_checks:
+            if channel_cfg.enabled and not getattr(channel_cfg, secret_field, ""):
+                warnings.append(
+                    f"{name} channel is enabled but {secret_field} is empty."
+                )
+
+        if self.channels.email.enabled:
+            if not self.channels.email.username or not self.channels.email.password:
+                warnings.append(
+                    "Email channel is enabled but username/password not set."
+                )
+
+        return warnings

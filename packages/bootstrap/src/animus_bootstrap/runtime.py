@@ -64,6 +64,12 @@ class AnimusRuntime:
             return
 
         logger.info("Animus runtime starting...")
+
+        # Fail-fast: warn about missing secrets before initializing components
+        secret_warnings = self._config.validate_secrets()
+        for warning in secret_warnings:
+            logger.warning("Config: %s", warning)
+
         data_dir = self._config.get_data_path()
         data_dir.mkdir(parents=True, exist_ok=True)
 

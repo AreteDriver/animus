@@ -8,8 +8,8 @@ Multi-agent orchestration framework for production AI workflows
 
 - **Version**: 1.7.0
 - **Language**: Python
-- **Files**: 601 across 2 languages
-- **Lines**: 225,475
+- **Files**: 638 across 2 languages
+- **Lines**: 239,179
 
 ## Architecture
 
@@ -19,6 +19,7 @@ forge/
 ├── .gorgon/
 │   └── snapshots/
 ├── config/
+├── logs/
 ├── migrations/
 ├── skills/
 │   ├── browser/
@@ -35,6 +36,7 @@ forge/
 ├── CLAUDE.md
 ├── README.md
 ├── pyproject.toml
+├── token.json
 ```
 
 ## Tech Stack
@@ -76,12 +78,12 @@ animus_forge.cli:app
 
 - Do NOT commit secrets, API keys, or credentials
 - Do NOT skip writing tests for new code
+- Do NOT use synchronous database calls in async endpoints
+- Do NOT return raw dicts — use Pydantic response models
 - Do NOT use `os.path` — use `pathlib.Path` everywhere
 - Do NOT use bare `except:` — catch specific exceptions
 - Do NOT use mutable default arguments
 - Do NOT use `print()` for logging — use the `logging` module
-- Do NOT use synchronous database calls in async endpoints
-- Do NOT return raw dicts — use Pydantic response models
 
 ## Dependencies
 
@@ -125,8 +127,8 @@ animus_forge.cli:app
 - `AdaptiveAllocation`
 - `AdaptiveRateLimitConfig`
 - `AdaptiveRateLimitState`
+- `AgentConfig`
 - `AgentContext`
-- `AgentContract`
 
 ### Domain Terms
 - AI
@@ -160,14 +162,14 @@ animus_forge.cli:app
 ### Enums/Constants
 - `ABSTAIN`
 - `ACKNOWLEDGED`
+- `ACT`
 - `ACTIVE`
 - `ADMIN`
+- `AGENT`
 - `AI_PROVIDER`
 - `ALERT`
 - `ALLOW`
 - `ANALYST`
-- `ANALYTICS`
-- `ANALYZE`
 
 ### Outstanding Items
 - **TODO**: fix this bug\n") (`tests/test_self_improve_coverage.py`)
@@ -175,9 +177,9 @@ animus_forge.cli:app
 
 ## AI Skills
 
-**Installed**: 117 skills in `~/.claude/skills/`
-- `a11y`, `accessibility-checker`, `agent-teams-orchestrator`, `align-debug`, `api-client`, `api-docs`, `api-tester`, `apple-dev-best-practices`, `arch`, `backup`, `build`, `changelog`, `ci`, `cicd-pipeline`, `code-builder`
-- ... and 102 more
+**Installed**: 122 skills in `~/.claude/skills/`
+- `a11y`, `accessibility-checker`, `agent-teams-orchestrator`, `align-debug`, `api-client`, `api-docs`, `api-tester`, `apple-dev-best-practices`, `arch`, `backup`, `brand-voice-architect`, `build`, `changelog`, `ci`, `cicd-pipeline`
+- ... and 107 more
 
 **Recommended bundles**: `api-integration`, `full-stack-dev`
 
