@@ -17,11 +17,17 @@ class TestGetDatabase:
 
     def setup_method(self):
         """Reset database cache before each test."""
+        from animus_forge.config import get_settings
+
         reset_database()
+        get_settings.cache_clear()
 
     def teardown_method(self):
         """Reset database cache after each test."""
+        from animus_forge.config import get_settings
+
         reset_database()
+        get_settings.cache_clear()
 
     def test_returns_backend(self, monkeypatch):
         """get_database returns a DatabaseBackend instance."""

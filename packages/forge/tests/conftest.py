@@ -12,7 +12,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # Exclude benchmark tests from normal collection (requires pytest-benchmark).
 # Benchmark CI job runs them explicitly via: pytest tests/test_benchmarks.py --benchmark-only
-collect_ignore = ["test_benchmarks.py", "test_self_improve_ollama_integration.py"]
+collect_ignore = [
+    "test_benchmarks.py",
+    "test_self_improve_ollama_integration.py",
+    "test_evolution_loop_ollama.py",
+]
 
 # --- OOM protection ---
 # Cap virtual memory at 32GB to prevent runaway tests from crashing the machine.

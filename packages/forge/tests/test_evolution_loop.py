@@ -411,10 +411,11 @@ class TestJsonParsing:
         result = loop._parse_json('Here is the result:\n{"key": "value"}\nDone.')
         assert result == {"key": "value"}
 
-    def test_parse_invalid_returns_empty(self, mock_provider, mock_budget, tmp_better, tmp_audit):
+    def test_parse_invalid_returns_fallback(self, mock_provider, mock_budget, tmp_better, tmp_audit):
         loop = _make_loop(mock_provider, mock_budget, tmp_better, tmp_audit)
         result = loop._parse_json("not json at all")
-        assert result == {}
+        assert result["hypothesis"] == "not json at all"
+        assert result["_parse_fallback"] is True
 
 
 # ---------------------------------------------------------------------------

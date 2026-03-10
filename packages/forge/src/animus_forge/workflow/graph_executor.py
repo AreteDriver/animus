@@ -117,7 +117,7 @@ class ReactFlowExecutor:
         Returns:
             ExecutionResult with outputs and status
         """
-        return asyncio.get_event_loop().run_until_complete(
+        return asyncio.run(
             self.execute_async(graph, variables, execution_id)
         )
 

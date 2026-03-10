@@ -458,8 +458,9 @@ class EvolutionLoop:
             except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
-        logger.warning("Failed to parse evolution LLM output")
-        return {}
+        logger.warning("Failed to parse evolution LLM output, using raw text fallback")
+        # Fallback: treat the entire response as the hypothesis
+        return {"hypothesis": text[:500], "_parse_fallback": True}
 
     @staticmethod
     def _load_principles(path: Path) -> list[str]:

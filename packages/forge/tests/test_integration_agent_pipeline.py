@@ -50,8 +50,37 @@ class TestLifespanWiring:
     """Verify the lifespan initializes agent infrastructure."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self, mock_provider):
-        """Use mock provider for all lifespan tests."""
+    def _setup(self, mock_provider, tmp_path):
+        """Use mock provider for all lifespan tests. Reset state to avoid pollution."""
+        import os
+
+        from animus_forge import api_state as state
+        from animus_forge.config import get_settings
+        from animus_forge.state.database import reset_database
+
+        # Ensure a clean, writable DATABASE_URL (prior tests may leave stale cache)
+        db_path = tmp_path / "test-lifespan.db"
+        os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+        get_settings.cache_clear()
+        reset_database()
+
+        # Clear stale state from prior tests
+        state.task_runner = None
+        state.agent_memory = None
+        state.subagent_manager = None
+        state.process_registry = None
+        state.agent_configs = None
+        state.supervisor_factory = lambda: None
+        yield
+        # Cleanup after
+        state.task_runner = None
+        state.agent_memory = None
+        state.subagent_manager = None
+        state.process_registry = None
+        state.agent_configs = None
+        reset_database()
+        get_settings.cache_clear()
+        os.environ.pop("DATABASE_URL", None)
 
     def test_task_runner_available_after_startup(self):
         from animus_forge import api_state as state
