@@ -16,7 +16,7 @@ mcp = pytest.importorskip("mcp")
 
 def _run(coro):
     """Run an async coroutine synchronously."""
-    return asyncio.new_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 def _make_memory(content: str, tags: list[str] | None = None) -> Memory:

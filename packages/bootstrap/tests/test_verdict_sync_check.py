@@ -13,12 +13,8 @@ from animus_bootstrap.intelligence.proactive.checks.verdict_sync import (
 
 
 def _run(coro):
-    """Helper to run async in tests."""
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+    """Run an async coroutine synchronously."""
+    return asyncio.run(coro)
 
 
 class TestVerdictSyncCheck:

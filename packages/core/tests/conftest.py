@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import gc
+import resource
 from pathlib import Path
 
 import pytest
@@ -11,6 +13,22 @@ from animus.cognitive import CognitiveLayer, ModelConfig
 # Exclude benchmark tests from normal collection (requires pytest-benchmark).
 # Benchmark CI job runs them explicitly via: pytest tests/test_benchmarks.py --benchmark-only
 collect_ignore = ["test_benchmarks.py"]
+
+# --- OOM protection ---
+_MEMORY_LIMIT_GB = 32
+try:
+    _soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+    _limit = _MEMORY_LIMIT_GB * 1024 * 1024 * 1024
+    resource.setrlimit(resource.RLIMIT_AS, (_limit, hard))
+except (ValueError, resource.error):
+    pass
+
+
+@pytest.fixture(autouse=True)
+def _force_gc():
+    """Force garbage collection after every test to prevent memory accumulation."""
+    yield
+    gc.collect()
 
 
 @pytest.fixture

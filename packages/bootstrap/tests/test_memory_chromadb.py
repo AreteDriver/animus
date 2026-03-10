@@ -9,13 +9,8 @@ import pytest
 
 
 def _run(coro):
-    """Run an async coroutine synchronously without closing the global event loop."""
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
-        asyncio.set_event_loop(asyncio.new_event_loop())
+    """Run an async coroutine synchronously."""
+    return asyncio.run(coro)
 
 
 class TestChromaDBBackendInit:

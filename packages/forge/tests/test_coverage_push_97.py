@@ -440,7 +440,7 @@ class TestDiscordBotCoverage:
 
         bot = object.__new__(DiscordBot)
         bot._client = None
-        result = asyncio.get_event_loop().run_until_complete(bot.send_message("123", "hello"))
+        result = asyncio.run(bot.send_message("123", "hello"))
         assert result is None
 
     def test_send_message_long_content_split(self):
@@ -457,7 +457,7 @@ class TestDiscordBotCoverage:
         bot._client = mock_client
 
         long_content = "A" * 5000
-        result = asyncio.get_event_loop().run_until_complete(bot.send_message("123", long_content))
+        result = asyncio.run(bot.send_message("123", long_content))
         assert result == "999"
         assert mock_channel.send.await_count == 3  # 5000 / 2000 = 3 chunks
 
@@ -470,7 +470,7 @@ class TestDiscordBotCoverage:
         mock_client.get_channel.side_effect = Exception("fail")
         bot._client = mock_client
 
-        result = asyncio.get_event_loop().run_until_complete(bot.send_message("123", "hi"))
+        result = asyncio.run(bot.send_message("123", "hi"))
         assert result is None
 
     def test_send_embed_no_client(self):
@@ -479,7 +479,7 @@ class TestDiscordBotCoverage:
 
         bot = object.__new__(DiscordBot)
         bot._client = None
-        result = asyncio.get_event_loop().run_until_complete(bot.send_embed("123", "title", "desc"))
+        result = asyncio.run(bot.send_embed("123", "title", "desc"))
         assert result is None
 
     def test_send_typing_no_client(self):
@@ -488,7 +488,7 @@ class TestDiscordBotCoverage:
 
         bot = object.__new__(DiscordBot)
         bot._client = None
-        asyncio.get_event_loop().run_until_complete(bot.send_typing("123"))
+        asyncio.run(bot.send_typing("123"))
 
 
 # ===================================================================
@@ -649,7 +649,7 @@ class TestGraphExecutorCoverage97:
             walker_inst = mock_walker_cls.return_value
             walker_inst.detect_cycles.return_value = []
             walker_inst.get_ready_nodes.side_effect = [["start", "ghost_node"], []]
-            result = asyncio.get_event_loop().run_until_complete(executor.execute_async(graph))
+            result = asyncio.run(executor.execute_async(graph))
         assert result.status == "completed"
 
     def test_execute_async_node_exception(self):
@@ -673,7 +673,7 @@ class TestGraphExecutorCoverage97:
                 walker_inst2 = mock_walker_cls2.return_value
                 walker_inst2.detect_cycles.return_value = []
                 walker_inst2.get_ready_nodes.side_effect = [["n1"]]
-                result = asyncio.get_event_loop().run_until_complete(executor.execute_async(graph))
+                result = asyncio.run(executor.execute_async(graph))
         assert result.status == "failed"
         assert "boom" in result.error
 
@@ -691,7 +691,7 @@ class TestGraphExecutorCoverage97:
             from animus_forge.workflow.graph_walker import GraphWalker
 
             walker = GraphWalker(graph)
-            result = asyncio.get_event_loop().run_until_complete(
+            result = asyncio.run(
                 executor._execute_node(node, {}, walker, "exec-1")
             )
         assert result.status == NodeStatus.FAILED
@@ -715,7 +715,7 @@ class TestGraphExecutorCoverage97:
             from animus_forge.workflow.graph_walker import GraphWalker
 
             walker = GraphWalker(graph)
-            result = asyncio.get_event_loop().run_until_complete(
+            result = asyncio.run(
                 executor._execute_node(node, {}, walker, "exec-1")
             )
         assert result.tokens_used == 42

@@ -18,13 +18,8 @@ from animus_bootstrap.intelligence.proactive.checks.reflection import (
 
 
 def _run(coro):
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
-        # Restore a fresh event loop so downstream tests aren't affected
-        asyncio.set_event_loop(asyncio.new_event_loop())
+    """Run an async coroutine synchronously."""
+    return asyncio.run(coro)
 
 
 @pytest.fixture(autouse=True)

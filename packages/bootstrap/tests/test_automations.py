@@ -625,7 +625,7 @@ class TestAutomationEngine:
         rule = self._make_rule()
         engine.add_rule(rule)
 
-        asyncio.get_event_loop().run_until_complete(engine.evaluate_message(_msg("hello")))
+        asyncio.run(engine.evaluate_message(_msg("hello")))
 
         history = engine.get_history()
         assert len(history) == 1
@@ -639,7 +639,7 @@ class TestAutomationEngine:
         engine.add_rule(r1)
         engine.add_rule(r2)
 
-        asyncio.get_event_loop().run_until_complete(engine.evaluate_message(_msg("hello")))
+        asyncio.run(engine.evaluate_message(_msg("hello")))
 
         history_a = engine.get_history(rule_id=r1.id)
         assert len(history_a) == 1
@@ -651,7 +651,7 @@ class TestAutomationEngine:
         rule = self._make_rule()
         engine.add_rule(rule)
 
-        asyncio.get_event_loop().run_until_complete(engine.evaluate_message(_msg("hello")))
+        asyncio.run(engine.evaluate_message(_msg("hello")))
         assert len(engine.get_history()) == 1
 
         engine.clear_history()

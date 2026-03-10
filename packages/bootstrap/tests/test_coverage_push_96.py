@@ -17,13 +17,8 @@ from fastapi.testclient import TestClient
 
 
 def _run(coro):
-    """Run async coroutine in a fresh event loop."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+    """Run an async coroutine synchronously."""
+    return asyncio.run(coro)
 
 
 # ---------------------------------------------------------------------------

@@ -98,9 +98,9 @@ class TestAnimusRuntime:
             memory_db_path=str(data_dir / "int.db"),
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert data_dir.exists()
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_start_creates_session_manager(self, tmp_path: Path) -> None:
         """start() creates a SessionManager."""
@@ -110,9 +110,9 @@ class TestAnimusRuntime:
             proactive_enabled=False,
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert rt.session_manager is not None
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_start_sets_started_true(self, tmp_path: Path) -> None:
         """start() sets started to True."""
@@ -122,9 +122,9 @@ class TestAnimusRuntime:
             proactive_enabled=False,
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert rt.started is True
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_start_creates_cognitive_backend(self, tmp_path: Path) -> None:
         """start() creates a cognitive backend."""
@@ -135,9 +135,9 @@ class TestAnimusRuntime:
             backend="ollama",
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert rt.cognitive_backend is not None
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_start_intelligence_disabled_skips_components(self, tmp_path: Path) -> None:
         """When intelligence.enabled is False, memory/tools/automations are None."""
@@ -147,12 +147,12 @@ class TestAnimusRuntime:
             proactive_enabled=False,
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert rt.memory_manager is None
         assert rt.tool_executor is None
         assert rt.automation_engine is None
         assert rt.proactive_engine is None
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_start_intelligence_enabled_creates_memory_manager(self, tmp_path: Path) -> None:
         """Memory manager is created when intelligence is enabled."""
@@ -163,9 +163,9 @@ class TestAnimusRuntime:
             memory_db_path=str(tmp_path / "int.db"),
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert rt.memory_manager is not None
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_start_intelligence_enabled_creates_tool_executor(self, tmp_path: Path) -> None:
         """Tool executor is created with built-in tools when intelligence is enabled."""
@@ -176,11 +176,11 @@ class TestAnimusRuntime:
             memory_db_path=str(tmp_path / "int.db"),
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert rt.tool_executor is not None
         # Built-in tools should be registered
         assert len(rt.tool_executor.list_tools()) > 0
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_start_intelligence_enabled_creates_automation_engine(self, tmp_path: Path) -> None:
         """Automation engine is created when intelligence is enabled."""
@@ -191,9 +191,9 @@ class TestAnimusRuntime:
             memory_db_path=str(tmp_path / "int.db"),
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert rt.automation_engine is not None
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_start_creates_intelligent_router_when_components_available(
         self, tmp_path: Path
@@ -208,9 +208,9 @@ class TestAnimusRuntime:
             memory_db_path=str(tmp_path / "int.db"),
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert isinstance(rt.router, IntelligentRouter)
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_start_creates_basic_router_when_intelligence_disabled(self, tmp_path: Path) -> None:
         """MessageRouter is used when intelligence is disabled."""
@@ -222,9 +222,9 @@ class TestAnimusRuntime:
             proactive_enabled=False,
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert isinstance(rt.router, MessageRouter)
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_start_proactive_enabled_creates_engine(self, tmp_path: Path) -> None:
         """Proactive engine is created and started when both flags are True."""
@@ -235,10 +235,10 @@ class TestAnimusRuntime:
             memory_db_path=str(tmp_path / "int.db"),
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert rt.proactive_engine is not None
         assert rt.proactive_engine.running is True
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_start_proactive_disabled_skips_engine(self, tmp_path: Path) -> None:
         """Proactive engine is not created when proactive.enabled is False."""
@@ -249,9 +249,9 @@ class TestAnimusRuntime:
             memory_db_path=str(tmp_path / "int.db"),
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert rt.proactive_engine is None
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_double_start_warns(self, tmp_path: Path) -> None:
         """Calling start() twice logs a warning and returns early."""
@@ -261,13 +261,13 @@ class TestAnimusRuntime:
             proactive_enabled=False,
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
 
         with patch("animus_bootstrap.runtime.logger") as mock_logger:
-            asyncio.get_event_loop().run_until_complete(rt.start())
+            asyncio.run(rt.start())
             mock_logger.warning.assert_called_once_with("Runtime already started")
 
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_stop_closes_all_components(self, tmp_path: Path) -> None:
         """stop() closes all initialized components."""
@@ -278,7 +278,7 @@ class TestAnimusRuntime:
             memory_db_path=str(tmp_path / "int.db"),
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
 
         # Verify components are alive
         assert rt.started is True
@@ -287,14 +287,14 @@ class TestAnimusRuntime:
         assert rt.automation_engine is not None
         assert rt.proactive_engine is not None
 
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
         assert rt.started is False
 
     def test_stop_safe_when_not_started(self) -> None:
         """stop() is a no-op when runtime was never started."""
         rt = AnimusRuntime(config=_make_config())
         # Should not raise
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
         assert rt.started is False
 
     def test_stop_twice_is_safe(self, tmp_path: Path) -> None:
@@ -305,10 +305,10 @@ class TestAnimusRuntime:
             proactive_enabled=False,
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.start())
+        asyncio.run(rt.stop())
         # Second stop is a no-op
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
         assert rt.started is False
 
 
@@ -555,11 +555,11 @@ class TestProactiveEngineCreation:
         cfg = _make_config(data_dir=str(tmp_path))
         rt = AnimusRuntime(config=cfg)
         rt.router = MagicMock()
-        engine = asyncio.get_event_loop().run_until_complete(rt._create_proactive_engine())
+        engine = asyncio.run(rt._create_proactive_engine())
         assert isinstance(engine, ProactiveEngine)
         assert engine.running is True
         # Clean up
-        asyncio.get_event_loop().run_until_complete(engine.stop())
+        asyncio.run(engine.stop())
         engine.close()
 
     def test_engine_registers_builtin_checks(self, tmp_path: Path) -> None:
@@ -567,10 +567,10 @@ class TestProactiveEngineCreation:
         cfg = _make_config(data_dir=str(tmp_path))
         rt = AnimusRuntime(config=cfg)
         rt.router = MagicMock()
-        engine = asyncio.get_event_loop().run_until_complete(rt._create_proactive_engine())
+        engine = asyncio.run(rt._create_proactive_engine())
         checks = engine.list_checks()
         assert len(checks) >= 3  # morning_brief, task_nudge, calendar
-        asyncio.get_event_loop().run_until_complete(engine.stop())
+        asyncio.run(engine.stop())
         engine.close()
 
     def test_engine_applies_check_config_overrides(self, tmp_path: Path) -> None:
@@ -583,7 +583,7 @@ class TestProactiveEngineCreation:
         )
         rt = AnimusRuntime(config=cfg)
         rt.router = MagicMock()
-        engine = asyncio.get_event_loop().run_until_complete(rt._create_proactive_engine())
+        engine = asyncio.run(rt._create_proactive_engine())
 
         # Find the morning_brief check
         morning = None
@@ -597,7 +597,7 @@ class TestProactiveEngineCreation:
         assert morning.schedule == "0 8 * * *"
         assert morning.channels == ["telegram"]
 
-        asyncio.get_event_loop().run_until_complete(engine.stop())
+        asyncio.run(engine.stop())
         engine.close()
 
 
@@ -675,7 +675,7 @@ class TestHealthEndpoint:
             memory_db_path=str(tmp_path / "int.db"),
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         app.state.runtime = rt
 
         client = TestClient(app, raise_server_exceptions=False)
@@ -689,7 +689,7 @@ class TestHealthEndpoint:
         assert data["components"]["automations"] is True
         assert data["components"]["proactive"] is False
 
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_health_returns_degraded_when_no_runtime(self) -> None:
         """GET /health returns 'degraded' when no runtime is set."""
@@ -795,7 +795,7 @@ class TestDashboardRoutersWithRuntime:
             memory_db_path=str(tmp_path / "int.db"),
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         set_runtime(rt)
 
         from animus_bootstrap.dashboard.app import app
@@ -805,7 +805,7 @@ class TestDashboardRoutersWithRuntime:
         resp = client.get("/tools")
         assert resp.status_code == 200
 
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_automations_page_with_runtime(self, tmp_path: Path) -> None:
         """Automations page pulls rules from runtime.automation_engine."""
@@ -816,7 +816,7 @@ class TestDashboardRoutersWithRuntime:
             memory_db_path=str(tmp_path / "int.db"),
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         set_runtime(rt)
 
         from animus_bootstrap.dashboard.app import app
@@ -826,7 +826,7 @@ class TestDashboardRoutersWithRuntime:
         resp = client.get("/automations")
         assert resp.status_code == 200
 
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_activity_page_with_runtime(self, tmp_path: Path) -> None:
         """Activity page pulls data from runtime.proactive_engine."""
@@ -837,7 +837,7 @@ class TestDashboardRoutersWithRuntime:
             memory_db_path=str(tmp_path / "int.db"),
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         set_runtime(rt)
 
         from animus_bootstrap.dashboard.app import app
@@ -847,7 +847,7 @@ class TestDashboardRoutersWithRuntime:
         resp = client.get("/activity")
         assert resp.status_code == 200
 
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
 
 # ------------------------------------------------------------------
@@ -988,11 +988,11 @@ class TestPersonaEngineCreation:
             proactive_enabled=False,
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert rt.persona_engine is not None
         assert rt.context_adapter is not None
         assert rt.persona_engine.persona_count >= 1
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_persona_engine_disabled(self, tmp_path: Path) -> None:
         """When personas.enabled is False, persona_engine is None."""
@@ -1003,10 +1003,10 @@ class TestPersonaEngineCreation:
         )
         cfg.personas.enabled = False
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert rt.persona_engine is None
         assert rt.context_adapter is None
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
 
     def test_persona_engine_passed_to_intelligent_router(self, tmp_path: Path) -> None:
         """IntelligentRouter receives persona_engine when both intelligence and personas enabled."""
@@ -1019,8 +1019,8 @@ class TestPersonaEngineCreation:
             memory_db_path=str(tmp_path / "int.db"),
         )
         rt = AnimusRuntime(config=cfg)
-        asyncio.get_event_loop().run_until_complete(rt.start())
+        asyncio.run(rt.start())
         assert isinstance(rt.router, IntelligentRouter)
         assert rt.router._persona_engine is not None
         assert rt.router._context_adapter is not None
-        asyncio.get_event_loop().run_until_complete(rt.stop())
+        asyncio.run(rt.stop())
