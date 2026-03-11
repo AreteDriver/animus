@@ -7,6 +7,7 @@ from animus_bootstrap.intelligence.proactive.checks.morning_brief import (
     get_morning_brief_check,
 )
 from animus_bootstrap.intelligence.proactive.checks.reflection import get_reflection_check
+from animus_bootstrap.intelligence.proactive.checks.self_heal import get_self_heal_check
 from animus_bootstrap.intelligence.proactive.checks.tasks import get_task_nudge_check
 from animus_bootstrap.intelligence.proactive.checks.verdict_sync import (
     get_verdict_sync_check,
@@ -22,6 +23,7 @@ def get_builtin_checks() -> list[ProactiveCheck]:
         get_calendar_check(),
         get_reflection_check(),
         get_verdict_sync_check(),
+        get_self_heal_check(),
     ]
 
 
@@ -30,6 +32,7 @@ __all__ = [
     "get_calendar_check",
     "get_morning_brief_check",
     "get_reflection_check",
+    "get_self_heal_check",
     "get_task_nudge_check",
     "get_verdict_sync_check",
 ]

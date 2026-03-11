@@ -875,7 +875,7 @@ class TestSelfImproveLoop:
 
 class TestSelfImproveToolDefinitions:
     def test_tool_count(self) -> None:
-        assert len(get_self_improve_tools()) == 5
+        assert len(get_self_improve_tools()) == 7
 
     def test_tool_names(self) -> None:
         names = {t.name for t in get_self_improve_tools()}
@@ -885,6 +885,8 @@ class TestSelfImproveToolDefinitions:
             "apply_improvement",
             "list_improvements",
             "self_improve_loop",
+            "measure_impact",
+            "rollback_improvement",
         }
 
     def test_propose_requires_approval(self) -> None:
@@ -937,8 +939,8 @@ class TestNewToolsInBuiltinRegistry:
 
     def test_total_tool_count(self) -> None:
         tools = get_all_builtin_tools()
-        # 9 original (added recall_memory) + 18 new + 4 task = 35
-        assert len(tools) == 35
+        # 9 original (added recall_memory) + 18 new + 4 task + 2 impact = 37
+        assert len(tools) == 37
 
     def test_all_have_handlers(self) -> None:
         tools = get_all_builtin_tools()

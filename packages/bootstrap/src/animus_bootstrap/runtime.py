@@ -125,7 +125,9 @@ class AnimusRuntime:
             # Wire self-improvement dependencies
             from animus_bootstrap.intelligence.tools.builtin.self_improve import (
                 set_improvement_store,
+                set_sandbox,
                 set_self_improve_deps,
+                set_self_improve_identity,
             )
 
             set_self_improve_deps(self.tool_executor, self.cognitive_backend)
@@ -139,6 +141,17 @@ class AnimusRuntime:
             self._improvement_store = ImprovementStore(improvements_db)
             set_improvement_store(self._improvement_store)
             logger.info("Improvement store initialized: %s", improvements_db)
+
+            # Sandbox for safe config/identity changes
+            from animus_bootstrap.intelligence.tools.builtin.sandbox import (
+                ImprovementSandbox,
+            )
+
+            config_path = ConfigManager().get_config_path()
+            self._sandbox = ImprovementSandbox(data_dir, config_path=config_path)
+            set_sandbox(self._sandbox)
+            set_self_improve_identity(self.identity_manager)
+            logger.info("Improvement sandbox initialized")
 
             # Wire identity tools to live identity manager
             if self.identity_manager is not None:
@@ -209,6 +222,20 @@ class AnimusRuntime:
                 config=self._config,
             )
             logger.info("Reflection loop dependencies wired")
+
+        # 8c. Wire self-heal dependencies
+        if self._config.intelligence.enabled and self.tool_executor is not None:
+            from animus_bootstrap.intelligence.proactive.checks.self_heal import (
+                set_self_heal_deps,
+            )
+
+            set_self_heal_deps(
+                tool_executor=self.tool_executor,
+                improvement_store=getattr(self, "_improvement_store", None),
+                cognitive_backend=self.cognitive_backend,
+                tool_history_store=getattr(self, "_tool_history_store", None),
+            )
+            logger.info("Self-heal loop dependencies wired")
 
         # 9. Persistent timer store + restore saved timers
         if self._config.intelligence.enabled:
@@ -300,6 +327,10 @@ class AnimusRuntime:
         if hasattr(self, "_improvement_store") and self._improvement_store is not None:
             self._improvement_store.close()
             logger.info("Improvement store closed")
+
+        # Sandbox has no close method but reset the reference
+        if hasattr(self, "_sandbox"):
+            self._sandbox = None
 
         if hasattr(self, "_tool_history_store") and self._tool_history_store is not None:
             self._tool_history_store.close()

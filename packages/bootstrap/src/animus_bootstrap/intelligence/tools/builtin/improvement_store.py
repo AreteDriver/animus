@@ -32,10 +32,24 @@ class ImprovementStore:
                 timestamp TEXT NOT NULL,
                 analysis TEXT,
                 patch TEXT,
-                applied_at TEXT
+                applied_at TEXT,
+                baseline_metrics TEXT,
+                post_metrics TEXT,
+                impact_score REAL
             )
         """)
         self._conn.commit()
+        # Migration: add columns if they don't exist (for existing DBs)
+        for col, col_type in [
+            ("baseline_metrics", "TEXT"),
+            ("post_metrics", "TEXT"),
+            ("impact_score", "REAL"),
+        ]:
+            try:
+                self._conn.execute(f"ALTER TABLE improvements ADD COLUMN {col} {col_type}")
+                self._conn.commit()
+            except sqlite3.OperationalError:
+                pass  # Column already exists
 
     def save(self, proposal: dict) -> int:
         """Insert a proposal and return its assigned ID."""
@@ -80,6 +94,24 @@ class ImprovementStore:
         self._conn.commit()
         return cursor.rowcount > 0
 
+    def set_baseline_metrics(self, proposal_id: int, metrics: str) -> bool:
+        """Record baseline metrics before applying a proposal."""
+        cursor = self._conn.execute(
+            "UPDATE improvements SET baseline_metrics = ? WHERE id = ?",
+            (metrics, proposal_id),
+        )
+        self._conn.commit()
+        return cursor.rowcount > 0
+
+    def set_post_metrics(self, proposal_id: int, metrics: str, impact_score: float) -> bool:
+        """Record post-application metrics and computed impact score."""
+        cursor = self._conn.execute(
+            "UPDATE improvements SET post_metrics = ?, impact_score = ? WHERE id = ?",
+            (metrics, impact_score, proposal_id),
+        )
+        self._conn.commit()
+        return cursor.rowcount > 0
+
     def get(self, proposal_id: int) -> dict | None:
         """Get a single proposal by ID."""
         cursor = self._conn.execute("SELECT * FROM improvements WHERE id = ?", (proposal_id,))
@@ -117,6 +149,9 @@ class ImprovementStore:
             "analysis": row["analysis"],
             "patch": row["patch"],
             "applied_at": row["applied_at"],
+            "baseline_metrics": row["baseline_metrics"],
+            "post_metrics": row["post_metrics"],
+            "impact_score": row["impact_score"],
         }
 
     def close(self) -> None:
