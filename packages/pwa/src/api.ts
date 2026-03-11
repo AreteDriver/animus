@@ -54,9 +54,18 @@ export function connectChat(onMessage: OnWSMessage): {
   send: (text: string) => void;
   close: () => void;
   getState: () => number;
+  getPendingCount: () => number;
 } {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   const ws = new WebSocket(`${proto}//${location.host}/ws/chat`);
+  const pending: string[] = [];
+
+  ws.onopen = () => {
+    while (pending.length > 0) {
+      const text = pending.shift()!;
+      ws.send(JSON.stringify({ text, sender_id: "pwa-user", sender_name: "User" }));
+    }
+  };
 
   ws.onmessage = (event) => {
     try {
@@ -71,10 +80,13 @@ export function connectChat(onMessage: OnWSMessage): {
     send: (text: string) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ text, sender_id: "pwa-user", sender_name: "User" }));
+      } else {
+        pending.push(text);
       }
     },
     close: () => ws.close(),
     getState: () => ws.readyState,
+    getPendingCount: () => pending.length,
   };
 }
 

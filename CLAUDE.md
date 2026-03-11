@@ -7,7 +7,7 @@
 - **Version**: 2.6.0
 - **Python**: >=3.10 (Core), >=3.11 (Bootstrap), >=3.12 (Forge)
 - **Layout**: Multi-package monorepo under `packages/`
-- **Tests**: 14,553 across 4 packages
+- **Tests**: 14,596 across 4 packages
 - **License**: MIT
 
 ## Non-Negotiables
@@ -46,7 +46,7 @@ animus/
 │   │   └── pyproject.toml
 │   └── bootstrap/               # Animus Bootstrap — install daemon, wizard, dashboard + gateway + intelligence
 │       ├── src/animus_bootstrap/ # Python package: import animus_bootstrap
-│       ├── tests/               # 1798 tests, 97% coverage
+│       ├── tests/               # 1841 tests, 97% coverage
 │       └── pyproject.toml
 ├── docs/
 │   └── whitepapers/             # Architecture whitepapers (all 3 layers)

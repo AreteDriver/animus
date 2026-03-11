@@ -7,6 +7,7 @@ interface Message {
   role: "user" | "assistant";
   text: string;
   timestamp: Date;
+  pending?: boolean;
 }
 
 export function ChatView() {
@@ -14,20 +15,28 @@ export function ChatView() {
   const [input, setInput] = useState("");
   const [connected, setConnected] = useState(false);
   const [sending, setSending] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<ReturnType<typeof connectChat> | null>(null);
 
   const handleIncoming = useCallback((msg: WSMessage) => {
     setSending(false);
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: msg.id,
-        role: "assistant" as const,
-        text: msg.text,
-        timestamp: new Date(msg.timestamp),
-      },
-    ]);
+    setMessages((prev) => {
+      // Clear pending flags on all user messages (they've been flushed)
+      const cleared = prev.map((m) =>
+        m.pending ? { ...m, pending: false } : m,
+      );
+      return [
+        ...cleared,
+        {
+          id: msg.id,
+          role: "assistant" as const,
+          text: msg.text,
+          timestamp: new Date(msg.timestamp),
+        },
+      ];
+    });
+    setPendingCount(0);
   }, []);
 
   useEffect(() => {
@@ -42,6 +51,7 @@ export function ChatView() {
         const state = ws.getState();
         if (state === WebSocket.OPEN) {
           setConnected(true);
+          setPendingCount(ws.getPendingCount());
           clearInterval(check);
         } else if (state === WebSocket.CLOSED) {
           setConnected(false);
@@ -67,17 +77,20 @@ export function ChatView() {
     const text = input.trim();
     if (!text || sending || !wsRef.current) return;
 
+    const isOffline = !connected;
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: "user",
       text,
       timestamp: new Date(),
+      pending: isOffline,
     };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
-    setSending(true);
+    if (!isOffline) setSending(true);
 
     wsRef.current.send(text);
+    if (isOffline) setPendingCount(wsRef.current.getPendingCount());
   }
 
   return (
@@ -87,13 +100,18 @@ export function ChatView() {
         <span className={`chat-status ${connected ? "chat-status--ok" : "chat-status--off"}`}>
           {connected ? "connected" : "offline"}
         </span>
+        {pendingCount > 0 && (
+          <span className="chat-status chat-status--off">
+            {pendingCount} pending
+          </span>
+        )}
       </h1>
       <div className="chat-messages">
         {messages.length === 0 && (
           <p className="chat-empty">Start a conversation.</p>
         )}
         {messages.map((msg) => (
-          <div key={msg.id} className={`chat-bubble chat-bubble--${msg.role}`}>
+          <div key={msg.id} className={`chat-bubble chat-bubble--${msg.role}${msg.pending ? " chat-msg--pending" : ""}`}>
             {msg.text}
           </div>
         ))}
@@ -112,12 +130,12 @@ export function ChatView() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          disabled={sending || !connected}
+          disabled={sending}
         />
         <button
           className="chat-send"
           onClick={handleSend}
-          disabled={sending || !input.trim() || !connected}
+          disabled={sending || !input.trim()}
         >
           Send
         </button>

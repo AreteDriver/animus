@@ -75,6 +75,11 @@
   font-style: italic;
 }
 
+.chat-msg--pending {
+  opacity: 0.5;
+  font-style: italic;
+}
+
 .chat-input-row {
   position: fixed;
   bottom: calc(64px + var(--safe-bottom));
