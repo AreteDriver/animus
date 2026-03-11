@@ -27,7 +27,7 @@ from animus_bootstrap.daemon.platforms.macos import (
     _AGENT_LABEL,
     MacOSService,
 )
-from animus_bootstrap.daemon.platforms.windows import _NOT_IMPLEMENTED_MSG, WindowsService
+from animus_bootstrap.daemon.platforms.windows import WindowsService
 from animus_bootstrap.daemon.supervisor import AnimusSupervisor
 from animus_bootstrap.daemon.updater import _PYPI_PACKAGE, _PYPI_URL, AnimusUpdater
 
@@ -1255,29 +1255,43 @@ class TestMacOSServiceIsRunning:
 
 
 class TestWindowsService:
-    """WindowsService — all methods raise NotImplementedError."""
+    """WindowsService — delegates to sc.exe via subprocess."""
 
-    def test_install_service(self) -> None:
-        with pytest.raises(NotImplementedError, match="not yet implemented"):
-            WindowsService().install_service()
+    @patch("animus_bootstrap.daemon.platforms.windows.subprocess.run")
+    @patch("animus_bootstrap.daemon.platforms.windows._run_sc")
+    def test_install_service(self, mock_sc: MagicMock, _mock_run: MagicMock) -> None:
+        mock_sc.return_value = MagicMock(returncode=0)
+        assert WindowsService().install_service() is True
+        mock_sc.assert_called_once()
 
-    def test_start(self) -> None:
-        with pytest.raises(NotImplementedError, match="not yet implemented"):
-            WindowsService().start()
+    @patch("animus_bootstrap.daemon.platforms.windows._run_sc")
+    def test_start(self, mock_sc: MagicMock) -> None:
+        mock_sc.return_value = MagicMock(returncode=0)
+        assert WindowsService().start() is True
 
-    def test_stop(self) -> None:
-        with pytest.raises(NotImplementedError, match="not yet implemented"):
-            WindowsService().stop()
+    @patch("animus_bootstrap.daemon.platforms.windows._run_sc")
+    def test_stop(self, mock_sc: MagicMock) -> None:
+        mock_sc.return_value = MagicMock(returncode=0)
+        assert WindowsService().stop() is True
 
-    def test_is_running(self) -> None:
-        with pytest.raises(NotImplementedError, match="not yet implemented"):
-            WindowsService().is_running()
+    @patch("animus_bootstrap.daemon.platforms.windows.subprocess.run")
+    def test_is_running(self, mock_run: MagicMock) -> None:
+        mock_run.return_value = MagicMock(stdout="STATE : 4  RUNNING")
+        assert WindowsService().is_running() is True
 
-    def test_uninstall_service(self) -> None:
-        with pytest.raises(NotImplementedError, match="not yet implemented"):
-            WindowsService().uninstall_service()
+    @patch("animus_bootstrap.daemon.platforms.windows.subprocess.run")
+    def test_is_not_running(self, mock_run: MagicMock) -> None:
+        mock_run.return_value = MagicMock(stdout="STATE : 1  STOPPED")
+        assert WindowsService().is_running() is False
 
-    def test_error_message_content(self) -> None:
-        with pytest.raises(NotImplementedError) as exc_info:
-            WindowsService().install_service()
-        assert _NOT_IMPLEMENTED_MSG == str(exc_info.value)
+    @patch("animus_bootstrap.daemon.platforms.windows._run_sc")
+    @patch("animus_bootstrap.daemon.platforms.windows.subprocess.run")
+    def test_uninstall_service(self, mock_run: MagicMock, mock_sc: MagicMock) -> None:
+        mock_run.return_value = MagicMock(stdout="STOPPED")
+        mock_sc.return_value = MagicMock(returncode=0)
+        assert WindowsService().uninstall_service() is True
+
+    @patch("animus_bootstrap.daemon.platforms.windows._run_sc")
+    def test_install_sc_not_found(self, mock_sc: MagicMock) -> None:
+        mock_sc.side_effect = FileNotFoundError
+        assert WindowsService().install_service() is False
