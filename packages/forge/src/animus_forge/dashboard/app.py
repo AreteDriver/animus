@@ -96,6 +96,7 @@ def render_sidebar() -> str:
         "Agents": "🤖",
         "Metrics": "📈",
         "Analytics": "🔬",
+        "Skills": "🧬",
         "Builder": "🎨",
         "Plugins": "🏪",
         "Workflows": "⚙️",
@@ -464,6 +465,17 @@ def _render_mcp_page() -> None:
         _render_mcp_fallback()
 
 
+def _render_skills_page() -> None:
+    """Render skill evolution dashboard page with lazy import."""
+    try:
+        from animus_forge.dashboard.skill_evolution_page import render_skill_evolution_page
+
+        render_skill_evolution_page()
+    except Exception:
+        st.title("🧬 Skills Evolution")
+        st.warning("Skill evolution component not available. Please check your installation.")
+
+
 def _render_evals_page() -> None:
     """Render evaluation dashboard page with lazy import."""
     try:
@@ -484,6 +496,7 @@ _PAGE_RENDERERS = {
     "Agents": render_agents_page,
     "Metrics": render_metrics_page,
     "Analytics": render_analytics_page,
+    "Skills": _render_skills_page,
     "Builder": _render_builder_page,
     "Plugins": _render_plugins_page,
     "Workflows": render_workflows_page,
