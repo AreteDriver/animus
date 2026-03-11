@@ -135,7 +135,7 @@ async def update_persona(request: Request, persona_id: str, body: PersonaUpdateR
         valid_tones = ("formal", "casual", "technical", "mentor", "creative", "balanced")
         if body.tone not in valid_tones:
             msg = f"Invalid tone. Must be: {', '.join(valid_tones)}"
-        raise HTTPException(status_code=400, detail=msg)
+            raise HTTPException(status_code=400, detail=msg)
         persona.voice.tone = body.tone
     if body.knowledge_domains is not None:
         persona.knowledge_domains = body.knowledge_domains

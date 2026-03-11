@@ -297,6 +297,10 @@ class AnimusRuntime:
             self.feedback_store.close()
             logger.info("Feedback store closed")
 
+        if hasattr(self, "_persona_storage") and self._persona_storage is not None:
+            self._persona_storage.close()
+            logger.info("Persona storage closed")
+
         if self.memory_manager is not None:
             self.memory_manager.close()
             logger.info("Memory manager closed")
@@ -493,30 +497,50 @@ class AnimusRuntime:
         )
 
     def _create_persona_engine(self) -> Any:
-        """Create persona engine from config."""
+        """Create persona engine from config with domain routing and persistence."""
         from animus_bootstrap.personas.engine import PersonaEngine, PersonaProfile
+        from animus_bootstrap.personas.knowledge import KnowledgeDomainRouter
+        from animus_bootstrap.personas.storage import PersonaStorage
         from animus_bootstrap.personas.voice import VoiceConfig
 
-        engine = PersonaEngine()
+        # Persistent storage for personas created via CLI/API
+        data_dir = self._config.get_data_path()
+        personas_db = data_dir / "personas.db"
+        storage = PersonaStorage(personas_db)
+        self._persona_storage = storage
 
-        # Register default persona from config
+        # Domain router for topic-based persona selection
+        domain_router = KnowledgeDomainRouter()
+
+        engine = PersonaEngine(domain_router=domain_router, storage=storage)
+
+        # Load any previously persisted personas first
+        loaded = engine.load_from_storage()
+        if loaded:
+            logger.info("Loaded %d personas from storage", loaded)
+
+        # Register default persona from config (if not already in storage)
         cfg = self._config.personas
-        default_persona = PersonaProfile(
-            name=cfg.default_name,
-            system_prompt=cfg.default_system_prompt,
-            voice=VoiceConfig(
-                tone=cfg.default_tone,
-                max_response_length=cfg.default_max_response_length,
-                emoji_policy=cfg.default_emoji_policy,
-            ),
-            is_default=True,
-        )
-        engine.register_persona(default_persona)
+        if not engine.get_persona_by_name(cfg.default_name):
+            default_persona = PersonaProfile(
+                name=cfg.default_name,
+                system_prompt=cfg.default_system_prompt,
+                voice=VoiceConfig(
+                    tone=cfg.default_tone,
+                    max_response_length=cfg.default_max_response_length,
+                    emoji_policy=cfg.default_emoji_policy,
+                ),
+                is_default=True,
+            )
+            engine.register_persona(default_persona)
 
-        # Register named profiles from config
+        # Register named profiles from config (skip if already in storage)
         for profile_name, profile_cfg in cfg.profiles.items():
+            name = profile_cfg.name or profile_name
+            if engine.get_persona_by_name(name):
+                continue
             persona = PersonaProfile(
-                name=profile_cfg.name or profile_name,
+                name=name,
                 description=profile_cfg.description,
                 system_prompt=profile_cfg.system_prompt,
                 voice=VoiceConfig(tone=profile_cfg.tone),
