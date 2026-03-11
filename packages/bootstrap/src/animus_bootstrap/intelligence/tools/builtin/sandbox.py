@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import logging
 import shutil
+import tomllib
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-import yaml
+import tomli_w
 
 logger = logging.getLogger(__name__)
 
@@ -16,29 +18,35 @@ class ImprovementSandbox:
     """Execute improvement proposals safely with backup and rollback.
 
     Supports two types of safe changes:
-    1. YAML config changes — modify animus config values
+    1. Config changes — modify animus TOML config values
     2. Identity file updates — modify LEARNED.md, system prompts, persona configs
 
     All changes create backups before applying. Rollback restores from backup.
     """
 
-    def __init__(self, data_dir: Path, config_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        data_dir: Path,
+        config_path: Path | None = None,
+        on_config_changed: Callable[[], None] | None = None,
+    ) -> None:
         self._data_dir = Path(data_dir)
         self._backup_dir = self._data_dir / "improvement_backups"
         self._backup_dir.mkdir(parents=True, exist_ok=True)
         self._config_path = config_path
+        self._on_config_changed = on_config_changed
 
     def apply_config_change(
         self,
         proposal_id: int,
-        yaml_path: str,
+        config_path: str,
         value: object,
     ) -> dict:
-        """Apply a YAML config change with backup.
+        """Apply a TOML config change with backup.
 
         Args:
             proposal_id: ID of the proposal being applied.
-            yaml_path: Dot-separated path (e.g. "intelligence.tool_timeout_seconds").
+            config_path: Dot-separated path (e.g. "intelligence.tool_timeout_seconds").
             value: New value to set.
 
         Returns:
@@ -47,12 +55,12 @@ class ImprovementSandbox:
         if self._config_path is None or not self._config_path.exists():
             return {"status": "error", "reason": "No config file found"}
 
-        # Read current config
-        config_text = self._config_path.read_text()
-        config = yaml.safe_load(config_text) or {}
+        # Read current config (TOML)
+        config_bytes = self._config_path.read_bytes()
+        config = tomllib.loads(config_bytes.decode())
 
         # Navigate to the target key
-        keys = yaml_path.split(".")
+        keys = config_path.split(".")
         old_value = _get_nested(config, keys)
 
         # Create backup
@@ -61,20 +69,28 @@ class ImprovementSandbox:
         # Set the new value
         _set_nested(config, keys, value)
 
-        # Write updated config
-        self._config_path.write_text(yaml.dump(config, default_flow_style=False, sort_keys=False))
+        # Write updated config (TOML)
+        self._config_path.write_bytes(tomli_w.dumps(config).encode())
 
         logger.info(
             "Proposal #%d: config %s changed from %r to %r",
             proposal_id,
-            yaml_path,
+            config_path,
             old_value,
             value,
         )
 
+        # Notify runtime to reload config
+        if self._on_config_changed is not None:
+            try:
+                self._on_config_changed()
+                logger.info("Config reloaded after proposal #%d", proposal_id)
+            except Exception:
+                logger.exception("Config reload failed after proposal #%d", proposal_id)
+
         return {
             "status": "applied",
-            "yaml_path": yaml_path,
+            "config_path": config_path,
             "old_value": old_value,
             "new_value": value,
             "backup_path": str(backup_path),
@@ -139,6 +155,13 @@ class ImprovementSandbox:
 
         shutil.copy2(backup_path, file_path)
         logger.info("Proposal #%d: rolled back %s from backup", proposal_id, file_path)
+
+        # Trigger reload if config was rolled back
+        if self._on_config_changed is not None and file_path == self._config_path:
+            try:
+                self._on_config_changed()
+            except Exception:
+                logger.exception("Config reload failed after rollback of proposal #%d", proposal_id)
 
         return {
             "status": "rolled_back",

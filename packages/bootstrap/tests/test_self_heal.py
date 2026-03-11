@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import tomllib
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import yaml
+import tomli_w
 
 from animus_bootstrap.intelligence.proactive.checks.self_heal import (
     _MIN_EXECUTIONS,
@@ -168,10 +169,18 @@ class TestSelfHealCheck:
 # ======================================================================
 
 
+def _write_toml(path: Path, data: dict) -> None:
+    path.write_bytes(tomli_w.dumps(data).encode())
+
+
+def _read_toml(path: Path) -> dict:
+    return tomllib.loads(path.read_bytes().decode())
+
+
 class TestImprovementSandbox:
     def test_apply_config_change(self, tmp_path: Path) -> None:
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text(yaml.dump({"intelligence": {"tool_timeout_seconds": 30}}))
+        config_path = tmp_path / "config.toml"
+        _write_toml(config_path, {"intelligence": {"tool_timeout_seconds": 30}})
 
         sandbox = ImprovementSandbox(tmp_path, config_path=config_path)
         result = sandbox.apply_config_change(1, "intelligence.tool_timeout_seconds", 60)
@@ -180,13 +189,12 @@ class TestImprovementSandbox:
         assert result["old_value"] == 30
         assert result["new_value"] == 60
 
-        # Verify config was updated
-        updated = yaml.safe_load(config_path.read_text())
+        updated = _read_toml(config_path)
         assert updated["intelligence"]["tool_timeout_seconds"] == 60
 
     def test_apply_config_creates_backup(self, tmp_path: Path) -> None:
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text(yaml.dump({"key": "old"}))
+        config_path = tmp_path / "config.toml"
+        _write_toml(config_path, {"key": "old"})
 
         sandbox = ImprovementSandbox(tmp_path, config_path=config_path)
         sandbox.apply_config_change(42, "key", "new")
@@ -196,26 +204,22 @@ class TestImprovementSandbox:
         assert backups[0]["proposal_id"] == 42
 
     def test_rollback_restores_original(self, tmp_path: Path) -> None:
-        config_path = tmp_path / "config.yaml"
-        original = {"key": "original_value"}
-        config_path.write_text(yaml.dump(original))
+        config_path = tmp_path / "config.toml"
+        _write_toml(config_path, {"key": "original_value"})
 
         sandbox = ImprovementSandbox(tmp_path, config_path=config_path)
         sandbox.apply_config_change(1, "key", "changed")
 
-        # Verify changed
-        assert yaml.safe_load(config_path.read_text())["key"] == "changed"
+        assert _read_toml(config_path)["key"] == "changed"
 
-        # Rollback
         result = sandbox.rollback(1, config_path)
         assert result["status"] == "rolled_back"
 
-        # Verify restored
-        assert yaml.safe_load(config_path.read_text())["key"] == "original_value"
+        assert _read_toml(config_path)["key"] == "original_value"
 
     def test_rollback_missing_backup(self, tmp_path: Path) -> None:
         sandbox = ImprovementSandbox(tmp_path)
-        result = sandbox.rollback(999, tmp_path / "nonexistent.yaml")
+        result = sandbox.rollback(999, tmp_path / "nonexistent.toml")
         assert result["status"] == "error"
 
     def test_apply_identity_append(self, tmp_path: Path) -> None:
@@ -235,16 +239,38 @@ class TestImprovementSandbox:
         assert result["status"] == "error"
 
     def test_nested_config_change(self, tmp_path: Path) -> None:
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text(yaml.dump({"a": {"b": {"c": 1}}}))
+        config_path = tmp_path / "config.toml"
+        _write_toml(config_path, {"a": {"b": {"c": 1}}})
 
         sandbox = ImprovementSandbox(tmp_path, config_path=config_path)
         result = sandbox.apply_config_change(1, "a.b.c", 99)
         assert result["old_value"] == 1
         assert result["new_value"] == 99
 
-        updated = yaml.safe_load(config_path.read_text())
+        updated = _read_toml(config_path)
         assert updated["a"]["b"]["c"] == 99
+
+    def test_on_config_changed_callback(self, tmp_path: Path) -> None:
+        config_path = tmp_path / "config.toml"
+        _write_toml(config_path, {"key": "val"})
+
+        callback = MagicMock()
+        sandbox = ImprovementSandbox(tmp_path, config_path=config_path, on_config_changed=callback)
+        sandbox.apply_config_change(1, "key", "new")
+
+        callback.assert_called_once()
+
+    def test_rollback_triggers_reload(self, tmp_path: Path) -> None:
+        config_path = tmp_path / "config.toml"
+        _write_toml(config_path, {"key": "original"})
+
+        callback = MagicMock()
+        sandbox = ImprovementSandbox(tmp_path, config_path=config_path, on_config_changed=callback)
+        sandbox.apply_config_change(1, "key", "changed")
+        callback.reset_mock()
+
+        sandbox.rollback(1, config_path)
+        callback.assert_called_once()
 
 
 # ======================================================================
@@ -293,6 +319,64 @@ class TestImpactMeasurement:
         assert "post_metrics" in proposal
         assert "impact_score" in proposal
         store.close()
+
+
+# ======================================================================
+# Runtime config reload
+# ======================================================================
+
+
+class TestRuntimeReloadConfig:
+    def test_reload_updates_tool_executor_settings(self) -> None:
+        from unittest.mock import patch
+
+        from animus_bootstrap.runtime import AnimusRuntime
+
+        rt = AnimusRuntime.__new__(AnimusRuntime)
+        rt._started = True
+        rt._channels = {}
+        rt.proactive_engine = None
+        rt.router = None
+
+        # Mock tool executor
+        rt.tool_executor = MagicMock()
+        rt.tool_executor._timeout = 30.0
+        rt.tool_executor._max_calls = 10
+
+        # Mock ConfigManager to return config with different values
+        mock_config = MagicMock()
+        mock_config.intelligence.tool_timeout_seconds = 120
+        mock_config.intelligence.max_tool_calls_per_turn = 20
+
+        with patch("animus_bootstrap.runtime.ConfigManager") as mock_cm:
+            mock_cm.return_value.load.return_value = mock_config
+            rt.reload_config()
+
+        assert rt.tool_executor._timeout == 120.0
+        assert rt.tool_executor._max_calls == 20
+        assert rt._config is mock_config
+
+    def test_reload_survives_load_failure(self) -> None:
+        from unittest.mock import patch
+
+        from animus_bootstrap.runtime import AnimusRuntime
+
+        rt = AnimusRuntime.__new__(AnimusRuntime)
+        rt._started = True
+        rt._channels = {}
+        rt.tool_executor = None
+        rt.proactive_engine = None
+        rt.router = None
+
+        original_config = MagicMock()
+        rt._config = original_config
+
+        with patch("animus_bootstrap.runtime.ConfigManager") as mock_cm:
+            mock_cm.return_value.load.side_effect = RuntimeError("bad config")
+            rt.reload_config()
+
+        # Config should remain unchanged
+        assert rt._config is original_config
 
 
 # ======================================================================

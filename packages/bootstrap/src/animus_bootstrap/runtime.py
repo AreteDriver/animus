@@ -148,7 +148,11 @@ class AnimusRuntime:
             )
 
             config_path = ConfigManager().get_config_path()
-            self._sandbox = ImprovementSandbox(data_dir, config_path=config_path)
+            self._sandbox = ImprovementSandbox(
+                data_dir,
+                config_path=config_path,
+                on_config_changed=self.reload_config,
+            )
             set_sandbox(self._sandbox)
             set_self_improve_identity(self.identity_manager)
             logger.info("Improvement sandbox initialized")
@@ -287,6 +291,46 @@ class AnimusRuntime:
 
         self._started = True
         logger.info("Animus runtime started successfully")
+
+    def reload_config(self) -> None:
+        """Reload config from disk and update live component settings.
+
+        Called by the ImprovementSandbox after config changes.
+        Only updates settings that can be safely hot-reloaded.
+        """
+        try:
+            new_config = ConfigManager().load()
+        except Exception:
+            logger.exception("Config reload failed — keeping current config")
+            return
+
+        self._config = new_config
+        logger.info("Config reloaded from disk")
+
+        # Hot-reload safe settings
+        if self.tool_executor is not None:
+            self.tool_executor._timeout = float(new_config.intelligence.tool_timeout_seconds)
+            self.tool_executor._max_calls = new_config.intelligence.max_tool_calls_per_turn
+            logger.info(
+                "Tool executor updated: timeout=%ss, max_calls=%d",
+                new_config.intelligence.tool_timeout_seconds,
+                new_config.intelligence.max_tool_calls_per_turn,
+            )
+
+        # Update proactive engine quiet hours
+        if self.proactive_engine is not None:
+            self.proactive_engine._quiet_start = new_config.proactive.quiet_hours_start
+            self.proactive_engine._quiet_end = new_config.proactive.quiet_hours_end
+            logger.info(
+                "Proactive engine quiet hours updated: %s-%s",
+                new_config.proactive.quiet_hours_start,
+                new_config.proactive.quiet_hours_end,
+            )
+
+        # Update router system prompt
+        if self.router is not None and hasattr(self.router, "_system_prompt"):
+            self.router._system_prompt = new_config.gateway.system_prompt
+            logger.info("Router system prompt updated")
 
     async def stop(self) -> None:
         """Gracefully shut down all components."""
