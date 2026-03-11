@@ -70,14 +70,17 @@ class MessageRouter:
 
     async def broadcast(self, text: str, channels: list[str] | None = None) -> None:
         """Send a message to all (or specified) connected channels."""
+        from animus_bootstrap.gateway.models import GatewayResponse
+
         targets = channels if channels is not None else list(self._channels.keys())
+        response = GatewayResponse(text=text, channel="broadcast")
         for name in targets:
             adapter = self._channels.get(name)
             if adapter is None:
                 logger.warning("broadcast: channel %r not registered", name)
                 continue
             try:
-                await adapter.send(text)
+                await adapter.send_message(response)
             except Exception:
                 logger.exception("broadcast failed for channel %r", name)
 

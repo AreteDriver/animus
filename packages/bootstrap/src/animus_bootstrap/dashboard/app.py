@@ -113,6 +113,7 @@ def _wire_webchat(webchat: WebChatAdapter, runtime: AnimusRuntime) -> None:
 
     import asyncio
 
+    runtime.router.register_channel("webchat", webchat)
     asyncio.ensure_future(webchat.on_message(_on_webchat_message))
 
 
