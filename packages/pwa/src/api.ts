@@ -19,12 +19,52 @@ export async function getHealth(): Promise<{ status: string }> {
   return request("/health");
 }
 
-// Chat
+// Chat (REST fallback)
 export async function sendMessage(text: string): Promise<{ text: string }> {
   return request("/conversations/messages", {
     method: "POST",
     body: JSON.stringify({ text }),
   });
+}
+
+// WebSocket chat
+export type WSMessage = {
+  id: string;
+  channel: string;
+  text: string;
+  timestamp: string;
+  sender: string;
+  metadata: Record<string, unknown>;
+};
+
+export type OnWSMessage = (msg: WSMessage) => void;
+
+export function connectChat(onMessage: OnWSMessage): {
+  send: (text: string) => void;
+  close: () => void;
+  getState: () => number;
+} {
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  const ws = new WebSocket(`${proto}//${location.host}/ws/chat`);
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data) as WSMessage;
+      onMessage(msg);
+    } catch {
+      // ignore malformed messages
+    }
+  };
+
+  return {
+    send: (text: string) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ text, sender_id: "pwa-user", sender_name: "User" }));
+      }
+    },
+    close: () => ws.close(),
+    getState: () => ws.readyState,
+  };
 }
 
 // Personas

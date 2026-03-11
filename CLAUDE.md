@@ -7,7 +7,7 @@
 - **Version**: 2.6.0
 - **Python**: >=3.10 (Core), >=3.11 (Bootstrap), >=3.12 (Forge)
 - **Layout**: Multi-package monorepo under `packages/`
-- **Tests**: 13,676 across 4 packages
+- **Tests**: 14,500 across 4 packages
 - **License**: MIT
 
 ## Non-Negotiables
@@ -30,11 +30,11 @@ animus/
 ├── packages/
 │   ├── core/                    # Animus Core — exocortex, identity, memory, CLI
 │   │   ├── animus/              # Python package: import animus
-│   │   ├── tests/               # 2108 tests, 97% coverage
+│   │   ├── tests/               # 2084 tests, 97% coverage
 │   │   └── pyproject.toml
 │   ├── forge/                   # Animus Forge — multi-agent orchestration (was: Gorgon)
 │   │   ├── src/animus_forge/    # Python package: import animus_forge
-│   │   ├── tests/               # 8894 tests, 97% coverage
+│   │   ├── tests/               # 9720 tests, 97% coverage
 │   │   ├── skills/              # Skill definitions (YAML + docs)
 │   │   ├── migrations/          # 14 SQL migrations
 │   │   ├── workflows/           # YAML workflow definitions
@@ -42,11 +42,11 @@ animus/
 │   ├── quorum/                  # Animus Quorum — coordination protocol (was: Convergent)
 │   │   ├── python/convergent/   # Python package: import convergent
 │   │   ├── src/                 # Rust PyO3 (optional)
-│   │   ├── tests/               # 926 tests, 97% coverage
+│   │   ├── tests/               # 920 tests, 97% coverage
 │   │   └── pyproject.toml
 │   └── bootstrap/               # Animus Bootstrap — install daemon, wizard, dashboard + gateway + intelligence
 │       ├── src/animus_bootstrap/ # Python package: import animus_bootstrap
-│       ├── tests/               # 1739 tests, 97% coverage
+│       ├── tests/               # 1776 tests, 97% coverage
 │       └── pyproject.toml
 ├── docs/
 │   └── whitepapers/             # Architecture whitepapers (all 3 layers)

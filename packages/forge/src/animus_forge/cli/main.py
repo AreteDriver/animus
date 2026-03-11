@@ -89,6 +89,7 @@ from .commands.memory import memory_app  # noqa: E402
 from .commands.metrics import metrics_app  # noqa: E402
 from .commands.schedule import schedule_app  # noqa: E402
 from .commands.self_improve import self_improve_app  # noqa: E402
+from .commands.skills import skills_app  # noqa: E402
 
 app.add_typer(agent_app, name="agent")
 app.add_typer(schedule_app, name="schedule")
@@ -107,6 +108,7 @@ app.add_typer(coordination_app, name="coordination")
 app.add_typer(self_improve_app, name="self-improve")
 app.add_typer(consciousness_app, name="bg")
 app.add_typer(evolve_app, name="evolve")
+app.add_typer(skills_app, name="skills")
 
 
 # =============================================================================

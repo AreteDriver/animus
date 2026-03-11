@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import sqlite3
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -926,11 +927,11 @@ class TestServeFunction:
 class TestPersonaEngineCreation:
     """Tests for _create_persona_engine."""
 
-    def test_persona_engine_creation(self) -> None:
+    def test_persona_engine_creation(self, tmp_path: Path) -> None:
         """Persona engine is created with default persona."""
         from animus_bootstrap.personas.engine import PersonaEngine
 
-        cfg = _make_config()
+        cfg = _make_config(data_dir=str(tmp_path))
         rt = AnimusRuntime(config=cfg)
         engine = rt._create_persona_engine()
         assert isinstance(engine, PersonaEngine)
@@ -942,11 +943,11 @@ class TestPersonaEngineCreation:
         assert default.name == "Animus"
         assert default.is_default is True
 
-    def test_persona_engine_from_config_profiles(self) -> None:
+    def test_persona_engine_from_config_profiles(self, tmp_path: Path) -> None:
         """Persona engine registers named profiles from config."""
         from animus_bootstrap.personas.engine import PersonaEngine
 
-        cfg = _make_config()
+        cfg = _make_config(data_dir=str(tmp_path))
         cfg.personas = PersonasSection(
             default_name="MyBot",
             default_tone="formal",
@@ -1026,3 +1027,193 @@ class TestPersonaEngineCreation:
         assert rt.router._persona_engine is not None
         assert rt.router._context_adapter is not None
         asyncio.run(rt.stop())
+
+    def test_persona_engine_has_domain_router(self, tmp_path: Path) -> None:
+        """Persona engine is created with a KnowledgeDomainRouter."""
+        cfg = _make_config(data_dir=str(tmp_path))
+        rt = AnimusRuntime(config=cfg)
+        engine = rt._create_persona_engine()
+        assert engine._domain_router is not None
+
+    def test_persona_engine_has_storage(self, tmp_path: Path) -> None:
+        """Persona engine is created with a PersonaStorage backend."""
+        cfg = _make_config(data_dir=str(tmp_path))
+        rt = AnimusRuntime(config=cfg)
+        engine = rt._create_persona_engine()
+        assert engine._storage is not None
+        assert hasattr(rt, "_persona_storage")
+        rt._persona_storage.close()
+
+    def test_persona_storage_persists_across_restarts(self, tmp_path: Path) -> None:
+        """Personas registered via CLI/API survive runtime restart."""
+        from animus_bootstrap.personas.engine import PersonaProfile
+        from animus_bootstrap.personas.voice import VoiceConfig
+
+        cfg = _make_config(
+            data_dir=str(tmp_path),
+            intelligence_enabled=False,
+            proactive_enabled=False,
+        )
+
+        # First boot: register a custom persona
+        rt = AnimusRuntime(config=cfg)
+        asyncio.run(rt.start())
+        custom = PersonaProfile(
+            name="TestBot",
+            description="Test persona",
+            voice=VoiceConfig(tone="casual"),
+        )
+        rt.persona_engine.register_persona(custom)
+        assert rt.persona_engine.get_persona_by_name("TestBot") is not None
+        asyncio.run(rt.stop())
+
+        # Second boot: custom persona should load from storage
+        rt2 = AnimusRuntime(config=cfg)
+        asyncio.run(rt2.start())
+        reloaded = rt2.persona_engine.get_persona_by_name("TestBot")
+        assert reloaded is not None
+        assert reloaded.description == "Test persona"
+        asyncio.run(rt2.stop())
+
+    def test_persona_storage_skips_config_duplicates(self, tmp_path: Path) -> None:
+        """Config personas are not re-registered if already in storage."""
+        cfg = _make_config(
+            data_dir=str(tmp_path),
+            intelligence_enabled=False,
+            proactive_enabled=False,
+        )
+
+        # First boot: default "Animus" persona saved to storage
+        rt = AnimusRuntime(config=cfg)
+        asyncio.run(rt.start())
+        count1 = rt.persona_engine.persona_count
+        asyncio.run(rt.stop())
+
+        # Second boot: count should be the same (no duplicates)
+        rt2 = AnimusRuntime(config=cfg)
+        asyncio.run(rt2.start())
+        count2 = rt2.persona_engine.persona_count
+        assert count2 == count1
+        asyncio.run(rt2.stop())
+
+    def test_persona_storage_closed_on_stop(self, tmp_path: Path) -> None:
+        """PersonaStorage.close() is called during stop()."""
+        cfg = _make_config(
+            data_dir=str(tmp_path),
+            intelligence_enabled=False,
+            proactive_enabled=False,
+        )
+        rt = AnimusRuntime(config=cfg)
+        asyncio.run(rt.start())
+        storage = rt._persona_storage
+        asyncio.run(rt.stop())
+        # After close, attempting a query should raise
+        with pytest.raises(sqlite3.ProgrammingError):
+            storage.load_all()
+
+
+# ------------------------------------------------------------------
+# TestChannelAdapters
+# ------------------------------------------------------------------
+
+
+class TestChannelAdapters:
+    """Tests for channel adapter wiring in runtime."""
+
+    def test_channels_dict_initialized(self) -> None:
+        """Runtime initializes with empty _channels dict."""
+        rt = AnimusRuntime(config=_make_config())
+        assert rt._channels == {}
+
+    def test_start_channels_skips_disabled(self, tmp_path: Path) -> None:
+        """Disabled channels are not started."""
+        cfg = _make_config(
+            data_dir=str(tmp_path),
+            intelligence_enabled=False,
+            proactive_enabled=False,
+        )
+        # All channels disabled by default
+        rt = AnimusRuntime(config=cfg)
+        asyncio.run(rt.start())
+        assert len(rt._channels) == 0
+        asyncio.run(rt.stop())
+
+    def test_start_channels_handles_import_error(self, tmp_path: Path) -> None:
+        """Channel start failure is logged but doesn't crash runtime."""
+        cfg = _make_config(
+            data_dir=str(tmp_path),
+            intelligence_enabled=False,
+            proactive_enabled=False,
+        )
+        cfg.channels.telegram.enabled = True
+        cfg.channels.telegram.bot_token = "fake-token"
+        rt = AnimusRuntime(config=cfg)
+        # Should not raise even if telegram deps are missing
+        asyncio.run(rt.start())
+        assert rt.started is True
+        asyncio.run(rt.stop())
+
+    def test_create_channel_adapter_telegram(self) -> None:
+        """_create_channel_adapter creates Telegram adapter with token."""
+        cfg = _make_config()
+        cfg.channels.telegram.bot_token = "test-token-123"
+        rt = AnimusRuntime(config=cfg)
+
+        mock_cls = MagicMock()
+        adapter = rt._create_channel_adapter("telegram", mock_cls)
+        mock_cls.assert_called_once_with(bot_token="test-token-123")
+        assert adapter is not None
+
+    def test_create_channel_adapter_discord(self) -> None:
+        """_create_channel_adapter creates Discord adapter with token + guilds."""
+        cfg = _make_config()
+        cfg.channels.discord.bot_token = "discord-token"
+        cfg.channels.discord.allowed_guilds = ["guild1"]
+        rt = AnimusRuntime(config=cfg)
+
+        mock_cls = MagicMock()
+        adapter = rt._create_channel_adapter("discord", mock_cls)
+        mock_cls.assert_called_once_with(
+            bot_token="discord-token",
+            allowed_guilds=["guild1"],
+        )
+        assert adapter is not None
+
+    def test_create_channel_adapter_slack(self) -> None:
+        """_create_channel_adapter creates Slack adapter with bot + app tokens."""
+        cfg = _make_config()
+        cfg.channels.slack.bot_token = "xoxb-test"
+        cfg.channels.slack.app_token = "xapp-test"
+        rt = AnimusRuntime(config=cfg)
+
+        mock_cls = MagicMock()
+        adapter = rt._create_channel_adapter("slack", mock_cls)
+        mock_cls.assert_called_once_with(
+            bot_token="xoxb-test",
+            app_token="xapp-test",
+        )
+        assert adapter is not None
+
+    def test_create_channel_adapter_unknown(self) -> None:
+        """_create_channel_adapter returns None for unknown channel."""
+        cfg = _make_config()
+        rt = AnimusRuntime(config=cfg)
+        result = rt._create_channel_adapter("unknown", MagicMock)
+        assert result is None
+
+    def test_stop_disconnects_channels(self, tmp_path: Path) -> None:
+        """stop() calls disconnect on all connected channels."""
+        cfg = _make_config(
+            data_dir=str(tmp_path),
+            intelligence_enabled=False,
+            proactive_enabled=False,
+        )
+        rt = AnimusRuntime(config=cfg)
+        asyncio.run(rt.start())
+
+        # Inject a mock channel
+        mock_adapter = AsyncMock()
+        rt._channels["test"] = mock_adapter
+
+        asyncio.run(rt.stop())
+        mock_adapter.disconnect.assert_awaited_once()

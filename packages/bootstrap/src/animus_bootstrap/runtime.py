@@ -48,6 +48,7 @@ class AnimusRuntime:
         self.persona_engine: PersonaEngine | None = None
         self.context_adapter: ContextAdapter | None = None
         self._mcp_bridge: MCPBridge | None = None
+        self._channels: dict[str, Any] = {}
 
     @property
     def config(self) -> AnimusConfig:
@@ -254,6 +255,9 @@ class AnimusRuntime:
         self.feedback_store = FeedbackStore(feedback_db)
         logger.info("Feedback store initialized: %s", feedback_db)
 
+        # 11. Channel adapters (connect enabled channels)
+        await self._start_channels()
+
         self._started = True
         logger.info("Animus runtime started successfully")
 
@@ -263,6 +267,14 @@ class AnimusRuntime:
             return
 
         logger.info("Animus runtime stopping...")
+
+        # Disconnect channel adapters
+        for name, adapter in self._channels.items():
+            try:
+                await adapter.disconnect()
+                logger.info("Channel disconnected: %s", name)
+            except Exception:
+                logger.warning("Failed to disconnect channel: %s", name, exc_info=True)
 
         if self._mcp_bridge is not None:
             await self._mcp_bridge.close()
@@ -551,6 +563,62 @@ class AnimusRuntime:
             engine.register_persona(persona)
 
         return engine
+
+    async def _start_channels(self) -> None:
+        """Connect enabled channel adapters based on config."""
+        channels_cfg = self._config.channels
+        tg = channels_cfg.telegram
+        dc = channels_cfg.discord
+        sl = channels_cfg.slack
+        channel_map: list[tuple[str, str, bool]] = [
+            ("telegram", "animus_bootstrap.gateway.channels.telegram", tg.enabled),
+            ("discord", "animus_bootstrap.gateway.channels.discord_channel", dc.enabled),
+            ("slack", "animus_bootstrap.gateway.channels.slack", sl.enabled),
+        ]
+
+        for name, module_path, enabled in channel_map:
+            if not enabled:
+                continue
+            try:
+                import importlib
+
+                mod = importlib.import_module(module_path)
+                adapter_cls = next(
+                    v
+                    for v in vars(mod).values()
+                    if isinstance(v, type)
+                    and hasattr(v, "connect")
+                    and v.__module__ == mod.__name__
+                )
+                adapter = self._create_channel_adapter(name, adapter_cls)
+                if adapter is None:
+                    continue
+                await adapter.connect()
+                self._channels[name] = adapter
+                logger.info("Channel connected: %s", name)
+            except Exception:
+                logger.warning(
+                    "Failed to start channel '%s'",
+                    name,
+                    exc_info=True,
+                )
+
+    def _create_channel_adapter(self, name: str, adapter_cls: type) -> Any:
+        """Instantiate a channel adapter with config-driven credentials."""
+        cfg = self._config.channels
+        if name == "telegram":
+            return adapter_cls(bot_token=cfg.telegram.bot_token)
+        if name == "discord":
+            return adapter_cls(
+                bot_token=cfg.discord.bot_token,
+                allowed_guilds=cfg.discord.allowed_guilds,
+            )
+        if name == "slack":
+            return adapter_cls(
+                bot_token=cfg.slack.bot_token,
+                app_token=cfg.slack.app_token,
+            )
+        return None
 
     async def _create_proactive_engine(self) -> Any:
         """Create and start proactive engine."""
