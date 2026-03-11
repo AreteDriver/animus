@@ -15,31 +15,26 @@ def _run(coro):
 
 class TestChromaDBBackendInit:
     def test_raises_without_chromadb(self):
-        with patch.dict("sys.modules", {"chromadb": None}):
-            # Force re-evaluation of HAS_CHROMADB
+        from animus_bootstrap.intelligence.memory_backends import chromadb_backend
 
-            from animus_bootstrap.intelligence.memory_backends import chromadb_backend
-
-            original = chromadb_backend.HAS_CHROMADB
-            chromadb_backend.HAS_CHROMADB = False
-            try:
-                with pytest.raises(RuntimeError, match="chromadb not installed"):
-                    chromadb_backend.ChromaDBMemoryBackend()
-            finally:
-                chromadb_backend.HAS_CHROMADB = original
+        original = chromadb_backend.HAS_CHROMADB
+        chromadb_backend.HAS_CHROMADB = False
+        try:
+            with pytest.raises(RuntimeError, match="chromadb not installed"):
+                chromadb_backend.ChromaDBMemoryBackend()
+        finally:
+            chromadb_backend.HAS_CHROMADB = original
 
     def test_init_with_mock_chromadb(self):
-        mock_chromadb = MagicMock()
         mock_client = MagicMock()
-        mock_chromadb.Client.return_value = mock_client
         mock_client.get_or_create_collection.return_value = MagicMock()
 
-        with patch.dict("sys.modules", {"chromadb": mock_chromadb}):
-            # Temporarily enable
-            import animus_bootstrap.intelligence.memory_backends.chromadb_backend as mod
+        import animus_bootstrap.intelligence.memory_backends.chromadb_backend as mod
 
-            original = mod.HAS_CHROMADB
-            mod.HAS_CHROMADB = True
+        original = mod.HAS_CHROMADB
+        mod.HAS_CHROMADB = True
+        with patch.object(mod, "chromadb", create=True) as mock_chromadb:
+            mock_chromadb.Client.return_value = mock_client
             try:
                 backend = mod.ChromaDBMemoryBackend()
                 assert backend._collections is not None
@@ -47,48 +42,47 @@ class TestChromaDBBackendInit:
                 mod.HAS_CHROMADB = original
 
 
+def _make_mock_backend():
+    """Create a ChromaDBMemoryBackend with fully mocked chromadb."""
+    mock_client = MagicMock()
+    collections = {}
+    for t in ("episodic", "semantic", "procedural"):
+        col = MagicMock()
+        col.count.return_value = 0
+        col.add = MagicMock()
+        col.query.return_value = {
+            "ids": [[]],
+            "documents": [[]],
+            "metadatas": [[]],
+            "distances": [[]],
+        }
+        col.delete = MagicMock()
+        collections[f"{t}_memories"] = col
+
+    mock_client.get_or_create_collection.side_effect = lambda name: collections[name]
+
+    import animus_bootstrap.intelligence.memory_backends.chromadb_backend as mod
+
+    original = mod.HAS_CHROMADB
+    mod.HAS_CHROMADB = True
+    with patch.object(mod, "chromadb", create=True) as mock_chromadb:
+        mock_chromadb.Client.return_value = mock_client
+        b = mod.ChromaDBMemoryBackend()
+    mod.HAS_CHROMADB = original
+    b._mock_collections = collections
+    return b
+
+
 class TestChromaDBBackendOperations:
     """Test store/search/delete/stats with mocked chromadb."""
 
     @pytest.fixture()
     def backend(self):
-        mock_chromadb = MagicMock()
-        mock_client = MagicMock()
-        mock_chromadb.Client.return_value = mock_client
-
-        # Create mock collections
-        collections = {}
-        for t in ("episodic", "semantic", "procedural"):
-            col = MagicMock()
-            col.count.return_value = 0
-            col.add = MagicMock()
-            col.query.return_value = {
-                "ids": [[]],
-                "documents": [[]],
-                "metadatas": [[]],
-                "distances": [[]],
-            }
-            col.delete = MagicMock()
-            collections[f"{t}_memories"] = col
-
-        mock_client.get_or_create_collection.side_effect = lambda name: collections[name]
-
-        with patch.dict("sys.modules", {"chromadb": mock_chromadb}):
-            import animus_bootstrap.intelligence.memory_backends.chromadb_backend as mod
-
-            original = mod.HAS_CHROMADB
-            mod.HAS_CHROMADB = True
-            try:
-                b = mod.ChromaDBMemoryBackend()
-                b._mock_collections = collections
-                yield b
-            finally:
-                mod.HAS_CHROMADB = original
+        return _make_mock_backend()
 
     def test_store_calls_add(self, backend):
         mem_id = _run(backend.store("episodic", "test content", {"key": "val"}))
         assert isinstance(mem_id, str)
-        # Verify collection.add was called
         col = backend._collections["episodic"]
         col.add.assert_called_once()
 

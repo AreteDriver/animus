@@ -15,7 +15,16 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from animus_bootstrap.intelligence.memory_backends.sqlite_backend import (
+try:
+    import pytest_benchmark  # noqa: F401
+
+    _HAS_BENCHMARK = True
+except ImportError:
+    _HAS_BENCHMARK = False
+
+pytestmark = pytest.mark.skipif(not _HAS_BENCHMARK, reason="pytest-benchmark not installed")
+
+from animus_bootstrap.intelligence.memory_backends.sqlite_backend import (  # noqa: E402
     SQLiteMemoryBackend,
 )
 

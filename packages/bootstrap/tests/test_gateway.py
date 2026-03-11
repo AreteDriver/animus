@@ -596,8 +596,10 @@ class TestMessageRouter:
 
         await router.broadcast("hello everyone")
 
-        adapter1.send.assert_awaited_once_with("hello everyone")
-        adapter2.send.assert_awaited_once_with("hello everyone")
+        adapter1.send_message.assert_awaited_once()
+        adapter2.send_message.assert_awaited_once()
+        assert adapter1.send_message.call_args[0][0].text == "hello everyone"
+        assert adapter2.send_message.call_args[0][0].text == "hello everyone"
 
     @pytest.mark.asyncio()
     async def test_broadcast_specific_channels(self, router: MessageRouter) -> None:
@@ -608,8 +610,9 @@ class TestMessageRouter:
 
         await router.broadcast("hello telegram", channels=["telegram"])
 
-        adapter1.send.assert_awaited_once_with("hello telegram")
-        adapter2.send.assert_not_awaited()
+        adapter1.send_message.assert_awaited_once()
+        assert adapter1.send_message.call_args[0][0].text == "hello telegram"
+        adapter2.send_message.assert_not_awaited()
 
     @pytest.mark.asyncio()
     async def test_broadcast_missing_channel_warns(self, router: MessageRouter) -> None:
@@ -620,7 +623,7 @@ class TestMessageRouter:
     async def test_broadcast_adapter_error_handled(self, router: MessageRouter) -> None:
         """Adapter failure in broadcast is caught and logged."""
         adapter = AsyncMock()
-        adapter.send = AsyncMock(side_effect=RuntimeError("send failed"))
+        adapter.send_message = AsyncMock(side_effect=RuntimeError("send failed"))
         router.register_channel("broken", adapter)
 
         # Should not raise

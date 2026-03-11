@@ -541,6 +541,7 @@ class TestRuntimeCoveragePaths:
         rt = AnimusRuntime.__new__(AnimusRuntime)
         rt._started = True
         rt._mcp_bridge = mock_bridge
+        rt._channels = {}
         rt._timer_store = None
         rt._improvement_store = None
         rt._tool_history_store = None
@@ -614,27 +615,26 @@ class TestConfigSchemaEnvOverrides:
 class TestAnimusBackendInit:
     """Test AnimusMemoryBackend __init__ branches."""
 
-    def test_import_error_raises_runtime(self):
+    def test_import_error_raises_runtime(self, tmp_path):
         from animus_bootstrap.intelligence.memory_backends.animus_backend import (
             AnimusMemoryBackend,
         )
 
         with patch.dict("sys.modules", {"animus": None, "animus.memory": None}):
-            with pytest.raises(RuntimeError, match="animus core not installed"):
-                AnimusMemoryBackend()
+            with pytest.raises(RuntimeError, match="animus-core is not installed"):
+                AnimusMemoryBackend(data_dir=tmp_path / "mem")
 
-    def test_success_raises_not_implemented(self):
+    def test_success_creates_backend(self, tmp_path):
         from animus_bootstrap.intelligence.memory_backends.animus_backend import (
             AnimusMemoryBackend,
         )
 
-        mock_mod = MagicMock()
-        with patch.dict(
-            "sys.modules",
-            {"animus": mock_mod, "animus.memory": mock_mod},
-        ):
-            with pytest.raises(NotImplementedError):
-                AnimusMemoryBackend()
+        try:
+            b = AnimusMemoryBackend(data_dir=tmp_path / "mem")
+            assert (tmp_path / "mem").exists()
+            b.close()
+        except RuntimeError:
+            pytest.skip("animus-core not installed")
 
 
 # ======================================================================

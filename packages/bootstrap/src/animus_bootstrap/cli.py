@@ -606,13 +606,16 @@ def personas_list() -> None:
 
 
 def _get_persona_storage():
-    """Get PersonaStorage instance from config path."""
-    from animus_bootstrap.config import ConfigManager
-    from animus_bootstrap.personas.storage import PersonaStorage
+    """Get PersonaStorage instance from config path, or None if unavailable."""
+    try:
+        from animus_bootstrap.config import ConfigManager
+        from animus_bootstrap.personas.storage import PersonaStorage
 
-    config_path = ConfigManager().get_config_path().parent
-    db_path = config_path / "personas.db"
-    return PersonaStorage(db_path)
+        config_path = ConfigManager().get_config_path().parent
+        db_path = config_path / "personas.db"
+        return PersonaStorage(db_path)
+    except Exception:
+        return None
 
 
 @personas_app.command("add")

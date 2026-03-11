@@ -1664,44 +1664,28 @@ class TestLogsRouter:
 
 
 class TestAnimusBackend:
-    """Cover animus_backend.py — ImportError fallback and stubs."""
+    """Cover animus_backend.py — ImportError fallback and creation."""
 
-    def test_import_error_fallback(self) -> None:
+    def test_import_error_fallback(self, tmp_path) -> None:
         from animus_bootstrap.intelligence.memory_backends.animus_backend import (
             AnimusMemoryBackend,
         )
 
         with patch.dict(sys.modules, {"animus": None, "animus.memory": None}):
-            with pytest.raises(RuntimeError, match="animus core not installed"):
-                AnimusMemoryBackend()
+            with pytest.raises(RuntimeError, match="animus-core is not installed"):
+                AnimusMemoryBackend(data_dir=tmp_path / "mem")
 
-    def test_not_implemented_stubs(self) -> None:
+    def test_creates_backend_when_core_available(self, tmp_path) -> None:
         from animus_bootstrap.intelligence.memory_backends.animus_backend import (
             AnimusMemoryBackend,
         )
 
-        # The __init__ raises NotImplementedError after the import check
-        with patch.dict(sys.modules, {"animus": MagicMock(), "animus.memory": MagicMock()}):
-            with patch(
-                "animus_bootstrap.intelligence.memory_backends.animus_backend.AnimusMemoryBackend.__init__",
-                return_value=None,
-            ):
-                backend = AnimusMemoryBackend.__new__(AnimusMemoryBackend)
-
-        with pytest.raises(NotImplementedError):
-            _run(backend.store("episodic", "test", {}))
-
-        with pytest.raises(NotImplementedError):
-            _run(backend.search("test"))
-
-        with pytest.raises(NotImplementedError):
-            _run(backend.delete("id"))
-
-        with pytest.raises(NotImplementedError):
-            _run(backend.get_stats())
-
-        # close() should not raise
-        backend.close()
+        try:
+            b = AnimusMemoryBackend(data_dir=tmp_path / "mem")
+            assert (tmp_path / "mem").exists()
+            b.close()
+        except RuntimeError:
+            pytest.skip("animus-core not installed")
 
 
 # ===========================================================================

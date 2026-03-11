@@ -654,14 +654,14 @@ class TestChromaDBBackend:
 
 
 class TestAnimusBackend:
-    def test_raises_without_animus(self) -> None:
+    def test_raises_without_animus(self, tmp_path) -> None:
         with patch.dict("sys.modules", {"animus": None, "animus.memory": None}):
             from animus_bootstrap.intelligence.memory_backends.animus_backend import (
                 AnimusMemoryBackend,
             )
 
-            with pytest.raises(RuntimeError, match="animus core not installed"):
-                AnimusMemoryBackend()
+            with pytest.raises(RuntimeError, match="animus-core is not installed"):
+                AnimusMemoryBackend(data_dir=tmp_path / "mem")
 
 
 # ======================================================================
