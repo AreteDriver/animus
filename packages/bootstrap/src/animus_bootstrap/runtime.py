@@ -420,7 +420,8 @@ class AnimusRuntime:
                 AnimusMemoryBackend,
             )
 
-            backend = AnimusMemoryBackend()
+            animus_dir = str(self._config.get_data_path() / "animus_memory")
+            backend = AnimusMemoryBackend(data_dir=animus_dir)
             return MemoryManager(backend)
 
         # Default to SQLite

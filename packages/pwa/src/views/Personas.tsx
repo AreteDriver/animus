@@ -1,11 +1,18 @@
 import { useState, useEffect } from "react";
-import { listPersonas, deletePersona, type Persona } from "../api";
+import { listPersonas, createPersona, deletePersona, type Persona } from "../api";
 import "./Personas.css";
+
+const TONE_OPTIONS = ["professional", "casual", "technical", "friendly"];
 
 export function PersonasView() {
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [tone, setTone] = useState(TONE_OPTIONS[0]);
+  const [creating, setCreating] = useState(false);
 
   async function load() {
     try {
@@ -24,6 +31,24 @@ export function PersonasView() {
     load();
   }, []);
 
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    try {
+      setCreating(true);
+      setError(null);
+      await createPersona({ name: name.trim(), description: description.trim(), tone });
+      setName("");
+      setDescription("");
+      setTone(TONE_OPTIONS[0]);
+      await load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Create failed");
+    } finally {
+      setCreating(false);
+    }
+  }
+
   async function handleDelete(id: string) {
     try {
       await deletePersona(id);
@@ -37,13 +62,44 @@ export function PersonasView() {
     <div className="personas">
       <h1 className="personas-title">Personas</h1>
 
-      {loading && <p className="personas-loading">Loading...</p>}
+      <form className="persona-form" onSubmit={handleCreate}>
+        <input
+          className="persona-input"
+          type="text"
+          placeholder="Name (required)"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+        <input
+          className="persona-input"
+          type="text"
+          placeholder="Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+        <select
+          className="persona-select"
+          value={tone}
+          onChange={(e) => setTone(e.target.value)}
+        >
+          {TONE_OPTIONS.map((t) => (
+            <option key={t} value={t}>
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </option>
+          ))}
+        </select>
+        <button className="persona-submit" type="submit" disabled={creating || !name.trim()}>
+          {creating ? "Creating..." : "Create"}
+        </button>
+      </form>
+
       {error && <p className="personas-error">{error}</p>}
+      {loading && <p className="personas-loading">Loading...</p>}
 
       {!loading && personas.length === 0 && (
         <p className="personas-empty">
-          No personas configured. Use the Bootstrap CLI or dashboard to create
-          one.
+          No personas configured. Create one above or use the Bootstrap CLI.
         </p>
       )}
 

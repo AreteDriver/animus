@@ -426,12 +426,16 @@ class TestMemoryManagerCreation:
         assert isinstance(result, MemoryManager)
         result.close()
 
-    def test_animus_backend_raises_not_implemented(self) -> None:
-        """Animus backend raises (not implemented or import error)."""
-        cfg = _make_config(memory_backend="animus")
+    def test_animus_backend_creates_manager(self, tmp_path: Path) -> None:
+        """Animus backend creates a MemoryManager when core is installed."""
+        cfg = _make_config(memory_backend="animus", data_dir=str(tmp_path))
         rt = AnimusRuntime(config=cfg)
-        with pytest.raises((NotImplementedError, RuntimeError)):
-            rt._create_memory_manager()
+        try:
+            result = rt._create_memory_manager()
+            assert result is not None
+        except RuntimeError:
+            # Core not installed — acceptable in some CI environments
+            pytest.skip("animus core not installed")
 
     def test_memory_db_parent_created(self, tmp_path: Path) -> None:
         """Parent directory for memory DB is created if missing."""

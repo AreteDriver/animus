@@ -55,6 +55,19 @@
   color: var(--warning);
 }
 
+.status-components {
+  margin-top: 16px;
+}
+
+.status-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
 .status-error {
   margin-top: 16px;
   padding: 12px;

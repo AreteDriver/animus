@@ -15,7 +15,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 // Health
-export async function getHealth(): Promise<{ status: string }> {
+export interface HealthResponse {
+  status: string;
+  version: string;
+  components: {
+    memory: boolean;
+    tools: boolean;
+    proactive: boolean;
+    automations: boolean;
+  };
+}
+
+export async function getHealth(): Promise<HealthResponse> {
   return request("/health");
 }
 
