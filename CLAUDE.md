@@ -7,7 +7,7 @@
 - **Version**: 2.7.0
 - **Python**: >=3.10 (Core), >=3.11 (Bootstrap), >=3.12 (Forge)
 - **Layout**: Multi-package monorepo under `packages/`
-- **Tests**: 14,596 across 4 packages
+- **Tests**: 14,592 across 4 packages
 - **License**: MIT
 
 ## Non-Negotiables
@@ -46,7 +46,7 @@ animus/
 │   │   └── pyproject.toml
 │   └── bootstrap/               # Animus Bootstrap — install daemon, wizard, dashboard + gateway + intelligence
 │       ├── src/animus_bootstrap/ # Python package: import animus_bootstrap
-│       ├── tests/               # 1841 tests, 97% coverage
+│       ├── tests/               # 1837 tests, 97% coverage
 │       └── pyproject.toml
 ├── docs/
 │   └── whitepapers/             # Architecture whitepapers (all 3 layers)
@@ -113,7 +113,7 @@ Each package has its own ruff config in its pyproject.toml.
 
 **Quorum** (`packages/quorum/python/convergent/`) — Coordination protocol library. Intent graph, constraints, contracts, economics, versioned graph, triumvirate voting, stigmergy, flocking, signal bus, phi-weighted scoring, GorgonBridge integration, health dashboard, cycle detection, event log. Optional Rust PyO3 for performance.
 
-**Bootstrap** (`packages/bootstrap/src/animus_bootstrap/`) — Install daemon, onboarding wizard, local dashboard, message gateway, intelligence layer, and persona system. Phase 1: one-command install, Rich-based setup wizard (8 steps), FastAPI+HTMX dashboard at localhost:7700, systemd/launchd service management, auto-updater. Phase 2: message gateway with 8 channel adapters (Telegram, Discord, Slack, Matrix, WhatsApp, Signal, Email, WebChat), cross-channel sessions, cognitive backends (Anthropic/Ollama/Forge), middleware (auth/ratelimit/logging). Phase 3: intelligence layer with memory integration (SQLite FTS5 + ChromaDB/Animus stubs), tool executor (8 built-in tools + MCP bridge + permission system), proactive engine (scheduler, quiet hours, 3 built-in checks), automation pipeline (triggers/conditions/actions with SQLite persistence), IntelligentRouter (memory-enriched + tool loop), intelligence dashboard (/tools, /automations, /activity). Phase 4: persona & voice layer with PersonaEngine (registry + channel routing), VoiceConfig (6 presets + time shifts), KnowledgeDomainRouter (9 domains), ContextAdapter (time/channel/mood), SQLite persona persistence, persona dashboard (/personas, /routing). Runtime wiring (AnimusRuntime orchestrator, lifespan, health endpoint). Native Anthropic tool_use (CognitiveResponse, ToolCall, multi-turn cognitive loop).
+**Bootstrap** (`packages/bootstrap/src/animus_bootstrap/`) — Install daemon, onboarding wizard, local dashboard, message gateway, intelligence layer, and persona system. Phase 1: one-command install, Rich-based setup wizard (8 steps), FastAPI+HTMX dashboard at localhost:7700, systemd/launchd service management, auto-updater. Phase 2: message gateway with 8 channel adapters (Telegram, Discord, Slack, Matrix, WhatsApp, Signal, Email, WebChat), cross-channel sessions, cognitive backends (Anthropic/Ollama/Forge), middleware (auth/ratelimit/logging). Phase 3: intelligence layer with memory integration (SQLite FTS5 + ChromaDB/Animus stubs), tool executor (8 built-in tools + MCP bridge + permission system), proactive engine (scheduler, quiet hours, 3 built-in checks), automation pipeline (triggers/conditions/actions with SQLite persistence), IntelligentRouter (memory-enriched + tool loop), intelligence dashboard (/tools, /automations, /activity). Phase 4: persona & voice layer with PersonaEngine (registry + channel routing), VoiceConfig (6 presets + time shifts), KnowledgeDomainRouter (9 domains), ContextAdapter (time/channel/mood), SQLite persona persistence, persona dashboard (/personas, /routing). Runtime wiring (AnimusRuntime orchestrator, lifespan, health endpoint). Native Anthropic tool_use (CognitiveResponse, ToolCall, multi-turn cognitive loop). Phase 5: self-improvement loop with self-heal proactive check (auto-detects tool failures/slow/errors every 6h), ImprovementSandbox (safe YAML config + identity changes with backup/rollback), impact measurement (baseline/post metrics, -100 to +100 score), 37 built-in tools, 6 proactive checks.
 
 ## Key Files
 
