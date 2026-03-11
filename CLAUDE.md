@@ -4,7 +4,7 @@
 
 ## Quick Reference
 
-- **Version**: 2.6.0
+- **Version**: 2.7.0
 - **Python**: >=3.10 (Core), >=3.11 (Bootstrap), >=3.12 (Forge)
 - **Layout**: Multi-package monorepo under `packages/`
 - **Tests**: 14,596 across 4 packages
