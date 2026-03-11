@@ -320,6 +320,174 @@ class DualOllamaBackend:
         )
 
 
+class HybridBackend:
+    """Hybrid backend — Anthropic for complex/meta queries, Ollama for casual chat.
+
+    Falls back to Ollama if Anthropic key is missing or API call fails.
+    """
+
+    _COMPLEX_KEYWORDS = frozenset(
+        {
+            # Self-referential / meta (about Animus itself)
+            "animus",
+            "yourself",
+            "self-improve",
+            "self-improvement",
+            "architecture",
+            "persona",
+            "identity",
+            "cognitive",
+            "backend",
+            "gateway",
+            "reflection",
+            "proposal",
+            "improvement",
+            "evolve",
+            "meta",
+            "capabilities",
+            "tools",
+            "proactive",
+            # Complex analysis
+            "analyze",
+            "analyse",
+            "explain",
+            "compare",
+            "evaluate",
+            "design",
+            "architect",
+            "tradeoff",
+            "trade-off",
+            "strategy",
+            "recommend",
+            "philosophy",
+            "implications",
+            "comprehensive",
+            "detailed",
+            "nuanced",
+            "reasoning",
+            "summarize",
+            "critique",
+            "review",
+            "assess",
+            "portfolio",
+        }
+    )
+
+    def __init__(
+        self,
+        anthropic_backend: AnthropicBackend | None,
+        ollama_backend: OllamaBackend | DualOllamaBackend,
+    ) -> None:
+        self._anthropic = anthropic_backend
+        self._ollama = ollama_backend
+        if anthropic_backend is None:
+            logger.warning(
+                "HybridBackend: no Anthropic key, all queries route to ollama"
+            )
+
+    def _classify_query(
+        self, messages: list[dict]
+    ) -> tuple[AnthropicBackend | OllamaBackend | DualOllamaBackend, str]:
+        """Classify query complexity and pick the appropriate backend."""
+        if self._anthropic is None:
+            return self._ollama, "anthropic_unavailable"
+
+        last_user = ""
+        for msg in reversed(messages):
+            if msg.get("role") == "user":
+                last_user = msg.get("content", "").lower()
+                break
+
+        words = set(last_user.split())
+        matched = words & self._COMPLEX_KEYWORDS
+        if matched:
+            return (
+                self._anthropic,
+                f"matched keywords: {', '.join(sorted(matched))}",
+            )
+
+        # Long questions are often complex
+        if "?" in last_user and len(last_user.split()) > 40:
+            return self._anthropic, "long question (>40 words)"
+
+        return self._ollama, "no complexity indicators"
+
+    async def generate_response(
+        self,
+        messages: list[dict],
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+    ) -> str:
+        backend, reason = self._classify_query(messages)
+        backend_name = "anthropic" if backend is self._anthropic else "ollama"
+        logger.info("HybridBackend routing to %s: %s", backend_name, reason)
+
+        if backend is self._anthropic:
+            try:
+                return await backend.generate_response(
+                    messages,
+                    system_prompt=system_prompt,
+                    max_tokens=max_tokens,
+                )
+            except Exception:
+                logger.warning(
+                    "HybridBackend: anthropic failed, falling back to ollama",
+                    exc_info=True,
+                )
+                return await self._ollama.generate_response(
+                    messages,
+                    system_prompt=system_prompt,
+                    max_tokens=max_tokens,
+                )
+
+        return await self._ollama.generate_response(
+            messages, system_prompt=system_prompt, max_tokens=max_tokens
+        )
+
+    async def generate_structured(
+        self,
+        messages: list[dict],
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        tools: list[dict] | None = None,
+    ) -> CognitiveResponse:
+        backend, reason = self._classify_query(messages)
+        backend_name = "anthropic" if backend is self._anthropic else "ollama"
+        logger.info(
+            "HybridBackend structured routing to %s: %s",
+            backend_name,
+            reason,
+        )
+
+        if backend is self._anthropic:
+            try:
+                return await backend.generate_structured(
+                    messages,
+                    system_prompt=system_prompt,
+                    max_tokens=max_tokens,
+                    tools=tools,
+                )
+            except Exception:
+                logger.warning(
+                    "HybridBackend: anthropic structured failed, "
+                    "falling back to ollama",
+                    exc_info=True,
+                )
+                return await self._ollama.generate_structured(
+                    messages,
+                    system_prompt=system_prompt,
+                    max_tokens=max_tokens,
+                    tools=tools,
+                )
+
+        return await self._ollama.generate_structured(
+            messages,
+            system_prompt=system_prompt,
+            max_tokens=max_tokens,
+            tools=tools,
+        )
+
+
 class ForgeBackend:
     """Animus Forge orchestration API backend."""
 

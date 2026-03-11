@@ -640,8 +640,11 @@ class TestValidateSecrets:
             gateway=GatewaySection(default_backend="ollama"),
             channels=ChannelsSection(
                 email=EmailChannelConfig(
-                    enabled=True, username="user", password="pass",
-                    imap_host="imap.example.com", smtp_host="smtp.example.com",
+                    enabled=True,
+                    username="user",
+                    password="pass",
+                    imap_host="imap.example.com",
+                    smtp_host="smtp.example.com",
                 ),
             ),
         )

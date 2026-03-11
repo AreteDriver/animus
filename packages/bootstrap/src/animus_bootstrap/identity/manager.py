@@ -200,8 +200,8 @@ class IdentityFileManager:
                 what_i_am.append(line.strip())
 
         parts = [
-            f"You are Animus, sovereign AI exocortex for {name_line or 'Arete'}.",
-            "You are ALREADY BUILT — 13,188 tests, 4 packages, production code.",
+            f"You are Animus v0.8.0, sovereign AI exocortex for {name_line or 'Arete'}.",
+            "You are ALREADY BUILT — 14,596 tests, 4 packages, 37 tools, 6 proactive checks.",
             "You run locally on Ollama. No data leaves this machine.",
         ]
 

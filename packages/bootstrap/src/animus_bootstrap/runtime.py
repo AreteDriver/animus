@@ -426,6 +426,35 @@ class AnimusRuntime:
 
             return OllamaBackend(model=ollama_cfg.model, host=host)
 
+        if backend_type == "hybrid":
+            from animus_bootstrap.gateway.cognitive import (
+                AnthropicBackend,
+                DualOllamaBackend,
+                HybridBackend,
+                OllamaBackend,
+            )
+
+            ollama_cfg = self._config.ollama
+            host = f"http://{ollama_cfg.host}:{ollama_cfg.port}"
+
+            if ollama_cfg.code_model:
+                ollama_be: OllamaBackend | DualOllamaBackend = DualOllamaBackend(
+                    chat_model=ollama_cfg.model,
+                    code_model=ollama_cfg.code_model,
+                    host=host,
+                )
+            else:
+                ollama_be = OllamaBackend(model=ollama_cfg.model, host=host)
+
+            anthropic_be: AnthropicBackend | None = None
+            if anthropic_key and len(anthropic_key) > 40:
+                anthropic_be = AnthropicBackend(api_key=anthropic_key)
+
+            return HybridBackend(
+                anthropic_backend=anthropic_be,
+                ollama_backend=ollama_be,
+            )
+
         if backend_type == "forge" and self._config.forge.enabled:
             from animus_bootstrap.gateway.cognitive import ForgeBackend
 

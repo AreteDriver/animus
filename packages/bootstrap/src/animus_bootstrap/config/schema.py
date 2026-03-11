@@ -308,8 +308,7 @@ class AnimusConfig(BaseSettings):
 
         if backend == "forge" and self.forge.enabled and not self.forge.api_key:
             warnings.append(
-                "Forge is enabled as gateway backend but forge.api_key "
-                "is not configured."
+                "Forge is enabled as gateway backend but forge.api_key is not configured."
             )
 
         # Channel tokens — only warn for enabled channels
@@ -321,14 +320,10 @@ class AnimusConfig(BaseSettings):
         ]
         for channel_cfg, secret_field, name in channel_checks:
             if channel_cfg.enabled and not getattr(channel_cfg, secret_field, ""):
-                warnings.append(
-                    f"{name} channel is enabled but {secret_field} is empty."
-                )
+                warnings.append(f"{name} channel is enabled but {secret_field} is empty.")
 
         if self.channels.email.enabled:
             if not self.channels.email.username or not self.channels.email.password:
-                warnings.append(
-                    "Email channel is enabled but username/password not set."
-                )
+                warnings.append("Email channel is enabled but username/password not set.")
 
         return warnings
