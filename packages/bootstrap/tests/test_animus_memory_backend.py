@@ -8,7 +8,16 @@ from unittest.mock import patch
 
 import pytest
 
-from animus_bootstrap.intelligence.memory_backends.animus_backend import (
+try:
+    import animus.memory  # noqa: F401
+
+    _HAS_CORE = True
+except ImportError:
+    _HAS_CORE = False
+
+pytestmark = pytest.mark.skipif(not _HAS_CORE, reason="animus-core not installed")
+
+from animus_bootstrap.intelligence.memory_backends.animus_backend import (  # noqa: E402
     AnimusMemoryBackend,
 )
 
