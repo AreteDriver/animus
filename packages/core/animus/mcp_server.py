@@ -131,9 +131,9 @@ def create_mcp_server():
         Args:
             status: Filter by status: pending, in_progress, completed, all.
         """
-        all_tasks = tasks.list_tasks()
+        all_tasks = tasks.list()
         if status != "all":
-            all_tasks = [t for t in all_tasks if t.status == status]
+            all_tasks = [t for t in all_tasks if t.status.value == status]
 
         if not all_tasks:
             return f"No {status} tasks."
@@ -155,7 +155,7 @@ def create_mcp_server():
         auth_err = _check_auth(api_key)
         if auth_err:
             return auth_err
-        task = tasks.add_task(description=description, priority=priority)
+        task = tasks.add(description=description, priority=priority)
         return f"Created task {task.id[:8]}: {description}"
 
     @mcp.tool()
@@ -169,7 +169,7 @@ def create_mcp_server():
         auth_err = _check_auth(api_key)
         if auth_err:
             return auth_err
-        success = tasks.complete_task(task_id)
+        success = tasks.complete(task_id)
         if success:
             return f"Task {task_id} marked complete."
         return f"Task {task_id} not found."
