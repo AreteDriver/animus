@@ -84,3 +84,10 @@ token.json
 # User data (never commit)
 user_data/
 personal/
+
+# Self-improve sandbox state
+.gorgon/
+
+# Node
+node_modules/
+package-lock.json
