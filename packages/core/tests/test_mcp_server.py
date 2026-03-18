@@ -153,14 +153,14 @@ class TestTaskTools:
     def test_list_tasks(self, server, mock_tasks):
         task = MagicMock()
         task.id = "task-001"
-        task.status = "pending"
+        task.status = MagicMock(value="pending")
         task.description = "Fix the bug"
-        mock_tasks.list_tasks.return_value = [task]
+        mock_tasks.list.return_value = [task]
         result = _run(server.call_tool("animus_list_tasks", {"status": "pending"}))
         assert "Fix the bug" in result[0][0].text
 
     def test_list_tasks_empty(self, server, mock_tasks):
-        mock_tasks.list_tasks.return_value = []
+        mock_tasks.list.return_value = []
         result = _run(server.call_tool("animus_list_tasks", {"status": "pending"}))
         assert "No pending" in result[0][0].text
 
@@ -172,12 +172,12 @@ class TestTaskTools:
         assert "Created task" in result[0][0].text
 
     def test_complete_task(self, server, mock_tasks):
-        mock_tasks.complete_task.return_value = True
+        mock_tasks.complete.return_value = True
         result = _run(server.call_tool("animus_complete_task", {"task_id": "task-001"}))
         assert "complete" in result[0][0].text
 
     def test_complete_task_not_found(self, server, mock_tasks):
-        mock_tasks.complete_task.return_value = False
+        mock_tasks.complete.return_value = False
         result = _run(server.call_tool("animus_complete_task", {"task_id": "bad-id"}))
         assert "not found" in result[0][0].text
 
