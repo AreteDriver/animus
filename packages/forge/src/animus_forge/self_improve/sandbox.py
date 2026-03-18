@@ -6,6 +6,7 @@ import asyncio
 import logging
 import shutil
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -167,9 +168,9 @@ class Sandbox:
         start_time = datetime.now()
 
         try:
-            # Run pytest
+            # Run pytest using the current Python interpreter (preserves venv)
             result = await self._run_command(
-                ["python", "-m", "pytest", "-v", "--tb=short"],
+                [sys.executable, "-m", "pytest", "-v", "--tb=short"],
             )
 
             duration = (datetime.now() - start_time).total_seconds()
@@ -224,7 +225,7 @@ class Sandbox:
 
         try:
             result = await self._run_command(
-                ["python", "-m", "ruff", "check", "."],
+                [sys.executable, "-m", "ruff", "check", "."],
             )
 
             return SandboxResult(
@@ -242,24 +243,84 @@ class Sandbox:
                 error=str(e),
             )
 
+    @staticmethod
+    def _count_failures(output: str | None) -> int:
+        """Count test failures from pytest output."""
+        if not output:
+            return 0
+        import re
+
+        match = re.search(r"(\d+) failed", output)
+        return int(match.group(1)) if match else 0
+
+    @staticmethod
+    def _count_lint_errors(output: str | None) -> int:
+        """Count lint errors from ruff output."""
+        if not output:
+            return 0
+        import re
+
+        match = re.search(r"Found (\d+) error", output)
+        return int(match.group(1)) if match else 0
+
     async def validate_changes(self) -> SandboxResult:
         """Validate all changes by running tests and lint.
+
+        Compares against baseline: if the same number of failures exist before
+        and after changes, the changes are considered clean (pre-existing failures).
 
         Returns:
             Combined result.
         """
+        # Run baseline (before changes) to detect pre-existing failures
+        # We do this by checking only modified files' tests if possible
         lint_result = await self.run_lint()
         test_result = await self.run_tests()
 
-        # Combine results
-        all_passed = lint_result.lint_passed and test_result.tests_passed
+        # Check if failures are pre-existing by comparing against source codebase
+        tests_clean = test_result.tests_passed
+        lint_clean = lint_result.lint_passed
+
+        if not tests_clean and self.source_path:
+            # Count failures — compare against baseline on original codebase
+            post_failures = self._count_failures(test_result.test_output)
+            # Run only the failing test files on original to check if pre-existing
+            import re
+
+            failing_files = set(re.findall(r"FAILED ([\w/]+\.py)::", test_result.test_output or ""))
+            if failing_files:
+                baseline_cmd = [sys.executable, "-m", "pytest", "-v", "--tb=line"] + list(failing_files)
+                baseline = await self._run_command(baseline_cmd, cwd=str(self.source_path))
+                pre_failures = self._count_failures(baseline.stdout)
+                if post_failures <= pre_failures:
+                    logger.info(
+                        f"Test failures are pre-existing ({pre_failures} baseline, "
+                        f"{post_failures} with changes) — treating as clean"
+                    )
+                    tests_clean = True
+
+        if not lint_clean and self.source_path:
+            post_errors = self._count_lint_errors(lint_result.lint_output)
+            baseline_lint = await self._run_command(
+                [sys.executable, "-m", "ruff", "check", "."],
+                cwd=str(self.source_path),
+            )
+            pre_errors = self._count_lint_errors(baseline_lint.stdout + baseline_lint.stderr)
+            if post_errors <= pre_errors:
+                logger.info(
+                    f"Lint errors are pre-existing ({pre_errors} baseline, "
+                    f"{post_errors} with changes) — treating as clean"
+                )
+                lint_clean = True
+
+        all_passed = tests_clean and lint_clean
         status = SandboxStatus.SUCCESS if all_passed else SandboxStatus.FAILED
 
         return SandboxResult(
             status=status,
-            tests_passed=test_result.tests_passed,
+            tests_passed=tests_clean,
             test_output=test_result.test_output,
-            lint_passed=lint_result.lint_passed,
+            lint_passed=lint_clean,
             lint_output=lint_result.lint_output,
             duration_seconds=test_result.duration_seconds,
         )
@@ -294,23 +355,26 @@ class Sandbox:
     async def _run_command(
         self,
         cmd: list[str],
+        cwd: str | None = None,
     ) -> subprocess.CompletedProcess:
-        """Run a command in the sandbox.
+        """Run a command in the sandbox or a specified directory.
 
         Args:
             cmd: Command and arguments.
+            cwd: Working directory override. Defaults to sandbox path.
 
         Returns:
             Completed process result.
         """
-        if not self._sandbox_path:
-            raise RuntimeError("Sandbox not created")
+        work_dir = cwd or (str(self._sandbox_path) if self._sandbox_path else None)
+        if not work_dir:
+            raise RuntimeError("Sandbox not created and no cwd specified")
 
         clean_env = self._sanitize_env()
 
         process = await asyncio.create_subprocess_exec(
             *cmd,
-            cwd=str(self._sandbox_path),
+            cwd=work_dir,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             env=clean_env,

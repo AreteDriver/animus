@@ -127,6 +127,15 @@ class SelfImproveOrchestrator:
         self._current_stage = WorkflowStage.IDLE
         self._current_plan: ImprovementPlan | None = None
 
+    def _is_local_provider(self) -> bool:
+        """Check if the current provider is a local LLM (Ollama)."""
+        if not self.provider:
+            return True
+        provider_name = type(self.provider).__name__.lower()
+        if hasattr(self.provider, "provider"):
+            provider_name = type(self.provider.provider).__name__.lower()
+        return "ollama" in provider_name
+
     def _create_backend(self):
         """Create a SQLite backend for persistent state."""
         try:
@@ -161,7 +170,22 @@ class SelfImproveOrchestrator:
             # Stage 1: Analyze
             self._current_stage = WorkflowStage.ANALYZING
             logger.info("Starting analysis...")
-            analysis = self.analyzer.analyze()
+
+            # Map focus_category string to ImprovementCategory enum
+            categories = None
+            if focus_category:
+                from animus_forge.self_improve.analyzer import ImprovementCategory
+
+                category_map = {c.value: c for c in ImprovementCategory}
+                if focus_category.lower() in category_map:
+                    categories = [category_map[focus_category.lower()]]
+                else:
+                    logger.warning(
+                        f"Unknown focus category '{focus_category}', analyzing all. "
+                        f"Valid: {list(category_map.keys())}"
+                    )
+
+            analysis = self.analyzer.analyze(categories=categories)
 
             if not analysis.suggestions:
                 logger.info("No improvement opportunities found")
@@ -403,50 +427,153 @@ class SelfImproveOrchestrator:
             logger.warning("No AI provider — cannot generate changes")
             return {}
 
-        # Read current contents of affected files
-        file_contents: dict[str, str] = {}
-        for file_path in plan.estimated_files:
-            full_path = self.codebase_path / file_path
-            if full_path.exists() and full_path.is_file():
-                try:
-                    file_contents[file_path] = full_path.read_text()[:8000]
-                except OSError as e:
-                    logger.warning(f"Cannot read {file_path}: {e}")
+        # Extract targeted function snippets instead of whole files
+        # This gives the LLM manageable context and produces compact responses
+        function_snippets: dict[str, list[tuple[str, str, int, int]]] = {}
+        file_full_contents: dict[str, str] = {}
 
-        # Build the prompt
+        for suggestion in plan.suggestions:
+            func_name = ""
+            if "Function `" in suggestion.description:
+                func_name = suggestion.description.split("Function `")[1].split("`")[0]
+            elif suggestion.title.startswith("Long function: "):
+                func_name = suggestion.title.replace("Long function: ", "")
+
+            for file_path in suggestion.affected_files:
+                full_path = self.codebase_path / file_path
+                if not full_path.exists():
+                    continue
+                try:
+                    content = full_path.read_text()
+                    file_full_contents[file_path] = content
+                except OSError:
+                    continue
+
+                if func_name:
+                    # Extract the function body
+                    lines = content.splitlines()
+                    func_start = None
+                    func_indent = 0
+                    for i, line in enumerate(lines):
+                        stripped = line.lstrip()
+                        if stripped.startswith(f"def {func_name}(") or stripped.startswith(
+                            f"async def {func_name}("
+                        ):
+                            func_start = i
+                            func_indent = len(line) - len(stripped)
+                            break
+                    if func_start is not None:
+                        func_end = func_start + 1
+                        for i in range(func_start + 1, len(lines)):
+                            line = lines[i]
+                            if line.strip() == "":
+                                continue
+                            indent = len(line) - len(line.lstrip())
+                            if indent <= func_indent and line.strip():
+                                break
+                            func_end = i + 1
+                        # Cap at 200 lines to keep LLM response manageable
+                        if func_end - func_start > 200:
+                            func_end = func_start + 200
+                        snippet = "\n".join(lines[func_start:func_end])
+                        if file_path not in function_snippets:
+                            function_snippets[file_path] = []
+                        function_snippets[file_path].append(
+                            (func_name, snippet, func_start, func_end)
+                        )
+
+        # Build the prompt with targeted snippets
+        snippets_text_parts = []
+        for file_path, snippets in function_snippets.items():
+            for func_name, snippet, start, end in snippets:
+                snippets_text_parts.append(
+                    f"=== {file_path} :: {func_name}() (lines {start + 1}-{end}) ===\n{snippet}"
+                )
+        snippets_text = "\n\n".join(snippets_text_parts)
+
         suggestions_text = "\n".join(
             f"- {s.title}: {s.description}"
             + (f"\n  Hints: {s.implementation_hints}" if s.implementation_hints else "")
-            + (f"\n  Files: {', '.join(s.affected_files)}" if s.affected_files else "")
             for s in plan.suggestions
         )
 
-        files_text = "\n\n".join(
-            f"=== {path} ===\n{content}" for path, content in file_contents.items()
+        example_file = plan.estimated_files[0] if plan.estimated_files else "example.py"
+
+        # Detect suggestion type to pick the right prompt strategy
+        is_documentation = all(
+            "docstring" in s.title.lower() or "documentation" in s.category.value.lower()
+            for s in plan.suggestions
         )
 
-        prompt = f"""You are implementing code improvements for a Python project.
+        if is_documentation:
+            # Documentation: generate docstrings programmatically or with minimal LLM help
+            return await self._generate_docstring_changes(plan, file_full_contents)
 
-## Plan: {plan.title}
+        elif snippets_text:
+            # Function refactoring: show targeted function snippets
+            prompt = f"""You are refactoring a Python function to be shorter and more readable.
+
+## Task: {plan.title}
 {plan.description}
 
-## Suggestions to implement:
+## Suggestions:
 {suggestions_text}
 
-## Current file contents:
-{files_text}
+## Current function code:
+{snippets_text}
 
-## Instructions:
-For each file that needs changes, return a JSON object with:
-- "file": the file path
-- "changes": array of objects, each with "old" (exact text to replace) and "new" (replacement text)
+## Rules:
+1. NEVER rename the function or change its signature.
+2. Extract logical blocks into helper methods/functions.
+3. Keep the original function as a dispatcher that calls the helpers.
+4. Add the helper functions right before the original function.
+5. Preserve all imports and type hints.
 
-Keep changes minimal and focused. Only modify what the suggestions require.
+## Output format:
+For each file, output the file path on its own line prefixed with FILE:, then the complete
+refactored code in a Python code block. Example:
 
-Return ONLY valid JSON:
-{{"file": "path/to/file.py", "changes": [{{"old": "exact old code", "new": "exact new code"}}]}}
+FILE: {example_file}
+```python
+def _helper():
+    pass
 
-If multiple files, return a JSON array of these objects."""
+def original_func():
+    _helper()
+```
+
+Output ONLY the FILE: markers and code blocks. No other text."""
+
+        else:
+            # Generic fallback with truncated file contents
+            fallback_text = "\n\n".join(
+                f"=== {path} ===\n{content[:4000]}"
+                for path, content in file_full_contents.items()
+            )
+            prompt = f"""You are implementing code improvements for a Python project.
+
+## Task: {plan.title}
+{plan.description}
+
+## Suggestions:
+{suggestions_text}
+
+## Current code:
+{fallback_text}
+
+## Rules:
+1. Keep changes minimal and focused.
+2. Do NOT rename functions or change signatures.
+
+## Output format:
+For each file, output FILE: then the path, then a python code block with the COMPLETE file.
+
+FILE: {example_file}
+```python
+complete file content
+```
+
+Output ONLY FILE: markers and code blocks. No other text."""""
 
         try:
             messages = [
@@ -472,6 +599,23 @@ If multiple files, return a JSON array of these objects."""
 
             logger.info(f"AI response length: {len(response)} chars")
             changes = self._parse_changes_response(response)
+
+            # If we have function snippets, splice the LLM output back into full files
+            # For documentation changes, the LLM returns complete files — use as-is
+            if function_snippets and not is_documentation:
+                spliced: dict[str, str] = {}
+                for file_path, new_code in changes.items():
+                    if file_path in function_snippets and file_path in file_full_contents:
+                        full_content = file_full_contents[file_path]
+                        lines = full_content.splitlines()
+                        # Replace the function region with the new code
+                        # Use the first (and usually only) function snippet's location
+                        _, _, start, end = function_snippets[file_path][0]
+                        new_lines = lines[:start] + new_code.splitlines() + lines[end:]
+                        spliced[file_path] = "\n".join(new_lines) + "\n"
+                    else:
+                        spliced[file_path] = new_code
+                changes = spliced
 
             # Validate: filter out critical files
             safe_changes: dict[str, str] = {}
@@ -516,6 +660,10 @@ If multiple files, return a JSON array of these objects."""
         text = re.sub(r",\s*}", "}", text)
         text = re.sub(r",\s*]", "]", text)
 
+        # Fix double-escaped quotes from local LLMs (\\\" -> \")
+        text = text.replace('\\\\"', '\\"')
+        text = text.replace("\\\\'", "\\'")
+
         # Fix single-quoted strings (LLMs mix quotes in JSON)
         # Replace 'value' with "value" when used as JSON values
         text = re.sub(
@@ -523,6 +671,11 @@ If multiple files, return a JSON array of these objects."""
             r'"\1"',
             text,
         )
+
+        # Try FILE: marker format first (most reliable for local LLMs)
+        file_marker_results = self._parse_file_markers(text)
+        if file_marker_results:
+            return file_marker_results
 
         parsed = self._try_parse_json(text)
         if parsed is None:
@@ -539,6 +692,124 @@ If multiple files, return a JSON array of these objects."""
             return {}
 
         return self._normalize_parsed_changes(parsed)
+
+    async def _generate_docstring_changes(
+        self,
+        plan: ImprovementPlan,
+        file_full_contents: dict[str, str],
+    ) -> dict[str, str]:
+        """Generate docstring additions using LLM for content, programmatic for insertion.
+
+        For each missing docstring suggestion, asks the LLM to write just the docstring
+        text, then programmatically inserts it at the correct location.
+        """
+        changes: dict[str, str] = {}
+
+        for suggestion in plan.suggestions:
+            for file_path in suggestion.affected_files:
+                if file_path not in file_full_contents:
+                    continue
+                content = file_full_contents[file_path]
+
+                if "module docstring" in suggestion.title.lower():
+                    # Module docstring — add at top
+                    if file_path not in changes:
+                        changes[file_path] = content
+
+                    # Ask LLM for a one-line module docstring
+                    if self.provider:
+                        resp = await self.provider.complete(
+                            [{"role": "user", "content": (
+                                f"Write a one-line Python module docstring for a file named "
+                                f"'{file_path}'. Return ONLY the docstring text (no quotes), "
+                                f"nothing else. Example: Utilities for data processing."
+                            )}],
+                            max_tokens=100,
+                        )
+                        docstring_text = resp.strip().strip('"').strip("'")
+                    else:
+                        # Derive from filename
+                        module_name = Path(file_path).stem.replace("_", " ").title()
+                        docstring_text = f"{module_name} module."
+
+                    new_content = f'"""{docstring_text}"""\n\n{changes[file_path]}'
+                    changes[file_path] = new_content
+
+                elif "Missing docstring:" in suggestion.title:
+                    # Function docstring — find the function and insert
+                    func_name = suggestion.title.replace("Missing docstring: ", "")
+                    if file_path not in changes:
+                        changes[file_path] = content
+
+                    current = changes[file_path]
+                    lines = current.splitlines()
+
+                    # Find the function definition
+                    for i, line in enumerate(lines):
+                        stripped = line.lstrip()
+                        if stripped.startswith(f"def {func_name}("):
+                            indent = len(line) - len(stripped) + 4  # Function body indent
+
+                            # Ask LLM for the docstring
+                            if self.provider:
+                                # Show the function signature + first 5 body lines
+                                func_context = "\n".join(lines[i:i + 6])
+                                resp = await self.provider.complete(
+                                    [{"role": "user", "content": (
+                                        f"Write a concise one-line Python docstring for this function. "
+                                        f"Return ONLY the docstring text (no triple quotes), nothing else.\n\n"
+                                        f"{func_context}"
+                                    )}],
+                                    max_tokens=100,
+                                )
+                                docstring_text = resp.strip().strip('"').strip("'")
+                            else:
+                                docstring_text = f"{func_name.replace('_', ' ').capitalize()}."
+
+                            # Insert docstring after the def line
+                            docstring_line = " " * indent + f'"""{docstring_text}"""'
+                            lines.insert(i + 1, docstring_line)
+                            changes[file_path] = "\n".join(lines) + "\n"
+                            break
+
+        logger.info(f"Generated docstring changes for {len(changes)} files")
+        return changes
+
+    def _parse_file_markers(self, text: str) -> dict[str, str]:
+        """Parse FILE: marker format from LLM response.
+
+        Format:
+            FILE: path/to/file.py
+            ```python
+            code here
+            ```
+
+        Returns:
+            Dict mapping file paths to code content, or empty dict if no markers found.
+        """
+        results: dict[str, str] = {}
+        # Split on FILE: markers
+        parts = re.split(r"(?:^|\n)FILE:\s*", text)
+        for part in parts[1:]:  # Skip everything before first FILE:
+            lines = part.strip().splitlines()
+            if not lines:
+                continue
+            file_path = lines[0].strip()
+            # Extract code from the code block
+            code_lines = lines[1:]
+            code_text = "\n".join(code_lines)
+            # Strip code fences
+            code_text = code_text.strip()
+            if code_text.startswith("```"):
+                fence_lines = code_text.splitlines()
+                fence_lines = fence_lines[1:]  # Remove opening fence
+                if fence_lines and fence_lines[-1].strip() == "```":
+                    fence_lines = fence_lines[:-1]  # Remove closing fence
+                code_text = "\n".join(fence_lines)
+            if file_path and code_text.strip():
+                results[file_path] = code_text
+                logger.info(f"Parsed FILE marker: {file_path} ({len(code_text)} chars)")
+        return results
 
     def _try_parse_json(self, text: str):
         """Attempt JSON parse, return None on failure."""
@@ -594,11 +865,33 @@ If multiple files, return a JSON array of these objects."""
                 continue
             old = change.get("old", "")
             new = change.get("new", "")
-            if old and old in content:
+            if not old:
+                continue
+            if old in content:
                 content = content.replace(old, new, 1)
                 applied += 1
             else:
-                logger.warning(f"Could not find match in {file_path}: {old[:60]}...")
+                # Fuzzy fallback: try matching with normalized whitespace
+                normalized_old = " ".join(old.split())
+                for line_idx, line in enumerate(content.splitlines()):
+                    normalized_line = " ".join(line.split())
+                    if normalized_old.startswith(normalized_line) and len(normalized_line) > 20:
+                        # Found approximate start — try block match
+                        content_lines = content.splitlines()
+                        old_lines = old.splitlines()
+                        match_len = 0
+                        for j, old_line in enumerate(old_lines):
+                            if line_idx + j < len(content_lines):
+                                if " ".join(old_line.split()) == " ".join(content_lines[line_idx + j].split()):
+                                    match_len += 1
+                        if match_len >= len(old_lines) * 0.7:  # 70% line match threshold
+                            actual_old = "\n".join(content_lines[line_idx:line_idx + len(old_lines)])
+                            content = content.replace(actual_old, new, 1)
+                            applied += 1
+                            logger.info(f"Fuzzy matched {match_len}/{len(old_lines)} lines in {file_path}")
+                            break
+                else:
+                    logger.warning(f"Could not find match in {file_path}: {old[:60]}...")
 
         logger.info(f"Applied {applied}/{len(changes)} changes to {file_path}")
         return content
@@ -625,6 +918,30 @@ If multiple files, return a JSON array of these objects."""
             Created plan.
         """
         import uuid
+
+        # Determine provider capability tier
+        is_local = self._is_local_provider()
+
+        if is_local:
+            # Local LLMs (Ollama): prefer small, precise fixes
+            # Priority: bare excepts > TODOs > missing docstrings > short refactors
+            small_fixes = [s for s in suggestions if s.estimated_lines <= 20]
+            medium_fixes = [s for s in suggestions if 20 < s.estimated_lines <= 100]
+
+            if small_fixes:
+                suggestions = sorted(small_fixes, key=lambda s: s.priority)[:3]
+            elif medium_fixes:
+                suggestions = sorted(medium_fixes, key=lambda s: s.priority)[:1]
+            else:
+                # All suggestions are large — take smallest one
+                suggestions = sorted(suggestions, key=lambda s: s.estimated_lines)[:1]
+        else:
+            # Cloud LLMs (Anthropic/OpenAI): can handle larger refactors
+            manageable = [s for s in suggestions if s.estimated_lines <= 500]
+            if manageable:
+                suggestions = manageable[:3]
+            else:
+                suggestions = sorted(suggestions, key=lambda s: s.estimated_lines)[:1]
 
         # Aggregate files and estimates
         all_files = set()
