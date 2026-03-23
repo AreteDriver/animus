@@ -1013,6 +1013,19 @@ def create_default_registry(security_config=None) -> ToolRegistry:
 
     registry.register(HARVEST_TOOL)
 
+    # Register harvest watchlist tools
+    from animus.harvest_watchlist_tools import (
+        WATCHLIST_ADD_TOOL,
+        WATCHLIST_LIST_TOOL,
+        WATCHLIST_REMOVE_TOOL,
+        WATCHLIST_SCAN_TOOL,
+    )
+
+    registry.register(WATCHLIST_ADD_TOOL)
+    registry.register(WATCHLIST_REMOVE_TOOL)
+    registry.register(WATCHLIST_LIST_TOOL)
+    registry.register(WATCHLIST_SCAN_TOOL)
+
     logger.info(f"Created default registry with {len(registry.list_tools())} tools")
     return registry
 

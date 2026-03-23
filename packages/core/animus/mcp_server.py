@@ -302,6 +302,96 @@ def create_mcp_server():
             return f"Harvest error: {e}"
 
     # -----------------------------------------------------------------------
+    # Harvest watchlist tools
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_watchlist_add(
+        target: str,
+        tags: str = "",
+        notes: str = "",
+        api_key: str = "",
+    ) -> str:
+        """Add a GitHub repo to the competition watchlist for periodic scanning.
+
+        Args:
+            target: GitHub repo URL or username/repo (e.g., 'fastapi/fastapi').
+            tags: Comma-separated tags (e.g., 'competitor,eve-frontier').
+            notes: Notes about why this repo matters.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.harvest_watchlist import add_to_watchlist
+
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
+
+        try:
+            entry = add_to_watchlist(target=target, tags=tag_list, notes=notes or None)
+            return json.dumps(entry, indent=2)
+        except ValueError as e:
+            return f"Watchlist add failed: {e}"
+        except Exception as e:
+            return f"Watchlist error: {e}"
+
+    @mcp.tool()
+    def animus_watchlist_remove(target: str, api_key: str = "") -> str:
+        """Remove a GitHub repo from the competition watchlist.
+
+        Args:
+            target: GitHub repo URL or username/repo to remove.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.harvest_watchlist import remove_from_watchlist
+
+        removed = remove_from_watchlist(target)
+        if removed:
+            return f"Removed '{target}' from watchlist."
+        return f"'{target}' not found on watchlist."
+
+    @mcp.tool()
+    def animus_watchlist_list() -> str:
+        """List all repos on the competition watchlist with their last scan data."""
+        from animus.harvest_watchlist import get_watchlist
+
+        repos = get_watchlist()
+        if not repos:
+            return "Watchlist is empty."
+        return json.dumps(repos, indent=2)
+
+    @mcp.tool()
+    def animus_watchlist_scan(
+        interval_hours: int = 0,
+        api_key: str = "",
+    ) -> str:
+        """Run harvest scans on all due repos and return a changes report.
+
+        Args:
+            interval_hours: Override scan interval in hours (0 = use default 168h/7 days).
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        import asyncio
+
+        from animus.harvest_watchlist import run_watchlist_scan
+
+        interval = interval_hours if interval_hours > 0 else None
+        try:
+            report = asyncio.run(run_watchlist_scan(memory=memory, interval_hours=interval))
+            return json.dumps(report, indent=2)
+        except Exception as e:
+            return f"Watchlist scan failed: {e}"
+
+    # -----------------------------------------------------------------------
     # Self-improvement tools
     # -----------------------------------------------------------------------
 
