@@ -268,6 +268,12 @@ Active development. Architecture stable. v2.3.0 released.
 
 ---
 
+## Community
+
+[Discord](https://discord.gg/fdzQkrt8) — Join the community
+
+---
+
 ## License
 
 MIT

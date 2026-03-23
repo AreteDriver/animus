@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Animus Discord Bot — operational intel bot with slash commands.
+Animus Discord Bot — operational intel bot with slash commands and conversational chat.
 
 Pushes harvest intel, searches Animus memory, manages watchlist,
-and provides daily briefs via Discord slash commands.
+provides daily briefs via Discord slash commands, and responds to
+@mentions with LLM-powered conversational replies grounded in memory.
 
 Standalone bot — does not modify the Forge Discord bot.
 
@@ -11,9 +12,11 @@ Usage:
     python tools/animus_discord_bot.py
 
 Environment:
-    ANIMUS_DISCORD_TOKEN  — Discord bot token (required)
-    ANIMUS_DISCORD_CHANNEL — Channel ID for auto-push intel (required for auto-push)
-    DISCORD_BOT_TOKEN     — Fallback token if ANIMUS_DISCORD_TOKEN not set
+    ANIMUS_DISCORD_TOKEN    — Discord bot token (required)
+    ANIMUS_DISCORD_CHANNEL  — Channel ID for auto-push intel (required for auto-push)
+    ANIMUS_CHAT_CHANNEL     — Channel ID where Animus responds to all messages (optional)
+    ANIMUS_CHAT_COOLDOWN    — Per-user cooldown in seconds (default: 10)
+    DISCORD_BOT_TOKEN       — Fallback token if ANIMUS_DISCORD_TOKEN not set
 """
 
 from __future__ import annotations
@@ -23,6 +26,8 @@ import json
 import logging
 import os
 import sys
+import time
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -37,6 +42,7 @@ from discord import app_commands
 from discord.ext import tasks
 
 from animus.config import AnimusConfig
+from animus.cognitive import CognitiveLayer, ModelConfig as CogModelConfig, ModelProvider
 from animus.memory import MemoryLayer, MemoryType
 
 # ---------------------------------------------------------------------------
@@ -99,6 +105,52 @@ def _get_memory() -> MemoryLayer:
 
 
 # ---------------------------------------------------------------------------
+# Cognitive layer (initialized lazily for chat responses)
+# ---------------------------------------------------------------------------
+
+_cognitive: CognitiveLayer | None = None
+
+
+def _get_cognitive() -> CognitiveLayer:
+    """Get or create the cognitive layer using config model settings."""
+    global _cognitive
+    if _cognitive is None:
+        cfg = _get_config()
+        provider_map = {
+            "ollama": ModelProvider.OLLAMA,
+            "anthropic": ModelProvider.ANTHROPIC,
+            "openai": ModelProvider.OPENAI,
+        }
+        provider = provider_map.get(cfg.model.provider, ModelProvider.OLLAMA)
+
+        primary = CogModelConfig(
+            provider=provider,
+            model_name=cfg.model.name,
+            api_key=cfg.model.anthropic_api_key or cfg.model.openai_api_key,
+            base_url=cfg.model.ollama_url if provider == ModelProvider.OLLAMA else cfg.model.openai_base_url,
+        )
+        _cognitive = CognitiveLayer(primary_config=primary)
+    return _cognitive
+
+
+# ---------------------------------------------------------------------------
+# Chat rate limiting
+# ---------------------------------------------------------------------------
+
+_user_cooldowns: dict[int, float] = defaultdict(float)
+CHAT_COOLDOWN = int(os.environ.get("ANIMUS_CHAT_COOLDOWN", "10"))
+
+CHAT_SYSTEM = """You are Animus, an AI exocortex built by ARETE (AreteDriver). You are helpful, \
+direct, and knowledgeable about software engineering, AI tools, and the projects in your memory.
+
+Keep responses concise (under 2000 chars for Discord). Be conversational but substantive. \
+If you have relevant context from memory, reference it naturally. If you don't know something, \
+say so directly — don't fabricate.
+
+You are chatting in a public Discord server. Be welcoming to newcomers."""
+
+
+# ---------------------------------------------------------------------------
 # Harvest state file — used for auto-push change detection
 # ---------------------------------------------------------------------------
 
@@ -128,13 +180,19 @@ def _save_harvest_state(report: dict[str, Any]) -> None:
 
 
 class AnimusBot(discord.Client):
-    """Animus operational Discord bot with slash commands."""
+    """Animus operational Discord bot with slash commands and conversational chat."""
 
-    def __init__(self, intel_channel_id: int | None = None) -> None:
+    def __init__(
+        self,
+        intel_channel_id: int | None = None,
+        chat_channel_id: int | None = None,
+    ) -> None:
         intents = discord.Intents.default()
+        intents.message_content = True
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
         self.intel_channel_id = intel_channel_id
+        self.chat_channel_id = chat_channel_id
         self._register_commands()
 
     async def setup_hook(self) -> None:
@@ -154,6 +212,95 @@ class AnimusBot(discord.Client):
                 name="the fleet",
             )
         )
+
+    # -------------------------------------------------------------------
+    # Conversational chat — responds to @mentions or chat channel msgs
+    # -------------------------------------------------------------------
+
+    async def on_message(self, message: discord.Message) -> None:
+        # Ignore own messages and other bots
+        if message.author.bot:
+            return
+
+        # Determine if we should respond:
+        # 1. @mention in any channel
+        # 2. Any message in the designated chat channel
+        is_mention = self.user is not None and self.user.mentioned_in(message)
+        is_chat_channel = (
+            self.chat_channel_id is not None
+            and message.channel.id == self.chat_channel_id
+        )
+
+        if not is_mention and not is_chat_channel:
+            return
+
+        # Rate limit per user
+        user_id = message.author.id
+        now = time.monotonic()
+        if now - _user_cooldowns[user_id] < CHAT_COOLDOWN:
+            remaining = int(CHAT_COOLDOWN - (now - _user_cooldowns[user_id]))
+            await message.reply(
+                f"Cooldown: try again in {remaining}s.",
+                mention_author=False,
+            )
+            return
+        _user_cooldowns[user_id] = now
+
+        # Strip the bot mention from the message text
+        content = message.content
+        if self.user is not None:
+            content = content.replace(f"<@{self.user.id}>", "").replace(
+                f"<@!{self.user.id}>", ""
+            ).strip()
+
+        if not content:
+            await message.reply(
+                "Ask me anything — I have memory of ARETE's projects, patterns, and tools.",
+                mention_author=False,
+            )
+            return
+
+        async with message.channel.typing():
+            try:
+                # Recall relevant context from memory
+                memory = _get_memory()
+                memories = memory.recall(query=content, limit=5)
+                context_parts = []
+                for m in memories:
+                    tags = f" [{', '.join(m.tags[:3])}]" if m.tags else ""
+                    context_parts.append(f"- {m.content[:300]}{tags}")
+
+                context = "\n".join(context_parts) if context_parts else None
+
+                # Build prompt with context
+                if context:
+                    full_prompt = (
+                        f"Relevant context from memory:\n{context}\n\n"
+                        f"User message: {content}"
+                    )
+                else:
+                    full_prompt = content
+
+                # Generate response via cognitive layer
+                cognitive = _get_cognitive()
+                response = await asyncio.to_thread(
+                    cognitive.primary.generate,
+                    full_prompt,
+                    CHAT_SYSTEM,
+                )
+
+                # Truncate to Discord's 2000 char limit
+                if len(response) > 1900:
+                    response = response[:1897] + "..."
+
+                await message.reply(response, mention_author=False)
+
+            except Exception:
+                logger.exception("Error generating chat response")
+                await message.reply(
+                    "Something went wrong processing that. Try again or use `/ask` for a memory search.",
+                    mention_author=False,
+                )
 
     # -------------------------------------------------------------------
     # Background task: harvest change detection
@@ -634,13 +781,28 @@ def main() -> None:
                 file=sys.stderr,
             )
 
-    bot = AnimusBot(intel_channel_id=intel_channel)
+    chat_channel_str = os.environ.get("ANIMUS_CHAT_CHANNEL", "")
+    chat_channel: int | None = None
+    if chat_channel_str:
+        try:
+            chat_channel = int(chat_channel_str)
+        except ValueError:
+            print(
+                f"Warning: ANIMUS_CHAT_CHANNEL '{chat_channel_str}' is not a valid integer.",
+                file=sys.stderr,
+            )
+
+    bot = AnimusBot(intel_channel_id=intel_channel, chat_channel_id=chat_channel)
 
     logger.info("Starting Animus Discord bot...")
     if intel_channel:
         logger.info("Intel auto-push channel: %s", intel_channel)
     else:
         logger.info("No ANIMUS_DISCORD_CHANNEL set — auto-push disabled")
+    if chat_channel:
+        logger.info("Chat channel: %s (responding to all messages)", chat_channel)
+    else:
+        logger.info("No ANIMUS_CHAT_CHANNEL set — responding to @mentions only")
 
     bot.run(token, log_handler=None)
 
