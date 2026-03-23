@@ -1,0 +1,22 @@
+[Unit]
+Description=Animus Discord Bot — operational intel + memory
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=arete
+WorkingDirectory=/home/arete/projects/animus
+ExecStart=/home/arete/projects/animus/packages/core/.venv/bin/python /home/arete/projects/animus/tools/animus_discord_bot.py
+Restart=on-failure
+RestartSec=10
+EnvironmentFile=/home/arete/.config/animus/discord.env
+
+# Hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/home/arete/.animus /home/arete/projects/animus
+
+[Install]
+WantedBy=multi-user.target
