@@ -226,10 +226,13 @@ class AnimusBot(discord.Client):
         # 1. @mention in any channel
         # 2. Any message in the designated chat channel
         is_mention = self.user is not None and self.user.mentioned_in(message)
-        is_chat_channel = (
-            self.chat_channel_id is not None
-            and message.channel.id == self.chat_channel_id
-        )
+        # Check if message is in the chat channel or any thread within it (forum posts)
+        is_chat_channel = False
+        if self.chat_channel_id is not None:
+            if message.channel.id == self.chat_channel_id:
+                is_chat_channel = True
+            elif hasattr(message.channel, "parent_id") and message.channel.parent_id == self.chat_channel_id:
+                is_chat_channel = True
 
         if not is_mention and not is_chat_channel:
             return
