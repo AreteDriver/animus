@@ -84,10 +84,11 @@ class TestMcpServerCreation:
         assert "animus_brief" in tool_names
         assert "animus_run_workflow" in tool_names
         assert "animus_self_improve" in tool_names
+        assert "animus_harvest" in tool_names
 
     def test_tool_count(self, server):
         tools = server._tool_manager.list_tools()
-        assert len(tools) == 10
+        assert len(tools) == 11
 
 
 class TestMemoryTools:

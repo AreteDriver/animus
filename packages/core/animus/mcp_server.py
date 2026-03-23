@@ -260,6 +260,48 @@ def create_mcp_server():
             return f"Workflow failed: {e}"
 
     # -----------------------------------------------------------------------
+    # Harvest tools
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_harvest(
+        target: str,
+        compare: bool = True,
+        depth: str = "quick",
+        api_key: str = "",
+    ) -> str:
+        """Scan an external GitHub repo and extract learnable patterns.
+
+        Clones the repo, runs anchormd analysis, extracts architecture,
+        dependencies, testing patterns, and CI setup. Optionally compares
+        against our projects and stores findings in memory.
+
+        Args:
+            target: GitHub repo URL or username/repo (e.g., 'fastapi/fastapi').
+            compare: Compare against our projects (default True).
+            depth: Scan depth: 'quick' (shallow clone) or 'deep' (full clone).
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.harvest import harvest_repo
+
+        try:
+            result = harvest_repo(
+                target=target,
+                compare=compare,
+                depth=depth,
+                memory_layer=memory,
+            )
+            return json.dumps(result.to_dict(), indent=2)
+        except (ValueError, RuntimeError) as e:
+            return f"Harvest failed: {e}"
+        except Exception as e:
+            return f"Harvest error: {e}"
+
+    # -----------------------------------------------------------------------
     # Self-improvement tools
     # -----------------------------------------------------------------------
 

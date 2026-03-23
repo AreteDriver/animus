@@ -1007,7 +1007,13 @@ def create_default_registry(security_config=None) -> ToolRegistry:
     registry = ToolRegistry()
     for tool in BUILTIN_TOOLS:
         registry.register(tool)
-    logger.info(f"Created default registry with {len(BUILTIN_TOOLS)} tools")
+
+    # Register harvest tool
+    from animus.harvest import HARVEST_TOOL
+
+    registry.register(HARVEST_TOOL)
+
+    logger.info(f"Created default registry with {len(registry.list_tools())} tools")
     return registry
 
 
