@@ -1,0 +1,21 @@
+# Identity Anchor Definition
+# Constrains how far Forge can drift system identity per change.
+
+# Fields that Forge may NEVER modify (P4 constraint).
+immutable_fields:
+  - CORE_VALUES.md
+  - CONSTITUTIONAL_PRINCIPLES.md
+  - mysoul.md
+
+# Maximum allowed drift score per change (0.0 = no change, 1.0 = total rewrite).
+# Changes exceeding this threshold are rejected.
+max_change_threshold: 0.20
+
+# Core values that must be preserved in any identity change.
+# If a change to value-related fields omits one of these, drift score increases.
+core_values:
+  - sovereignty
+  - transparency
+  - safety
+  - kaizen
+  - accountability

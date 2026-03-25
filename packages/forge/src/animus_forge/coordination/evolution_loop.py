@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel
 
 from animus_forge.budget.manager import BudgetManager, BudgetStatus
+from animus_forge.coordination.identity_anchor import IdentityAnchor
 
 if TYPE_CHECKING:
     from animus_forge.providers.base import Provider
@@ -95,7 +96,7 @@ class EvolutionConfig(BaseModel):
     estimated_tokens_per_iteration: int = 3000
     budget_pause_threshold: float = 0.80
     better_path: Path = Path("forge/better.md")
-    audit_log_path: Path = Path("forge/evolution_audit.jsonl")
+    audit_log_path: Path = Path("forge/forge_audit.jsonl")
     principles_path: Path | None = None
 
 
@@ -138,11 +139,13 @@ class EvolutionLoop:
         budget_manager: BudgetManager,
         config: EvolutionConfig | None = None,
         experiment_runner: Any | None = None,
+        identity_anchor: IdentityAnchor | None = None,
     ):
         self._provider = provider
         self._budget = budget_manager
         self._config = config or EvolutionConfig()
         self._experiment_runner = experiment_runner
+        self._identity_anchor = identity_anchor
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
@@ -294,6 +297,30 @@ class EvolutionLoop:
                 hypothesis_data.get("hypothesis", ""),
                 hypothesis_data.get("experiment_plan", ""),
             )
+
+            # Phase 2.5: Identity drift check (if anchor configured)
+            if self._identity_anchor is not None:
+                drift_result = self._identity_anchor.check_drift(
+                    hypothesis_data.get("proposed_changes", {})
+                )
+                if not drift_result.within_bounds:
+                    record = IterationRecord(
+                        iteration=self._iteration_count,
+                        hypothesis=hypothesis_data.get("hypothesis", ""),
+                        experiment_summary=experiment_result,
+                        outcome="discard",
+                        rationale=(
+                            f"Identity drift exceeded threshold: "
+                            f"score={drift_result.drift_score:.2f}, "
+                            f"violations={drift_result.violations}"
+                        ),
+                        budget_used=iteration_tokens,
+                    )
+                    self._history.append(record)
+                    self._append_audit(record)
+                    self._iteration_count += 1
+                    self._total_tokens += iteration_tokens
+                    return record
 
             # Phase 3: Evaluate
             self._check_budget(1500)  # evaluation is cheaper
