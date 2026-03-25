@@ -2217,13 +2217,25 @@ class TestSandboxCoverage:
                 sb,
                 "run_lint",
                 new_callable=AsyncMock,
-                return_value=SandboxResult(status=SandboxStatus.FAILED, lint_passed=False),
+                return_value=SandboxResult(
+                    status=SandboxStatus.FAILED,
+                    lint_passed=False,
+                    lint_output="Found 3 errors",
+                ),
             ),
             patch.object(
                 sb,
                 "run_tests",
                 new_callable=AsyncMock,
                 return_value=SandboxResult(status=SandboxStatus.SUCCESS, tests_passed=True),
+            ),
+            patch.object(
+                sb,
+                "_run_command",
+                new_callable=AsyncMock,
+                return_value=subprocess.CompletedProcess(
+                    args=[], returncode=0, stdout="", stderr=""
+                ),
             ),
         ):
             result = await sb.validate_changes()
@@ -2641,11 +2653,18 @@ class TestOrchestratorCoverage:
         provider.complete = AsyncMock(return_value='{"new.py": "content"}')
         orch = self._make_orch(tmp_path, provider=provider)
 
+        suggestion = ImprovementSuggestion(
+            id="s1",
+            category=ImprovementCategory.REFACTORING,
+            title="Refactor code",
+            description="Improve structure",
+            affected_files=["nonexistent.py"],
+        )
         plan = ImprovementPlan(
             id="p1",
             title="T",
             description="D",
-            suggestions=[],
+            suggestions=[suggestion],
             implementation_steps=[],
             estimated_files=["nonexistent.py"],
             estimated_lines=5,
@@ -2669,11 +2688,18 @@ class TestOrchestratorCoverage:
         )
         orch = SelfImproveOrchestrator(codebase_path=tmp_path, provider=provider, config=config)
 
+        suggestion = ImprovementSuggestion(
+            id="s1",
+            category=ImprovementCategory.REFACTORING,
+            title="Refactor code",
+            description="Improve structure",
+            affected_files=["safe.py"],
+        )
         plan = ImprovementPlan(
             id="p1",
             title="T",
             description="D",
-            suggestions=[],
+            suggestions=[suggestion],
             implementation_steps=[],
             estimated_files=["safe.py"],
             estimated_lines=5,
@@ -2707,11 +2733,18 @@ class TestOrchestratorCoverage:
         provider.complete = AsyncMock(return_value='{"bad.py": "new"}')
         orch = self._make_orch(tmp_path, provider=provider)
 
+        suggestion = ImprovementSuggestion(
+            id="s1",
+            category=ImprovementCategory.REFACTORING,
+            title="Refactor code",
+            description="Improve structure",
+            affected_files=["bad.py"],
+        )
         plan = ImprovementPlan(
             id="p1",
             title="T",
             description="D",
-            suggestions=[],
+            suggestions=[suggestion],
             implementation_steps=[],
             estimated_files=["bad.py"],
             estimated_lines=5,
