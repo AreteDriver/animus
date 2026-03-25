@@ -26,7 +26,7 @@ try:
     _soft, hard = resource.getrlimit(resource.RLIMIT_AS)
     _limit = _MEMORY_LIMIT_GB * 1024 * 1024 * 1024
     resource.setrlimit(resource.RLIMIT_AS, (_limit, hard))
-except (ValueError, resource.error):
+except (OSError, ValueError):
     pass  # Some environments don't support RLIMIT_AS
 
 

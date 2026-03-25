@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import json
-import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 
@@ -18,7 +17,6 @@ from animus_forge.coordination.evolution_loop import (
     EvolutionLoop,
     IterationRecord,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -75,24 +73,28 @@ def mock_provider() -> MagicMock:
 
 def _make_hypothesis_response(tokens: int = 100) -> FakeCompletionResponse:
     return FakeCompletionResponse(
-        content=json.dumps({
-            "hypothesis": "Caching repeated LLM calls will reduce execution time",
-            "experiment_plan": "Add memoization to provider.complete() for identical prompts",
-            "expected_outcome": "10% fewer LLM calls on repeated workflows",
-            "estimated_tokens": 500,
-        }),
+        content=json.dumps(
+            {
+                "hypothesis": "Caching repeated LLM calls will reduce execution time",
+                "experiment_plan": "Add memoization to provider.complete() for identical prompts",
+                "expected_outcome": "10% fewer LLM calls on repeated workflows",
+                "estimated_tokens": 500,
+            }
+        ),
         tokens_used=tokens,
     )
 
 
 def _make_eval_response(outcome: str = "keep", tokens: int = 80) -> FakeCompletionResponse:
     return FakeCompletionResponse(
-        content=json.dumps({
-            "outcome": outcome,
-            "rationale": "Caching reduced calls by 15%, exceeding target",
-            "confidence": 0.85,
-            "suggestions_for_next": "Try cache invalidation strategies",
-        }),
+        content=json.dumps(
+            {
+                "outcome": outcome,
+                "rationale": "Caching reduced calls by 15%, exceeding target",
+                "confidence": 0.85,
+                "suggestions_for_next": "Try cache invalidation strategies",
+            }
+        ),
         tokens_used=tokens,
     )
 
@@ -159,12 +161,11 @@ class TestEvolutionLoopInit:
         assert s["iteration"] == 0
         assert s["max_iterations"] == 10
 
-    def test_load_custom_principles(self, mock_provider, mock_budget, tmp_better, tmp_audit, tmp_path):
+    def test_load_custom_principles(
+        self, mock_provider, mock_budget, tmp_better, tmp_audit, tmp_path
+    ):
         principles_file = tmp_path / "principles.md"
-        principles_file.write_text(
-            "### P1 — Sovereignty\n"
-            "### P2 — Continuity\n"
-        )
+        principles_file.write_text("### P1 — Sovereignty\n### P2 — Continuity\n")
         config = EvolutionConfig(
             enabled=True,
             better_path=tmp_better,
@@ -297,6 +298,7 @@ class TestBudgetEnforcement:
 
     def test_budget_exceeded_halts_loop(self, mock_provider, mock_budget, tmp_better, tmp_audit):
         from animus_forge.budget.manager import BudgetStatus
+
         type(mock_budget).status = PropertyMock(return_value=BudgetStatus.EXCEEDED)
         loop = _make_loop(mock_provider, mock_budget, tmp_better, tmp_audit)
         assert loop._can_continue() is False
@@ -317,7 +319,10 @@ class TestExperimentRunner:
             _make_eval_response(),
         ]
         loop = _make_loop(
-            mock_provider, mock_budget, tmp_better, tmp_audit,
+            mock_provider,
+            mock_budget,
+            tmp_better,
+            tmp_audit,
             experiment_runner=runner,
         )
         record = loop.run_one()
@@ -332,7 +337,10 @@ class TestExperimentRunner:
             _make_eval_response(),
         ]
         loop = _make_loop(
-            mock_provider, mock_budget, tmp_better, tmp_audit,
+            mock_provider,
+            mock_budget,
+            tmp_better,
+            tmp_audit,
             experiment_runner=bad_runner,
         )
         record = loop.run_one()
@@ -411,7 +419,9 @@ class TestJsonParsing:
         result = loop._parse_json('Here is the result:\n{"key": "value"}\nDone.')
         assert result == {"key": "value"}
 
-    def test_parse_invalid_returns_fallback(self, mock_provider, mock_budget, tmp_better, tmp_audit):
+    def test_parse_invalid_returns_fallback(
+        self, mock_provider, mock_budget, tmp_better, tmp_audit
+    ):
         loop = _make_loop(mock_provider, mock_budget, tmp_better, tmp_audit)
         result = loop._parse_json("not json at all")
         assert result["hypothesis"] == "not json at all"

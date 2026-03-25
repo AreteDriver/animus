@@ -7,7 +7,7 @@ and that each degrades gracefully when its component fails.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -34,7 +34,6 @@ async def _run_lifespan(extra_patches=None):
     without a real server. Instead, we directly execute the agent init code
     paths that the lifespan would run.
     """
-    import os
 
     # Simulate the agent infrastructure initialization from lifespan lines 241-305
     try:

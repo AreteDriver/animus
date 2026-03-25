@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
+from unittest.mock import AsyncMock, MagicMock
 
 from animus_bootstrap.gateway.cognitive import HybridBackend
 from animus_bootstrap.gateway.cognitive_types import CognitiveResponse
@@ -27,7 +25,8 @@ class TestHybridClassification:
         ollama = MagicMock()
         hybrid = HybridBackend(anthropic_backend=anthropic, ollama_backend=ollama)
 
-        backend, reason = hybrid._classify_query(_make_messages("animus self improvement suggestions?"))
+        msgs = _make_messages("animus self improvement suggestions?")
+        backend, reason = hybrid._classify_query(msgs)
         assert backend is anthropic
         assert "animus" in reason
 
@@ -36,7 +35,8 @@ class TestHybridClassification:
         ollama = MagicMock()
         hybrid = HybridBackend(anthropic_backend=anthropic, ollama_backend=ollama)
 
-        backend, reason = hybrid._classify_query(_make_messages("analyze the architecture of this system"))
+        msgs = _make_messages("analyze the architecture of this system")
+        backend, reason = hybrid._classify_query(msgs)
         assert backend is anthropic
         assert "analyze" in reason or "architecture" in reason
 
@@ -71,9 +71,7 @@ class TestHybridClassification:
         ollama = MagicMock()
         hybrid = HybridBackend(anthropic_backend=None, ollama_backend=ollama)
 
-        backend, reason = hybrid._classify_query(
-            _make_messages("analyze the architecture")
-        )
+        backend, reason = hybrid._classify_query(_make_messages("analyze the architecture"))
         assert backend is ollama
         assert "unavailable" in reason
 
@@ -146,9 +144,7 @@ class TestHybridGenerateResponse:
         ollama.generate_response = AsyncMock(return_value="ollama only")
 
         hybrid = HybridBackend(anthropic_backend=None, ollama_backend=ollama)
-        result = _run(
-            hybrid.generate_response(_make_messages("analyze the architecture"))
-        )
+        result = _run(hybrid.generate_response(_make_messages("analyze the architecture")))
 
         assert result == "ollama only"
         ollama.generate_response.assert_awaited_once()
@@ -178,9 +174,7 @@ class TestHybridGenerateStructured:
         ollama.generate_structured = AsyncMock(return_value=fallback)
 
         hybrid = HybridBackend(anthropic_backend=anthropic, ollama_backend=ollama)
-        result = _run(
-            hybrid.generate_structured(_make_messages("evaluate my tools"))
-        )
+        result = _run(hybrid.generate_structured(_make_messages("evaluate my tools")))
 
         assert result.text == "ollama fallback"
         ollama.generate_structured.assert_awaited_once()

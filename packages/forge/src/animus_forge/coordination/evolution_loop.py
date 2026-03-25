@@ -21,7 +21,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from animus_forge.budget.manager import BudgetManager, BudgetStatus
 
@@ -230,7 +230,9 @@ class EvolutionLoop:
         """Background loop. Runs iterations until halt condition."""
         while not self._stop_event.is_set():
             if self._iteration_count >= self._config.max_iterations:
-                logger.info("Evolution loop: max iterations reached (%d)", self._config.max_iterations)
+                logger.info(
+                    "Evolution loop: max iterations reached (%d)", self._config.max_iterations
+                )
                 break
 
             if not self._can_continue():
@@ -248,18 +250,24 @@ class EvolutionLoop:
             except Exception:
                 logger.exception("Evolution loop: iteration %d failed", self._iteration_count)
                 # Log the error but don't crash the loop
-                self._append_audit(IterationRecord(
-                    iteration=self._iteration_count,
-                    hypothesis="(failed to generate)",
-                    experiment_summary="(iteration error)",
-                    outcome="error",
-                    rationale="Unhandled exception — see logs",
-                    budget_used=0,
-                ))
+                self._append_audit(
+                    IterationRecord(
+                        iteration=self._iteration_count,
+                        hypothesis="(failed to generate)",
+                        experiment_summary="(iteration error)",
+                        outcome="error",
+                        rationale="Unhandled exception — see logs",
+                        budget_used=0,
+                    )
+                )
                 self._iteration_count += 1
 
         self._stop_event.set()
-        logger.info("Evolution loop exited: %d iterations, %d tokens", self._iteration_count, self._total_tokens)
+        logger.info(
+            "Evolution loop exited: %d iterations, %d tokens",
+            self._iteration_count,
+            self._total_tokens,
+        )
 
     def _can_continue(self) -> bool:
         """Check budget and threshold conditions."""
