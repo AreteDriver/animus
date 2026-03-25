@@ -8,6 +8,7 @@ Auth: Set ANIMUS_MCP_API_KEY env var to require authentication.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 
@@ -380,8 +381,6 @@ def create_mcp_server():
         if auth_err:
             return auth_err
 
-        import asyncio
-
         from animus.harvest_watchlist import run_watchlist_scan
 
         interval = interval_hours if interval_hours > 0 else None
@@ -419,7 +418,6 @@ def create_mcp_server():
         if auth_err:
             return auth_err
 
-        import asyncio
         from pathlib import Path
 
         cpath = Path(codebase_path)
