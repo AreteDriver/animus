@@ -218,6 +218,17 @@ class AnimusBot(discord.Client):
     # -------------------------------------------------------------------
 
     async def on_message(self, message: discord.Message) -> None:
+        # Debug: log all incoming messages
+        parent_id = getattr(message.channel, "parent_id", None)
+        logger.info(
+            "on_message: channel=%s (type=%s, parent=%s) author=%s content=%s",
+            message.channel.id,
+            type(message.channel).__name__,
+            parent_id,
+            message.author,
+            message.content[:50] if message.content else "<empty>",
+        )
+
         # Ignore own messages and other bots
         if message.author.bot:
             return

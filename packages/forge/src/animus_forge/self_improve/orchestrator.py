@@ -547,10 +547,10 @@ Output ONLY the FILE: markers and code blocks. No other text."""
         else:
             # Generic fallback with truncated file contents
             fallback_text = "\n\n".join(
-                f"=== {path} ===\n{content[:4000]}"
-                for path, content in file_full_contents.items()
+                f"=== {path} ===\n{content[:4000]}" for path, content in file_full_contents.items()
             )
-            prompt = f"""You are implementing code improvements for a Python project.
+            prompt = (
+                f"""You are implementing code improvements for a Python project.
 
 ## Task: {plan.title}
 {plan.description}
@@ -573,7 +573,9 @@ FILE: {example_file}
 complete file content
 ```
 
-Output ONLY FILE: markers and code blocks. No other text."""""
+Output ONLY FILE: markers and code blocks. No other text."""
+                ""
+            )
 
         try:
             messages = [
@@ -719,11 +721,16 @@ Output ONLY FILE: markers and code blocks. No other text."""""
                     # Ask LLM for a one-line module docstring
                     if self.provider:
                         resp = await self.provider.complete(
-                            [{"role": "user", "content": (
-                                f"Write a one-line Python module docstring for a file named "
-                                f"'{file_path}'. Return ONLY the docstring text (no quotes), "
-                                f"nothing else. Example: Utilities for data processing."
-                            )}],
+                            [
+                                {
+                                    "role": "user",
+                                    "content": (
+                                        f"Write a one-line Python module docstring for a file named "
+                                        f"'{file_path}'. Return ONLY the docstring text (no quotes), "
+                                        f"nothing else. Example: Utilities for data processing."
+                                    ),
+                                }
+                            ],
                             max_tokens=100,
                         )
                         docstring_text = resp.strip().strip('"').strip("'")
@@ -753,13 +760,18 @@ Output ONLY FILE: markers and code blocks. No other text."""""
                             # Ask LLM for the docstring
                             if self.provider:
                                 # Show the function signature + first 5 body lines
-                                func_context = "\n".join(lines[i:i + 6])
+                                func_context = "\n".join(lines[i : i + 6])
                                 resp = await self.provider.complete(
-                                    [{"role": "user", "content": (
-                                        f"Write a concise one-line Python docstring for this function. "
-                                        f"Return ONLY the docstring text (no triple quotes), nothing else.\n\n"
-                                        f"{func_context}"
-                                    )}],
+                                    [
+                                        {
+                                            "role": "user",
+                                            "content": (
+                                                f"Write a concise one-line Python docstring for this function. "
+                                                f"Return ONLY the docstring text (no triple quotes), nothing else.\n\n"
+                                                f"{func_context}"
+                                            ),
+                                        }
+                                    ],
                                     max_tokens=100,
                                 )
                                 docstring_text = resp.strip().strip('"').strip("'")
@@ -882,13 +894,19 @@ Output ONLY FILE: markers and code blocks. No other text."""""
                         match_len = 0
                         for j, old_line in enumerate(old_lines):
                             if line_idx + j < len(content_lines):
-                                if " ".join(old_line.split()) == " ".join(content_lines[line_idx + j].split()):
+                                if " ".join(old_line.split()) == " ".join(
+                                    content_lines[line_idx + j].split()
+                                ):
                                     match_len += 1
                         if match_len >= len(old_lines) * 0.7:  # 70% line match threshold
-                            actual_old = "\n".join(content_lines[line_idx:line_idx + len(old_lines)])
+                            actual_old = "\n".join(
+                                content_lines[line_idx : line_idx + len(old_lines)]
+                            )
                             content = content.replace(actual_old, new, 1)
                             applied += 1
-                            logger.info(f"Fuzzy matched {match_len}/{len(old_lines)} lines in {file_path}")
+                            logger.info(
+                                f"Fuzzy matched {match_len}/{len(old_lines)} lines in {file_path}"
+                            )
                             break
                 else:
                     logger.warning(f"Could not find match in {file_path}: {old[:60]}...")

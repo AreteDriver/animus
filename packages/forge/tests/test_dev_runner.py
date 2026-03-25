@@ -82,7 +82,11 @@ class TestRunnerNormalExecution:
 
         mock_runner_instance.run.assert_awaited_once()
         call_kwargs = mock_runner_instance.run.call_args
-        assert call_kwargs.args[0] == "builder" or call_kwargs.kwargs.get("agent") == "builder" or call_kwargs[0][0] == "builder"
+        assert (
+            call_kwargs.args[0] == "builder"
+            or call_kwargs.kwargs.get("agent") == "builder"
+            or call_kwargs[0][0] == "builder"
+        )
 
     def test_runner_uses_specified_role(self):
         """--role tester routes to the tester agent."""

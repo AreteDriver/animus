@@ -117,9 +117,7 @@ class ReactFlowExecutor:
         Returns:
             ExecutionResult with outputs and status
         """
-        return asyncio.run(
-            self.execute_async(graph, variables, execution_id)
-        )
+        return asyncio.run(self.execute_async(graph, variables, execution_id))
 
     async def execute_async(
         self,

@@ -268,9 +268,7 @@ async def lifespan(app: FastAPI):
     try:
         from animus_forge.agents.task_runner import AgentTaskRunner
 
-        _tr_provider = create_agent_provider(
-            os.environ.get("DEFAULT_PROVIDER", "ollama")
-        )
+        _tr_provider = create_agent_provider(os.environ.get("DEFAULT_PROVIDER", "ollama"))
         _tr_registry = None
         try:
             from animus_forge.tools.registry import ForgeToolRegistry

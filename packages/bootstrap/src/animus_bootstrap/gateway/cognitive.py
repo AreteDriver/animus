@@ -381,9 +381,7 @@ class HybridBackend:
         self._anthropic = anthropic_backend
         self._ollama = ollama_backend
         if anthropic_backend is None:
-            logger.warning(
-                "HybridBackend: no Anthropic key, all queries route to ollama"
-            )
+            logger.warning("HybridBackend: no Anthropic key, all queries route to ollama")
 
     def _classify_query(
         self, messages: list[dict]
@@ -469,8 +467,7 @@ class HybridBackend:
                 )
             except Exception:
                 logger.warning(
-                    "HybridBackend: anthropic structured failed, "
-                    "falling back to ollama",
+                    "HybridBackend: anthropic structured failed, falling back to ollama",
                     exc_info=True,
                 )
                 return await self._ollama.generate_structured(

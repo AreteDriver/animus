@@ -106,7 +106,9 @@ class TestEvolutionLoopOllama:
         print(f"Tokens used: {record.budget_used}")
         print(f"Experiment: {record.experiment_summary[:200]}")
 
-    def test_two_iterations_with_history(self, ollama_provider, budget_manager, better_md, audit_log):
+    def test_two_iterations_with_history(
+        self, ollama_provider, budget_manager, better_md, audit_log
+    ):
         """Verify the loop passes prior results to subsequent iterations."""
         from animus_forge.coordination.evolution_loop import EvolutionConfig, EvolutionLoop
 

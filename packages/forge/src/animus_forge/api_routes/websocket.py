@@ -102,9 +102,7 @@ async def websocket_agents(
     _cb_registered = False
     if broadcaster is not None:
         try:
-            broadcaster._agent_ws_callbacks = getattr(
-                broadcaster, "_agent_ws_callbacks", []
-            )
+            broadcaster._agent_ws_callbacks = getattr(broadcaster, "_agent_ws_callbacks", [])
             broadcaster._agent_ws_callbacks.append(on_agent_event)
             _cb_registered = True
         except Exception:
@@ -151,13 +149,15 @@ async def websocket_agents(
                         if prev != current:
                             seen_states[run.run_id] = current
                             try:
-                                queue.put_nowait({
-                                    "type": "agent_run",
-                                    "run_id": run.run_id,
-                                    "agent": run.agent,
-                                    "status": current,
-                                    "task": run.task[:200],
-                                })
+                                queue.put_nowait(
+                                    {
+                                        "type": "agent_run",
+                                        "run_id": run.run_id,
+                                        "agent": run.agent,
+                                        "status": current,
+                                        "task": run.task[:200],
+                                    }
+                                )
                             except asyncio.QueueFull:
                                 pass
                 except asyncio.CancelledError:

@@ -691,9 +691,7 @@ class TestGraphExecutorCoverage97:
             from animus_forge.workflow.graph_walker import GraphWalker
 
             walker = GraphWalker(graph)
-            result = asyncio.run(
-                executor._execute_node(node, {}, walker, "exec-1")
-            )
+            result = asyncio.run(executor._execute_node(node, {}, walker, "exec-1"))
         assert result.status == NodeStatus.FAILED
         error_cb.assert_called_once()
 
@@ -715,9 +713,7 @@ class TestGraphExecutorCoverage97:
             from animus_forge.workflow.graph_walker import GraphWalker
 
             walker = GraphWalker(graph)
-            result = asyncio.run(
-                executor._execute_node(node, {}, walker, "exec-1")
-            )
+            result = asyncio.run(executor._execute_node(node, {}, walker, "exec-1"))
         assert result.tokens_used == 42
 
 

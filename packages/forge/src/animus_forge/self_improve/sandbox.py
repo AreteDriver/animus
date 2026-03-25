@@ -289,7 +289,9 @@ class Sandbox:
 
             failing_files = set(re.findall(r"FAILED ([\w/]+\.py)::", test_result.test_output or ""))
             if failing_files:
-                baseline_cmd = [sys.executable, "-m", "pytest", "-v", "--tb=line"] + list(failing_files)
+                baseline_cmd = [sys.executable, "-m", "pytest", "-v", "--tb=line"] + list(
+                    failing_files
+                )
                 baseline = await self._run_command(baseline_cmd, cwd=str(self.source_path))
                 pre_failures = self._count_failures(baseline.stdout)
                 if post_failures <= pre_failures:
