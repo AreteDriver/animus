@@ -1,26 +1,27 @@
 # CLAUDE.md — Animus Monorepo
 
-> Personal AI exocortex with multi-agent orchestration and coordination protocol.
+## Project Overview
 
-## Quick Reference
+Personal AI exocortex with multi-agent orchestration and coordination protocol.
 
 - **Version**: 2.7.0
 - **Python**: >=3.10 (Core), >=3.11 (Bootstrap), >=3.12 (Forge)
-- **Layout**: Multi-package monorepo under `packages/`
-- **Tests**: 14,596 across 4 packages
+- **Layout**: Multi-package monorepo — `packages/core`, `packages/forge`, `packages/quorum`, `packages/bootstrap`, `packages/pwa`
+- **Tests**: 14,596+ across 4 packages (Core 2109, Forge 9720, Quorum 926, Bootstrap 1841+)
+- **Coverage**: 97% per package
 - **License**: MIT
 
 ## Non-Negotiables
 
 Read these before every session. No exceptions.
 
-1. **Never bypass budget enforcement.** All LLM calls from Forge must pass through `budget/manager.py`. The `BudgetManager` is wired into `WorkflowExecutor` — do not circumvent it with direct provider calls.
+1. **Never bypass budget enforcement.** All LLM calls from Forge must pass through `packages/forge/src/animus_forge/budget/manager.py`. The `BudgetManager` is wired into `WorkflowExecutor` — do not circumvent it with direct provider calls.
 2. **Never modify identity files without approval gates.** Bootstrap's `IdentityProposalManager` (20% change threshold) is the only mutation path. Core's `CORE_VALUES.md` is immutable.
 3. **Never delete memory or identity files.** Deprecate and archive instead. Memory is append-heavy by design.
-4. **Audit log is sacred.** Forge actions emit to structured logs via `monitoring/`. This feeds the reflection loop and is the ground truth for spend tracking.
+4. **Audit log is sacred.** Forge actions emit to structured logs via `packages/forge/src/animus_forge/monitoring/`. This feeds the reflection loop and is the ground truth for spend tracking.
 5. **Quorum IntentNodes require signed writes.** Use `convergent.intent` APIs — don't write intent state directly.
 6. **No unregistered background threads.** If Forge spawns workers, they must be trackable and cleanly terminable.
-7. **Self-improve targets YAML workflows by default.** Python code changes require the full sandbox + approval + rollback pipeline in `self_improve/orchestrator.py`. YAML evolution is the safe fast path.
+7. **Self-improve targets YAML workflows by default.** Python code changes require the full sandbox + approval + rollback pipeline in `packages/forge/src/animus_forge/self_improve/orchestrator.py`. YAML evolution is the safe fast path.
 8. **Constitutional principles (P1-P9) constrain all agent behavior.** See `docs/CONSTITUTIONAL_PRINCIPLES.md`. Forge reads these to bound its actions.
 
 ## Monorepo Structure
@@ -94,9 +95,9 @@ Each package has its own ruff config in its pyproject.toml.
 | Package | PyPI Name | Import | Dependencies |
 |---------|-----------|--------|--------------|
 | Core | animus-core | `import animus` | ollama, chromadb, pyyaml, pydantic, rich |
-| Forge | animus-forge | `import animus_forge` | openai, anthropic, fastapi, convergentai, ... |
+| Forge | animus-forge | `import animus_forge` | openai, anthropic, convergentai, typer, rich |
 | Quorum | convergentAI | `import convergent` | zero production deps |
-| Bootstrap | animus-bootstrap | `import animus_bootstrap` | typer, rich, fastapi, httpx, pydantic |
+| Bootstrap | animus-bootstrap | `import animus_bootstrap` | typer, rich, httpx, pydantic |
 
 ## Cross-Package Dependencies
 
@@ -113,7 +114,7 @@ Each package has its own ruff config in its pyproject.toml.
 
 **Quorum** (`packages/quorum/python/convergent/`) — Coordination protocol library. Intent graph, constraints, contracts, economics, versioned graph, triumvirate voting, stigmergy, flocking, signal bus, phi-weighted scoring, GorgonBridge integration, health dashboard, cycle detection, event log. Optional Rust PyO3 for performance.
 
-**Bootstrap** (`packages/bootstrap/src/animus_bootstrap/`) — Install daemon, onboarding wizard, local dashboard, message gateway, intelligence layer, and persona system. Phase 1: one-command install, Rich-based setup wizard (8 steps), FastAPI+HTMX dashboard at localhost:7700, systemd/launchd service management, auto-updater. Phase 2: message gateway with 8 channel adapters (Telegram, Discord, Slack, Matrix, WhatsApp, Signal, Email, WebChat), cross-channel sessions, cognitive backends (Anthropic/Ollama/Forge), middleware (auth/ratelimit/logging). Phase 3: intelligence layer with memory integration (SQLite FTS5 + ChromaDB/Animus stubs), tool executor (8 built-in tools + MCP bridge + permission system), proactive engine (scheduler, quiet hours, 3 built-in checks), automation pipeline (triggers/conditions/actions with SQLite persistence), IntelligentRouter (memory-enriched + tool loop), intelligence dashboard (/tools, /automations, /activity). Phase 4: persona & voice layer with PersonaEngine (registry + channel routing), VoiceConfig (6 presets + time shifts), KnowledgeDomainRouter (9 domains), ContextAdapter (time/channel/mood), SQLite persona persistence, persona dashboard (/personas, /routing). Runtime wiring (AnimusRuntime orchestrator, lifespan, health endpoint). Native Anthropic tool_use (CognitiveResponse, ToolCall, multi-turn cognitive loop). Phase 5: self-improvement loop with self-heal proactive check (auto-detects tool failures/slow/errors every 6h), ImprovementSandbox (safe YAML config + identity changes with backup/rollback), impact measurement (baseline/post metrics, -100 to +100 score), 37 built-in tools, 6 proactive checks.
+**Bootstrap** (`packages/bootstrap/src/animus_bootstrap/`) — Install daemon, onboarding wizard, local dashboard, message gateway, intelligence layer, and persona system. Phase 1: one-command install, Rich-based setup wizard (8 steps), HTMX dashboard at localhost:7700, systemd/launchd service management, auto-updater. Phase 2: message gateway with 8 channel adapters (Telegram, Discord, Slack, Matrix, WhatsApp, Signal, Email, WebChat), cross-channel sessions, cognitive backends (Anthropic/Ollama/Forge), middleware (auth/ratelimit/logging). Phase 3: intelligence layer with memory integration (SQLite FTS5 + ChromaDB/Animus stubs), tool executor (8 built-in tools + MCP bridge + permission system), proactive engine (scheduler, quiet hours, 3 built-in checks), automation pipeline (triggers/conditions/actions with SQLite persistence), IntelligentRouter (memory-enriched + tool loop), intelligence dashboard (/tools, /automations, /activity). Phase 4: persona & voice layer with PersonaEngine (registry + channel routing), VoiceConfig (6 presets + time shifts), KnowledgeDomainRouter (9 domains), ContextAdapter (time/channel/mood), SQLite persona persistence, persona dashboard (/personas, /routing). Runtime wiring (AnimusRuntime orchestrator, lifespan, health endpoint). Native Anthropic tool_use (CognitiveResponse, ToolCall, multi-turn cognitive loop). Phase 5: self-improvement loop with self-heal proactive check (auto-detects tool failures/slow/errors every 6h), ImprovementSandbox (safe YAML config + identity changes with backup/rollback), impact measurement (baseline/post metrics, -100 to +100 score), 37 built-in tools, 6 proactive checks.
 
 ## Key Files
 
@@ -125,7 +126,7 @@ Each package has its own ruff config in its pyproject.toml.
 - `packages/core/animus/swarm/engine.py` — Lightweight parallel orchestration
 
 ### Forge
-- `packages/forge/src/animus_forge/api.py` — FastAPI app
+- `packages/forge/src/animus_forge/api.py` — HTTP API app
 - `packages/forge/src/animus_forge/cli/main.py` — Typer CLI
 - `packages/forge/src/animus_forge/workflow/executor_core.py` — Workflow executor
 - `packages/forge/src/animus_forge/agents/supervisor.py` — SupervisorAgent
@@ -145,10 +146,67 @@ Each package has its own ruff config in its pyproject.toml.
 | `docs/ARCHITECTURE.md` | System architecture overview |
 | `docs/SAFETY.md` | Security layer design |
 
-## Conventions
+## Common Commands
 
-- Type hints throughout
-- Conventional commits
-- Ruff for linting/formatting (per-package configs)
-- pytest for testing
+```bash
+# Test individual packages
+cd packages/core && pytest tests/ -v
+cd packages/forge && pytest tests/ -v  # MUST run from forge dir (relative paths)
+cd packages/quorum && PYTHONPATH=python pytest tests/ -v
+cd packages/bootstrap && pytest tests/ -v
+
+# Lint + format (always run BOTH)
+ruff check packages/ && ruff format --check packages/
+
+# Install everything for development
+pip install -e "packages/quorum/[dev]" -e "packages/forge/[dev]" -e "packages/core/[dev]" -e "packages/bootstrap/[dev]"
+```
+
+## Coding Standards
+
+- Type hints on all functions
 - Dataclasses in Core, Pydantic in Forge, dataclasses in Quorum
+- Ruff for linting/formatting (per-package configs in pyproject.toml)
+- pytest for testing (97% coverage target per package)
+- `lru_cache` pollution: use `get_settings.cache_clear()` in both setup AND teardown
+- `sys.executable` for subprocess calls (never bare `python`)
+- Forge `Provider.complete()` takes `CompletionRequest`, not raw messages
+- Forge supervisor method is `process_message()`, not `process()`
+
+## Anti-Patterns
+
+- Do NOT bypass `BudgetManager` with direct provider calls
+- Do NOT use bare `python` in subprocess — use `sys.executable`
+- Do NOT modify `CORE_VALUES.md` — it is immutable
+- Do NOT write intent state directly — use `convergent.intent` APIs
+- Do NOT reset fields in `__post_init__` that are set before method entry
+
+## Dependencies
+
+### Core
+ollama, chromadb, pyyaml, pydantic, rich
+
+### Forge
+openai, anthropic, convergentai, typer, rich, pydantic
+
+### Quorum
+Zero production dependencies (pure library)
+
+### Bootstrap
+typer, rich, httpx, pydantic
+
+## Git Conventions
+
+- Conventional commits: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`
+- Run `pytest` + `ruff check` before pushing
+- CI: lint + test-core + test-quorum + test-forge + test-bootstrap + security
+
+## Domain Context
+
+Animus is a personal AI exocortex — a system for augmenting human cognition with persistent memory, multi-agent orchestration, and self-improvement capabilities. Key concepts:
+
+- **Exocortex**: External cognitive system (memory + reasoning + tools)
+- **Forge**: Multi-agent orchestration with budget-managed LLM calls
+- **Quorum**: Coordination protocol for agent consensus (intent graph, triumvirate voting)
+- **Bootstrap**: One-command install with daemon, dashboard, and message gateway
+- **Constitutional Principles**: P1-P9 behavioral constraints on all agents
