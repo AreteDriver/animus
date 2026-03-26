@@ -1304,6 +1304,7 @@ class MemoryLayer:
                 source="learned",
                 confidence=0.9,
                 subtype="consolidated",
+                provenance="consolidation",
             )
 
             # Remove originals and clean up entity references
