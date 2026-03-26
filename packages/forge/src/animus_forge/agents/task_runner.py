@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import re
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -176,8 +177,9 @@ class AgentTaskRunner:
             result.status = "failed"
             result.error = str(e)
             result.duration_ms = int((time.time() - start) * 1000)
-            self._emit_status(task_id, "failed", agent=agent, error=str(e))
-            logger.error("Agent %s task failed: %s", agent, e)
+            safe_agent = re.sub(r"[\x00-\x1f\x7f]", "", agent) if agent else agent
+            self._emit_status(task_id, "failed", agent=safe_agent, error=str(e))
+            logger.error("Agent %s task failed: %s", safe_agent, e)
 
         return result
 

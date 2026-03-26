@@ -47,7 +47,8 @@ def list_processes(
         entries = [p.to_dict() for p in processes[:limit]]
         return {"processes": entries, "total": len(entries)}
     except (ValueError, KeyError) as e:
-        return {"processes": [], "total": 0, "error": str(e)}
+        logger.warning("Invalid process filter: %s", e, exc_info=True)
+        return {"processes": [], "total": 0, "error": "Invalid filter parameter"}
 
 
 @router.get("/processes/{process_id}", responses=AUTH_RESPONSES)
@@ -203,7 +204,8 @@ async def run_agent_task(
                 agent_memory=_get_agent_memory(),
             )
         except Exception as e:
-            return {"error": str(e), "status": "failed"}
+            logger.error("Failed to initialize agent provider: %s", e, exc_info=True)
+            return {"error": "Failed to initialize agent", "status": "failed"}
 
     result = await runner.run(agent, task, use_tools=use_tools)
     return result.to_dict()
@@ -230,7 +232,8 @@ def list_agent_runs(
         entries = [r.to_dict() for r in runs[:limit]]
         return {"runs": entries, "total": len(entries)}
     except (ValueError, KeyError) as e:
-        return {"runs": [], "total": 0, "error": str(e)}
+        logger.warning("Invalid run filter: %s", e, exc_info=True)
+        return {"runs": [], "total": 0, "error": "Invalid filter parameter"}
 
 
 @router.get("/runs/{run_id}", responses=AUTH_RESPONSES)
