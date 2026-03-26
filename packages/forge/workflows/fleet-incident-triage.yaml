@@ -1,0 +1,146 @@
+# Fleet Incident Triage — Full investigation of a persistent outage
+# For services that didn't recover after initial remediation
+#
+# Deeper investigation: logs, metrics, database, recent deploys
+
+name: fleet-incident-triage
+version: 1.0.0
+description: Deep triage of a persistent fleet service outage
+tags: [fleet, remediation, ops, incident]
+
+inputs:
+  alert_file:
+    type: string
+    description: Path to the alert context JSON file
+  service_name:
+    type: string
+    description: Name of the affected service
+  fly_app:
+    type: string
+    description: Fly.io app name
+    default: ""
+
+timeout_seconds: 300
+estimated_tokens: 3000
+
+steps:
+  - id: load_context
+    type: shell
+    description: Load alert context and timeline
+    command: |
+      echo "=== Alert Context ==="
+      cat "${alert_file}"
+      echo ""
+      echo "=== Alert History ==="
+      ls -lt /home/arete/.animus/fleet_alerts/ 2>/dev/null | head -10
+    timeout_seconds: 5
+
+  - id: extended_logs
+    type: shell
+    description: Pull extended logs from Fly.io
+    condition:
+      field: fly_app
+      operator: not_empty
+    command: |
+      echo "=== Last 100 log lines ==="
+      /home/arete/.fly/bin/flyctl logs -a "${fly_app}" --no-tail 2>/dev/null | tail -100
+    timeout_seconds: 20
+    on_failure: skip
+
+  - id: recent_deploys
+    type: shell
+    description: Check recent deployments that might have caused the issue
+    condition:
+      field: fly_app
+      operator: not_empty
+    command: |
+      echo "=== Recent Releases ==="
+      /home/arete/.fly/bin/flyctl releases -a "${fly_app}" 2>/dev/null | head -10
+      echo ""
+      echo "=== Machine Events ==="
+      /home/arete/.fly/bin/flyctl machine list -a "${fly_app}" 2>&1
+    timeout_seconds: 15
+    on_failure: skip
+
+  - id: check_resources
+    type: shell
+    description: Check machine resource utilization
+    condition:
+      field: fly_app
+      operator: not_empty
+    command: |
+      /home/arete/.fly/bin/flyctl status -a "${fly_app}" --json 2>/dev/null | \
+        python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    for m in data.get('Machines', []):
+        print(f\"Machine {m.get('id','?')}: state={m.get('state','?')}, region={m.get('region','?')}\")
+        cfg = m.get('config', {})
+        if 'guest' in cfg:
+            g = cfg['guest']
+            print(f\"  CPU: {g.get('cpus',0)}, Memory: {g.get('memory_mb',0)}MB\")
+except Exception as e:
+    print(f'Parse error: {e}')
+" 2>/dev/null
+    timeout_seconds: 15
+    on_failure: skip
+
+  - id: check_git_recent
+    type: shell
+    description: Check if there were recent code changes to the service
+    command: |
+      # Map service to repo directory
+      case "${service_name}" in
+        benchgoblins_api) REPO="/home/arete/projects/BenchGoblins" ;;
+        gatekeeper_api) REPO="/home/arete/projects/EVE_Gatekeeper" ;;
+        monolith_api) REPO="/home/arete/projects/monolith" ;;
+        witness_api) REPO="/home/arete/projects/witness" ;;
+        frontier_tribe_os) REPO="/home/arete/projects/frontier-tribe-os" ;;
+        aicards_mint) REPO="/home/arete/projects/aicards-tcg" ;;
+        staycards_mint) REPO="/home/arete/projects/straykids-tcg" ;;
+        license_server) REPO="/home/arete/projects/anchormd" ;;
+        *) REPO="" ;;
+      esac
+
+      if [ -n "$REPO" ] && [ -d "$REPO" ]; then
+        echo "=== Last 5 commits ==="
+        git -C "$REPO" log --oneline -5 2>/dev/null
+        echo ""
+        echo "=== Last deploy-related commit ==="
+        git -C "$REPO" log --oneline --all --grep="deploy\|release\|fix" -3 2>/dev/null
+      else
+        echo "No local repo mapped for ${service_name}"
+      fi
+    timeout_seconds: 10
+    on_failure: skip
+
+  - id: triage_report
+    type: ollama
+    description: Generate incident triage report
+    model: qwen2.5:14b
+    prompt: |
+      Generate a concise incident triage report for this persistent fleet outage:
+
+      Service: ${service_name} (Fly app: ${fly_app})
+      Alert: ${load_context}
+      Logs: ${extended_logs}
+      Recent deploys: ${recent_deploys}
+      Resources: ${check_resources}
+      Recent code changes: ${check_git_recent}
+
+      Structure the report as:
+      1. TIMELINE: When it started, what changed
+      2. ROOT CAUSE HYPOTHESIS: Most likely cause based on evidence
+      3. ACTIONS TAKEN: What automated remediation was attempted
+      4. RECOMMENDED NEXT STEPS: What the operator should do
+      5. SEVERITY: Critical/High/Medium
+
+      Keep it actionable and under 200 words.
+    estimated_tokens: 800
+    on_failure: skip
+
+outputs:
+  - triage_report
+  - extended_logs
+  - recent_deploys

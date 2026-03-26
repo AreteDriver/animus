@@ -1,0 +1,74 @@
+# Fleet Service Degraded — Investigate and report
+# Triggered when fleet-monitor detects degraded health fields
+#
+# Less aggressive than fleet-service-down — investigate, don't restart
+
+name: fleet-degraded
+version: 1.0.0
+description: Investigate a degraded fleet service and report findings
+tags: [fleet, remediation, ops]
+
+inputs:
+  alert_file:
+    type: string
+    description: Path to the alert context JSON file
+  service_name:
+    type: string
+    description: Name of the affected service
+  fly_app:
+    type: string
+    description: Fly.io app name (empty if not a Fly service)
+    default: ""
+
+timeout_seconds: 120
+estimated_tokens: 1000
+
+steps:
+  - id: load_context
+    type: shell
+    description: Load alert context
+    command: cat "${alert_file}"
+    timeout_seconds: 5
+
+  - id: recheck_health
+    type: shell
+    description: Re-check the health endpoint for current state
+    command: |
+      HEALTH_URL=$(cat ${alert_file} | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("health_url",""))')
+      if [ -n "$HEALTH_URL" ]; then
+        curl -s --max-time 15 "$HEALTH_URL" 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "Non-JSON or unreachable"
+      fi
+    timeout_seconds: 20
+    on_failure: skip
+
+  - id: check_fly_logs
+    type: shell
+    description: Check recent logs for errors
+    condition:
+      field: fly_app
+      operator: not_empty
+    command: |
+      /home/arete/.fly/bin/flyctl logs -a "${fly_app}" --no-tail 2>/dev/null | grep -i "error\|warn\|fail\|exception" | tail -15
+    timeout_seconds: 15
+    on_failure: skip
+
+  - id: assess
+    type: ollama
+    description: Assess severity and recommend action
+    model: qwen2.5:14b
+    prompt: |
+      A fleet service is degraded (not fully down). Assess the situation:
+
+      Service: ${service_name}
+      Alert context: ${load_context}
+      Current health: ${recheck_health}
+      Error logs: ${check_fly_logs}
+
+      Provide: 1) What specific component is degraded, 2) Is this self-healing or needs intervention,
+      3) Recommended action (monitor/restart/escalate). Keep it under 100 words.
+    estimated_tokens: 300
+    on_failure: skip
+
+outputs:
+  - assess
+  - recheck_health

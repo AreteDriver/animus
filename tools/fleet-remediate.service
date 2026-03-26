@@ -1,0 +1,19 @@
+[Unit]
+Description=Animus Fleet Remediation Runner — process pending fleet alerts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=arete
+WorkingDirectory=/home/arete/projects/animus
+ExecStart=/home/arete/projects/animus/packages/core/.venv/bin/python /home/arete/projects/animus/tools/fleet_remediate.py
+
+# Hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/home/arete/.animus /home/arete/projects/animus
+
+[Install]
+WantedBy=multi-user.target

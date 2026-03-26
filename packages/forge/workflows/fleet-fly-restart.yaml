@@ -1,0 +1,78 @@
+# Fleet Fly.io Restart — Safe restart of a Fly.io application
+# Can be triggered manually or by the remediation runner
+#
+# Handles the common case of Fly.io machines going unresponsive
+
+name: fleet-fly-restart
+version: 1.0.0
+description: Safely restart a Fly.io application with pre/post health checks
+tags: [fleet, remediation, ops, fly]
+
+inputs:
+  fly_app:
+    type: string
+    description: Fly.io application name to restart
+  health_url:
+    type: string
+    description: Health endpoint URL to verify after restart
+    default: ""
+
+timeout_seconds: 180
+estimated_tokens: 500
+
+steps:
+  - id: pre_check
+    type: shell
+    description: Check current machine state before restart
+    command: |
+      echo "=== Machine Status ==="
+      /home/arete/.fly/bin/flyctl status -a "${fly_app}" 2>&1 | head -20
+      echo ""
+      echo "=== Machine List ==="
+      /home/arete/.fly/bin/flyctl machine list -a "${fly_app}" 2>&1
+    timeout_seconds: 15
+    on_failure: skip
+
+  - id: restart
+    type: shell
+    description: Restart all machines
+    command: |
+      /home/arete/.fly/bin/flyctl apps restart "${fly_app}" 2>&1
+    timeout_seconds: 60
+
+  - id: wait_healthy
+    type: shell
+    description: Wait for health endpoint to respond 200
+    depends_on: [restart]
+    command: |
+      HEALTH="${health_url}"
+      if [ -z "$HEALTH" ]; then
+        echo "No health URL provided — skipping verification"
+        exit 0
+      fi
+      for i in 1 2 3 4 5 6; do
+        sleep 10
+        CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$HEALTH" 2>/dev/null)
+        echo "Attempt $i: HTTP $CODE"
+        if [ "$CODE" = "200" ]; then
+          echo "HEALTHY"
+          exit 0
+        fi
+      done
+      echo "STILL_UNHEALTHY after 60s"
+      exit 1
+    timeout_seconds: 90
+    on_failure: skip
+
+  - id: post_check
+    type: shell
+    description: Final machine status after restart
+    depends_on: [wait_healthy]
+    command: |
+      /home/arete/.fly/bin/flyctl status -a "${fly_app}" 2>&1 | head -20
+    timeout_seconds: 15
+    on_failure: skip
+
+outputs:
+  - wait_healthy
+  - post_check

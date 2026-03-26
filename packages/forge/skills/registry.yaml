@@ -165,6 +165,66 @@ skills:
       - github_token
       - github_username
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # FLEET OPERATIONS SKILLS
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - name: fleet_operations
+    path: system/fleet_operations
+    agent: system
+    version: 1.0.0
+    status: active
+    description: |
+      Monitor and remediate fleet services. Health checks, Fly.io restarts,
+      log retrieval, incident triage, and daily health reports.
+      Auto-approve policy for observe/notify/act (restarts). Execute
+      (deploys, config changes) requires approval.
+    capabilities:
+      - check_health
+      - restart_fly_service
+      - get_service_logs
+      - create_alert_task
+      - resolve_alert_task
+      - run_health_report
+      - run_incident_triage
+    dependencies:
+      required: [curl, python3]
+      optional: [flyctl]
+    config_required: []
+    auto_approve:
+      - check_health
+      - get_service_logs
+      - restart_fly_service
+      - create_alert_task
+      - resolve_alert_task
+      - run_health_report
+    require_approval:
+      - run_incident_triage
+
+  - name: service_monitoring
+    path: system/service_monitoring
+    agent: system
+    version: 1.0.0
+    status: active
+    description: |
+      Systemd service management and monitoring. Check service status,
+      view logs, restart services. Used alongside fleet_operations for
+      local service health (fleet-monitor bot, animus discord bot, etc.)
+    capabilities:
+      - check_service_status
+      - view_journal_logs
+      - restart_service
+      - list_services
+    dependencies:
+      required: [systemctl, journalctl]
+      optional: []
+    auto_approve:
+      - check_service_status
+      - view_journal_logs
+      - list_services
+    require_approval:
+      - restart_service
+
 # ═══════════════════════════════════════════════════════════════════════════
 # PLANNED SKILLS (not yet implemented)
 # ═══════════════════════════════════════════════════════════════════════════

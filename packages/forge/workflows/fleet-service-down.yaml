@@ -1,0 +1,116 @@
+# Fleet Service Down — Diagnose and attempt recovery
+# Triggered when fleet-monitor detects a service is DOWN
+#
+# Input: alert context JSON from ~/.animus/fleet_alerts/{task_id}.json
+# Output: diagnosis + remediation result
+
+name: fleet-service-down
+version: 1.0.0
+description: Diagnose a downed fleet service and attempt automated recovery
+tags: [fleet, remediation, ops]
+
+inputs:
+  alert_file:
+    type: string
+    description: Path to the alert context JSON file
+  service_name:
+    type: string
+    description: Name of the affected service
+  fly_app:
+    type: string
+    description: Fly.io app name (empty if not a Fly service)
+    default: ""
+
+timeout_seconds: 300
+estimated_tokens: 2000
+
+steps:
+  - id: load_context
+    type: shell
+    description: Load alert context and check current status
+    command: |
+      cat "${alert_file}"
+      echo "---HEALTH_RECHECK---"
+      curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+        "$(cat ${alert_file} | python3 -c 'import sys,json; print(json.load(sys.stdin).get("health_url",""))')" \
+        2>/dev/null || echo "UNREACHABLE"
+    timeout_seconds: 15
+    on_failure: skip
+
+  - id: check_fly_status
+    type: shell
+    description: Check Fly.io machine status if applicable
+    condition:
+      field: fly_app
+      operator: not_empty
+    command: |
+      /home/arete/.fly/bin/flyctl status -a "${fly_app}" --json 2>/dev/null || echo '{"error": "flyctl failed"}'
+    timeout_seconds: 15
+    on_failure: skip
+
+  - id: check_fly_logs
+    type: shell
+    description: Grab recent Fly.io logs for diagnosis
+    condition:
+      field: fly_app
+      operator: not_empty
+    command: |
+      /home/arete/.fly/bin/flyctl logs -a "${fly_app}" --no-tail 2>/dev/null | tail -30
+    timeout_seconds: 15
+    on_failure: skip
+
+  - id: attempt_restart
+    type: shell
+    description: Restart the Fly.io machine if service is on Fly
+    condition:
+      field: fly_app
+      operator: not_empty
+    command: |
+      echo "Attempting restart of ${fly_app}..."
+      /home/arete/.fly/bin/flyctl apps restart "${fly_app}" 2>&1 || \
+        echo "Restart failed — may need manual intervention"
+    timeout_seconds: 60
+    on_failure: skip
+
+  - id: verify_recovery
+    type: shell
+    description: Wait and re-check health after restart
+    depends_on: [attempt_restart]
+    command: |
+      sleep 15
+      HEALTH_URL=$(cat ${alert_file} | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("health_url",""))')
+      if [ -n "$HEALTH_URL" ]; then
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$HEALTH_URL" 2>/dev/null)
+        echo "Health check after restart: HTTP $HTTP_CODE"
+        if [ "$HTTP_CODE" = "200" ]; then
+          echo "RECOVERY_SUCCESS"
+        else
+          echo "RECOVERY_FAILED — service still returning $HTTP_CODE"
+        fi
+      else
+        echo "NO_HEALTH_URL — cannot verify"
+      fi
+    timeout_seconds: 45
+    on_failure: skip
+
+  - id: summarize
+    type: ollama
+    description: Summarize the incident and actions taken
+    model: qwen2.5:14b
+    prompt: |
+      Summarize this fleet incident in 3-4 sentences:
+      Service: ${service_name}
+      Fly App: ${fly_app}
+      Status check: ${load_context}
+      Fly status: ${check_fly_status}
+      Recent logs: ${check_fly_logs}
+      Restart result: ${attempt_restart}
+      Recovery verification: ${verify_recovery}
+
+      Format: What happened, what was tried, current state, next steps if needed.
+    estimated_tokens: 500
+    on_failure: skip
+
+outputs:
+  - summary
+  - verify_recovery
