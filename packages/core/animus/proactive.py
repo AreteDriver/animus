@@ -166,6 +166,7 @@ class ProactiveEngine:
             ScheduledCheck(name="deadline_scan", interval_minutes=60),
             ScheduledCheck(name="follow_up_scan", interval_minutes=120),
             ScheduledCheck(name="context_refresh", interval_minutes=30),
+            ScheduledCheck(name="fleet_alert_scan", interval_minutes=5),
         ]
 
         self._load_nudges()
@@ -536,6 +537,158 @@ class ProactiveEngine:
         return nudge
 
     # =========================================================================
+    # Fleet Alert Scanner
+    # =========================================================================
+
+    def scan_fleet_alerts(self) -> list[Nudge]:
+        """
+        Scan for pending fleet alerts and run remediation.
+
+        Reads alert context files from ~/.animus/fleet_alerts/,
+        attempts automated remediation (health recheck, Fly.io restart),
+        and emits nudges with the results.
+
+        Returns:
+            List of nudges for alerts that were processed
+        """
+        import subprocess
+        import uuid
+
+        alerts_dir = self.data_dir / "fleet_alerts"
+        if not alerts_dir.exists():
+            return []
+
+        # Load pending alert context files
+        alert_files = [
+            f for f in alerts_dir.glob("*.json") if f.name != "active_alerts.json"
+        ]
+        if not alert_files:
+            return []
+
+        logger.info(f"Fleet alert scan: {len(alert_files)} pending alert(s)")
+
+        nudges = []
+        for alert_file in alert_files:
+            try:
+                alert = json.loads(alert_file.read_text())
+            except (json.JSONDecodeError, OSError):
+                continue
+
+            service = alert.get("display_name", alert.get("service_name", "unknown"))
+            status = alert.get("status", "unknown")
+            health_url = alert.get("health_url", "")
+
+            # Quick health recheck before running full remediation
+            if health_url:
+                recovered = self._check_health(health_url)
+                if recovered:
+                    nudge = Nudge(
+                        id=str(uuid.uuid4()),
+                        nudge_type=NudgeType.PATTERN_INSIGHT,
+                        priority=NudgePriority.LOW,
+                        title=f"Fleet: {service} recovered",
+                        content=f"{service} is back online (was {status}). Auto-resolved.",
+                        created_at=datetime.now(),
+                        expires_at=datetime.now() + timedelta(hours=2),
+                        metadata={"fleet_service": alert.get("service_name"), "action": "auto_resolved"},
+                    )
+                    self._emit_nudge(nudge)
+                    nudges.append(nudge)
+
+                    # Auto-resolve the task and clean up
+                    self._resolve_fleet_task(alert.get("task_id", ""))
+                    alert_file.unlink(missing_ok=True)
+                    continue
+
+            # Service still down — run the remediation runner
+            logger.info(f"Fleet: {service} still {status}, running remediation")
+            try:
+                result = subprocess.run(
+                    [
+                        "python3",
+                        str(Path.home() / "projects" / "animus" / "tools" / "fleet_remediate.py"),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                )
+                output = (result.stdout + result.stderr).strip()
+                remediation_ok = "RECOVERED" in output
+            except (subprocess.TimeoutExpired, OSError) as e:
+                output = str(e)
+                remediation_ok = False
+
+            priority = NudgePriority.URGENT if status == "down" else NudgePriority.HIGH
+            if remediation_ok:
+                priority = NudgePriority.MEDIUM
+
+            nudge = Nudge(
+                id=str(uuid.uuid4()),
+                nudge_type=NudgeType.PATTERN_INSIGHT,
+                priority=priority,
+                title=f"Fleet: {service} {'recovered' if remediation_ok else 'still ' + status}",
+                content=(
+                    f"Remediation {'succeeded' if remediation_ok else 'attempted but service still unhealthy'}.\n"
+                    f"Details: {output[-300:]}"
+                ),
+                created_at=datetime.now(),
+                expires_at=datetime.now() + timedelta(hours=4),
+                metadata={
+                    "fleet_service": alert.get("service_name"),
+                    "action": "remediated" if remediation_ok else "remediation_failed",
+                    "fly_app": alert.get("fly_app"),
+                },
+            )
+            self._emit_nudge(nudge)
+            nudges.append(nudge)
+
+        return nudges
+
+    @staticmethod
+    def _check_health(url: str, timeout: int = 15) -> bool:
+        """Quick HTTP health check. Returns True if 200."""
+        import subprocess
+
+        try:
+            result = subprocess.run(
+                ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", str(timeout), url],
+                capture_output=True,
+                text=True,
+                timeout=timeout + 5,
+            )
+            return result.stdout.strip() == "200"
+        except (subprocess.TimeoutExpired, OSError):
+            return False
+
+    def _resolve_fleet_task(self, task_id: str) -> None:
+        """Mark a fleet alert task as completed in tasks.json."""
+        tasks_file = self.data_dir / "tasks.json"
+        if not tasks_file.exists() or not task_id:
+            return
+        try:
+            tasks = json.loads(tasks_file.read_text())
+            if task_id in tasks:
+                now = datetime.now().isoformat()
+                tasks[task_id]["status"] = "completed"
+                tasks[task_id]["completed_at"] = now
+                tasks[task_id]["updated_at"] = now
+                note = f"[{now}] RECOVERED — auto-resolved by proactive engine"
+                if tasks[task_id]["notes"]:
+                    tasks[task_id]["notes"] += f"\n{note}"
+                else:
+                    tasks[task_id]["notes"] = note
+                tasks_file.write_text(json.dumps(tasks, indent=2))
+
+                # Clean up active_alerts tracking
+                active_file = self.data_dir / "fleet_alerts" / "active_alerts.json"
+                if active_file.exists():
+                    active = json.loads(active_file.read_text())
+                    active = {k: v for k, v in active.items() if v != task_id}
+                    active_file.write_text(json.dumps(active, indent=2))
+        except (json.JSONDecodeError, OSError) as e:
+            logger.error(f"Failed to resolve fleet task {task_id}: {e}")
+
+    # =========================================================================
     # Scheduled Runner
     # =========================================================================
 
@@ -554,6 +707,8 @@ class ProactiveEngine:
                     results.extend(self.scan_follow_ups())
                 elif check.name == "context_refresh":
                     pass  # Context nudges are generated on-demand
+                elif check.name == "fleet_alert_scan":
+                    results.extend(self.scan_fleet_alerts())
                 check.last_run = datetime.now()
             except Exception as e:
                 logger.error(f"Scheduled check '{check.name}' failed: {e}")
