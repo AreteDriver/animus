@@ -18,8 +18,8 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import os
 import json
+import os
 import re
 import sys
 from dataclasses import dataclass, field
@@ -506,6 +506,7 @@ def sync(
                 source="learned",  # Learned from Claude Code context
                 confidence=0.9,  # High but not 1.0 (not directly stated to Animus)
                 subtype=mem.subtype,
+                provenance="sync",
             )
             state.synced[mem.content_hash] = {
                 "animus_id": result.id,

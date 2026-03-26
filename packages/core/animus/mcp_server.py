@@ -73,7 +73,9 @@ def create_mcp_server():
         except ValueError:
             mt = MemoryType.SEMANTIC
 
-        mem = memory.remember(content=content, memory_type=mt, tags=tag_list, source="mcp")
+        mem = memory.remember(
+            content=content, memory_type=mt, tags=tag_list, source="mcp", provenance="mcp"
+        )
         return f"Stored memory {mem.id[:8]} ({mt.value}, {len(tag_list)} tags)"
 
     @mcp.tool()
@@ -120,6 +122,41 @@ def create_mcp_server():
         """Get Animus memory statistics."""
         stats = memory.get_statistics()
         return json.dumps(stats, indent=2, default=str)
+
+    @mcp.tool()
+    def animus_snapshot(label: str, api_key: str = "") -> str:
+        """Create a snapshot of all Animus memories for backup or rollback.
+
+        Args:
+            label: Human-readable label for the snapshot (e.g., 'pre-cleanup').
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+        result = memory.snapshot(label=label)
+        return json.dumps(result, indent=2)
+
+    @mcp.tool()
+    def animus_version_history(memory_id: str, limit: int = 10) -> str:
+        """Get version history of a memory by walking its parent chain.
+
+        Args:
+            memory_id: Memory ID or partial ID prefix.
+            limit: Maximum versions to return (default 10).
+        """
+        history = memory.get_version_history(memory_id=memory_id, limit=limit)
+        if not history:
+            return f"No memory found for ID: {memory_id}"
+        lines = []
+        for m in history:
+            parent = f" <- {m.parent_id[:8]}" if m.parent_id else ""
+            summary = f" ({m.change_summary})" if m.change_summary else ""
+            lines.append(
+                f"- v{m.version} [{m.id[:8]}]{parent}{summary} "
+                f"[{m.provenance}] {m.created_at.strftime('%Y-%m-%d %H:%M')}"
+            )
+        return "\n".join(lines)
 
     # -----------------------------------------------------------------------
     # Task tools

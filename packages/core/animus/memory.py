@@ -58,6 +58,11 @@ class Memory:
     source: str = "stated"  # stated | inferred | learned
     confidence: float = 1.0  # 0.0-1.0
     subtype: str | None = None  # e.g., "conversation", "fact", "preference"
+    # Context Core versioning fields
+    version: int = 1
+    parent_id: str | None = None  # previous version's memory ID
+    change_summary: str | None = None  # what changed from parent
+    provenance: str = "direct"  # "direct" | "sync" | "consolidation" | "import" | "mcp"
 
     def to_dict(self) -> dict:
         return {
@@ -71,6 +76,10 @@ class Memory:
             "source": self.source,
             "confidence": self.confidence,
             "subtype": self.subtype,
+            "version": self.version,
+            "parent_id": self.parent_id,
+            "change_summary": self.change_summary,
+            "provenance": self.provenance,
         }
 
     @classmethod
@@ -86,6 +95,10 @@ class Memory:
             source=data.get("source", "stated"),
             confidence=data.get("confidence", 1.0),
             subtype=data.get("subtype"),
+            version=data.get("version", 1),
+            parent_id=data.get("parent_id"),
+            change_summary=data.get("change_summary"),
+            provenance=data.get("provenance", "direct"),
         )
 
     @classmethod
@@ -98,6 +111,10 @@ class Memory:
         source: str = "stated",
         confidence: float = 1.0,
         subtype: str | None = None,
+        version: int = 1,
+        parent_id: str | None = None,
+        change_summary: str | None = None,
+        provenance: str = "direct",
     ) -> "Memory":
         """Factory method to create a Memory with auto-generated id and timestamps."""
         now = datetime.now()
@@ -112,6 +129,10 @@ class Memory:
             source=source,
             confidence=confidence,
             subtype=subtype,
+            version=version,
+            parent_id=parent_id,
+            change_summary=change_summary,
+            provenance=provenance,
         )
 
     def add_tag(self, tag: str) -> None:
@@ -515,12 +536,20 @@ class ChromaMemoryStore(MemoryStore):
                             "source",
                             "confidence",
                             "subtype",
+                            "version",
+                            "parent_id",
+                            "change_summary",
+                            "provenance",
                         )
                     },
                     tags=tags,
                     source=metadata.get("source", "stated"),
                     confidence=float(metadata.get("confidence", 1.0)),
                     subtype=metadata.get("subtype"),
+                    version=int(metadata.get("version", 1)),
+                    parent_id=metadata.get("parent_id") or None,
+                    change_summary=metadata.get("change_summary") or None,
+                    provenance=metadata.get("provenance", "direct"),
                 )
         except Exception as e:
             logger.warning(f"Failed to load metadata from ChromaDB: {e}")
@@ -534,9 +563,15 @@ class ChromaMemoryStore(MemoryStore):
             "tags": json.dumps(memory.tags),  # Store as JSON string
             "source": memory.source,
             "confidence": memory.confidence,
+            "version": str(memory.version),
+            "provenance": memory.provenance,
         }
         if memory.subtype:
             metadata["subtype"] = memory.subtype
+        if memory.parent_id:
+            metadata["parent_id"] = memory.parent_id
+        if memory.change_summary:
+            metadata["change_summary"] = memory.change_summary
         # Add custom metadata (convert to strings)
         for k, v in memory.metadata.items():
             metadata[k] = str(v)
@@ -625,6 +660,10 @@ class ChromaMemoryStore(MemoryStore):
                         source=metadata.get("source", "stated"),
                         confidence=float(metadata.get("confidence", 1.0)),
                         subtype=metadata.get("subtype"),
+                        version=int(metadata.get("version", 1)),
+                        parent_id=metadata.get("parent_id") or None,
+                        change_summary=metadata.get("change_summary") or None,
+                        provenance=metadata.get("provenance", "direct"),
                     )
 
                 # Apply tag filter (ChromaDB can't filter JSON arrays)
@@ -707,6 +746,7 @@ class MemoryLayer:
         source: str = "stated",
         confidence: float = 1.0,
         subtype: str | None = None,
+        provenance: str = "direct",
     ) -> Memory:
         """
         Store a new memory.
@@ -719,6 +759,7 @@ class MemoryLayer:
             source: How the memory was acquired (stated/inferred/learned)
             confidence: Confidence level 0.0-1.0
             subtype: Optional subtype (e.g., "fact", "preference")
+            provenance: Origin of the memory (direct/sync/consolidation/import/mcp)
 
         Returns:
             The created Memory object
@@ -737,6 +778,7 @@ class MemoryLayer:
             source=source,
             confidence=confidence,
             subtype=subtype,
+            provenance=provenance,
         )
 
         self.store.store(memory)
@@ -898,6 +940,162 @@ class MemoryLayer:
         """Get all tags with their usage counts."""
         return self.store.get_all_tags()
 
+    def update_with_version(
+        self,
+        memory_id: str,
+        content: str | None = None,
+        tags: list[str] | None = None,
+        metadata: dict | None = None,
+        change_summary: str | None = None,
+        provenance: str = "direct",
+    ) -> Memory | None:
+        """Create a new versioned memory that supersedes an existing one.
+
+        Instead of mutating in place, this creates a NEW memory with
+        ``parent_id`` pointing to the old one and an incremented ``version``.
+
+        Args:
+            memory_id: ID (or prefix) of the memory to update.
+            content: New content (uses parent content if None).
+            tags: New tags (uses parent tags if None).
+            metadata: New metadata (uses parent metadata if None).
+            change_summary: Human-readable description of the delta.
+            provenance: Origin of the change.
+
+        Returns:
+            The newly created Memory, or None if the parent was not found.
+        """
+        parent = self.get_memory(memory_id)
+        if not parent:
+            return None
+
+        new_content = content if content is not None else parent.content
+        new_tags = tags if tags is not None else list(parent.tags)
+        new_metadata = metadata if metadata is not None else dict(parent.metadata)
+
+        # Auto-generate change_summary when not provided
+        if change_summary is None:
+            parts: list[str] = []
+            if content is not None and content != parent.content:
+                parts.append("content updated")
+            if tags is not None and set(tags) != set(parent.tags):
+                parts.append("tags changed")
+            if metadata is not None and metadata != parent.metadata:
+                parts.append("metadata changed")
+            change_summary = "; ".join(parts) if parts else "no-op version bump"
+
+        now = datetime.now()
+        normalized_tags = [t.lower().strip() for t in new_tags if t.strip()]
+
+        new_memory = Memory(
+            id=str(uuid.uuid4()),
+            content=new_content,
+            memory_type=parent.memory_type,
+            created_at=now,
+            updated_at=now,
+            metadata=new_metadata,
+            tags=normalized_tags,
+            source=parent.source,
+            confidence=parent.confidence,
+            subtype=parent.subtype,
+            version=parent.version + 1,
+            parent_id=parent.id,
+            change_summary=change_summary,
+            provenance=provenance,
+        )
+
+        self.store.store(new_memory)
+        logger.info(
+            f"Created version {new_memory.version} of memory {parent.id[:8]} -> {new_memory.id[:8]}"
+        )
+        return new_memory
+
+    def get_version_history(self, memory_id: str, limit: int = 10) -> list[Memory]:
+        """Walk the parent_id chain and return version history (newest first).
+
+        Args:
+            memory_id: ID (or prefix) of any memory in the chain.
+            limit: Maximum number of versions to return.
+
+        Returns:
+            List of Memory objects ordered newest-first.
+        """
+        history: list[Memory] = []
+        current = self.get_memory(memory_id)
+        while current and len(history) < limit:
+            history.append(current)
+            if current.parent_id:
+                current = self.get_memory(current.parent_id)
+            else:
+                break
+        return history
+
+    def snapshot(self, label: str) -> dict:
+        """Export all memories to a timestamped snapshot file.
+
+        Args:
+            label: Human-readable label for the snapshot.
+
+        Returns:
+            Metadata dict with label, timestamp, memory_count, and path.
+        """
+        now = datetime.now()
+        timestamp = now.strftime("%Y%m%dT%H%M%S")
+        all_memories = self.store.list_all()
+
+        snapshot_data = {
+            "label": label,
+            "timestamp": now.isoformat(),
+            "memory_count": len(all_memories),
+            "memories": [m.to_dict() for m in all_memories],
+        }
+
+        snapshots_dir = self.data_dir / "snapshots"
+        snapshots_dir.mkdir(parents=True, exist_ok=True)
+        snapshot_path = snapshots_dir / f"{label}_{timestamp}.json"
+        snapshot_path.write_text(json.dumps(snapshot_data, indent=2))
+
+        logger.info(f"Snapshot '{label}' saved: {len(all_memories)} memories -> {snapshot_path}")
+        return {
+            "label": label,
+            "timestamp": now.isoformat(),
+            "memory_count": len(all_memories),
+            "path": str(snapshot_path),
+        }
+
+    def restore_snapshot(self, snapshot_path: str) -> int:
+        """Restore memories from a snapshot file.
+
+        Clears the current collection and imports all memories from the
+        snapshot.
+
+        Args:
+            snapshot_path: Path to the snapshot JSON file.
+
+        Returns:
+            Number of memories restored.
+        """
+        path = Path(snapshot_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Snapshot not found: {snapshot_path}")
+
+        snapshot_data = json.loads(path.read_text())
+        memories_data = snapshot_data.get("memories", [])
+
+        # Clear current collection
+        for mem in self.store.list_all():
+            self.store.delete(mem.id)
+
+        # Import all memories from snapshot
+        count = 0
+        for item in memories_data:
+            memory = Memory.from_dict(item)
+            self.store.store(memory)
+            count += 1
+
+        logger.info(f"Restored snapshot '{snapshot_data.get('label', '?')}': {count} memories")
+        return count
+
     def forget(self, memory_id: str) -> bool:
         """Delete a specific memory and clean up entity references."""
         # Try partial match
@@ -1020,6 +1218,13 @@ class MemoryLayer:
                 by_subtype[mem.subtype] = by_subtype.get(mem.subtype, 0) + 1
             total_confidence += mem.confidence
 
+        # Version statistics
+        total_versions = sum(m.version for m in all_memories)
+        memories_with_history = sum(1 for m in all_memories if m.parent_id is not None)
+        by_provenance: dict[str, int] = {}
+        for mem in all_memories:
+            by_provenance[mem.provenance] = by_provenance.get(mem.provenance, 0) + 1
+
         return {
             "total": len(all_memories),
             "by_type": by_type,
@@ -1028,6 +1233,9 @@ class MemoryLayer:
             "avg_confidence": total_confidence / len(all_memories) if all_memories else 0,
             "unique_tags": len(tags),
             "top_tags": sorted(tags.items(), key=lambda x: x[1], reverse=True)[:10],
+            "total_versions": total_versions,
+            "memories_with_history": memories_with_history,
+            "by_provenance": by_provenance,
         }
 
     def consolidate(self, max_age_days: int = 90, min_group_size: int = 3) -> int:

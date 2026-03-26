@@ -122,8 +122,8 @@ class TestMcpServerCreation:
 
     def test_tool_count(self, server):
         tools = server._tool_manager.list_tools()
-        # 4 memory + 3 task + 1 brief + 1 workflow + 1 harvest + 4 watchlist + 1 self-improve = 15
-        assert len(tools) == 15
+        # 4 memory + 2 versioning + 3 task + 1 brief + 1 workflow + 1 harvest + 4 watchlist + 1 self-improve = 17
+        assert len(tools) == 17
 
 
 class TestMemoryTools:
@@ -263,9 +263,7 @@ class TestRunWorkflow:
         from animus.forge.models import ForgeError
 
         with patch("animus.forge.loader.load_workflow", side_effect=ForgeError("bad schema")):
-            result = _run(
-                server.call_tool("animus_run_workflow", {"workflow_path": str(bad_yaml)})
-            )
+            result = _run(server.call_tool("animus_run_workflow", {"workflow_path": str(bad_yaml)}))
             assert "Failed to load workflow" in result[0][0].text
 
     def test_workflow_success_with_results(self, server, tmp_path):
@@ -295,18 +293,16 @@ class TestRunWorkflow:
         mock_state.total_tokens = 600
         mock_state.total_cost = 0.0042
 
-        with patch("animus.forge.loader.load_workflow", return_value=mock_wf_config), \
-             patch("animus.cognitive.CognitiveLayer"), \
-             patch("animus.cognitive.ModelConfig") as mock_mc, \
-             patch("animus.tools.create_default_registry"), \
-             patch("animus.forge.ForgeEngine") as mock_engine_cls:
+        with (
+            patch("animus.forge.loader.load_workflow", return_value=mock_wf_config),
+            patch("animus.cognitive.CognitiveLayer"),
+            patch("animus.cognitive.ModelConfig") as mock_mc,
+            patch("animus.tools.create_default_registry"),
+            patch("animus.forge.ForgeEngine") as mock_engine_cls,
+        ):
             mock_mc.ollama.return_value = MagicMock()
             mock_engine_cls.return_value.run.return_value = mock_state
-            result = _run(
-                server.call_tool(
-                    "animus_run_workflow", {"workflow_path": str(wf_yaml)}
-                )
-            )
+            result = _run(server.call_tool("animus_run_workflow", {"workflow_path": str(wf_yaml)}))
             text = result[0][0].text
             assert "test_pipeline" in text
             assert "completed" in text
@@ -412,38 +408,28 @@ class TestHarvestTool:
         mock_result = MagicMock()
         mock_result.to_dict.return_value = {"repo": "test/repo", "patterns": 5}
         with patch("animus.harvest.harvest_repo", return_value=mock_result):
-            result = _run(
-                server.call_tool("animus_harvest", {"target": "test/repo"})
-            )
+            result = _run(server.call_tool("animus_harvest", {"target": "test/repo"}))
             data = json.loads(result[0][0].text)
             assert data["repo"] == "test/repo"
 
     def test_harvest_value_error(self, server, mock_memory):
         with patch("animus.harvest.harvest_repo", side_effect=ValueError("bad target")):
-            result = _run(
-                server.call_tool("animus_harvest", {"target": "bad"})
-            )
+            result = _run(server.call_tool("animus_harvest", {"target": "bad"}))
             assert "Harvest failed" in result[0][0].text
 
     def test_harvest_runtime_error(self, server, mock_memory):
         with patch("animus.harvest.harvest_repo", side_effect=RuntimeError("clone failed")):
-            result = _run(
-                server.call_tool("animus_harvest", {"target": "bad/repo"})
-            )
+            result = _run(server.call_tool("animus_harvest", {"target": "bad/repo"}))
             assert "Harvest failed" in result[0][0].text
 
     def test_harvest_unexpected_error(self, server, mock_memory):
         with patch("animus.harvest.harvest_repo", side_effect=OSError("disk full")):
-            result = _run(
-                server.call_tool("animus_harvest", {"target": "test/repo"})
-            )
+            result = _run(server.call_tool("animus_harvest", {"target": "test/repo"}))
             assert "Harvest error" in result[0][0].text
 
     def test_harvest_auth_blocked(self, server, mock_memory):
         with patch("animus.mcp_server._MCP_API_KEY", "secret"):
-            result = _run(
-                server.call_tool("animus_harvest", {"target": "test/repo"})
-            )
+            result = _run(server.call_tool("animus_harvest", {"target": "test/repo"}))
             assert "Authentication required" in result[0][0].text
 
     def test_harvest_auth_passes(self, server, mock_memory):
@@ -452,9 +438,7 @@ class TestHarvestTool:
         with patch("animus.mcp_server._MCP_API_KEY", "key123"):
             with patch("animus.harvest.harvest_repo", return_value=mock_result):
                 result = _run(
-                    server.call_tool(
-                        "animus_harvest", {"target": "test/repo", "api_key": "key123"}
-                    )
+                    server.call_tool("animus_harvest", {"target": "test/repo", "api_key": "key123"})
                 )
                 assert "Authentication required" not in result[0][0].text
 
@@ -477,9 +461,7 @@ class TestWatchlistTools:
     def test_watchlist_add_no_tags(self, server):
         entry = {"target": "test/repo", "tags": [], "added": "2026-03-25"}
         with patch("animus.harvest_watchlist.add_to_watchlist", return_value=entry):
-            result = _run(
-                server.call_tool("animus_watchlist_add", {"target": "test/repo"})
-            )
+            result = _run(server.call_tool("animus_watchlist_add", {"target": "test/repo"}))
             data = json.loads(result[0][0].text)
             assert data["target"] == "test/repo"
 
@@ -488,9 +470,7 @@ class TestWatchlistTools:
             "animus.harvest_watchlist.add_to_watchlist",
             side_effect=ValueError("duplicate"),
         ):
-            result = _run(
-                server.call_tool("animus_watchlist_add", {"target": "test/repo"})
-            )
+            result = _run(server.call_tool("animus_watchlist_add", {"target": "test/repo"}))
             assert "Watchlist add failed" in result[0][0].text
 
     def test_watchlist_add_unexpected_error(self, server):
@@ -498,37 +478,27 @@ class TestWatchlistTools:
             "animus.harvest_watchlist.add_to_watchlist",
             side_effect=OSError("disk"),
         ):
-            result = _run(
-                server.call_tool("animus_watchlist_add", {"target": "test/repo"})
-            )
+            result = _run(server.call_tool("animus_watchlist_add", {"target": "test/repo"}))
             assert "Watchlist error" in result[0][0].text
 
     def test_watchlist_add_auth_blocked(self, server):
         with patch("animus.mcp_server._MCP_API_KEY", "secret"):
-            result = _run(
-                server.call_tool("animus_watchlist_add", {"target": "test/repo"})
-            )
+            result = _run(server.call_tool("animus_watchlist_add", {"target": "test/repo"}))
             assert "Authentication required" in result[0][0].text
 
     def test_watchlist_remove_success(self, server):
         with patch("animus.harvest_watchlist.remove_from_watchlist", return_value=True):
-            result = _run(
-                server.call_tool("animus_watchlist_remove", {"target": "test/repo"})
-            )
+            result = _run(server.call_tool("animus_watchlist_remove", {"target": "test/repo"}))
             assert "Removed" in result[0][0].text
 
     def test_watchlist_remove_not_found(self, server):
         with patch("animus.harvest_watchlist.remove_from_watchlist", return_value=False):
-            result = _run(
-                server.call_tool("animus_watchlist_remove", {"target": "test/repo"})
-            )
+            result = _run(server.call_tool("animus_watchlist_remove", {"target": "test/repo"}))
             assert "not found" in result[0][0].text
 
     def test_watchlist_remove_auth_blocked(self, server):
         with patch("animus.mcp_server._MCP_API_KEY", "secret"):
-            result = _run(
-                server.call_tool("animus_watchlist_remove", {"target": "test/repo"})
-            )
+            result = _run(server.call_tool("animus_watchlist_remove", {"target": "test/repo"}))
             assert "Authentication required" in result[0][0].text
 
     def test_watchlist_list_with_repos(self, server):
@@ -549,9 +519,10 @@ class TestWatchlistTools:
         async def fake_scan(**kwargs):
             return report
 
-        with patch(
-            "animus.harvest_watchlist.run_watchlist_scan", side_effect=fake_scan
-        ), _patch_nested_asyncio_run():
+        with (
+            patch("animus.harvest_watchlist.run_watchlist_scan", side_effect=fake_scan),
+            _patch_nested_asyncio_run(),
+        ):
             result = _run(server.call_tool("animus_watchlist_scan", {}))
             data = json.loads(result[0][0].text)
             assert data["scanned"] == 2
@@ -564,12 +535,11 @@ class TestWatchlistTools:
             call_log.update(kwargs)
             return report
 
-        with patch(
-            "animus.harvest_watchlist.run_watchlist_scan", side_effect=fake_scan
-        ), _patch_nested_asyncio_run():
-            result = _run(
-                server.call_tool("animus_watchlist_scan", {"interval_hours": 24})
-            )
+        with (
+            patch("animus.harvest_watchlist.run_watchlist_scan", side_effect=fake_scan),
+            _patch_nested_asyncio_run(),
+        ):
+            result = _run(server.call_tool("animus_watchlist_scan", {"interval_hours": 24}))
             data = json.loads(result[0][0].text)
             assert data["scanned"] == 1
             assert call_log["interval_hours"] == 24
@@ -593,20 +563,14 @@ class TestSelfImproveTool:
 
     def test_self_improve_path_not_found(self, server):
         result = _run(
-            server.call_tool(
-                "animus_self_improve", {"codebase_path": "/nonexistent/path"}
-            )
+            server.call_tool("animus_self_improve", {"codebase_path": "/nonexistent/path"})
         )
         assert "Path not found" in result[0][0].text
 
     def test_self_improve_forge_not_installed(self, server, tmp_path):
         # Patch the specific imports that animus_self_improve tries
         with patch.dict("sys.modules", {"animus_forge.agents.provider_wrapper": None}):
-            result = _run(
-                server.call_tool(
-                    "animus_self_improve", {"codebase_path": str(tmp_path)}
-                )
-            )
+            result = _run(server.call_tool("animus_self_improve", {"codebase_path": str(tmp_path)}))
             assert "Forge not installed" in result[0][0].text
 
     def test_self_improve_provider_error(self, server, tmp_path):
@@ -643,13 +607,17 @@ class TestSelfImproveTool:
 
         mock_orch.run = mock_run
 
-        with patch(
-            "animus_forge.agents.provider_wrapper.create_agent_provider",
-            return_value=MagicMock(),
-        ), patch(
-            "animus_forge.self_improve.orchestrator.SelfImproveOrchestrator",
-            return_value=mock_orch,
-        ), _patch_nested_asyncio_run():
+        with (
+            patch(
+                "animus_forge.agents.provider_wrapper.create_agent_provider",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "animus_forge.self_improve.orchestrator.SelfImproveOrchestrator",
+                return_value=mock_orch,
+            ),
+            _patch_nested_asyncio_run(),
+        ):
             result = _run(
                 server.call_tool(
                     "animus_self_improve",
@@ -677,13 +645,17 @@ class TestSelfImproveTool:
 
         mock_orch.run = mock_run
 
-        with patch(
-            "animus_forge.agents.provider_wrapper.create_agent_provider",
-            return_value=MagicMock(),
-        ), patch(
-            "animus_forge.self_improve.orchestrator.SelfImproveOrchestrator",
-            return_value=mock_orch,
-        ), _patch_nested_asyncio_run():
+        with (
+            patch(
+                "animus_forge.agents.provider_wrapper.create_agent_provider",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "animus_forge.self_improve.orchestrator.SelfImproveOrchestrator",
+                return_value=mock_orch,
+            ),
+            _patch_nested_asyncio_run(),
+        ):
             result = _run(
                 server.call_tool(
                     "animus_self_improve",
@@ -702,13 +674,17 @@ class TestSelfImproveTool:
 
         mock_orch.run = mock_run
 
-        with patch(
-            "animus_forge.agents.provider_wrapper.create_agent_provider",
-            return_value=MagicMock(),
-        ), patch(
-            "animus_forge.self_improve.orchestrator.SelfImproveOrchestrator",
-            return_value=mock_orch,
-        ), _patch_nested_asyncio_run():
+        with (
+            patch(
+                "animus_forge.agents.provider_wrapper.create_agent_provider",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "animus_forge.self_improve.orchestrator.SelfImproveOrchestrator",
+                return_value=mock_orch,
+            ),
+            _patch_nested_asyncio_run(),
+        ):
             result = _run(
                 server.call_tool(
                     "animus_self_improve",
@@ -733,23 +709,17 @@ class TestWriteToolsAuth:
 
     def test_create_task_auth(self, server):
         with patch("animus.mcp_server._MCP_API_KEY", "authkey"):
-            result = _run(
-                server.call_tool("animus_create_task", {"description": "test"})
-            )
+            result = _run(server.call_tool("animus_create_task", {"description": "test"}))
             assert "Authentication required" in result[0][0].text
 
     def test_complete_task_auth(self, server):
         with patch("animus.mcp_server._MCP_API_KEY", "authkey"):
-            result = _run(
-                server.call_tool("animus_complete_task", {"task_id": "t1"})
-            )
+            result = _run(server.call_tool("animus_complete_task", {"task_id": "t1"}))
             assert "Authentication required" in result[0][0].text
 
     def test_run_workflow_auth(self, server):
         with patch("animus.mcp_server._MCP_API_KEY", "authkey"):
-            result = _run(
-                server.call_tool("animus_run_workflow", {"workflow_path": "/test.yaml"})
-            )
+            result = _run(server.call_tool("animus_run_workflow", {"workflow_path": "/test.yaml"}))
             assert "Authentication required" in result[0][0].text
 
 
