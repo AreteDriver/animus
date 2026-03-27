@@ -255,3 +255,15 @@ jobs:
           name: benchmark-results
           path: .benchmarks/
           retention-days: 90
+
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_CICD }}
+        run: |
+          STATUS="${{ job.status }}"
+          COLOR=$([ "$STATUS" = "success" ] && echo 3066993 || echo 15158332)
+          ICON=$([ "$STATUS" = "success" ] && echo "✅" || echo "❌")
+          curl -s -X POST "$DISCORD_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "{\"embeds\":[{\"title\":\"$ICON ${{ github.repository }}\",\"description\":\"Branch: ${{ github.ref_name }} | Status: $STATUS\",\"color\":$COLOR}]}"
