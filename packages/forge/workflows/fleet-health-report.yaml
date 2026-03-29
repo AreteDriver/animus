@@ -27,7 +27,7 @@ steps:
         "BenchGoblins Web|https://benchgoblins.com"
         "Gatekeeper API|https://edengk.com/api/health"
         "Gatekeeper Web|https://edengk.com"
-        "Monolith API|https://monolith-evefrontier.fly.dev/api/v1/health"
+        "Monolith API|https://aegismonolith.xyz/api/v1/health"
         "WatchTower API|https://watchtower-evefrontier.fly.dev/health"
         "Frontier Tribe OS|https://frontier-tribe-os.fly.dev/health"
         "AI Cards Mint|https://aicards-mint.fly.dev/health"

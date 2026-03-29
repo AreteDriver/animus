@@ -40,7 +40,7 @@ FLYCTL = "/home/arete/.fly/bin/flyctl"
 # Services where auto-restart is safe
 SAFE_RESTART_APPS = {
     "benchgoblins-backend",
-    "monolith-evefrontier",
+    "aegismonolith",
     "watchtower-evefrontier",
     "frontier-tribe-os",
     "aicards-mint",
@@ -324,7 +324,7 @@ class _ServiceURLs(dict):
         "benchgoblins_web": "https://benchgoblins.com",
         "gatekeeper_api": "https://edengk.com/api/health",
         "gatekeeper_web": "https://edengk.com",
-        "monolith_api": "https://monolith-evefrontier.fly.dev/api/v1/health",
+        "monolith_api": "https://aegismonolith.fly.dev/api/v1/health",
         "witness_api": "https://watchtower-evefrontier.fly.dev/health",
         "frontier_tribe_os": "https://frontier-tribe-os.fly.dev/health",
         "aicards_mint": "https://aicards-mint.fly.dev/health",
