@@ -11,9 +11,9 @@ Usage:
     python tools/harvest_cron.py --quiet      # Minimal stdout output
 
 Cron (Sunday 6am):
-    0 6 * * 0 /home/arete/projects/animus/packages/core/.venv/bin/python \
-        /home/arete/projects/animus/tools/harvest_cron.py \
-        >> /home/arete/.animus/harvest_cron.log 2>&1
+    0 6 * * 0 ~/projects/animus/packages/core/.venv/bin/python \
+        ~/projects/animus/tools/harvest_cron.py \
+        >> ~/.animus/harvest_cron.log 2>&1
 """
 
 from __future__ import annotations

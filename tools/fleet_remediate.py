@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
 import sys
 import time
@@ -35,7 +36,7 @@ ANIMUS_DIR = Path.home() / ".animus"
 ALERTS_DIR = ANIMUS_DIR / "fleet_alerts"
 TASKS_FILE = ANIMUS_DIR / "tasks.json"
 RESULTS_DIR = ANIMUS_DIR / "fleet_results"
-FLYCTL = "/home/arete/.fly/bin/flyctl"
+FLYCTL = os.environ.get("FLYCTL_PATH", "flyctl")
 
 # Services where auto-restart is safe
 SAFE_RESTART_APPS = {

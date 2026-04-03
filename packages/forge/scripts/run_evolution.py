@@ -2,7 +2,7 @@
 """Run one iteration of the Animus Forge evolution loop.
 
 Usage:
-    cd /home/arete/projects/animus/packages/forge
+    cd packages/forge
     .venv/bin/python scripts/run_evolution.py [--iterations N]
 """
 

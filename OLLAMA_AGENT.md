@@ -145,10 +145,10 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/arete/projects/animus/packages/forge
-Environment="PATH=/home/arete/projects/animus/packages/forge/.venv/bin:/usr/local/bin:/usr/bin:/bin"
-EnvironmentFile=/home/arete/projects/animus/.env
-ExecStart=/home/arete/projects/animus/packages/forge/.venv/bin/uvicorn animus_forge.api:app --host 127.0.0.1 --port 8000
+WorkingDirectory=%h/projects/animus/packages/forge
+Environment="PATH=%h/projects/animus/packages/forge/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=%h/projects/animus/.env
+ExecStart=%h/projects/animus/packages/forge/.venv/bin/uvicorn animus_forge.api:app --host 127.0.0.1 --port 8000
 Restart=on-failure
 RestartSec=5
 
