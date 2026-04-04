@@ -212,6 +212,15 @@ class SupervisorAgent:
         self._task_runner = None  # Set via set_task_runner()
         self._active_delegations: list[AgentDelegation] = []
 
+        # Sefirotic topology router — non-destructive routing overlay
+        try:
+            from animus_forge.agents.sefirotic_router import SefiroticRouter
+
+            self._sefirotic_router: SefiroticRouter | None = SefiroticRouter()
+            logger.info("Sefirotic router initialized (22-edge topology active)")
+        except Exception:
+            self._sefirotic_router = None
+
     def set_task_runner(self, runner: Any) -> None:
         """Set the AgentTaskRunner for delegated agent execution.
 
@@ -1086,6 +1095,16 @@ Focus on the most important findings and recommendations.
         if plan is None:
             # Direct response — supervisor handled it without delegation
             return response
+
+        # Apply sefirotic topology weighting (non-destructive overlay)
+        if self._sefirotic_router is not None:
+            plan.delegations = self._sefirotic_router.weight_delegations(
+                plan.delegations, message
+            )
+            logger.debug(
+                "Sefirotic routing applied: %s",
+                [(d.get("role"), d.get("topology_weight")) for d in plan.delegations],
+            )
 
         # Execute delegations
         progress_callback("delegating", plan.analysis)
