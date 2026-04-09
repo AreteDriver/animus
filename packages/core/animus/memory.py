@@ -436,11 +436,32 @@ class LocalMemoryStore(MemoryStore):
         return tag_counts
 
 
+def _rrf_fuse(
+    ranked_lists: list[list[str]],
+    k: int = 60,
+) -> list[str]:
+    """Reciprocal Rank Fusion — merge multiple ranked ID lists.
+
+    Args:
+        ranked_lists: Each inner list is memory IDs in rank order.
+        k: RRF constant (default 60, standard value).
+
+    Returns:
+        Fused list of memory IDs sorted by combined RRF score.
+    """
+    scores: dict[str, float] = {}
+    for ranked in ranked_lists:
+        for rank, mem_id in enumerate(ranked):
+            scores[mem_id] = scores.get(mem_id, 0.0) + 1.0 / (k + rank + 1)
+    return sorted(scores, key=scores.get, reverse=True)  # type: ignore[arg-type]
+
+
 class ChromaMemoryStore(MemoryStore):
     """
-    Vector-based memory store using ChromaDB.
+    Vector-based memory store using ChromaDB with optional BM25 hybrid search.
 
-    Provides semantic search using embeddings.
+    Provides semantic search using embeddings, optionally fused with BM25
+    keyword search via Reciprocal Rank Fusion (RRF).
     """
 
     @staticmethod
@@ -475,6 +496,9 @@ class ChromaMemoryStore(MemoryStore):
         self.data_dir = data_dir
         self.collection_name = collection_name
         self._memories: dict[str, Memory] = {}  # Local cache for metadata
+        self._bm25 = None  # Lazy-initialized BM25 index
+        self._bm25_ids: list[str] = []  # ID ordering matching BM25 corpus
+        self._bm25_dirty = True  # Rebuild flag
 
         try:
             import chromadb
@@ -554,6 +578,35 @@ class ChromaMemoryStore(MemoryStore):
         except Exception as e:
             logger.warning(f"Failed to load metadata from ChromaDB: {e}")
 
+    def _rebuild_bm25(self) -> None:
+        """Rebuild BM25 index from in-memory cache."""
+        try:
+            from rank_bm25 import BM25Okapi
+        except ImportError:
+            logger.debug("rank_bm25 not installed — hybrid search disabled")
+            self._bm25 = None
+            self._bm25_dirty = False
+            return
+
+        self._bm25_ids = list(self._memories.keys())
+        corpus = [self._memories[mid].content.lower().split() for mid in self._bm25_ids]
+        if corpus:
+            self._bm25 = BM25Okapi(corpus)
+            logger.debug(f"BM25 index rebuilt with {len(corpus)} documents")
+        else:
+            self._bm25 = None
+        self._bm25_dirty = False
+
+    def _bm25_search(self, query: str, limit: int) -> list[str]:
+        """Return memory IDs ranked by BM25 keyword relevance."""
+        if self._bm25_dirty:
+            self._rebuild_bm25()
+        if not self._bm25 or not self._bm25_ids:
+            return []
+        scores = self._bm25.get_scores(query.lower().split())
+        ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
+        return [self._bm25_ids[i] for i in ranked[:limit] if scores[i] > 0]
+
     def _build_chroma_metadata(self, memory: Memory) -> dict:
         """Build ChromaDB-compatible metadata dict."""
         metadata = {
@@ -587,6 +640,7 @@ class ChromaMemoryStore(MemoryStore):
             metadatas=[metadata],
         )
         self._memories[memory.id] = memory
+        self._bm25_dirty = True
         logger.debug(f"Stored memory {memory.id[:8]} in ChromaDB")
 
     def update(self, memory: Memory) -> bool:
@@ -608,7 +662,12 @@ class ChromaMemoryStore(MemoryStore):
         min_confidence: float = 0.0,
         limit: int = 10,
     ) -> list[Memory]:
-        """Semantic search with filters."""
+        """Hybrid search: dense vector (ChromaDB) + BM25 keyword, fused with RRF.
+
+        Falls back to vector-only if rank_bm25 is not installed.
+        """
+        fetch_limit = limit * 3 if tags else limit * 2
+
         # Build where clause for ChromaDB
         where_conditions = []
         if memory_type:
@@ -625,20 +684,46 @@ class ChromaMemoryStore(MemoryStore):
             where_filter = {"$and": where_conditions}
 
         try:
+            # --- Dense vector search ---
             results = self.collection.query(
                 query_texts=[query],
-                n_results=limit * 2 if tags else limit,  # Over-fetch if filtering tags
+                n_results=fetch_limit,
                 where=where_filter,
                 include=["documents", "metadatas", "distances"],
             )
+            dense_ids = list(results["ids"][0]) if results["ids"] else []
+
+            # --- BM25 keyword search ---
+            bm25_ids = self._bm25_search(query, limit=fetch_limit)
+
+            # --- RRF fusion ---
+            if bm25_ids:
+                fused_ids = _rrf_fuse([dense_ids, bm25_ids])
+                logger.debug(
+                    f"Hybrid search: {len(dense_ids)} dense + {len(bm25_ids)} BM25 "
+                    f"→ {len(fused_ids)} fused"
+                )
+            else:
+                fused_ids = dense_ids  # Fallback to dense-only
+
+            # Build a lookup for metadata from the ChromaDB results
+            chroma_meta = {}
+            chroma_docs = {}
+            for i, mem_id in enumerate(results["ids"][0]):
+                chroma_meta[mem_id] = (
+                    results["metadatas"][0][i] if results["metadatas"] else {}
+                )
+                chroma_docs[mem_id] = (
+                    results["documents"][0][i] if results["documents"] else ""
+                )
 
             memories = []
-            for i, mem_id in enumerate(results["ids"][0]):
+            for mem_id in fused_ids:
                 memory = self._memories.get(mem_id)
-                if not memory:
-                    # Reconstruct from results
-                    metadata = results["metadatas"][0][i] if results["metadatas"] else {}
-                    content = results["documents"][0][i] if results["documents"] else ""
+                if not memory and mem_id in chroma_meta:
+                    # Reconstruct from ChromaDB results
+                    metadata = chroma_meta[mem_id]
+                    content = chroma_docs.get(mem_id, "")
                     tags_json = metadata.get("tags", "[]")
                     try:
                         mem_tags = json.loads(tags_json) if isinstance(tags_json, str) else []
@@ -665,6 +750,8 @@ class ChromaMemoryStore(MemoryStore):
                         change_summary=metadata.get("change_summary") or None,
                         provenance=metadata.get("provenance", "direct"),
                     )
+                elif not memory:
+                    continue  # BM25-only result not in ChromaDB response
 
                 # Apply tag filter (ChromaDB can't filter JSON arrays)
                 if tags and not all(t in memory.tags for t in tags):
@@ -674,7 +761,7 @@ class ChromaMemoryStore(MemoryStore):
                 if len(memories) >= limit:
                     break
 
-            logger.debug(f"Semantic search '{query[:30]}...' found {len(memories)} results")
+            logger.debug(f"Search '{query[:30]}...' found {len(memories)} results")
             return memories
 
         except Exception as e:

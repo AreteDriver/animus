@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from datetime import datetime
 
 from animus.config import AnimusConfig
 from animus.logging import get_logger
@@ -91,9 +92,20 @@ def create_mcp_server():
             return "No matching memories found."
 
         lines = []
+        now = datetime.now()
+        has_stale = False
         for m in results:
             tags = f" [{', '.join(m.tags)}]" if m.tags else ""
-            lines.append(f"- [{m.id[:8]}] {m.content[:200]}{tags}")
+            age_days = (now - m.created_at).days if m.created_at else 0
+            age_str = f" ({age_days}d ago)" if age_days > 0 else " (today)"
+            lines.append(f"- [{m.id[:8]}]{age_str} {m.content[:200]}{tags}")
+            if age_days > 1:
+                has_stale = True
+        if has_stale:
+            lines.append(
+                "\n⚠ Some memories are >1 day old. Verify claims about code "
+                "behavior or file paths against current state before asserting as fact."
+            )
         return "\n".join(lines)
 
     @mcp.tool()
@@ -112,9 +124,20 @@ def create_mcp_server():
         if not results:
             return f"No memories found with tags: {', '.join(tag_list)}"
 
+        now = datetime.now()
         lines = []
+        has_stale = False
         for m in results:
-            lines.append(f"- [{m.id[:8]}] {m.content[:200]}")
+            age_days = (now - m.created_at).days if m.created_at else 0
+            age_str = f" ({age_days}d ago)" if age_days > 0 else " (today)"
+            lines.append(f"- [{m.id[:8]}]{age_str} {m.content[:200]}")
+            if age_days > 1:
+                has_stale = True
+        if has_stale:
+            lines.append(
+                "\n⚠ Some memories are >1 day old. Verify claims about code "
+                "behavior or file paths against current state before asserting as fact."
+            )
         return "\n".join(lines)
 
     @mcp.tool()
