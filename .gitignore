@@ -92,3 +92,4 @@ personal/
 node_modules/
 package-lock.json
 packages/forge/forge/forge_audit.jsonl
+.claude/
