@@ -261,7 +261,7 @@ def _default_placebo_perturbation(source: str, rng: random.Random) -> str:
         inserted = False
         for pos in range(idx, len(lines) - 1):
             stripped = lines[pos].strip()
-            if stripped and not stripped.startswith("#") and re.match(r"^\s{4,}", lines[pos]):
+            if stripped and not stripped.startswith("#") and re.match(r"^\s+", lines[pos]):
                 indent = re.match(r"^(\s+)", lines[pos]).group(1)
                 lines.insert(pos + 1, f"{indent}pass  # placebo")
                 inserted = True
