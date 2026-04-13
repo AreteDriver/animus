@@ -440,7 +440,7 @@ class Sandbox:
             )
             import re as _re
 
-            match = _re.search(r"(\d+)\s+tests? collected", collect_result.stdout)
+            match = re.search(r"(\d+)\s+tests? collected", collect_result.stdout)
             if match:
                 tests_total = float(match.group(1))
         except Exception as exc:
