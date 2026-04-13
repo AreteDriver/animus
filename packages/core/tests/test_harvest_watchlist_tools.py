@@ -97,9 +97,7 @@ class TestWatchlistScanTool:
         async def fake_scan(**kwargs):
             return report
 
-        with patch(
-            "animus.harvest_watchlist.run_watchlist_scan", side_effect=fake_scan
-        ):
+        with patch("animus.harvest_watchlist.run_watchlist_scan", side_effect=fake_scan):
             result = _tool_watchlist_scan({})
             assert result.success
             data = json.loads(result.output)
@@ -109,9 +107,7 @@ class TestWatchlistScanTool:
         async def fail_scan(**kwargs):
             raise RuntimeError("network")
 
-        with patch(
-            "animus.harvest_watchlist.run_watchlist_scan", side_effect=fail_scan
-        ):
+        with patch("animus.harvest_watchlist.run_watchlist_scan", side_effect=fail_scan):
             result = _tool_watchlist_scan({})
             assert not result.success
             assert "Scan failed" in result.error

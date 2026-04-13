@@ -87,7 +87,10 @@ class TestPillarAssignment:
     def test_equilibrium_pillar(self):
         equil = [s for s, p in PILLAR_MAP.items() if p == Pillar.EQUILIBRIUM]
         assert set(equil) == {
-            Sefirah.KETER, Sefirah.TIFERET, Sefirah.YESOD, Sefirah.MALKUTH,
+            Sefirah.KETER,
+            Sefirah.TIFERET,
+            Sefirah.YESOD,
+            Sefirah.MALKUTH,
         }
 
 
@@ -206,7 +209,7 @@ class TestDelegationWeighting:
 
     def test_sorts_by_weight(self, router):
         delegations = [
-            {"role": "tester"},   # Validation role for creative task -> misaligned
+            {"role": "tester"},  # Validation role for creative task -> misaligned
             {"role": "builder"},  # Expansion role for creative task -> aligned
         ]
         weighted = router.weight_delegations(delegations, "Create a new module")
