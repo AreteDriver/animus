@@ -44,9 +44,9 @@ async def self_mod_page(request: Request) -> object:
     improvements = get_improvement_log()
 
     return templates.TemplateResponse(
+        request,
         "self_mod.html",
         {
-            "request": request,
             "code_history": code_history,
             "improvements": improvements,
         },

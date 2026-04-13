@@ -14,10 +14,7 @@ router = APIRouter()
 async def memory_page(request: Request) -> object:
     """Render the memory browser placeholder."""
     templates = request.app.state.templates
-    return templates.TemplateResponse(
-        "memory.html",
-        {"request": request},
-    )
+    return templates.TemplateResponse(request, "memory.html", {})
 
 
 @router.get("/memory/export")

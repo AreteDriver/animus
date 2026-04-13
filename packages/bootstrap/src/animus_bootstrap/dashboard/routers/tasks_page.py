@@ -22,10 +22,7 @@ async def tasks_page(request: Request) -> object:
     templates = request.app.state.templates
     store = _get_task_store(request)
     tasks = store.list_all() if store else []
-    return templates.TemplateResponse(
-        "tasks.html",
-        {"request": request, "tasks": tasks},
-    )
+    return templates.TemplateResponse(request, "tasks.html", {"tasks": tasks})
 
 
 @router.post("/tasks/create")

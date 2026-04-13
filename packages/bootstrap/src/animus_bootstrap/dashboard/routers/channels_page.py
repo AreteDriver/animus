@@ -69,9 +69,9 @@ async def channels_page(request: Request) -> object:
     channels = get_channel_registry()
 
     return templates.TemplateResponse(
+        request,
         "channels.html",
         {
-            "request": request,
             "channels": channels,
         },
     )

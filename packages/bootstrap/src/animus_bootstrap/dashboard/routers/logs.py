@@ -40,10 +40,7 @@ async def _tail_log() -> AsyncGenerator[dict[str, str], None]:
 async def logs_page(request: Request) -> object:
     """Render the log viewer page."""
     templates = request.app.state.templates
-    return templates.TemplateResponse(
-        "logs.html",
-        {"request": request},
-    )
+    return templates.TemplateResponse(request, "logs.html", {})
 
 
 @router.get("/logs/stream")

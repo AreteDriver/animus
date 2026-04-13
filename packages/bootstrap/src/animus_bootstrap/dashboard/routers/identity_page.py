@@ -37,10 +37,7 @@ async def identity_page(request: Request) -> object:
                 }
             )
 
-    return templates.TemplateResponse(
-        "identity.html",
-        {"request": request, "files": files},
-    )
+    return templates.TemplateResponse(request, "identity.html", {"files": files})
 
 
 @router.get("/identity/edit/{filename}")

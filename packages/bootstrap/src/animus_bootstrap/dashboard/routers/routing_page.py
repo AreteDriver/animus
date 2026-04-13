@@ -36,4 +36,4 @@ async def routing_page(request: Request) -> HTMLResponse:
             routing.append({"channel": ch, "persona": assigned})
     else:
         routing = [{"channel": ch, "persona": "Default"} for ch in _CHANNELS]
-    return templates.TemplateResponse("routing.html", {"request": request, "routing": routing})
+    return templates.TemplateResponse(request, "routing.html", {"routing": routing})

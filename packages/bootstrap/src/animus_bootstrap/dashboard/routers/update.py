@@ -15,9 +15,9 @@ async def update_page(request: Request) -> object:
     """Render the update management page."""
     templates = request.app.state.templates
     return templates.TemplateResponse(
+        request,
         "update.html",
         {
-            "request": request,
             "current_version": animus_bootstrap.__version__,
         },
     )

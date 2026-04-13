@@ -40,9 +40,9 @@ async def timers_page(request: Request) -> object:
                 )
 
     return templates.TemplateResponse(
+        request,
         "timers.html",
         {
-            "request": request,
             "dynamic_timers": dynamic_timers,
             "engine_timers": engine_timers,
         },
