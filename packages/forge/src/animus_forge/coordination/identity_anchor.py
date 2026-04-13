@@ -94,14 +94,13 @@ class IdentityAnchor:
                 drift_score += 0.5
 
         # Check core values preservation
-        all_values_text = " ".join(
-            str(v).lower() for v in proposed_changes.values()
-        )
+        all_values_text = " ".join(str(v).lower() for v in proposed_changes.values())
         for value in self._core_values:
             if value.lower() not in all_values_text:
                 # Only flag if the change touches value-related fields
                 value_fields = [
-                    k for k in proposed_changes
+                    k
+                    for k in proposed_changes
                     if "value" in k.lower() or "principle" in k.lower() or "core" in k.lower()
                 ]
                 if value_fields:
@@ -134,9 +133,7 @@ class IdentityAnchor:
     def _load_anchor(self) -> None:
         """Load anchor definition from YAML."""
         if not self._anchor_path.exists():
-            logger.info(
-                "Anchor file not found at %s, using defaults", self._anchor_path
-            )
+            logger.info("Anchor file not found at %s, using defaults", self._anchor_path)
             return
 
         try:

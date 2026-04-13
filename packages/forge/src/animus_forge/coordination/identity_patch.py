@@ -120,9 +120,7 @@ class IdentityPatchGate:
                     )
                 applied = True
             except Exception:
-                logger.exception(
-                    "Failed to apply patch %s via proposal manager", patch_id
-                )
+                logger.exception("Failed to apply patch %s via proposal manager", patch_id)
 
         # Fallback: write to staging file
         if not applied:
