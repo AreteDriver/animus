@@ -60,9 +60,9 @@ async def config_page(request: Request) -> object:
     }
 
     return templates.TemplateResponse(
+        request,
         "config.html",
         {
-            "request": request,
             "config": masked,
             "saved": request.query_params.get("saved", ""),
         },

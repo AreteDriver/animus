@@ -112,9 +112,9 @@ async def home_page(request: Request) -> object:
         persona_count = runtime.persona_engine.persona_count
 
     return templates.TemplateResponse(
+        request,
         "home.html",
         {
-            "request": request,
             "runtime_status": runtime_status,
             "forge_status": forge_status,
             "memory_size": memory_size,

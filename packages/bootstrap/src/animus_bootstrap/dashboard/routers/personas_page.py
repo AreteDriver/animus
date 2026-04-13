@@ -66,7 +66,7 @@ async def personas_page(request: Request) -> HTMLResponse:
                     "channels": (", ".join(k for k, v in p.channel_bindings.items() if v) or "All"),
                 }
             )
-    return templates.TemplateResponse("personas.html", {"request": request, "personas": personas})
+    return templates.TemplateResponse(request, "personas.html", {"personas": personas})
 
 
 @router.get("/api/personas")

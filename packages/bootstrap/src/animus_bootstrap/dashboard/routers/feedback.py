@@ -57,7 +57,4 @@ async def feedback_page(request: Request) -> object:
         stats = store.get_stats()
         recent = store.get_recent(limit=50)
 
-    return templates.TemplateResponse(
-        "feedback.html",
-        {"request": request, "stats": stats, "recent": recent},
-    )
+    return templates.TemplateResponse(request, "feedback.html", {"stats": stats, "recent": recent})

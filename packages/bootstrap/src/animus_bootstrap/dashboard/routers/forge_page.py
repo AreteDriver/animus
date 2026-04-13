@@ -53,9 +53,9 @@ async def forge_page(request: Request) -> object:
             forge_status = "stopped"
 
     return templates.TemplateResponse(
+        request,
         "forge.html",
         {
-            "request": request,
             "forge_enabled": forge_enabled,
             "forge_status": forge_status,
             "forge_health": forge_health,
