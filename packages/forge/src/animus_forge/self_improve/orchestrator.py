@@ -13,6 +13,12 @@ from typing import TYPE_CHECKING, Any
 
 from .analyzer import CodebaseAnalyzer, ImprovementSuggestion
 from .approval import ApprovalGate, ApprovalStage, ApprovalStatus
+from .null_model_gate import (
+    NullModelGateConfig,
+    NullModelResult,
+    gate_against_null,
+    generate_placebo_changes,
+)
 from .pr_manager import PRManager, PullRequest
 from .rollback import RollbackManager, Snapshot
 from .safety import SafetyChecker, SafetyConfig, SafetyViolation
@@ -68,6 +74,7 @@ class ImprovementResult:
     pull_request: PullRequest | None = None
     error: str | None = None
     violations: list[SafetyViolation] = field(default_factory=list)
+    null_model_result: NullModelResult | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -94,6 +101,7 @@ class SelfImproveOrchestrator:
         config: SafetyConfig | None = None,
         tool_registry: Any = None,
         db_path: Path | str | None = None,
+        null_model_config: NullModelGateConfig | None = None,
     ):
         """Initialize the orchestrator.
 
@@ -104,11 +112,19 @@ class SelfImproveOrchestrator:
             tool_registry: Optional ForgeToolRegistry for tool-equipped generation.
             db_path: Path to SQLite database for persistent approvals and
                 checkpoints. Defaults to ``<codebase>/.gorgon/self_improve.db``.
+            null_model_config: Optional Prima Materia null-model gate
+                configuration. When provided and ``enabled=True``, a placebo
+                null-model comparison is run between sandbox validation and
+                apply approval: the proposed change must measurably improve
+                tracked metrics beyond the distribution of trivial
+                whitespace/comment perturbations, or the gate rejects it.
+                Defaults to None (gate disabled — existing behavior preserved).
         """
         self.codebase_path = Path(codebase_path)
         self.provider = provider
         self.config = config or SafetyConfig.load()
         self.tool_registry = tool_registry
+        self.null_model_config = null_model_config
 
         # Persistent state
         self._db_path = Path(db_path) if db_path else self.codebase_path / ".gorgon/self_improve.db"
@@ -280,9 +296,10 @@ class SelfImproveOrchestrator:
                     error="No changes generated",
                 )
 
-            # Stage 5: Test in sandbox
+            # Stage 5: Test in sandbox (+ optional null-model gate)
             self._current_stage = WorkflowStage.TESTING
             logger.info("Testing changes in sandbox...")
+            null_result: NullModelResult | None = None
             with Sandbox(self.codebase_path, timeout=self.config.sandbox_timeout) as sandbox:
                 applied = await sandbox.apply_changes(changes)
                 if not applied:
@@ -295,6 +312,11 @@ class SelfImproveOrchestrator:
                     )
                 sandbox_result = await sandbox.validate_changes()
 
+                # Optional: null-model gate (Prima Materia methodology).
+                # Only runs if a config was supplied and it's enabled.
+                if self.null_model_config and self.null_model_config.enabled:
+                    null_result = await self._run_null_model_gate(sandbox=sandbox, changes=changes)
+
             if not sandbox_result.tests_passed:
                 if self.config.auto_rollback_on_test_failure:
                     self._current_stage = WorkflowStage.FAILED
@@ -303,8 +325,35 @@ class SelfImproveOrchestrator:
                         stage_reached=WorkflowStage.TESTING,
                         plan=plan,
                         sandbox_result=sandbox_result,
+                        null_model_result=null_result,
                         error="Tests failed in sandbox",
                     )
+
+            # Null-model gate rejection is a hard stop between stages 5 and 6.
+            if (
+                null_result is not None
+                and self.null_model_config
+                and not self.null_model_config.allows(null_result.verdict)
+            ):
+                self._current_stage = WorkflowStage.FAILED
+                logger.warning(
+                    "Null-model gate rejected change: verdict=%s, percentile=%.1f",
+                    null_result.verdict.value,
+                    null_result.percentile,
+                )
+                return ImprovementResult(
+                    success=False,
+                    stage_reached=WorkflowStage.TESTING,
+                    plan=plan,
+                    sandbox_result=sandbox_result,
+                    null_model_result=null_result,
+                    error=(
+                        f"Null-model gate rejected change "
+                        f"(verdict={null_result.verdict.value}, "
+                        f"percentile={null_result.percentile:.1f}): "
+                        f"{null_result.rationale}"
+                    ),
+                )
 
             # Stage 6: Get apply approval
             if self.config.human_approval_apply:
@@ -398,6 +447,7 @@ class SelfImproveOrchestrator:
                 snapshot=snapshot,
                 sandbox_result=sandbox_result,
                 pull_request=pr,
+                null_model_result=null_result,
             )
 
         except Exception as e:
@@ -988,6 +1038,79 @@ Output ONLY FILE: markers and code blocks. No other text."""
             estimated_files=list(all_files),
             estimated_lines=total_lines,
         )
+
+    async def _run_null_model_gate(
+        self,
+        sandbox: Sandbox,
+        changes: dict[str, str],
+    ) -> NullModelResult | None:
+        """Run the Prima Materia null-model gate on a proposed change.
+
+        Collects a baseline metric snapshot from the original codebase, a
+        proposed snapshot from the sandbox (which already has the changes
+        applied), and N placebo snapshots from trivial perturbations of
+        the same file set. Returns the verdict.
+
+        Args:
+            sandbox: The `Sandbox` instance holding the already-applied changes.
+            changes: Mapping of file path → new file content (the proposed
+                change set). Original contents are read from ``codebase_path``.
+
+        Returns:
+            A `NullModelResult`, or None if gate computation failed.
+        """
+        if not self.null_model_config or not self.null_model_config.enabled:
+            return None
+
+        try:
+            # Baseline: snapshot the untouched source path.
+            baseline = await sandbox.compute_metrics(cwd=str(self.codebase_path))
+
+            # Proposed: snapshot the sandbox (which has changes applied).
+            proposed = await sandbox.compute_metrics()
+
+            # Placebo null samples: for each sample, create a fresh scratch
+            # sandbox, apply trivial perturbations to the same file set,
+            # and take a snapshot. Throttled to keep runtime manageable.
+            originals: dict[str, str] = {}
+            for path in changes:
+                full = self.codebase_path / path
+                try:
+                    originals[path] = full.read_text()
+                except OSError:
+                    continue
+            if not originals:
+                logger.warning("Null gate: no readable originals for perturbation")
+                return None
+
+            placebo_sets = generate_placebo_changes(
+                originals,
+                n=self.null_model_config.n_null_samples,
+                seed=self.null_model_config.seed,
+            )
+
+            from .null_model_gate import MetricSnapshot
+
+            null_snapshots: list[MetricSnapshot] = []
+            for sample in placebo_sets:
+                with Sandbox(
+                    self.codebase_path, timeout=self.config.sandbox_timeout
+                ) as placebo_sandbox:
+                    await placebo_sandbox.apply_changes(sample)
+                    snap = await placebo_sandbox.compute_metrics()
+                    null_snapshots.append(snap)
+
+            null_result = gate_against_null(baseline, proposed, null_snapshots)
+            logger.info(
+                "Null-model gate: verdict=%s percentile=%.1f (%d null samples)",
+                null_result.verdict.value,
+                null_result.percentile,
+                len(null_snapshots),
+            )
+            return null_result
+        except Exception as exc:
+            logger.exception("Null-model gate failed: %s", exc)
+            return None
 
     def rollback(self, snapshot_id: str) -> bool:
         """Rollback to a previous snapshot.

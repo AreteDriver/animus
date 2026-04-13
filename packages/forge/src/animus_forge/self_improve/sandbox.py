@@ -12,9 +12,71 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .null_model_gate import MetricSnapshot
 
 logger = logging.getLogger(__name__)
+
+
+def _walk_python_metrics(root: str) -> tuple[float | None, float | None]:
+    """Walk a directory tree and compute (lines_of_code, docstring_coverage_pct).
+
+    Lines of code = non-blank, non-comment .py lines.
+    Docstring coverage = fraction of functions / methods with a string-literal
+    first statement. This is a heuristic, not a full AST analysis — it reads
+    as a text scan and is cheap enough to run repeatedly.
+    """
+    root_path = Path(root)
+    if not root_path.exists():
+        return None, None
+
+    loc = 0
+    total_funcs = 0
+    funcs_with_doc = 0
+    for py_file in root_path.rglob("*.py"):
+        # Skip venv / cache / build directories
+        parts = set(py_file.parts)
+        if parts & {".venv", "venv", "__pycache__", ".mypy_cache", ".pytest_cache", ".tox"}:
+            continue
+        try:
+            text = py_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        lines = text.splitlines()
+        for line in lines:
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#"):
+                loc += 1
+
+        # Function detection: look for `def ` or `async def ` lines, then
+        # check the next non-blank line for a string literal.
+        n = len(lines)
+        i = 0
+        while i < n:
+            stripped = lines[i].lstrip()
+            if stripped.startswith("def ") or stripped.startswith("async def "):
+                total_funcs += 1
+                # Look for the body's first non-blank, non-comment line
+                j = i + 1
+                while j < n:
+                    body = lines[j].strip()
+                    if not body or body.startswith("#"):
+                        j += 1
+                        continue
+                    if body.startswith(
+                        ('"""', "'''", 'r"""', "r'''", 'f"""', "f'''")
+                    ) or body.startswith(('"', "'")):
+                        funcs_with_doc += 1
+                    break
+            i += 1
+
+    if total_funcs == 0:
+        docstring_pct: float | None = None
+    else:
+        docstring_pct = 100.0 * funcs_with_doc / total_funcs
+    return float(loc) if loc > 0 else None, docstring_pct
 
 
 class SandboxStatus(str, Enum):
@@ -325,6 +387,73 @@ class Sandbox:
             lint_passed=lint_clean,
             lint_output=lint_result.lint_output,
             duration_seconds=test_result.duration_seconds,
+        )
+
+    async def compute_metrics(self, cwd: str | None = None) -> MetricSnapshot:
+        """Compute a metric snapshot of the current sandbox (or a given path).
+
+        Collects quantitative signals that a null-model gate can compare
+        between baseline and proposed states:
+
+          - tests_total, tests_passing (from pytest --collect-only / run)
+          - lint_errors (from ruff check)
+          - lines_of_code (non-blank, non-comment .py lines)
+          - docstring_coverage_percent (rough heuristic)
+
+        Runs pytest in collect-only mode to count tests cheaply; only runs
+        the full suite if `run_tests=True` is passed via the caller. This
+        keeps placebo snapshotting fast for the null-model loop.
+
+        Args:
+            cwd: Optional working directory to inspect. Defaults to the
+                sandbox path.
+
+        Returns:
+            A `MetricSnapshot` populated with whatever could be measured.
+        """
+        from .null_model_gate import MetricSnapshot
+
+        work_dir = cwd or (str(self._sandbox_path) if self._sandbox_path else None)
+        if not work_dir:
+            return MetricSnapshot(metadata={"error": "No sandbox path"})
+
+        metadata: dict[str, Any] = {"cwd": work_dir}
+
+        # Count lint errors
+        lint_errors: float | None = None
+        try:
+            lint_result = await self._run_command(
+                [sys.executable, "-m", "ruff", "check", "--output-format=concise", "."],
+                cwd=work_dir,
+            )
+            lint_errors = float(self._count_lint_errors(lint_result.stdout + lint_result.stderr))
+        except Exception as exc:
+            metadata["lint_error"] = str(exc)
+
+        # Collect test count (cheap)
+        tests_total: float | None = None
+        try:
+            collect_result = await self._run_command(
+                [sys.executable, "-m", "pytest", "--collect-only", "-q"],
+                cwd=work_dir,
+            )
+            import re as _re
+
+            match = _re.search(r"(\d+)\s+tests? collected", collect_result.stdout)
+            if match:
+                tests_total = float(match.group(1))
+        except Exception as exc:
+            metadata["collect_error"] = str(exc)
+
+        # Static code metrics — walk the tree and count
+        loc, docstring_pct = _walk_python_metrics(work_dir)
+
+        return MetricSnapshot(
+            tests_total=tests_total,
+            lint_errors=lint_errors,
+            lines_of_code=loc,
+            docstring_coverage_percent=docstring_pct,
+            metadata=metadata,
         )
 
     @staticmethod

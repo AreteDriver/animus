@@ -13,6 +13,16 @@ Safety Features:
 
 from .analyzer import CodebaseAnalyzer, ImprovementSuggestion
 from .approval import ApprovalGate, ApprovalStatus
+from .null_model_gate import (
+    MetricSnapshot,
+    NullModelGateConfig,
+    NullModelResult,
+    NullModelVerdict,
+    classify_verdict,
+    gate_against_null,
+    generate_placebo_changes,
+    score_delta,
+)
 from .orchestrator import SelfImproveOrchestrator
 from .pr_manager import PRManager, PRStatus
 from .rollback import RollbackManager, Snapshot
@@ -40,4 +50,13 @@ __all__ = [
     # PR Management
     "PRManager",
     "PRStatus",
+    # Null-model gate (Prima Materia methodology)
+    "MetricSnapshot",
+    "NullModelResult",
+    "NullModelVerdict",
+    "NullModelGateConfig",
+    "score_delta",
+    "generate_placebo_changes",
+    "classify_verdict",
+    "gate_against_null",
 ]
