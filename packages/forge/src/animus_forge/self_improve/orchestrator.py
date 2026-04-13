@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 from .analyzer import CodebaseAnalyzer, ImprovementSuggestion
 from .approval import ApprovalGate, ApprovalStage, ApprovalStatus
 from .null_model_gate import (
+    MetricSnapshot,
     NullModelGateConfig,
     NullModelResult,
     gate_against_null,
