@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import shutil
 import subprocess
 import sys
@@ -12,7 +13,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-import re
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -438,8 +438,6 @@ class Sandbox:
                 [sys.executable, "-m", "pytest", "--collect-only", "-q"],
                 cwd=work_dir,
             )
-            import re as _re
-
             match = re.search(r"(\d+)\s+tests? collected", collect_result.stdout)
             if match:
                 tests_total = float(match.group(1))

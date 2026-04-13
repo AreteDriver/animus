@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any
 from .analyzer import CodebaseAnalyzer, ImprovementSuggestion
 from .approval import ApprovalGate, ApprovalStage, ApprovalStatus
 from .null_model_gate import (
-    MetricSnapshot,
     NullModelGateConfig,
     NullModelResult,
     gate_against_null,
@@ -1090,9 +1089,7 @@ Output ONLY FILE: markers and code blocks. No other text."""
                 seed=self.null_model_config.seed,
             )
 
-            from .null_model_gate import MetricSnapshot
-
-            null_snapshots: list[MetricSnapshot] = []
+            null_snapshots = []
             with Sandbox(
                 self.codebase_path, timeout=self.config.sandbox_timeout
             ) as placebo_sandbox:
