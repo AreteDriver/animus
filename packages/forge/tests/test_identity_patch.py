@@ -10,7 +10,6 @@ import pytest
 
 from animus_forge.coordination.identity_patch import IdentityPatch, IdentityPatchGate
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -206,9 +205,7 @@ class TestListPending:
 class TestPersistence:
     """Tests for patch persistence across instances."""
 
-    def test_load_patches_from_disk(
-        self, tmp_patches_path: Path, tmp_audit_path: Path
-    ) -> None:
+    def test_load_patches_from_disk(self, tmp_patches_path: Path, tmp_audit_path: Path) -> None:
         gate1 = IdentityPatchGate(
             patches_path=tmp_patches_path,
             audit_log_path=tmp_audit_path,

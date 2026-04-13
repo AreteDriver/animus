@@ -710,12 +710,8 @@ class ChromaMemoryStore(MemoryStore):
             chroma_meta = {}
             chroma_docs = {}
             for i, mem_id in enumerate(results["ids"][0]):
-                chroma_meta[mem_id] = (
-                    results["metadatas"][0][i] if results["metadatas"] else {}
-                )
-                chroma_docs[mem_id] = (
-                    results["documents"][0][i] if results["documents"] else ""
-                )
+                chroma_meta[mem_id] = results["metadatas"][0][i] if results["metadatas"] else {}
+                chroma_docs[mem_id] = results["documents"][0][i] if results["documents"] else ""
 
             memories = []
             for mem_id in fused_ids:

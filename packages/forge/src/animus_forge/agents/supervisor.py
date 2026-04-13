@@ -1098,9 +1098,7 @@ Focus on the most important findings and recommendations.
 
         # Apply sefirotic topology weighting (non-destructive overlay)
         if self._sefirotic_router is not None:
-            plan.delegations = self._sefirotic_router.weight_delegations(
-                plan.delegations, message
-            )
+            plan.delegations = self._sefirotic_router.weight_delegations(plan.delegations, message)
             logger.debug(
                 "Sefirotic routing applied: %s",
                 [(d.get("role"), d.get("topology_weight")) for d in plan.delegations],

@@ -20,9 +20,15 @@ from animus_forge.providers.ollama_provider import OllamaProvider
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run Animus Forge evolution loop")
-    parser.add_argument("--iterations", type=int, default=1, help="Number of iterations (default: 1)")
-    parser.add_argument("--model", default="qwen2.5:14b", help="Ollama model (default: qwen2.5:14b)")
-    parser.add_argument("--budget", type=int, default=100_000, help="Token budget (default: 100000)")
+    parser.add_argument(
+        "--iterations", type=int, default=1, help="Number of iterations (default: 1)"
+    )
+    parser.add_argument(
+        "--model", default="qwen2.5:14b", help="Ollama model (default: qwen2.5:14b)"
+    )
+    parser.add_argument(
+        "--budget", type=int, default=100_000, help="Token budget (default: 100000)"
+    )
     args = parser.parse_args()
 
     forge_root = Path(__file__).parent.parent
@@ -33,7 +39,7 @@ def main() -> None:
         print(f"ERROR: better.md not found at {better_path}")
         sys.exit(1)
 
-    print(f"Evolution Loop Configuration:")
+    print("Evolution Loop Configuration:")
     print(f"  Model: {args.model}")
     print(f"  Iterations: {args.iterations}")
     print(f"  Budget: {args.budget:,} tokens")

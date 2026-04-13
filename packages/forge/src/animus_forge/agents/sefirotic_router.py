@@ -36,23 +36,23 @@ logger = logging.getLogger(__name__)
 class Sefirah(Enum):
     """The 10 sefirot as routing nodes."""
 
-    KETER = 0       # Intent parsing / input
-    CHOKHMAH = 1    # Creative synthesis / expansion
-    BINAH = 2       # Constraint analysis / contraction
-    CHESED = 3      # Tool selection / capability expansion
-    GEVURAH = 4     # Safety gating / budget enforcement
-    TIFERET = 5     # Supervisor / central orchestrator
-    NETZACH = 6     # Memory write / persistence
-    HOD = 7         # Memory read / retrieval
-    YESOD = 8       # Response assembly / synthesis
-    MALKUTH = 9     # Action execution / output
+    KETER = 0  # Intent parsing / input
+    CHOKHMAH = 1  # Creative synthesis / expansion
+    BINAH = 2  # Constraint analysis / contraction
+    CHESED = 3  # Tool selection / capability expansion
+    GEVURAH = 4  # Safety gating / budget enforcement
+    TIFERET = 5  # Supervisor / central orchestrator
+    NETZACH = 6  # Memory write / persistence
+    HOD = 7  # Memory read / retrieval
+    YESOD = 8  # Response assembly / synthesis
+    MALKUTH = 9  # Action execution / output
 
 
 class Pillar(Enum):
     """The three pillars as processing modes."""
 
-    MERCY = "mercy"           # Expansion: generate, discover, persist
-    SEVERITY = "severity"     # Contraction: validate, constrain, retrieve
+    MERCY = "mercy"  # Expansion: generate, discover, persist
+    SEVERITY = "severity"  # Contraction: validate, constrain, retrieve
     EQUILIBRIUM = "equilibrium"  # Integration: input, orchestrate, assemble, output
 
 
@@ -100,13 +100,13 @@ EDGES: list[tuple[Sefirah, Sefirah]] = [
 
 # Role-to-Sefirah mapping for agent delegation
 ROLE_MAP: dict[str, Sefirah] = {
-    "planner": Sefirah.CHOKHMAH,     # Creative planning = expansion
-    "architect": Sefirah.CHOKHMAH,   # Architecture = creative synthesis
-    "builder": Sefirah.CHESED,       # Building = tool-using expansion
-    "tester": Sefirah.BINAH,         # Testing = constraint validation
-    "reviewer": Sefirah.GEVURAH,     # Review = safety/quality gate
-    "analyst": Sefirah.BINAH,        # Analysis = constraint/understanding
-    "documenter": Sefirah.NETZACH,   # Documentation = knowledge persistence
+    "planner": Sefirah.CHOKHMAH,  # Creative planning = expansion
+    "architect": Sefirah.CHOKHMAH,  # Architecture = creative synthesis
+    "builder": Sefirah.CHESED,  # Building = tool-using expansion
+    "tester": Sefirah.BINAH,  # Testing = constraint validation
+    "reviewer": Sefirah.GEVURAH,  # Review = safety/quality gate
+    "analyst": Sefirah.BINAH,  # Analysis = constraint/understanding
+    "documenter": Sefirah.NETZACH,  # Documentation = knowledge persistence
 }
 
 
@@ -119,8 +119,8 @@ class RoutingDecision:
     path_exists: bool
     hop_count: int
     pillar_alignment: float  # 0-1, how well target's pillar matches task type
-    topology_weight: float   # Combined routing score
-    skip_connection: bool    # True if using the 22nd path
+    topology_weight: float  # Combined routing score
+    skip_connection: bool  # True if using the 22nd path
 
 
 @dataclass
@@ -231,16 +231,42 @@ class SefiroticRouter:
         lower = message.lower()
 
         creative_signals = [
-            "create", "build", "design", "implement", "add", "new",
-            "generate", "propose", "brainstorm", "explore", "draft",
+            "create",
+            "build",
+            "design",
+            "implement",
+            "add",
+            "new",
+            "generate",
+            "propose",
+            "brainstorm",
+            "explore",
+            "draft",
         ]
         validation_signals = [
-            "test", "check", "verify", "review", "audit", "analyze",
-            "debug", "fix", "investigate", "validate", "assess",
+            "test",
+            "check",
+            "verify",
+            "review",
+            "audit",
+            "analyze",
+            "debug",
+            "fix",
+            "investigate",
+            "validate",
+            "assess",
         ]
         safety_signals = [
-            "security", "safety", "limit", "budget", "restrict",
-            "block", "deny", "prevent", "guard", "protect",
+            "security",
+            "safety",
+            "limit",
+            "budget",
+            "restrict",
+            "block",
+            "deny",
+            "prevent",
+            "guard",
+            "protect",
         ]
 
         creative_score = sum(1 for s in creative_signals if s in lower)
@@ -279,9 +305,7 @@ class SefiroticRouter:
             decision = self.route(role, task_type)
 
             delegation["topology_weight"] = decision.topology_weight
-            delegation["sefirotic_path"] = (
-                f"{decision.source.name} -> {decision.target.name}"
-            )
+            delegation["sefirotic_path"] = f"{decision.source.name} -> {decision.target.name}"
             delegation["pillar"] = PILLAR_MAP[decision.target].value
             if decision.skip_connection:
                 delegation["skip_connection"] = True
@@ -312,9 +336,6 @@ class SefiroticRouter:
             "edges": len(EDGES),
             "hub": Sefirah.TIFERET.name,
             "hub_connections": len(self._adjacency[Sefirah.TIFERET]),
-            "pillars": {
-                p.value: [s.name for s in Sefirah if PILLAR_MAP[s] == p]
-                for p in Pillar
-            },
+            "pillars": {p.value: [s.name for s in Sefirah if PILLAR_MAP[s] == p] for p in Pillar},
             "skip_connection": "CHOKHMAH -> NETZACH (22nd path)",
         }

@@ -559,9 +559,7 @@ class ProactiveEngine:
             return []
 
         # Load pending alert context files
-        alert_files = [
-            f for f in alerts_dir.glob("*.json") if f.name != "active_alerts.json"
-        ]
+        alert_files = [f for f in alerts_dir.glob("*.json") if f.name != "active_alerts.json"]
         if not alert_files:
             return []
 
@@ -590,7 +588,10 @@ class ProactiveEngine:
                         content=f"{service} is back online (was {status}). Auto-resolved.",
                         created_at=datetime.now(),
                         expires_at=datetime.now() + timedelta(hours=2),
-                        metadata={"fleet_service": alert.get("service_name"), "action": "auto_resolved"},
+                        metadata={
+                            "fleet_service": alert.get("service_name"),
+                            "action": "auto_resolved",
+                        },
                     )
                     self._emit_nudge(nudge)
                     nudges.append(nudge)
@@ -651,7 +652,17 @@ class ProactiveEngine:
 
         try:
             result = subprocess.run(
-                ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", str(timeout), url],
+                [
+                    "curl",
+                    "-s",
+                    "-o",
+                    "/dev/null",
+                    "-w",
+                    "%{http_code}",
+                    "--max-time",
+                    str(timeout),
+                    url,
+                ],
                 capture_output=True,
                 text=True,
                 timeout=timeout + 5,
