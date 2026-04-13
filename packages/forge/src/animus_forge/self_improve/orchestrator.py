@@ -1092,10 +1092,10 @@ Output ONLY FILE: markers and code blocks. No other text."""
             from .null_model_gate import MetricSnapshot
 
             null_snapshots: list[MetricSnapshot] = []
-            for sample in placebo_sets:
-                with Sandbox(
-                    self.codebase_path, timeout=self.config.sandbox_timeout
-                ) as placebo_sandbox:
+            with Sandbox(
+                self.codebase_path, timeout=self.config.sandbox_timeout
+            ) as placebo_sandbox:
+                for sample in placebo_sets:
                     await placebo_sandbox.apply_changes(sample)
                     snap = await placebo_sandbox.compute_metrics()
                     null_snapshots.append(snap)
