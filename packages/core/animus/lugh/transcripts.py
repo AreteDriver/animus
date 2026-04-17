@@ -46,6 +46,7 @@ KNOWN_LINE_TYPES = {
     "queue-operation",
     "permission-mode",
     "last-prompt",
+    "progress",  # streaming bash output ticks in subagent transcripts (~1/sec)
 }
 TURN_TYPES = {"user", "assistant"}
 
