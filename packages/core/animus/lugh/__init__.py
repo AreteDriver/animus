@@ -12,6 +12,8 @@ Submodules:
 
 from __future__ import annotations
 
+from animus.lugh.cache import TranscriptCache
+from animus.lugh.drift_client import DriftMonitorClient
 from animus.lugh.models import SessionSummary, Turn
 from animus.lugh.repos import (
     HARVEST_TOOL,
@@ -21,6 +23,9 @@ from animus.lugh.repos import (
     harvest_repo,
 )
 from animus.lugh.transcripts import (
+    KNOWN_LINE_TYPES,
+    MODEL_PRICING,
+    MODEL_PRICING_LAST_UPDATED,
     drift_signals,
     harvest_transcripts,
     parse_session,
@@ -73,4 +78,10 @@ __all__ = [
     "harvest_transcripts",
     "parse_session",
     "rollup_by_cwd",
+    "KNOWN_LINE_TYPES",
+    "MODEL_PRICING",
+    "MODEL_PRICING_LAST_UPDATED",
+    # infrastructure
+    "TranscriptCache",
+    "DriftMonitorClient",
 ]

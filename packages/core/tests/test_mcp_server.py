@@ -122,8 +122,9 @@ class TestMcpServerCreation:
 
     def test_tool_count(self, server):
         tools = server._tool_manager.list_tools()
-        # 4 memory + 2 versioning + 3 task + 1 brief + 1 workflow + 1 harvest + 4 watchlist + 1 self-improve = 17
-        assert len(tools) == 17
+        # 4 memory + 2 versioning + 3 task + 1 brief + 1 workflow + 1 harvest
+        # + 4 watchlist + 3 transcripts + 1 self-improve = 20
+        assert len(tools) == 20
 
 
 class TestMemoryTools:

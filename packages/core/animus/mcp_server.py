@@ -451,6 +451,128 @@ def create_mcp_server():
             return f"Watchlist scan failed: {e}"
 
     # -----------------------------------------------------------------------
+    # Lugh transcript tools (Claude Code JSONL harvester)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_transcripts_rollup(
+        since: str = "",
+        project: str = "",
+        include_sidechains: bool = True,
+        api_key: str = "",
+    ) -> str:
+        """Roll up Claude Code transcript cost/turns by per-turn cwd.
+
+        Args:
+            since: YYYY-MM-DD lower bound on session date (empty = all time).
+            project: Substring filter on session file path.
+            include_sidechains: Include subagent transcripts (default True).
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from datetime import datetime as _dt
+        from datetime import timezone as _tz
+
+        from animus.lugh.transcripts import harvest_transcripts, rollup_by_cwd
+
+        since_dt = None
+        if since:
+            try:
+                since_dt = _dt.strptime(since, "%Y-%m-%d").replace(tzinfo=_tz.utc)
+            except ValueError:
+                return f"Invalid --since: expected YYYY-MM-DD, got {since!r}"
+
+        try:
+            sessions = list(harvest_transcripts(
+                project=project or None,
+                since=since_dt,
+                include_sidechains=include_sidechains,
+            ))
+            roll = rollup_by_cwd(sessions)
+            top = sorted(roll.items(), key=lambda kv: -kv[1]["cost"])[:20]
+            return json.dumps(
+                {
+                    "session_count": len(sessions),
+                    "rollup": [{"cwd": c, **d} for c, d in top],
+                },
+                indent=2,
+                default=str,
+            )
+        except Exception as e:
+            return f"Transcript rollup failed: {e}"
+
+    @mcp.tool()
+    def animus_transcripts_session(session_id: str, api_key: str = "") -> str:
+        """Emit the drift_signals payload for a single Claude Code session.
+
+        Args:
+            session_id: Session UUID to look up.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.lugh.transcripts import drift_signals, harvest_transcripts
+
+        try:
+            for s in harvest_transcripts():
+                if s.session_id == session_id:
+                    return json.dumps(drift_signals(s), indent=2, default=str)
+            return f"Session {session_id!r} not found in ~/.claude/projects"
+        except Exception as e:
+            return f"Transcript lookup failed: {e}"
+
+    @mcp.tool()
+    def animus_transcripts_drift(
+        since: str = "",
+        min_efficiency_drift: float = 50.0,
+        limit: int = 20,
+        api_key: str = "",
+    ) -> str:
+        """List recent sessions with high efficiency drift (conversation-heavy).
+
+        efficiency_drift = % of turns classified as conversation. Values > 50
+        indicate thinking-heavy sessions; > 70 is usually actionable signal.
+
+        Args:
+            since: YYYY-MM-DD lower bound on session date.
+            min_efficiency_drift: Only include sessions at or above this threshold.
+            limit: Max sessions to return (default 20).
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from datetime import datetime as _dt
+        from datetime import timezone as _tz
+
+        from animus.lugh.transcripts import drift_signals, harvest_transcripts
+
+        since_dt = None
+        if since:
+            try:
+                since_dt = _dt.strptime(since, "%Y-%m-%d").replace(tzinfo=_tz.utc)
+            except ValueError:
+                return f"Invalid --since: expected YYYY-MM-DD, got {since!r}"
+
+        try:
+            flagged = []
+            for s in harvest_transcripts(since=since_dt):
+                p = drift_signals(s)
+                if p["signals"]["efficiency_drift"] >= min_efficiency_drift:
+                    flagged.append(p)
+            flagged.sort(key=lambda p: -p["signals"]["efficiency_drift"])
+            return json.dumps({"count": len(flagged), "sessions": flagged[:limit]},
+                              indent=2, default=str)
+        except Exception as e:
+            return f"Drift scan failed: {e}"
+
+    # -----------------------------------------------------------------------
     # Self-improvement tools
     # -----------------------------------------------------------------------
 
