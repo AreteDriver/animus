@@ -347,7 +347,7 @@ def create_mcp_server():
         if auth_err:
             return auth_err
 
-        from animus.harvest import harvest_repo
+        from animus.lugh.repos import harvest_repo
 
         try:
             result = harvest_repo(
@@ -363,7 +363,7 @@ def create_mcp_server():
             return f"Harvest error: {e}"
 
     # -----------------------------------------------------------------------
-    # Harvest watchlist tools
+    # Lugh watchlist tools
     # -----------------------------------------------------------------------
 
     @mcp.tool()
@@ -385,7 +385,7 @@ def create_mcp_server():
         if auth_err:
             return auth_err
 
-        from animus.harvest_watchlist import add_to_watchlist
+        from animus.lugh.watchlist import add_to_watchlist
 
         tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
 
@@ -409,7 +409,7 @@ def create_mcp_server():
         if auth_err:
             return auth_err
 
-        from animus.harvest_watchlist import remove_from_watchlist
+        from animus.lugh.watchlist import remove_from_watchlist
 
         removed = remove_from_watchlist(target)
         if removed:
@@ -419,7 +419,7 @@ def create_mcp_server():
     @mcp.tool()
     def animus_watchlist_list() -> str:
         """List all repos on the competition watchlist with their last scan data."""
-        from animus.harvest_watchlist import get_watchlist
+        from animus.lugh.watchlist import get_watchlist
 
         repos = get_watchlist()
         if not repos:
@@ -441,7 +441,7 @@ def create_mcp_server():
         if auth_err:
             return auth_err
 
-        from animus.harvest_watchlist import run_watchlist_scan
+        from animus.lugh.watchlist import run_watchlist_scan
 
         interval = interval_hours if interval_hours > 0 else None
         try:

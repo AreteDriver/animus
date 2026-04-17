@@ -1,4 +1,4 @@
-"""Tool definitions and handlers for harvest watchlist integration."""
+"""Tool definitions and handlers for Lugh watchlist integration."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def _tool_watchlist_add(params: dict) -> ToolResult:
     """Tool handler for animus_watchlist_add."""
-    from animus.harvest_watchlist import add_to_watchlist
+    from animus.lugh.watchlist import add_to_watchlist
 
     target = params.get("target")
     if not target:
@@ -56,7 +56,7 @@ def _tool_watchlist_add(params: dict) -> ToolResult:
 
 def _tool_watchlist_remove(params: dict) -> ToolResult:
     """Tool handler for animus_watchlist_remove."""
-    from animus.harvest_watchlist import remove_from_watchlist
+    from animus.lugh.watchlist import remove_from_watchlist
 
     target = params.get("target")
     if not target:
@@ -93,7 +93,7 @@ def _tool_watchlist_remove(params: dict) -> ToolResult:
 
 def _tool_watchlist_list(params: dict) -> ToolResult:
     """Tool handler for animus_watchlist_list."""
-    from animus.harvest_watchlist import get_watchlist
+    from animus.lugh.watchlist import get_watchlist
 
     try:
         repos = get_watchlist()
@@ -114,7 +114,7 @@ def _tool_watchlist_list(params: dict) -> ToolResult:
 
 def _tool_watchlist_scan(params: dict) -> ToolResult:
     """Tool handler for animus_watchlist_scan."""
-    from animus.harvest_watchlist import run_watchlist_scan
+    from animus.lugh.watchlist import run_watchlist_scan
 
     interval = params.get("interval_hours")
 

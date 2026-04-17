@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Harvest Watchlist Cron — weekly competition scanner.
+Lugh Watchlist Cron — weekly competition scanner.
 
 Runs run_watchlist_scan(), prints a summary, and posts a Discord webhook
 notification with results.
 
 Usage:
-    python tools/harvest_cron.py              # Run scan + notify
-    python tools/harvest_cron.py --dry-run    # Preview without Discord post
-    python tools/harvest_cron.py --quiet      # Minimal stdout output
+    python tools/lugh_cron.py              # Run scan + notify
+    python tools/lugh_cron.py --dry-run    # Preview without Discord post
+    python tools/lugh_cron.py --quiet      # Minimal stdout output
 
 Cron (Sunday 6am):
     0 6 * * 0 ~/projects/animus/packages/core/.venv/bin/python \
-        ~/projects/animus/tools/harvest_cron.py \
-        >> ~/.animus/harvest_cron.log 2>&1
+        ~/projects/animus/tools/lugh_cron.py \
+        >> ~/.animus/lugh_cron.log 2>&1
 """
 
 from __future__ import annotations
@@ -30,9 +30,10 @@ _CORE_DIR = os.path.join(os.path.dirname(__file__), "..", "packages", "core")
 if os.path.isdir(_CORE_DIR) and _CORE_DIR not in sys.path:
     sys.path.insert(0, os.path.realpath(_CORE_DIR))
 
-from animus.harvest_watchlist import run_watchlist_scan
+from animus.lugh.watchlist import run_watchlist_scan
 
-DISCORD_WEBHOOK_ENV = "HARVEST_DISCORD_WEBHOOK"
+DISCORD_WEBHOOK_ENV = "LUGH_DISCORD_WEBHOOK"
+_LEGACY_DISCORD_WEBHOOK_ENV = "HARVEST_DISCORD_WEBHOOK"
 
 # Colors for Discord embeds
 COLOR_GREEN = 0x2ECC71   # No changes / all good
@@ -199,7 +200,7 @@ def main() -> int:
     print_summary(report, quiet=args.quiet)
 
     # Discord notification
-    webhook_url = os.environ.get(DISCORD_WEBHOOK_ENV, "")
+    webhook_url = os.environ.get(DISCORD_WEBHOOK_ENV, "") or os.environ.get(_LEGACY_DISCORD_WEBHOOK_ENV, "")
     if not webhook_url:
         if not args.quiet:
             print(f"\n  [{DISCORD_WEBHOOK_ENV} not set — skipping Discord notification]")
