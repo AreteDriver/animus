@@ -486,11 +486,13 @@ def create_mcp_server():
                 return f"Invalid --since: expected YYYY-MM-DD, got {since!r}"
 
         try:
-            sessions = list(harvest_transcripts(
-                project=project or None,
-                since=since_dt,
-                include_sidechains=include_sidechains,
-            ))
+            sessions = list(
+                harvest_transcripts(
+                    project=project or None,
+                    since=since_dt,
+                    include_sidechains=include_sidechains,
+                )
+            )
             roll = rollup_by_cwd(sessions)
             top = sorted(roll.items(), key=lambda kv: -kv[1]["cost"])[:20]
             return json.dumps(
@@ -567,8 +569,9 @@ def create_mcp_server():
                 if p["signals"]["efficiency_drift"] >= min_efficiency_drift:
                     flagged.append(p)
             flagged.sort(key=lambda p: -p["signals"]["efficiency_drift"])
-            return json.dumps({"count": len(flagged), "sessions": flagged[:limit]},
-                              indent=2, default=str)
+            return json.dumps(
+                {"count": len(flagged), "sessions": flagged[:limit]}, indent=2, default=str
+            )
         except Exception as e:
             return f"Drift scan failed: {e}"
 
