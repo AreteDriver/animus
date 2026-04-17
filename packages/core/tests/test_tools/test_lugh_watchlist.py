@@ -1,4 +1,4 @@
-"""Tests for harvest watchlist feature."""
+"""Tests for Lugh watchlist feature."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from unittest.mock import patch
 
 import pytest
 
-from animus.harvest import HarvestResult
-from animus.harvest_watchlist import (
+from animus.lugh.repos import HarvestResult
+from animus.lugh.watchlist import (
     _load_watchlist,
     _save_watchlist,
     add_to_watchlist,
@@ -21,7 +21,7 @@ from animus.harvest_watchlist import (
     run_watchlist_scan,
     update_scan_result,
 )
-from animus.harvest_watchlist_tools import (
+from animus.lugh.watchlist_tools import (
     WATCHLIST_ADD_TOOL,
     WATCHLIST_LIST_TOOL,
     WATCHLIST_REMOVE_TOOL,
@@ -35,8 +35,9 @@ from animus.harvest_watchlist_tools import (
 @pytest.fixture(autouse=True)
 def _isolate_watchlist(tmp_path, monkeypatch):
     """Point WATCHLIST_FILE to tmp_path so tests don't touch real data."""
-    test_file = tmp_path / "harvest_watchlist.json"
-    monkeypatch.setattr("animus.harvest_watchlist.WATCHLIST_FILE", test_file)
+    test_file = tmp_path / "lugh_watchlist.json"
+    monkeypatch.setattr("animus.lugh.watchlist.WATCHLIST_FILE", test_file)
+    monkeypatch.setattr("animus.lugh.watchlist._LEGACY_WATCHLIST_FILE", tmp_path / "__never__.json")
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +72,7 @@ class TestAddToWatchlist:
     def test_add_persists_to_disk(self, tmp_path):
         add_to_watchlist("user/repo")
         # Read the file directly
-        watchlist_file = tmp_path / "harvest_watchlist.json"
+        watchlist_file = tmp_path / "lugh_watchlist.json"
         data = json.loads(watchlist_file.read_text())
         assert len(data["repos"]) == 1
         assert data["repos"][0]["target"] == "user/repo"
@@ -187,7 +188,7 @@ class TestUpdateScanResult:
     def test_persists_to_disk(self, tmp_path):
         add_to_watchlist("user/repo")
         update_scan_result("user/repo", score=75)
-        watchlist_file = tmp_path / "harvest_watchlist.json"
+        watchlist_file = tmp_path / "lugh_watchlist.json"
         data = json.loads(watchlist_file.read_text())
         assert data["repos"][0]["last_score"] == 75
 
@@ -282,7 +283,7 @@ class TestGetChangesReport:
 
 
 class TestRunWatchlistScan:
-    @patch("animus.harvest.harvest_repo")
+    @patch("animus.lugh.repos.harvest_repo")
     def test_scans_due_repos(self, mock_harvest):
         mock_harvest.return_value = HarvestResult(
             repo="user/repo",
@@ -295,7 +296,7 @@ class TestRunWatchlistScan:
         assert report["scanned"] == 1
         mock_harvest.assert_called_once()
 
-    @patch("animus.harvest.harvest_repo")
+    @patch("animus.lugh.repos.harvest_repo")
     def test_reports_changes(self, mock_harvest):
         # First scan
         add_to_watchlist("user/repo")
@@ -325,7 +326,7 @@ class TestRunWatchlistScan:
         assert len(report["changes"]) == 1
         assert report["changes"][0]["repo"] == "user/repo"
 
-    @patch("animus.harvest.harvest_repo")
+    @patch("animus.lugh.repos.harvest_repo")
     def test_handles_scan_error(self, mock_harvest):
         mock_harvest.side_effect = RuntimeError("Clone failed")
         add_to_watchlist("user/broken")

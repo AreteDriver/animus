@@ -1,5 +1,5 @@
 """
-Harvest Watchlist — competition monitoring for repos.
+Lugh Watchlist — competition monitoring for repos.
 
 Stores a list of repos to periodically scan, tracks score changes,
 and generates diff reports between scans.
@@ -9,20 +9,35 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-WATCHLIST_FILE = Path("~/.animus/harvest_watchlist.json").expanduser()
+WATCHLIST_FILE = Path("~/.animus/lugh_watchlist.json").expanduser()
+_LEGACY_WATCHLIST_FILE = Path("~/.animus/harvest_watchlist.json").expanduser()
 
 # Default scan interval: 7 days
 DEFAULT_SCAN_INTERVAL_HOURS = 168
 
 
+def _migrate_legacy_if_needed() -> None:
+    """Copy harvest_watchlist.json -> lugh_watchlist.json on first use."""
+    if WATCHLIST_FILE.exists() or not _LEGACY_WATCHLIST_FILE.exists():
+        return
+    try:
+        WATCHLIST_FILE.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(_LEGACY_WATCHLIST_FILE, WATCHLIST_FILE)
+        logger.info("Migrated watchlist: %s -> %s", _LEGACY_WATCHLIST_FILE, WATCHLIST_FILE)
+    except OSError as e:
+        logger.warning("Legacy watchlist migration failed: %s", e)
+
+
 def _load_watchlist() -> dict[str, Any]:
     """Load watchlist from disk. Returns default structure if missing."""
+    _migrate_legacy_if_needed()
     if not WATCHLIST_FILE.exists():
         return {"repos": [], "scan_interval_hours": DEFAULT_SCAN_INTERVAL_HOURS}
     try:
@@ -58,7 +73,7 @@ def add_to_watchlist(
     Returns:
         The created watchlist entry.
     """
-    from animus.harvest import _extract_repo_name
+    from animus.lugh.repos import _extract_repo_name
 
     repo_name = _extract_repo_name(target)
     data = _load_watchlist()
@@ -92,7 +107,7 @@ def remove_from_watchlist(target: str) -> bool:
     Returns:
         True if removed, False if not found.
     """
-    from animus.harvest import _extract_repo_name
+    from animus.lugh.repos import _extract_repo_name
 
     repo_name = _extract_repo_name(target)
     data = _load_watchlist()
@@ -164,7 +179,7 @@ def update_scan_result(
     Returns:
         Updated entry or None if not found.
     """
-    from animus.harvest import _extract_repo_name
+    from animus.lugh.repos import _extract_repo_name
 
     repo_name = _extract_repo_name(target)
     data = _load_watchlist()
@@ -194,7 +209,7 @@ def get_changes_report(
     Returns:
         Change report dict with score_change, new/removed patterns, etc.
     """
-    from animus.harvest import _extract_repo_name
+    from animus.lugh.repos import _extract_repo_name
 
     repo_name = _extract_repo_name(target)
     data = _load_watchlist()
@@ -271,7 +286,7 @@ async def run_watchlist_scan(
     Returns:
         Structured report with scanned count, changes, and no_changes.
     """
-    from animus.harvest import harvest_repo
+    from animus.lugh.repos import harvest_repo
 
     due = get_due_repos(interval_hours=interval_hours)
 

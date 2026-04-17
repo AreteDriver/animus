@@ -1,4 +1,4 @@
-"""Tests for animus_harvest tool."""
+"""Tests for animus_harvest tool (Lugh repos submodule)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from animus.harvest import (
+from animus.lugh.repos import (
     HARVEST_TOOL,
     HarvestResult,
     _basic_scan,
@@ -440,7 +440,7 @@ class TestToolHarvest:
         assert not result.success
         assert "depth" in result.error
 
-    @patch("animus.harvest.harvest_repo")
+    @patch("animus.lugh.repos.harvest_repo")
     def test_success(self, mock_harvest):
         mock_harvest.return_value = HarvestResult(repo="user/repo", score=75, architecture="Python")
         result = _tool_harvest({"target": "user/repo"})
@@ -449,14 +449,14 @@ class TestToolHarvest:
         assert output["repo"] == "user/repo"
         assert output["score"] == 75
 
-    @patch("animus.harvest.harvest_repo")
+    @patch("animus.lugh.repos.harvest_repo")
     def test_value_error(self, mock_harvest):
         mock_harvest.side_effect = ValueError("Bad target")
         result = _tool_harvest({"target": "bad"})
         assert not result.success
         assert "Bad target" in result.error
 
-    @patch("animus.harvest.harvest_repo")
+    @patch("animus.lugh.repos.harvest_repo")
     def test_runtime_error(self, mock_harvest):
         mock_harvest.side_effect = RuntimeError("Clone failed")
         result = _tool_harvest({"target": "user/repo"})
@@ -491,8 +491,8 @@ class TestToolRegistration:
 
 
 class TestHarvestRepo:
-    @patch("animus.harvest._clone_repo")
-    @patch("animus.harvest._scan_with_anchormd")
+    @patch("animus.lugh.repos._clone_repo")
+    @patch("animus.lugh.repos._scan_with_anchormd")
     def test_full_harvest(self, mock_scan, mock_clone, tmp_path):
         mock_scan.return_value = {
             "total_files": 42,
@@ -537,8 +537,8 @@ class TestHarvestRepo:
         assert len(result.notable_patterns) > 0
         assert isinstance(result.comparison, dict)
 
-    @patch("animus.harvest._clone_repo")
-    @patch("animus.harvest._scan_with_anchormd")
+    @patch("animus.lugh.repos._clone_repo")
+    @patch("animus.lugh.repos._scan_with_anchormd")
     def test_harvest_no_compare(self, mock_scan, mock_clone):
         mock_scan.return_value = {
             "total_files": 5,
@@ -554,8 +554,8 @@ class TestHarvestRepo:
         result = harvest_repo("user/small-repo", compare=False)
         assert result.comparison == {}
 
-    @patch("animus.harvest._clone_repo")
-    @patch("animus.harvest._scan_with_anchormd")
+    @patch("animus.lugh.repos._clone_repo")
+    @patch("animus.lugh.repos._scan_with_anchormd")
     def test_harvest_stores_in_memory(self, mock_scan, mock_clone):
         mock_scan.return_value = {
             "total_files": 10,
@@ -572,7 +572,7 @@ class TestHarvestRepo:
         harvest_repo("user/repo", memory_layer=mock_memory)
         mock_memory.remember.assert_called_once()
 
-    @patch("animus.harvest._clone_repo")
+    @patch("animus.lugh.repos._clone_repo")
     def test_harvest_clone_failure(self, mock_clone):
         mock_clone.side_effect = RuntimeError("git clone failed: not found")
         with pytest.raises(RuntimeError, match="git clone failed"):
@@ -582,8 +582,8 @@ class TestHarvestRepo:
         with pytest.raises(ValueError, match="Invalid target"):
             harvest_repo("not-a-valid-target")
 
-    @patch("animus.harvest._clone_repo")
-    @patch("animus.harvest._scan_with_anchormd")
+    @patch("animus.lugh.repos._clone_repo")
+    @patch("animus.lugh.repos._scan_with_anchormd")
     def test_cleanup_on_success(self, mock_scan, mock_clone):
         """Temp dir should be cleaned up even on success."""
         mock_scan.return_value = {
@@ -600,8 +600,8 @@ class TestHarvestRepo:
         result = harvest_repo("user/repo")
         assert result.repo == "user/repo"
 
-    @patch("animus.harvest._clone_repo")
-    @patch("animus.harvest._scan_with_anchormd")
+    @patch("animus.lugh.repos._clone_repo")
+    @patch("animus.lugh.repos._scan_with_anchormd")
     def test_deep_depth_uses_full_clone(self, mock_scan, mock_clone):
         mock_scan.return_value = {
             "total_files": 1,
@@ -639,14 +639,14 @@ class TestScanWithAnchormd:
             },
         ):
             # Force ImportError path
-            with patch("animus.harvest._basic_scan") as mock_basic:
+            with patch("animus.lugh.repos._basic_scan") as mock_basic:
                 mock_basic.return_value = {"total_files": 1}
                 # The import will fail, falling back to basic
                 import importlib
 
-                import animus.harvest
+                import animus.lugh.repos
 
-                importlib.reload(animus.harvest)
-                result = animus.harvest._scan_with_anchormd(tmp_path)
+                importlib.reload(animus.lugh.repos)
+                result = animus.lugh.repos._scan_with_anchormd(tmp_path)
                 # Either uses anchormd or falls back — both are valid
                 assert isinstance(result, dict)
