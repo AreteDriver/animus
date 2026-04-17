@@ -1008,13 +1008,13 @@ def create_default_registry(security_config=None) -> ToolRegistry:
     for tool in BUILTIN_TOOLS:
         registry.register(tool)
 
-    # Register harvest tool
-    from animus.harvest import HARVEST_TOOL
+    # Register Lugh repo harvester tool
+    from animus.lugh.repos import HARVEST_TOOL
 
     registry.register(HARVEST_TOOL)
 
-    # Register harvest watchlist tools
-    from animus.harvest_watchlist_tools import (
+    # Register Lugh watchlist tools
+    from animus.lugh.watchlist_tools import (
         WATCHLIST_ADD_TOOL,
         WATCHLIST_LIST_TOOL,
         WATCHLIST_REMOVE_TOOL,
