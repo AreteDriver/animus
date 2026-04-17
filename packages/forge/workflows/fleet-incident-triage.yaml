@@ -71,18 +71,18 @@ steps:
     command: |
       /home/arete/.fly/bin/flyctl status -a "${fly_app}" --json 2>/dev/null | \
         python3 -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    for m in data.get('Machines', []):
-        print(f\"Machine {m.get('id','?')}: state={m.get('state','?')}, region={m.get('region','?')}\")
-        cfg = m.get('config', {})
-        if 'guest' in cfg:
-            g = cfg['guest']
-            print(f\"  CPU: {g.get('cpus',0)}, Memory: {g.get('memory_mb',0)}MB\")
-except Exception as e:
-    print(f'Parse error: {e}')
-" 2>/dev/null
+      import sys, json
+      try:
+          data = json.load(sys.stdin)
+          for m in data.get('Machines', []):
+              print(f\"Machine {m.get('id','?')}: state={m.get('state','?')}, region={m.get('region','?')}\")
+              cfg = m.get('config', {})
+              if 'guest' in cfg:
+                  g = cfg['guest']
+                  print(f\"  CPU: {g.get('cpus',0)}, Memory: {g.get('memory_mb',0)}MB\")
+      except Exception as e:
+          print(f'Parse error: {e}')
+      " 2>/dev/null
     timeout_seconds: 15
     on_failure: skip
 
