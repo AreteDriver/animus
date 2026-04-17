@@ -39,7 +39,8 @@ class SessionSummary:
     project_dir: str  # mangled dir name under projects/
     primary_cwd: str | None  # most frequent cwd across turns
     date: str | None  # YYYY-MM-DD (min turn timestamp)
-    duration_seconds: float | None
+    duration_seconds: float | None  # wall clock (max - min timestamp)
+    active_seconds: float | None  # sum of inter-turn gaps below IDLE_GAP_SECONDS
     turn_count: int
     tool_call_count: int
     mcp_call_count: int
@@ -51,4 +52,6 @@ class SessionSummary:
     total_cost_usd: float
     activity_breakdown: dict[str, float]  # activity -> % of turns
     cwd_breakdown: dict[str, int]  # cwd -> turn count
+    unknown_line_types: list[str] = field(default_factory=list)  # schema drift signals
+    unknown_models: list[str] = field(default_factory=list)  # unpriced models
     turns: list[Turn] = field(default_factory=list)
