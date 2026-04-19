@@ -26,6 +26,5 @@ async def automations_page(request: Request) -> object:
         history = runtime.automation_engine.get_history(limit=50)
 
     return templates.TemplateResponse(
-        "automations.html",
-        {"request": request, "rules": rules, "history": history},
+        request, "automations.html", {"rules": rules, "history": history}
     )

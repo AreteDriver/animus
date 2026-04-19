@@ -29,9 +29,9 @@ async def activity_page(request: Request) -> object:
         nudge_history = engine.get_nudge_history(limit=50)
 
     return templates.TemplateResponse(
+        request,
         "activity.html",
         {
-            "request": request,
             "engine_status": engine_status,
             "checks": checks,
             "nudge_history": nudge_history,

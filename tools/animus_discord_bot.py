@@ -367,7 +367,7 @@ class AnimusBot(discord.Client):
         async def harvest_cmd(interaction: discord.Interaction, repo: str) -> None:
             await interaction.response.defer(thinking=True)
             try:
-                from animus.harvest import harvest_repo
+                from animus.lugh.repos import harvest_repo
 
                 result = harvest_repo(
                     target=repo,
@@ -389,7 +389,7 @@ class AnimusBot(discord.Client):
         # /watchlist
         @tree.command(name="watchlist", description="Show the current harvest watchlist")
         async def watchlist_cmd(interaction: discord.Interaction) -> None:
-            from animus.harvest_watchlist import get_watchlist
+            from animus.lugh.watchlist import get_watchlist
 
             repos = get_watchlist()
             if not repos:
@@ -427,7 +427,7 @@ class AnimusBot(discord.Client):
             tags: str = "",
             notes: str = "",
         ) -> None:
-            from animus.harvest_watchlist import add_to_watchlist
+            from animus.lugh.watchlist import add_to_watchlist
 
             tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
             try:
@@ -454,7 +454,7 @@ class AnimusBot(discord.Client):
         async def watchlist_scan_cmd(interaction: discord.Interaction) -> None:
             await interaction.response.defer(thinking=True)
             try:
-                from animus.harvest_watchlist import run_watchlist_scan
+                from animus.lugh.watchlist import run_watchlist_scan
 
                 report = await run_watchlist_scan(memory=_get_memory())
                 embed = _build_harvest_report_embed(report)
@@ -701,7 +701,7 @@ async def _build_brief_embed() -> discord.Embed:
 
     # Recent harvest state
     try:
-        from animus.harvest_watchlist import get_watchlist, get_due_repos
+        from animus.lugh.watchlist import get_watchlist, get_due_repos
 
         watchlist = get_watchlist()
         due = get_due_repos()

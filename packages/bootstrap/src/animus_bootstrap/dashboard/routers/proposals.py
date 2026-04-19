@@ -60,9 +60,9 @@ async def proposals_page(request: Request) -> object:
         history = [_proposal_to_template(p) for p in pm.history() if p.status != "pending"]
 
     return templates.TemplateResponse(
+        request,
         "proposals.html",
         {
-            "request": request,
             "pending": pending,
             "history": history,
             "pending_count": len(pending),

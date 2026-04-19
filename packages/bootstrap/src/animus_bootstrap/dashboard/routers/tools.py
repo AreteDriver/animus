@@ -144,9 +144,9 @@ async def tools_page(request: Request) -> object:
     ]
 
     return templates.TemplateResponse(
+        request,
         "tools.html",
         {
-            "request": request,
             "tools": tool_list,
             "history": history,
             "pending_approvals": pending,

@@ -31,9 +31,9 @@ async def conversations_page(request: Request) -> object:
     recent = list(reversed(messages[-50:]))
 
     return templates.TemplateResponse(
+        request,
         "conversations.html",
         {
-            "request": request,
             "messages": recent,
         },
     )

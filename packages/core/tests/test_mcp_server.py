@@ -122,8 +122,9 @@ class TestMcpServerCreation:
 
     def test_tool_count(self, server):
         tools = server._tool_manager.list_tools()
-        # 4 memory + 2 versioning + 3 task + 1 brief + 1 workflow + 1 harvest + 4 watchlist + 1 self-improve = 17
-        assert len(tools) == 17
+        # 4 memory + 2 versioning + 3 task + 1 brief + 1 workflow + 1 harvest
+        # + 4 watchlist + 3 transcripts + 1 self-improve = 20
+        assert len(tools) == 20
 
 
 class TestMemoryTools:
@@ -407,23 +408,23 @@ class TestHarvestTool:
     def test_harvest_success(self, server, mock_memory):
         mock_result = MagicMock()
         mock_result.to_dict.return_value = {"repo": "test/repo", "patterns": 5}
-        with patch("animus.harvest.harvest_repo", return_value=mock_result):
+        with patch("animus.lugh.repos.harvest_repo", return_value=mock_result):
             result = _run(server.call_tool("animus_harvest", {"target": "test/repo"}))
             data = json.loads(result[0][0].text)
             assert data["repo"] == "test/repo"
 
     def test_harvest_value_error(self, server, mock_memory):
-        with patch("animus.harvest.harvest_repo", side_effect=ValueError("bad target")):
+        with patch("animus.lugh.repos.harvest_repo", side_effect=ValueError("bad target")):
             result = _run(server.call_tool("animus_harvest", {"target": "bad"}))
             assert "Harvest failed" in result[0][0].text
 
     def test_harvest_runtime_error(self, server, mock_memory):
-        with patch("animus.harvest.harvest_repo", side_effect=RuntimeError("clone failed")):
+        with patch("animus.lugh.repos.harvest_repo", side_effect=RuntimeError("clone failed")):
             result = _run(server.call_tool("animus_harvest", {"target": "bad/repo"}))
             assert "Harvest failed" in result[0][0].text
 
     def test_harvest_unexpected_error(self, server, mock_memory):
-        with patch("animus.harvest.harvest_repo", side_effect=OSError("disk full")):
+        with patch("animus.lugh.repos.harvest_repo", side_effect=OSError("disk full")):
             result = _run(server.call_tool("animus_harvest", {"target": "test/repo"}))
             assert "Harvest error" in result[0][0].text
 
@@ -436,7 +437,7 @@ class TestHarvestTool:
         mock_result = MagicMock()
         mock_result.to_dict.return_value = {"repo": "ok"}
         with patch("animus.mcp_server._MCP_API_KEY", "key123"):
-            with patch("animus.harvest.harvest_repo", return_value=mock_result):
+            with patch("animus.lugh.repos.harvest_repo", return_value=mock_result):
                 result = _run(
                     server.call_tool("animus_harvest", {"target": "test/repo", "api_key": "key123"})
                 )
@@ -448,7 +449,7 @@ class TestWatchlistTools:
 
     def test_watchlist_add(self, server):
         entry = {"target": "test/repo", "tags": ["ai"], "added": "2026-03-25"}
-        with patch("animus.harvest_watchlist.add_to_watchlist", return_value=entry):
+        with patch("animus.lugh.watchlist.add_to_watchlist", return_value=entry):
             result = _run(
                 server.call_tool(
                     "animus_watchlist_add",
@@ -460,14 +461,14 @@ class TestWatchlistTools:
 
     def test_watchlist_add_no_tags(self, server):
         entry = {"target": "test/repo", "tags": [], "added": "2026-03-25"}
-        with patch("animus.harvest_watchlist.add_to_watchlist", return_value=entry):
+        with patch("animus.lugh.watchlist.add_to_watchlist", return_value=entry):
             result = _run(server.call_tool("animus_watchlist_add", {"target": "test/repo"}))
             data = json.loads(result[0][0].text)
             assert data["target"] == "test/repo"
 
     def test_watchlist_add_value_error(self, server):
         with patch(
-            "animus.harvest_watchlist.add_to_watchlist",
+            "animus.lugh.watchlist.add_to_watchlist",
             side_effect=ValueError("duplicate"),
         ):
             result = _run(server.call_tool("animus_watchlist_add", {"target": "test/repo"}))
@@ -475,7 +476,7 @@ class TestWatchlistTools:
 
     def test_watchlist_add_unexpected_error(self, server):
         with patch(
-            "animus.harvest_watchlist.add_to_watchlist",
+            "animus.lugh.watchlist.add_to_watchlist",
             side_effect=OSError("disk"),
         ):
             result = _run(server.call_tool("animus_watchlist_add", {"target": "test/repo"}))
@@ -487,12 +488,12 @@ class TestWatchlistTools:
             assert "Authentication required" in result[0][0].text
 
     def test_watchlist_remove_success(self, server):
-        with patch("animus.harvest_watchlist.remove_from_watchlist", return_value=True):
+        with patch("animus.lugh.watchlist.remove_from_watchlist", return_value=True):
             result = _run(server.call_tool("animus_watchlist_remove", {"target": "test/repo"}))
             assert "Removed" in result[0][0].text
 
     def test_watchlist_remove_not_found(self, server):
-        with patch("animus.harvest_watchlist.remove_from_watchlist", return_value=False):
+        with patch("animus.lugh.watchlist.remove_from_watchlist", return_value=False):
             result = _run(server.call_tool("animus_watchlist_remove", {"target": "test/repo"}))
             assert "not found" in result[0][0].text
 
@@ -503,13 +504,13 @@ class TestWatchlistTools:
 
     def test_watchlist_list_with_repos(self, server):
         repos = [{"target": "a/b", "last_scan": "2026-03-20"}]
-        with patch("animus.harvest_watchlist.get_watchlist", return_value=repos):
+        with patch("animus.lugh.watchlist.get_watchlist", return_value=repos):
             result = _run(server.call_tool("animus_watchlist_list", {}))
             data = json.loads(result[0][0].text)
             assert len(data) == 1
 
     def test_watchlist_list_empty(self, server):
-        with patch("animus.harvest_watchlist.get_watchlist", return_value=[]):
+        with patch("animus.lugh.watchlist.get_watchlist", return_value=[]):
             result = _run(server.call_tool("animus_watchlist_list", {}))
             assert "empty" in result[0][0].text.lower()
 
@@ -520,7 +521,7 @@ class TestWatchlistTools:
             return report
 
         with (
-            patch("animus.harvest_watchlist.run_watchlist_scan", side_effect=fake_scan),
+            patch("animus.lugh.watchlist.run_watchlist_scan", side_effect=fake_scan),
             _patch_nested_asyncio_run(),
         ):
             result = _run(server.call_tool("animus_watchlist_scan", {}))
@@ -536,7 +537,7 @@ class TestWatchlistTools:
             return report
 
         with (
-            patch("animus.harvest_watchlist.run_watchlist_scan", side_effect=fake_scan),
+            patch("animus.lugh.watchlist.run_watchlist_scan", side_effect=fake_scan),
             _patch_nested_asyncio_run(),
         ):
             result = _run(server.call_tool("animus_watchlist_scan", {"interval_hours": 24}))
@@ -546,7 +547,7 @@ class TestWatchlistTools:
 
     def test_watchlist_scan_failure(self, server):
         with patch(
-            "animus.harvest_watchlist.run_watchlist_scan",
+            "animus.lugh.watchlist.run_watchlist_scan",
             side_effect=RuntimeError("network error"),
         ):
             result = _run(server.call_tool("animus_watchlist_scan", {}))
