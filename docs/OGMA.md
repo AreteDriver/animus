@@ -144,10 +144,43 @@ The markdown archive at `~/projects/notes/ogma/` is Ogma's long-term memory in v
 | Subsystem | Interaction |
 |-----------|-------------|
 | **Lugh** (`packages/core/animus/lugh/`) | Upstream — provides `SourceItem`s + relevance scores Ogma reads from |
-| **Forge** (`packages/forge/`) | v2 — runs `/ogma brief` as a workflow with budget-managed LLM calls |
+| **Forge self-improve** (`packages/forge/src/animus_forge/self_improve/`) | **Primary downstream** — Ogma proposals feed the improvement pipeline as strategic input (see below) |
+| **Forge** (`packages/forge/`) | v2 — runs `/ogma brief` and `/ogma sweep` as budget-managed workflows |
 | **Quorum** (`packages/quorum/`) | Out of scope for v1. v3 could route high-stakes proposals (>0.7 confidence, substantial effort) through triumvirate voting before acting |
 | **Core memory** (`packages/core/animus/memory.py`) | v2 — Ogma writes synthesis as episodic memories; v3 queries them via MCP |
 | **Constitutional Principles** (P1–P9) | Proposals evaluated against principles; violations → escalate or reject |
+
+## Self-Improvement Integration — The Flywheel
+
+Animus already has a self-improvement loop:
+
+- `packages/forge/src/animus_forge/self_improve/analyzer.py` produces `ImprovementSuggestion`s from heuristics (docstring gaps, bare excepts, TODOs).
+- `orchestrator.py` coordinates approval → safety → sandbox → rollback → PR.
+- `packages/forge/forge/better.md` defines what "better" means and constrains scope (YAML-only, 3000-token iterations as of 2026-04-18).
+
+**What's missing:** strategic direction. The heuristic analyzer picks low-hanging fruit it can pattern-match. It doesn't know that a module is architecturally weak, that a subsystem duplicates another project's work, or that a just-published paper reveals a better way to do memory compression.
+
+Ogma is that strategic layer. The integration is staged:
+
+### Phase 1 — Today (v1)
+
+Ogma writes markdown proposals to `~/projects/notes/ogma/`. You read them, decide what's worth doing, manually invoke Forge or open PRs. **No automatic execution** — you stay in the loop. This is deliberate for v1 because Ogma's proposals will occasionally be wrong, and "wrong + automatic + substantial effort" is bad.
+
+### Phase 2 — `self_improve.sources.ogma`
+
+Add a new module `packages/forge/src/animus_forge/self_improve/sources/ogma.py` that reads the Ogma notes directory and converts proposals to `ImprovementSuggestion` records (same shape the analyzer produces). These flow through the existing `orchestrator.py` — reusing **every existing gate** (approval, safety checker, sandbox, rollback, PR manager). Ogma is a new *source* of suggestions, not a new pipeline.
+
+Practical effect: instead of the self-improve loop only proposing "add a docstring to `_parse_date()`," it can propose "rebuild `memory.py` to compose a learned-memory overlay with the existing ChromaDB retrieval, per Ogma audit 2026-04-22-memory.md."
+
+### Phase 3 — Outcome feedback loop
+
+After Forge executes an Ogma-sourced suggestion, emit a structured outcome event (sandbox result, test delta, `better.md` measurement delta). Ogma — on its next run — reads the outcome alongside the original proposal and audits *itself*: did the rebuild actually improve things? Which proposals compound? Which classes of proposal systematically fail?
+
+Over time, this closes the loop: Lugh harvests → Ogma synthesizes → Forge executes → Ogma measures. Each cycle, the exocortex is measurably better, and Ogma's own calibration improves because it sees its own outcomes.
+
+### The scope constraint itself is audit-worthy
+
+`better.md` today says "YAML only, 3000 tokens per iteration." That was the right call when the self-improve loop was unproven. It may no longer be the right call. **One of Ogma's early internal audits should target `better.md` itself** — is the YAML-only constraint still warranted, or are we leaving the highest-leverage improvements on the table? Meta, but not accidentally so: if the self-improvement loop can't critique its own scope, it's not actually self-improving.
 
 ---
 
@@ -166,12 +199,14 @@ The markdown archive at `~/projects/notes/ogma/` is Ogma's long-term memory in v
 
 | Version | Surface | Status | Depends on |
 |---------|---------|--------|------------|
-| v1.0 | `/ogma` skill | **Shipping now** | Lugh sources (PR #24) |
+| v1.0 | `/ogma` skill — read/brief/gap/audit/sweep | **Shipping now** | Lugh sources (PR #24) |
 | v1.1 | Markdown archive indexed by animus_sync | Planned | v1.0 merged |
 | v2.0 | Forge weekly briefing workflow | Planned | ChromaDB write path for lugh |
 | v2.1 | Discord embed of weekly Ogma brief | Planned | v2.0 |
+| **v2.5** | **`self_improve.sources.ogma` — Ogma proposals feed orchestrator as `ImprovementSuggestion`s** | **Planned** | v2.0 + scope review of `better.md` |
 | v3.0 | MCP tool surface | Planned | v2.0 |
-| v3.1 | Quorum-gated proposals for high-effort changes | Speculative | v3.0 + Quorum IntentNode wiring |
+| v3.1 | Outcome feedback — Ogma reads Forge results, self-audits proposal quality | Planned | v2.5 |
+| v3.2 | Quorum-gated proposals for high-effort changes | Speculative | v3.0 + Quorum IntentNode wiring |
 
 ---
 
