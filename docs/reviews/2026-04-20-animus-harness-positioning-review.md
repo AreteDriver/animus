@@ -158,3 +158,63 @@ Track these as release gates:
 ## Positioning Statement (recommended)
 
 "Animus is an AI reliability platform: a workflow harness for agent systems that combines budget-aware orchestration, deterministic recovery, and coordination primitives for parallel coherence — with measurable controls for quality, safety, and cost."
+
+## What makes Animus 100/100 (truly unique and useful)
+
+A perfect-score Animus is not "more features." It is **provable reliability + controllable economics + irreplaceable user memory + differentiated coordination** in one cohesive system.
+
+### The 100/100 standard (five non-negotiables)
+
+1. **Reliability you can prove**
+   - 99%+ successful workflow completion within declared retry policy.
+   - Deterministic checkpoint-resume with audited recovery times.
+   - Release-to-release golden benchmark stability.
+
+2. **Economics you can control**
+   - Every workflow has pre-run cost estimate + hard budget ceiling.
+   - Post-run variance from estimate remains inside a strict SLO (e.g., ±10%).
+   - Cost regressions automatically fail CI gates.
+
+3. **Quality that does not silently drift**
+   - Benchmark suites and task-level evals run on every release.
+   - Quality floor enforced as a deploy gate.
+   - Human rework rate tracked as a first-class metric.
+
+4. **Safety and governance by default**
+   - Policy-as-code for tool permissions, data boundaries, and approval thresholds.
+   - Full action audit trail and explainable gate failures.
+   - Rollback pathways tested continuously.
+
+5. **Compounding memory advantage**
+   - Core memory improves user outcomes measurably over time (speed, quality, fewer repeated instructions).
+   - Portable user memory with transparent controls (view/edit/delete/export).
+
+### What makes Animus uniquely defensible (vs "another agent framework")
+
+Animus becomes uniquely valuable when these capabilities are integrated (not bolted on):
+
+- **Forge:** deterministic workflow control plane (budgets, gates, resume)
+- **Quorum:** supervisor-free coordination primitive for parallel coherence
+- **Core:** persistent memory that compounds user-specific advantage
+- **Bootstrap:** deployment/operations envelope that makes the stack practical
+
+Individually, competitors can match pieces. The moat is the **integrated reliability architecture** with measurable outcomes.
+
+### Utility test: when users say “I cannot go back”
+
+You know Animus is 100/100 when users experience all three:
+
+1. "My automations complete predictably and recover from failure."
+2. "I know what runs will cost before they run."
+3. "The system gets better for *me* over time because memory compounds."
+
+### 12-month path to 100/100 (pragmatic)
+
+- **Quarter 1:** Claims-evidence CI gate + golden benchmark wired to PR checks.
+- **Quarter 2:** Policy-as-code + cost/quality regression blocking in CI.
+- **Quarter 3:** Production observability package (cost/latency/quality/safety dashboards).
+- **Quarter 4:** Memory outcome studies + certified workflow templates + reference deployments.
+
+### Canonical one-liner
+
+"Animus is the reliability operating system for agent workflows: deterministic execution, bounded cost, governed autonomy, and memory that compounds user advantage."
