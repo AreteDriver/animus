@@ -1,0 +1,43 @@
+name: golden_benchmark_workflow
+version: 1
+
+description: |
+  Deterministic benchmark workflow used to compare reliability, cost, and quality
+  across releases. Inputs must be fixed and versioned.
+
+max_cost_usd: 0.10
+
+default_provider: mock
+
+agents:
+  - id: planner
+    role: planner
+    model: mock:gpt-mini
+    budget: 1500
+    timeout_seconds: 30
+    task: "Create a deterministic plan from input corpus."
+
+  - id: analyzer
+    role: analyst
+    model: mock:gpt-mini
+    budget: 2500
+    depends_on: [planner]
+    timeout_seconds: 30
+    task: "Extract key findings and rank by deterministic scoring rubric."
+
+  - id: summarizer
+    role: writer
+    model: mock:gpt-mini
+    budget: 1200
+    depends_on: [analyzer]
+    timeout_seconds: 30
+    task: "Produce a constrained summary with explicit section headings."
+
+gates:
+  - after: analyzer
+    check: quality_score >= 0.80
+    on_fail: halt
+
+  - after: summarizer
+    check: output_sections == ["overview", "findings", "actions"]
+    on_fail: halt
