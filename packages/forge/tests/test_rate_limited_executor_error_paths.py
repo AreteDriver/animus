@@ -171,11 +171,7 @@ class TestExecuteParallelDeadlockAndErrorPaths:
         for tid in ("t1", "t2"):
             assert isinstance(result.tasks[tid].error, Exception)
 
-    # Note: lines 493-494 (`if item is None: continue`) and 497-499
-    # (`if not task: continue`) cannot be exercised via the public API
-    # without triggering an infinite loop — both paths skip the task-booking
-    # that would mark it completed, so the outer `while pending` never exits.
-    # These are defensive fallthroughs that only trigger under impossible
-    # states (the inner _run_task_with_rate_limit already swallows errors
-    # and always returns a 3-tuple with the task's real id). Leaving them
-    # uncovered is correct — testing them would test a latent livelock.
+    # Note: the None-result and mismatched-task-id defensive branches
+    # are exercised in test_rate_limited_executor_livelock_fix.py — they
+    # were previously untestable because the branches themselves
+    # livelocked the outer loop. The fix in this PR makes them safe.

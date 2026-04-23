@@ -491,11 +491,44 @@ class RateLimitedParallelExecutor(ParallelExecutor):
                     continue
 
                 if item is None:
+                    # Defensive: a done coro returned None without a task_id.
+                    # Book the corresponding async_task's ParallelTask as
+                    # failed so the outer `while pending` loop can progress.
+                    # Without this, the orphan stays in pending forever and
+                    # the outer loop livelocks creating fresh async_tasks
+                    # for it on every iteration.
+                    for async_task, ptask in async_tasks.items():
+                        if async_task.done() and ptask.id not in completed_ids:
+                            ptask.error = RuntimeError("Task returned None (unexpected state)")
+                            result.failed.append(ptask.id)
+                            result.tasks[ptask.id] = ptask
+                            completed_ids.add(ptask.id)
+                            if ptask.id in pending:
+                                del pending[ptask.id]
+                            if on_error:
+                                on_error(ptask.id, ptask.error)
+                            break
                     continue
 
                 task_id, res, err = item
                 task = pending.get(task_id)
                 if not task:
+                    # Defensive: result's task_id doesn't match any pending
+                    # task (likely a stale retry or handler-id mismatch).
+                    # Record the stale id as completed to prevent rematch,
+                    # then book the orphaned async_task so we don't livelock.
+                    completed_ids.add(task_id)
+                    for async_task, ptask in async_tasks.items():
+                        if async_task.done() and ptask.id not in completed_ids:
+                            ptask.error = RuntimeError(f"Task id mismatch: got {task_id!r}")
+                            result.failed.append(ptask.id)
+                            result.tasks[ptask.id] = ptask
+                            completed_ids.add(ptask.id)
+                            if ptask.id in pending:
+                                del pending[ptask.id]
+                            if on_error:
+                                on_error(ptask.id, ptask.error)
+                            break
                     continue
 
                 task.result = res
