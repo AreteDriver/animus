@@ -70,12 +70,8 @@ class TestDeliverAsyncCircuitBreaker:
         manager.circuit_breaker.allow_request = MagicMock(return_value=False)
 
         # Patch get_async_client so the post path is never reached (would fail).
-        with patch(
-            "animus_forge.webhooks.webhook_delivery.get_async_client"
-        ) as mock_get:
-            mock_get.side_effect = AssertionError(
-                "client should not be built when circuit is open"
-            )
+        with patch("animus_forge.webhooks.webhook_delivery.get_async_client") as mock_get:
+            mock_get.side_effect = AssertionError("client should not be built when circuit is open")
             delivery = await manager.deliver_async(
                 "https://example.invalid/hook", {"event": "ping"}
             )

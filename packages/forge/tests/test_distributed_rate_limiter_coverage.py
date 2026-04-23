@@ -36,9 +36,7 @@ class TestRedisRateLimiterAsyncClientLazy:
         import types as _types
 
         fake_client = MagicMock()
-        fake_aioredis = _types.SimpleNamespace(
-            from_url=AsyncMock(return_value=fake_client)
-        )
+        fake_aioredis = _types.SimpleNamespace(from_url=AsyncMock(return_value=fake_client))
         fake_redis_pkg = _types.ModuleType("redis")
         fake_redis_pkg.asyncio = fake_aioredis  # type: ignore[attr-defined]
 

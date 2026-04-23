@@ -31,9 +31,7 @@ class TestExecuteParallelBody:
         async def fake_execute_step(self, node, context):
             return {f"out_{node.id}": True}
 
-        monkeypatch.setattr(
-            ReactFlowExecutor, "_execute_step", fake_execute_step, raising=True
-        )
+        monkeypatch.setattr(ReactFlowExecutor, "_execute_step", fake_execute_step, raising=True)
 
         node = GraphNode(
             id="parallel-1",
@@ -66,9 +64,7 @@ class TestExecuteParallelBody:
                 raise RuntimeError("branch boom")
             return {"ok": 1}
 
-        monkeypatch.setattr(
-            ReactFlowExecutor, "_execute_step", fake_execute_step, raising=True
-        )
+        monkeypatch.setattr(ReactFlowExecutor, "_execute_step", fake_execute_step, raising=True)
 
         node = GraphNode(
             id="par",
@@ -94,9 +90,7 @@ class TestExecuteParallelBody:
             # Non-dict, non-exception result — line 509 gates out.
             return "string-result"
 
-        monkeypatch.setattr(
-            ReactFlowExecutor, "_execute_step", fake_execute_step, raising=True
-        )
+        monkeypatch.setattr(ReactFlowExecutor, "_execute_step", fake_execute_step, raising=True)
 
         node = GraphNode(
             id="par",
@@ -181,9 +175,7 @@ class TestExecuteStepConditionAndTokens:
         assert outputs["response"] == "ok"
 
     @pytest.mark.asyncio
-    async def test_agent_node_with_anthropic_provider_maps_to_claude_code(
-        self, monkeypatch
-    ):
+    async def test_agent_node_with_anthropic_provider_maps_to_claude_code(self, monkeypatch):
         """Line 533: provider == 'anthropic' → step_type = claude_code."""
         executor = ReactFlowExecutor()
         captured = {}

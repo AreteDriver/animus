@@ -59,9 +59,7 @@ class TestOTLPHTTPExporter:
 
     def test_3xx_response_returns_false(self):
         """Lines 254-256: response.status >= 300 → warning + False."""
-        exporter = OTLPHTTPExporter(
-            ExportConfig(otlp_endpoint="http://localhost:4318/v1/traces")
-        )
+        exporter = OTLPHTTPExporter(ExportConfig(otlp_endpoint="http://localhost:4318/v1/traces"))
 
         fake_response = MagicMock()
         fake_response.status = 302

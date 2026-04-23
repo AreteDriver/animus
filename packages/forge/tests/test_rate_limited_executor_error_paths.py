@@ -38,9 +38,7 @@ class TestDistributedLimiter:
     def test_get_distributed_limiter_lazy_init(self):
         """Lines 224-228: first call builds + caches the limiter."""
         ex = RateLimitedParallelExecutor(distributed=True)
-        with patch(
-            "animus_forge.workflow.distributed_rate_limiter.get_rate_limiter"
-        ) as mock_get:
+        with patch("animus_forge.workflow.distributed_rate_limiter.get_rate_limiter") as mock_get:
             fake_limiter = MagicMock()
             mock_get.return_value = fake_limiter
 
@@ -106,7 +104,9 @@ class TestRunTaskDistributedBreakOnAllowed:
         async def handler(**kwargs):
             return {"ok": True}
 
-        task = ParallelTask(id="t1", step_id="s1", handler=handler, kwargs={"provider": "anthropic"})
+        task = ParallelTask(
+            id="t1", step_id="s1", handler=handler, kwargs={"provider": "anthropic"}
+        )
         semaphores = ex._get_semaphores()
 
         task_id, res, err = await ex._run_task_with_rate_limit(task, semaphores)
@@ -163,9 +163,7 @@ class TestExecuteParallelDeadlockAndErrorPaths:
         t1 = ParallelTask(id="t1", step_id="s1", handler=bad_handler, kwargs={})
         t2 = ParallelTask(id="t2", step_id="s2", handler=bad_handler, kwargs={})
 
-        result = await ex.execute_parallel_rate_limited(
-            tasks=[t1, t2], on_error=on_error
-        )
+        result = await ex.execute_parallel_rate_limited(tasks=[t1, t2], on_error=on_error)
 
         assert set(result.failed) == {"t1", "t2"}
         assert len(errors) == 2

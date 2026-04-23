@@ -97,9 +97,7 @@ class TestValidateWorkflow:
         assert any("all depends_on values must be strings" in e for e in errors)
 
     def test_step_id_must_be_non_empty(self):
-        errors = validate_workflow(
-            {"name": "w", "steps": [{"id": "   ", "type": "shell"}]}
-        )
+        errors = validate_workflow({"name": "w", "steps": [{"id": "   ", "type": "shell"}]})
         assert any("non-empty string" in e for e in errors)
 
 

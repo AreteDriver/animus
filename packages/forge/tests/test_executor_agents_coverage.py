@@ -63,9 +63,7 @@ class TestBuildOllamaAutonomyProvider:
             {"ollama_host": "http://fake:11434", "ollama_model": "qwen2.5:7b"}
         )
 
-        mock_ollama_cls.assert_called_once_with(
-            model="qwen2.5:7b", host="http://fake:11434"
-        )
+        mock_ollama_cls.assert_called_once_with(model="qwen2.5:7b", host="http://fake:11434")
         raw.initialize.assert_called_once()
         # Inner wrapper exposes async complete(prompt) -> str.
         assert hasattr(provider, "complete")
@@ -85,9 +83,7 @@ class TestBuildOllamaAutonomyProvider:
 
         AgentStepHandlerMixin._build_ollama_autonomy_provider({})
 
-        mock_ollama_cls.assert_called_once_with(
-            model="env-model:3b", host="http://env-host:11434"
-        )
+        mock_ollama_cls.assert_called_once_with(model="env-model:3b", host="http://env-host:11434")
 
     @patch("animus_forge.providers.ollama_provider.OllamaProvider")
     def test_wrapper_complete_returns_response_content(self, mock_ollama_cls):
