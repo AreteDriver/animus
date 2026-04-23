@@ -9,8 +9,8 @@ Targets:
 from __future__ import annotations
 
 import os
-import sys
 import sqlite3
+import sys
 import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 

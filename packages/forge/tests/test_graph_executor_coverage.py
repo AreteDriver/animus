@@ -10,14 +10,14 @@ Closes blocks flagged by CI on 2c8cde2:
 from __future__ import annotations
 
 import sys
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
 sys.path.insert(0, "src")
 
 from animus_forge.workflow.graph_executor import ReactFlowExecutor
-from animus_forge.workflow.graph_models import GraphEdge, GraphNode, WorkflowGraph
+from animus_forge.workflow.graph_models import GraphNode, WorkflowGraph
 
 
 class TestExecuteParallelBody:

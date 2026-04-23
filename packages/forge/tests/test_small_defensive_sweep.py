@@ -8,21 +8,26 @@ read real API signatures — no blind mocking.
 from __future__ import annotations
 
 import sys
-import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 sys.path.insert(0, "src")
 
+from animus_forge.state.agent_context import AgentContext  # noqa: E402
+from animus_forge.state.backends import create_backend  # noqa: E402
+from animus_forge.state.memory import ContextWindow  # noqa: E402
+from animus_forge.tracing.export import (  # noqa: E402
+    BatchExporter,
+    ExportConfig,
+    OTLPHTTPExporter,
+    TraceExporter,
+)
 
 # ---------------------------------------------------------------------------
 # state/agent_context.py — 277-279 (get_conversation_messages no window),
 #                          295-297 (load_from_memory no window)
 # ---------------------------------------------------------------------------
-
-
-from animus_forge.state.agent_context import AgentContext
 
 
 class TestAgentContextNoWindow:
@@ -45,14 +50,6 @@ class TestAgentContextNoWindow:
 # tracing/export.py — 116-118 (_get_session no-op), 254-256 (3xx response),
 #                     304-305 (start when thread alive), 360 (error counter)
 # ---------------------------------------------------------------------------
-
-
-from animus_forge.tracing.export import (
-    BatchExporter,
-    ExportConfig,
-    OTLPHTTPExporter,
-    TraceExporter,
-)
 
 
 class TestOTLPHTTPExporter:
@@ -142,9 +139,6 @@ class TestBatchExporterExportFailure:
 # ---------------------------------------------------------------------------
 
 
-from animus_forge.state.backends import create_backend
-
-
 class TestCreateBackendSQLite:
     # Note: line 300 (`if path.startswith("///"): path = path[3:]`) is
     # functionally unreachable via urlparse — sqlite:///foo.db yields
@@ -175,9 +169,6 @@ class TestCreateBackendSQLite:
 # ---------------------------------------------------------------------------
 # state/context_window.py — 361-362 (invalid MessageRole fallthrough)
 # ---------------------------------------------------------------------------
-
-
-from animus_forge.state.memory import ContextWindow, MessageRole
 
 
 class TestContextWindowInvalidRoleTag:

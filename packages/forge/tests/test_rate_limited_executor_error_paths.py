@@ -13,7 +13,6 @@ Targets:
 
 from __future__ import annotations
 
-import asyncio
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -23,10 +22,8 @@ sys.path.insert(0, "src")
 
 from animus_forge.workflow.parallel import ParallelTask
 from animus_forge.workflow.rate_limited_executor import (
-    ProviderRateLimits,
     RateLimitedParallelExecutor,
 )
-
 
 # ---------------------------------------------------------------------------
 # _get_distributed_limiter / _check_distributed_limit

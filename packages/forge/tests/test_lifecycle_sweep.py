@@ -12,20 +12,21 @@ import asyncio
 import os
 import sys
 import tempfile
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastapi import WebSocketDisconnect
 
 sys.path.insert(0, "src")
 
+from animus_forge.state.backends import SQLiteBackend  # noqa: E402
+from animus_forge.websocket.broadcaster import Broadcaster  # noqa: E402
+from animus_forge.websocket.manager import ConnectionManager  # noqa: E402
+from animus_forge.workflow.version_manager import WorkflowVersionManager  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # websocket/broadcaster.py
 # ---------------------------------------------------------------------------
-
-
-from animus_forge.websocket.broadcaster import Broadcaster
 
 
 @pytest.fixture
@@ -84,11 +85,6 @@ class TestBroadcasterProcessQueue:
 # ---------------------------------------------------------------------------
 # websocket/manager.py — handle_connection lifecycle
 # ---------------------------------------------------------------------------
-
-
-from fastapi import WebSocketDisconnect
-
-from animus_forge.websocket.manager import ConnectionManager
 
 
 class TestConnectionManagerHandleConnection:
@@ -167,10 +163,6 @@ class TestConnectionManagerHandleConnection:
 # ---------------------------------------------------------------------------
 # workflow/version_manager.py — migrate-existing-workflows exception path
 # ---------------------------------------------------------------------------
-
-
-from animus_forge.state.backends import SQLiteBackend
-from animus_forge.workflow.version_manager import WorkflowVersionManager
 
 
 @pytest.fixture
