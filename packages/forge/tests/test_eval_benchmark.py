@@ -75,12 +75,20 @@ def memory_backend():
 
     backend = SQLiteBackend(":memory:")
 
-    # Apply eval migration
-    migration_path = Path(__file__).parent.parent / "migrations" / "012_eval_results.sql"
-    if migration_path.exists():
-        backend.executescript(migration_path.read_text())
-    else:
-        # Inline schema for CI
+    # Apply eval migrations (012 = base, 018 = rubric/failure/cost, 019 = content failures)
+    migrations_dir = Path(__file__).parent.parent / "migrations"
+    applied_any = False
+    for name in (
+        "012_eval_results.sql",
+        "018_eval_rubric_failure.sql",
+        "019_eval_content_failures.sql",
+    ):
+        path = migrations_dir / name
+        if path.exists():
+            backend.executescript(path.read_text())
+            applied_any = True
+    if not applied_any:
+        # Inline schema for CI — kept in sync with migrations 012 + 018
         backend.executescript(
             """
             CREATE TABLE IF NOT EXISTS eval_runs (
@@ -100,7 +108,12 @@ def memory_backend():
                 avg_score REAL DEFAULT 0.0,
                 pass_rate REAL DEFAULT 0.0,
                 total_tokens INTEGER DEFAULT 0,
-                metadata TEXT
+                metadata TEXT,
+                rubric_name TEXT,
+                rubric_version TEXT,
+                config_hash TEXT,
+                prompt_version TEXT,
+                total_cost_usd REAL DEFAULT 0.0
             );
             CREATE TABLE IF NOT EXISTS eval_case_results (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,6 +126,11 @@ def memory_backend():
                 latency_ms REAL DEFAULT 0,
                 tokens_used INTEGER DEFAULT 0,
                 metrics_json TEXT,
+                failure_mode TEXT,
+                rubric_band TEXT,
+                rubric_scores_json TEXT,
+                cost_usd REAL DEFAULT 0.0,
+                content_failure_modes_json TEXT,
                 FOREIGN KEY (run_id) REFERENCES eval_runs(id) ON DELETE CASCADE
             );
             """
@@ -236,6 +254,7 @@ class TestSuiteLoader:
             "contains",
             "similarity",
             "regex",
+            "regex_absence",
             "length",
             "exact_match",
             "llm_judge",
@@ -280,7 +299,7 @@ class TestSuiteLoader:
 
         loader = SuiteLoader(real_dir)
         suites = loader.list_suites()
-        assert len(suites) >= 4
+        assert len(suites) >= 1
 
         for suite_info in suites:
             suite = loader.load_suite(suite_info["name"])
@@ -529,8 +548,9 @@ class TestEvalCLI:
     def test_eval_list(self, runner: CliRunner, cli_app) -> None:
         result = runner.invoke(cli_app, ["list"])
         assert result.exit_code == 0
-        # Should show suites from the real eval_suites/ dir
-        assert "planner" in result.output or "No suites" in result.output
+        # Should show suites from the real eval_suites/ dir, or the
+        # "no suites" empty-state message.
+        assert "benchgoblins-ask" in result.output or "No suites" in result.output
 
     def test_eval_list_custom_dir(self, runner: CliRunner, cli_app, tmp_suites_dir: Path) -> None:
         result = runner.invoke(cli_app, ["list", "--suites-dir", str(tmp_suites_dir)])

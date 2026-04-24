@@ -1,0 +1,38 @@
+name: code-edit
+version: 1.0.0
+description: >
+  Scoring rubric for code-edit agent outputs. Weights correctness highest,
+  penalizes schema drift (non-code in code fields), rewards concision.
+tags:
+  - role:code-edit
+  - phase:v1
+
+bands:
+  - {letter: A, floor: 0.90}
+  - {letter: B, floor: 0.80}
+  - {letter: C, floor: 0.70}
+  - {letter: D, floor: 0.60}
+  - {letter: F, floor: 0.0}
+
+dims:
+  - name: correctness
+    metric: ContainsMetric
+    weight: 3.0
+    description: Output contains expected identifiers / fragments
+    kwargs:
+      all_required: true
+
+  - name: schema_valid
+    metric: RegexMatchMetric
+    weight: 1.5
+    description: Output contains a fenced code block
+    kwargs:
+      pattern: "```"
+
+  - name: concision
+    metric: LengthMetric
+    weight: 0.5
+    description: Output stays under 2000 chars
+    kwargs:
+      max_length: 2000
+      unit: chars

@@ -27,6 +27,7 @@ from animus_forge.evaluation.metrics import (
     FactualityMetric,
     LengthMetric,
     LLMJudgeMetric,
+    RegexAbsenceMetric,
     RegexMatchMetric,
     SafetyMetric,
     SimilarityMetric,
@@ -455,6 +456,121 @@ class TestAgentEvaluator:
         assert result.score == 1.0
         assert result.status == EvalStatus.PASSED
 
+    def test_fail_fast_forces_failure_on_subscore(self):
+        """A fail_fast metric scoring <1.0 forces FAILED regardless of composite."""
+
+        class HardGate(EvalMetric):
+            fail_fast = True
+
+            @property
+            def name(self):
+                return "hard_gate"
+
+            def score(self, output, expected, case):
+                return 0.0  # hard fail
+
+        class SoftHigh(EvalMetric):
+            @property
+            def name(self):
+                return "soft_high"
+
+            def score(self, output, expected, case):
+                return 1.0
+
+        fn = MagicMock(return_value="output")
+        evaluator = AgentEvaluator(fn, threshold=0.3)
+        # Composite = (0.0 + 1.0) / 2 = 0.5 > threshold 0.3 → would PASS normally.
+        # But hard_gate is fail_fast and scored 0.0, so status must be FAILED
+        # even though composite clears the threshold.
+        result = evaluator.evaluate(_make_case(), [HardGate(), SoftHigh()])
+        assert result.status == EvalStatus.FAILED
+        assert result.score > evaluator.threshold  # composite still above threshold
+        assert result.metrics["hard_gate"] == 0.0
+        assert result.metrics["soft_high"] == 1.0
+
+    def test_fail_fast_allows_pass_when_score_is_one(self):
+        """fail_fast=True with score=1.0 does NOT force failure."""
+
+        class HardGate(EvalMetric):
+            fail_fast = True
+
+            @property
+            def name(self):
+                return "hard_gate"
+
+            def score(self, output, expected, case):
+                return 1.0
+
+        fn = MagicMock(return_value="output")
+        evaluator = AgentEvaluator(fn, threshold=0.5)
+        result = evaluator.evaluate(_make_case(), [HardGate()])
+        assert result.status == EvalStatus.PASSED
+        assert result.score == 1.0
+
+    def test_fail_fast_default_false_preserves_existing_behavior(self):
+        """Metrics without fail_fast attr behave like existing averaging."""
+
+        class SoftLow(EvalMetric):
+            @property
+            def name(self):
+                return "soft_low"
+
+            def score(self, output, expected, case):
+                return 0.6  # above threshold, should PASS
+
+        fn = MagicMock(return_value="output")
+        evaluator = AgentEvaluator(fn, threshold=0.5)
+        result = evaluator.evaluate(_make_case(), [SoftLow()])
+        assert result.status == EvalStatus.PASSED  # composite 0.6 > 0.5
+        assert getattr(SoftLow(), "fail_fast", False) is False
+
+    def test_duplicate_metric_names_get_unique_keys(self):
+        """Multiple metrics of the same class don't collide in metric_scores."""
+
+        class SameName(EvalMetric):
+            def __init__(self, val):
+                self._val = val
+
+            @property
+            def name(self):
+                return "same"
+
+            def score(self, output, expected, case):
+                return self._val
+
+        fn = MagicMock(return_value="output")
+        evaluator = AgentEvaluator(fn, threshold=0.3)
+        # Three metrics, all named "same", with distinct scores.
+        result = evaluator.evaluate(_make_case(), [SameName(0.0), SameName(0.5), SameName(1.0)])
+        # All three should appear in the dict with auto-suffixed keys.
+        assert set(result.metrics.keys()) == {"same", "same_1", "same_2"}
+        # Composite is true average of all three: (0 + 0.5 + 1.0) / 3 = 0.5
+        assert abs(result.score - 0.5) < 1e-9
+
+    def test_fail_fast_instance_attribute_from_loader(self):
+        """Loader sets fail_fast per-instance; class-level default unchanged."""
+
+        class SoftMetric(EvalMetric):
+            @property
+            def name(self):
+                return "soft"
+
+            def score(self, output, expected, case):
+                return 0.3
+
+        m = SoftMetric()
+        assert m.fail_fast is False
+        # Simulate loader setting it per-instance
+        m.fail_fast = True
+
+        fn = MagicMock(return_value="output")
+        evaluator = AgentEvaluator(fn, threshold=0.2)
+        result = evaluator.evaluate(_make_case(), [m])
+        # Composite 0.3 > threshold 0.2 (would PASS normally), but fail_fast trips
+        assert result.status == EvalStatus.FAILED
+        # Another instance of same class should still default to False
+        assert SoftMetric().fail_fast is False
+
     def test_evaluate_no_metrics_no_output(self):
         fn = MagicMock(return_value="")
         evaluator = AgentEvaluator(fn)
@@ -565,6 +681,38 @@ class TestProviderEvaluator:
             result = evaluator.evaluate(_make_case(), [_FailingMetric()])
         assert result.status == EvalStatus.ERROR
         assert result.metrics["failing"] == 0.0
+
+    @patch("animus_forge.evaluation.base.CompletionRequest", create=True)
+    def test_fail_fast_forces_failure_provider(self, _mock_cr):
+        """ProviderEvaluator honors fail_fast just like AgentEvaluator."""
+
+        class HardGate(EvalMetric):
+            fail_fast = True
+
+            @property
+            def name(self):
+                return "hard_gate"
+
+            def score(self, output, expected, case):
+                return 0.0
+
+        class SoftHigh(EvalMetric):
+            @property
+            def name(self):
+                return "soft_high"
+
+            def score(self, output, expected, case):
+                return 1.0
+
+        provider = self._mock_provider(content="response", tokens=10)
+        evaluator = ProviderEvaluator(provider, threshold=0.3)
+        with patch("animus_forge.providers.CompletionRequest", return_value=MagicMock()):
+            result = evaluator.evaluate(_make_case(), [HardGate(), SoftHigh()])
+        # Composite 0.5 > threshold 0.3, but fail_fast trips.
+        assert result.status == EvalStatus.FAILED
+        assert result.score > evaluator.threshold
+        assert result.metrics["hard_gate"] == 0.0
+        assert result.metrics["soft_high"] == 1.0
 
     @patch("animus_forge.evaluation.base.CompletionRequest", create=True)
     def test_evaluate_below_threshold(self, _mock_cr):
@@ -740,6 +888,67 @@ class TestRegexMatchMetric:
         # Must pass expected to use the init pattern
         assert m.score("Hello World", "dummy", _make_case()) == 1.0
         assert m.score("hello world", "dummy", _make_case()) == 0.0
+
+
+class TestRegexAbsenceMetric:
+    """Tests for RegexAbsenceMetric — inverse of RegexMatchMetric."""
+
+    def test_name(self):
+        assert RegexAbsenceMetric().name == "regex_absence"
+
+    def test_pattern_not_found_passes(self):
+        m = RegexAbsenceMetric(pattern=r"recommendations")
+        assert m.score("clean rationale text", "anything", _make_case()) == 1.0
+
+    def test_pattern_found_fails(self):
+        m = RegexAbsenceMetric(pattern=r"recommendations")
+        assert m.score('leaked: {"recommendations": []}', "anything", _make_case()) == 0.0
+
+    def test_pattern_from_expected(self):
+        m = RegexAbsenceMetric()
+        assert m.score("clean output", r"forbidden_token", _make_case()) == 1.0
+        assert m.score("has forbidden_token here", r"forbidden_token", _make_case()) == 0.0
+
+    def test_no_match_passes(self):
+        m = RegexAbsenceMetric(pattern=r"^\d+$")
+        assert m.score("abc", r"^\d+$", _make_case()) == 1.0
+
+    def test_none_expected_uses_none_pattern(self):
+        """Mirrors RegexMatchMetric precedence quirk: expected=None means pattern=None."""
+        m = RegexAbsenceMetric(pattern=r"recommendations")
+        assert m.score("something", None, _make_case()) == 1.0
+
+    def test_none_pattern_and_expected_with_output(self):
+        m = RegexAbsenceMetric()
+        assert m.score("something", None, _make_case()) == 1.0
+
+    def test_none_pattern_and_expected_empty_output(self):
+        m = RegexAbsenceMetric()
+        assert m.score("", None, _make_case()) == 0.0
+
+    def test_invalid_regex_from_expected(self):
+        m = RegexAbsenceMetric()
+        assert m.score("test", r"[invalid", _make_case()) == 0.0
+
+    def test_invalid_regex_from_init(self):
+        m = RegexAbsenceMetric(pattern=r"[invalid")
+        assert m.score("test", "something", _make_case()) == 0.0
+
+    def test_unable_to_determine_literal(self):
+        """Guards the specific 'decision: Unable to determine' invariant."""
+        m = RegexAbsenceMetric(pattern=r'"decision"\s*:\s*"Unable to determine"')
+        good = '{"decision": "Add Kyren Williams", "rationale": "..."}'
+        bad = '{"decision": "Unable to determine", "rationale": ""}'
+        assert m.score(good, "dummy", _make_case()) == 1.0
+        assert m.score(bad, "dummy", _make_case()) == 0.0
+
+    def test_raw_json_leak_in_rationale(self):
+        """Guards the 5c2cf48 regression: rationale containing raw JSON shape."""
+        m = RegexAbsenceMetric(pattern=r'"rationale"\s*:\s*"\s*[\{\[]')
+        leaked = '{"rationale": "{\\"recommendations\\": []}", "decision": "..."}'
+        clean = '{"rationale": "Start Mahomes against Denver.", "decision": "Start Mahomes"}'
+        assert m.score(leaked, "dummy", _make_case()) == 0.0
+        assert m.score(clean, "dummy", _make_case()) == 1.0
 
 
 class TestSimilarityMetric:
