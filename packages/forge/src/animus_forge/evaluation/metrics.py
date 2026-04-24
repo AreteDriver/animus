@@ -116,6 +116,41 @@ class RegexMatchMetric(EvalMetric):
             return 0.0
 
 
+class RegexAbsenceMetric(EvalMetric):
+    """Inverse of RegexMatchMetric — passes when pattern is NOT found.
+
+    Useful for negative invariants: "rationale must not contain raw JSON",
+    "output must not equal literal 'Unable to determine'", etc. Needed
+    for regression suites where the bug is the presence of a shape that
+    should have been transformed or filtered.
+    """
+
+    def __init__(self, pattern: str | None = None):
+        self._pattern = pattern
+
+    @property
+    def name(self) -> str:
+        return "regex_absence"
+
+    def score(
+        self,
+        output: str | Any,
+        expected: str | Any | None,
+        case: EvalCase,
+    ) -> float:
+        pattern = self._pattern or str(expected) if expected else None
+        if pattern is None:
+            return 1.0 if output else 0.0
+
+        output_str = str(output)
+        try:
+            if re.search(pattern, output_str):
+                return 0.0
+            return 1.0
+        except re.error:
+            return 0.0
+
+
 class SimilarityMetric(EvalMetric):
     """Semantic similarity using embeddings."""
 
@@ -521,6 +556,140 @@ class LengthMetric(EvalMetric):
             return self._max_length / length
 
         return 1.0
+
+
+class SelfAuditedLengthMetric(EvalMetric):
+    """Length metric that also verifies model's self-reported word count.
+
+    Pattern: prompt instructs the model to append ``<wc>N</wc>`` as the final
+    token, where N is its own word count. Three outcomes:
+
+        1. tag present AND claimed ≈ actual AND within max → 1.0 (honest + compliant)
+        2. tag present AND claimed diverges from actual beyond tolerance → 0.3
+           (dishonest self-audit — confident claim, wrong number)
+        3. tag absent → 0.5 (no self-audit; can't tell if model was honest)
+
+    The claim/actual tolerance defaults to 10% (±10 words on a 100-word budget).
+    Raise it when prompts are brittle, lower it when you want strict compliance.
+
+    Counts *exclude* the ``<wc>...</wc>`` tag itself when computing actual length,
+    so the model doesn't need to subtract its own tag from its claim.
+    """
+
+    _WC_RE = re.compile(r"<wc>\s*(\d+)\s*</wc>\s*$", re.IGNORECASE)
+
+    def __init__(
+        self,
+        max_length: int | None = None,
+        min_length: int = 0,
+        tolerance: float = 0.10,
+        tag_absent_score: float = 0.5,
+        mismatch_score: float = 0.3,
+    ):
+        """Initialize self-audited length metric.
+
+        Args:
+            max_length: Maximum word count budget; None disables ceiling check
+            min_length: Minimum word count (default 0 — no floor)
+            tolerance: Fractional slack on claimed vs actual (default 10%)
+            tag_absent_score: Score when <wc> tag missing (default 0.5)
+            mismatch_score: Score when claimed-vs-actual exceeds tolerance (default 0.3)
+        """
+        self._max_length = max_length
+        self._min_length = min_length
+        self._tolerance = tolerance
+        self._tag_absent_score = tag_absent_score
+        self._mismatch_score = mismatch_score
+
+    @property
+    def name(self) -> str:
+        return "self_audited_length"
+
+    def score(
+        self,
+        output: str | Any,
+        expected: str | Any | None,
+        case: EvalCase,
+    ) -> float:
+        output_str = str(output).strip()
+        match = self._WC_RE.search(output_str)
+
+        if not match:
+            return self._tag_absent_score
+
+        # Strip the tag so the actual count reflects the content alone
+        body = self._WC_RE.sub("", output_str).strip()
+        claimed = int(match.group(1))
+        actual = len(body.split())
+
+        # Claim honesty
+        tolerance_abs = max(1, int(self._tolerance * max(claimed, 1)))
+        if abs(claimed - actual) > tolerance_abs:
+            return self._mismatch_score
+
+        # Compliance with budget
+        if self._max_length is not None and actual > self._max_length:
+            return max(self._max_length / actual, 0.0)
+
+        if actual < self._min_length:
+            return actual / self._min_length if self._min_length > 0 else 0.0
+
+        return 1.0
+
+
+class NegativeExampleMetric(EvalMetric):
+    """Score 1.0 when output is dissimilar to any negative example; lower otherwise.
+
+    Reads ``case.metadata["negative_examples"]`` — a list of strings the prompt
+    should actively avoid. Each negative example is compared to the output via
+    word-overlap (Jaccard); the metric returns ``1 - max_similarity``.
+
+    Pair with negative-example few-shot in the prompt itself: list the rejected
+    outputs in the prompt with a one-line reason each, then score at runtime
+    with this metric. Anthropic's best-practice guide flags negative examples
+    as 2–3x more effective than positive instruction alone for style constraints.
+    """
+
+    def __init__(self, similarity_threshold: float = 0.5):
+        """Initialize.
+
+        Args:
+            similarity_threshold: Scores above this are linearly mapped
+                toward 0; scores at or below it pass through as
+                ``1 - similarity`` (identity). This lets authors tune
+                how punitive the metric is.
+        """
+        self._threshold = similarity_threshold
+
+    @property
+    def name(self) -> str:
+        return "negative_example"
+
+    def score(
+        self,
+        output: str | Any,
+        expected: str | Any | None,
+        case: EvalCase,
+    ) -> float:
+        negative_examples = case.metadata.get("negative_examples") or []
+        if not negative_examples:
+            return 1.0
+
+        output_words = set(str(output).lower().split())
+        if not output_words:
+            return 1.0
+
+        max_similarity = 0.0
+        for example in negative_examples:
+            example_words = set(str(example).lower().split())
+            if not example_words:
+                continue
+            intersection = output_words & example_words
+            union = output_words | example_words
+            similarity = len(intersection) / len(union) if union else 0.0
+            max_similarity = max(max_similarity, similarity)
+
+        return max(0.0, 1.0 - max_similarity)
 
 
 class CompositeMetric(EvalMetric):

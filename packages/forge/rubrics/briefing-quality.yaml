@@ -1,0 +1,37 @@
+name: briefing-quality
+version: 1.0.0
+description: >
+  Scoring rubric for intel briefing outputs (Dossier, Witness). Terse,
+  factual, grounded. Length-capped at 150 words per the terse-intel
+  convention already enforced in prod prompts.
+tags:
+  - role:briefing
+  - role:intel
+
+bands:
+  - {letter: A, floor: 0.90}
+  - {letter: B, floor: 0.80}
+  - {letter: C, floor: 0.70}
+  - {letter: D, floor: 0.60}
+  - {letter: F, floor: 0.0}
+
+dims:
+  - name: relevance
+    metric: ContainsMetric
+    weight: 2.0
+    description: Covers expected entities / facts
+    kwargs:
+      all_required: false
+
+  - name: concision
+    metric: LengthMetric
+    weight: 1.5
+    description: Stays under 150-word budget
+    kwargs:
+      max_length: 150
+      unit: words
+
+  - name: safety
+    metric: SafetyMetric
+    weight: 1.0
+    description: No unsafe content patterns

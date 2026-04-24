@@ -57,6 +57,15 @@ class EvalResult:
         latency_ms: Time taken for agent response
         tokens_used: Tokens consumed
         timestamp: When evaluation was run
+        failure_mode: Structured failure bucket (FailureMode value) — None
+            when the case passed or was skipped. Populated by
+            ``FailureClassifier`` after evaluation.
+        rubric_band: Letter grade (A/B/C/D/F) assigned by a Rubric. None
+            when no rubric was applied.
+        rubric_scores: Per-dim scores from the applied rubric, if any.
+            Keys are rubric dim names; values are 0-1 floats.
+        cost_usd: USD cost of this case, as estimated by CostCalculator.
+            Zero for free providers (e.g. Ollama) or when unknown.
     """
 
     case: EvalCase
@@ -69,6 +78,10 @@ class EvalResult:
     tokens_used: int = 0
     timestamp: datetime = field(default_factory=datetime.now)
     metadata: dict[str, Any] = field(default_factory=dict)
+    failure_mode: str | None = None
+    rubric_band: str | None = None
+    rubric_scores: dict[str, float] = field(default_factory=dict)
+    cost_usd: float = 0.0
 
     @property
     def passed(self) -> bool:
@@ -87,7 +100,28 @@ class EvalResult:
             "latency_ms": self.latency_ms,
             "tokens_used": self.tokens_used,
             "timestamp": self.timestamp.isoformat(),
+            "failure_mode": self.failure_mode,
+            "rubric_band": self.rubric_band,
+            "rubric_scores": self.rubric_scores,
+            "cost_usd": self.cost_usd,
         }
+
+
+def _unique_metric_key(base_name: str, existing: dict) -> str:
+    """Return a dict key that doesn't collide with existing entries.
+
+    Evaluators key ``metric_scores`` by ``metric.name``. Multiple metrics
+    of the same class (e.g. three ``RegexMatchMetric`` with different
+    patterns) share a name and would clobber each other, corrupting the
+    composite average. This helper auto-suffixes duplicates so every
+    metric invocation contributes to the composite.
+    """
+    if base_name not in existing:
+        return base_name
+    suffix = 1
+    while f"{base_name}_{suffix}" in existing:
+        suffix += 1
+    return f"{base_name}_{suffix}"
 
 
 class EvalMetric(ABC):
@@ -95,7 +129,17 @@ class EvalMetric(ABC):
 
     Metrics score agent outputs on specific dimensions like
     accuracy, relevance, safety, etc.
+
+    Attributes:
+        fail_fast: When True, a score < 1.0 from this metric forces the
+            case to EvalStatus.FAILED regardless of composite score. Used
+            for hard structural invariants (e.g., "rationale must not
+            contain raw JSON") that shouldn't be averaged with soft-
+            quality rubric dims. Class-level default False; loader sets
+            per-instance from YAML `fail_fast: true` in the metric spec.
     """
+
+    fail_fast: bool = False
 
     @property
     @abstractmethod
@@ -301,14 +345,22 @@ class AgentEvaluator(Evaluator):
 
         latency_ms = (time.time() - start_time) * 1000
 
-        # Calculate metric scores
+        # Calculate metric scores; track any fail_fast metric that didn't score 1.0.
+        # Duplicate metric names get auto-suffixed so every invocation contributes
+        # to the composite (see _unique_metric_key).
         metric_scores = {}
+        fail_fast_tripped = False
         for metric in metrics:
+            key = _unique_metric_key(metric.name, metric_scores)
             try:
                 score = metric.score(output, case.expected, case)
-                metric_scores[metric.name] = score
+                metric_scores[key] = score
+                if getattr(metric, "fail_fast", False) and score < 1.0:
+                    fail_fast_tripped = True
             except Exception as e:
-                metric_scores[metric.name] = 0.0
+                metric_scores[key] = 0.0
+                if getattr(metric, "fail_fast", False):
+                    fail_fast_tripped = True
                 if error is None:
                     error = f"Metric {metric.name} failed: {e}"
 
@@ -318,9 +370,12 @@ class AgentEvaluator(Evaluator):
         else:
             overall_score = 1.0 if output else 0.0
 
-        # Determine status
+        # Determine status. fail_fast metrics are hard gates — any score <1.0
+        # forces FAILED regardless of composite.
         if error:
             status = EvalStatus.ERROR
+        elif fail_fast_tripped:
+            status = EvalStatus.FAILED
         elif overall_score >= self.threshold:
             status = EvalStatus.PASSED
         else:
@@ -401,14 +456,22 @@ class ProviderEvaluator(Evaluator):
 
         latency_ms = (time.time() - start_time) * 1000
 
-        # Calculate metric scores
+        # Calculate metric scores; track any fail_fast metric that didn't score 1.0.
+        # Duplicate metric names get auto-suffixed so every invocation contributes
+        # to the composite (see _unique_metric_key).
         metric_scores = {}
+        fail_fast_tripped = False
         for metric in metrics:
+            key = _unique_metric_key(metric.name, metric_scores)
             try:
                 score = metric.score(output, case.expected, case)
-                metric_scores[metric.name] = score
+                metric_scores[key] = score
+                if getattr(metric, "fail_fast", False) and score < 1.0:
+                    fail_fast_tripped = True
             except Exception as e:
-                metric_scores[metric.name] = 0.0
+                metric_scores[key] = 0.0
+                if getattr(metric, "fail_fast", False):
+                    fail_fast_tripped = True
                 if error is None:
                     error = f"Metric {metric.name} failed: {e}"
 
@@ -418,9 +481,12 @@ class ProviderEvaluator(Evaluator):
         else:
             overall_score = 1.0 if output else 0.0
 
-        # Determine status
+        # Determine status. fail_fast metrics are hard gates — any score <1.0
+        # forces FAILED regardless of composite.
         if error:
             status = EvalStatus.ERROR
+        elif fail_fast_tripped:
+            status = EvalStatus.FAILED
         elif overall_score >= self.threshold:
             status = EvalStatus.PASSED
         else:

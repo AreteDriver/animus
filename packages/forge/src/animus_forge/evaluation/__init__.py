@@ -18,6 +18,8 @@ from .metrics import (
     ExactMatchMetric,
     FactualityMetric,
     LLMJudgeMetric,
+    NegativeExampleMetric,
+    SelfAuditedLengthMetric,
     SimilarityMetric,
 )
 from .reporters import (
@@ -42,6 +44,8 @@ __all__ = [
     "CodeExecutionMetric",
     "SimilarityMetric",
     "FactualityMetric",
+    "SelfAuditedLengthMetric",
+    "NegativeExampleMetric",
     # Runner
     "EvalRunner",
     # Reporters

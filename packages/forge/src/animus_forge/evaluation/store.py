@@ -44,6 +44,10 @@ class EvalStore:
         model: str | None = None,
         run_mode: str = "live",
         metadata: dict[str, Any] | None = None,
+        rubric_name: str | None = None,
+        rubric_version: str | None = None,
+        config_hash: str | None = None,
+        prompt_version: str | None = None,
     ) -> str:
         """Record a completed evaluation run with all case results.
 
@@ -54,6 +58,7 @@ class EvalStore:
         started_at = (result.timestamp or now).isoformat()
         completed_at = now.isoformat()
         total_tokens = sum(r.tokens_used for r in result.results)
+        total_cost_usd = sum(getattr(r, "cost_usd", 0.0) or 0.0 for r in result.results)
         meta_json = json.dumps(metadata) if metadata else None
 
         with self.backend.transaction():
@@ -63,8 +68,11 @@ class EvalStore:
                     (id, suite_name, agent_role, model, run_mode,
                      started_at, completed_at, duration_ms,
                      total_cases, passed, failed, errors, skipped,
-                     avg_score, pass_rate, total_tokens, metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     avg_score, pass_rate, total_tokens, metadata,
+                     rubric_name, rubric_version, config_hash,
+                     prompt_version, total_cost_usd)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?)
                 """,
                 (
                     run_id,
@@ -84,18 +92,38 @@ class EvalStore:
                     result.pass_rate,
                     total_tokens,
                     meta_json,
+                    rubric_name,
+                    rubric_version,
+                    config_hash,
+                    prompt_version,
+                    total_cost_usd,
                 ),
             )
 
             for case_result in result.results:
                 metrics_json = json.dumps(case_result.metrics) if case_result.metrics else None
                 output_text = str(case_result.output)[:2000] if case_result.output else None
+                rubric_scores_json = (
+                    json.dumps(case_result.rubric_scores)
+                    if getattr(case_result, "rubric_scores", None)
+                    else None
+                )
+                content_failure_modes = (
+                    case_result.metadata.get("content_failure_modes")
+                    if case_result.metadata
+                    else None
+                )
+                content_failures_json = (
+                    json.dumps(content_failure_modes) if content_failure_modes else None
+                )
                 self.backend.execute(
                     """
                     INSERT INTO eval_case_results
                         (run_id, case_name, status, score, output, error,
-                         latency_ms, tokens_used, metrics_json)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         latency_ms, tokens_used, metrics_json,
+                         failure_mode, rubric_band, rubric_scores_json,
+                         cost_usd, content_failure_modes_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         run_id,
@@ -107,6 +135,11 @@ class EvalStore:
                         case_result.latency_ms,
                         case_result.tokens_used,
                         metrics_json,
+                        getattr(case_result, "failure_mode", None),
+                        getattr(case_result, "rubric_band", None),
+                        rubric_scores_json,
+                        getattr(case_result, "cost_usd", 0.0) or 0.0,
+                        content_failures_json,
                     ),
                 )
 
@@ -136,7 +169,9 @@ class EvalStore:
             SELECT id, suite_name, agent_role, model, run_mode,
                    started_at, completed_at, duration_ms,
                    total_cases, passed, failed, errors, skipped,
-                   avg_score, pass_rate, total_tokens, metadata
+                   avg_score, pass_rate, total_tokens, metadata,
+                   rubric_name, rubric_version, config_hash,
+                   prompt_version, total_cost_usd
             FROM eval_runs
             WHERE 1=1
         """
@@ -309,6 +344,24 @@ class EvalStore:
         else:
             result["metrics"] = {}
         result.pop("metrics_json", None)
+
+        if result.get("rubric_scores_json"):
+            try:
+                result["rubric_scores"] = json.loads(result["rubric_scores_json"])
+            except (json.JSONDecodeError, TypeError):
+                result["rubric_scores"] = {}
+        else:
+            result["rubric_scores"] = {}
+        result.pop("rubric_scores_json", None)
+
+        if result.get("content_failure_modes_json"):
+            try:
+                result["content_failure_modes"] = json.loads(result["content_failure_modes_json"])
+            except (json.JSONDecodeError, TypeError):
+                result["content_failure_modes"] = []
+        else:
+            result["content_failure_modes"] = []
+        result.pop("content_failure_modes_json", None)
         return result
 
 
