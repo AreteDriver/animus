@@ -1,0 +1,8 @@
+{
+  "benchmark": "golden_workflow",
+  "version": 1,
+  "timestamp_utc": "20260420T210010Z",
+  "workflow_path": "packages/forge/workflows/benchmarks/golden_workflow.yaml",
+  "status": "scaffold_created",
+  "next_step": "wire to forge runner + collect cost/quality/latency metrics"
+}

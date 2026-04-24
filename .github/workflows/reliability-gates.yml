@@ -1,0 +1,55 @@
+name: Reliability Gates
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'docs/ARCHITECTURE_NAMING.md'
+      - 'docs/metrics/**'
+      - 'docs/reviews/**'
+      - 'packages/forge/workflows/benchmarks/**'
+      - 'tools/run_golden_workflow_benchmark.py'
+      - 'tools/validate_claims_evidence.py'
+      - '.github/workflows/reliability-gates.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'docs/ARCHITECTURE_NAMING.md'
+      - 'docs/metrics/**'
+      - 'docs/reviews/**'
+      - 'packages/forge/workflows/benchmarks/**'
+      - 'tools/run_golden_workflow_benchmark.py'
+      - 'tools/validate_claims_evidence.py'
+      - '.github/workflows/reliability-gates.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  claims-and-golden:
+    name: Claims Matrix + Golden Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Validate claims-to-evidence matrix
+        run: python tools/validate_claims_evidence.py
+
+      - name: Run golden workflow benchmark scaffold
+        run: python tools/run_golden_workflow_benchmark.py --output .benchmarks/golden_workflow.json
+
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-workflow-artifact
+          path: .benchmarks/golden_workflow.json
+          retention-days: 30
