@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from animus_bootstrap.intelligence.feedback import FeedbackStore
     from animus_bootstrap.intelligence.memory import MemoryManager
     from animus_bootstrap.intelligence.proactive.engine import ProactiveEngine
+    from animus_bootstrap.intelligence.proactive.outcomes import OutcomeStore
     from animus_bootstrap.intelligence.router import IntelligentRouter
     from animus_bootstrap.intelligence.tools.executor import ToolExecutor
     from animus_bootstrap.intelligence.tools.mcp_bridge import MCPBridge
@@ -42,6 +43,7 @@ class AnimusRuntime:
         self.memory_manager: MemoryManager | None = None
         self.tool_executor: ToolExecutor | None = None
         self.proactive_engine: ProactiveEngine | None = None
+        self._outcome_store: OutcomeStore | None = None
         self.automation_engine: Any = None
         self.router: IntelligentRouter | None = None
         self.cognitive_backend: Any = None
@@ -279,6 +281,11 @@ class AnimusRuntime:
             set_task_nudge_store(self._task_store)
             logger.info("Task store initialized: %s", tasks_db)
 
+            if self.proactive_engine is not None:
+                self.proactive_engine.add_action_observer(
+                    _make_task_store_observer(self._task_store)
+                )
+
         # 10. Feedback store
         from animus_bootstrap.intelligence.feedback import FeedbackStore
 
@@ -354,6 +361,9 @@ class AnimusRuntime:
         if self.proactive_engine is not None:
             await self.proactive_engine.stop()
             self.proactive_engine.close()
+        if getattr(self, "_outcome_store", None) is not None:
+            self._outcome_store.close()
+            self._outcome_store = None
             logger.info("Proactive engine stopped")
 
         if self.automation_engine is not None:
@@ -729,14 +739,19 @@ class AnimusRuntime:
         """Create and start proactive engine."""
         from animus_bootstrap.intelligence.proactive.checks import get_builtin_checks
         from animus_bootstrap.intelligence.proactive.engine import ProactiveEngine
+        from animus_bootstrap.intelligence.proactive.outcomes import OutcomeStore
 
         data_dir = self._config.get_data_path()
         proactive_db = data_dir / "proactive.db"
+        outcomes_db = data_dir / "proactive_outcomes.db"
 
         # Build send callback that routes through the gateway
         async def send_nudge(text: str, channels: list[str]) -> None:
             if self.router:
                 await self.router.broadcast(text, channels)
+
+        self._outcome_store = OutcomeStore(outcomes_db)
+        logger.info("Proactive outcome store initialized: %s", outcomes_db)
 
         engine = ProactiveEngine(
             db_path=proactive_db,
@@ -745,7 +760,12 @@ class AnimusRuntime:
                 self._config.proactive.quiet_hours_end,
             ),
             send_callback=send_nudge,
+            outcome_store=self._outcome_store,
         )
+
+        tool_history = getattr(self, "_tool_history_store", None)
+        if tool_history is not None:
+            engine.add_action_observer(_make_tool_history_observer(tool_history))
 
         # Register built-in checks
         for check in get_builtin_checks():
@@ -769,6 +789,60 @@ class AnimusRuntime:
         set_proactive_engine(engine)
 
         return engine
+
+
+def _make_tool_history_observer(history_store: Any) -> Any:
+    """Build an action observer that counts tool invocations in [since, until)."""
+
+    def observe(since: Any, until: Any) -> int:
+        try:
+            recent = history_store.list_recent(limit=200)
+        except Exception:
+            logger.exception("tool history observer failed")
+            return 0
+        from datetime import datetime as _dt
+
+        count = 0
+        for entry in recent:
+            ts_raw = entry.get("timestamp")
+            if not ts_raw:
+                continue
+            try:
+                ts = _dt.fromisoformat(ts_raw)
+            except ValueError:
+                continue
+            if since <= ts < until:
+                count += 1
+        return count
+
+    return observe
+
+
+def _make_task_store_observer(task_store: Any) -> Any:
+    """Build an action observer that counts tasks created in [since, until)."""
+
+    def observe(since: Any, until: Any) -> int:
+        try:
+            tasks = task_store.list_all()
+        except Exception:
+            logger.exception("task store observer failed")
+            return 0
+        from datetime import datetime as _dt
+
+        count = 0
+        for task in tasks:
+            created_raw = task.get("created")
+            if not created_raw:
+                continue
+            try:
+                created = _dt.fromisoformat(created_raw)
+            except ValueError:
+                continue
+            if since <= created < until:
+                count += 1
+        return count
+
+    return observe
 
 
 # Module-level singleton
