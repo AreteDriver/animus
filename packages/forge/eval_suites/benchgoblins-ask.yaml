@@ -1,0 +1,407 @@
+name: benchgoblins-ask
+description: >
+  BenchGoblins /ask chat-endpoint regression suite. Guards the shape
+  invariants fixed in commit 5c2cf48: no raw JSON leak into `rationale`,
+  no mid-word truncation, waiver-shape JSON gets mapped into the
+  envelope with populated `details.recommendations`.
+
+  Cases split 10/10 between waiver-shape triggers (the regression-prone
+  path — Claude often emits {recommendations, drop_candidates, summary}
+  instead of the CONTROL_PROMPT envelope) and control/analysis-shape
+  cases (start/sit, trade, ranking — the standard envelope path).
+
+  Layer `personal-quality` rubric on top at runtime:
+    animus-forge eval run benchgoblins-ask \
+      --rubric personal-quality \
+      --model claude-haiku-4-5 \
+      --parallel
+
+  The agent adapter that wires this suite to BenchGoblins'
+  `ClaudeService.make_decision` is registered separately; see
+  `eval_suites/adapters/benchgoblins_ask.py` (to be written).
+
+agent_role: benchgoblins-ask
+
+threshold: 0.75
+
+tags:
+  - product:benchgoblins
+  - endpoint:ask
+  - regression:5c2cf48
+  - owner:arete
+
+# Hard structural gates applied to every case. These catch the specific
+# 5c2cf48 regression shape WITHOUT relying on judge subjectivity. The
+# agent adapter returns the parsed response dict serialized as JSON —
+# metrics regex against that string.
+metrics:
+  # All six structural gates below are marked fail_fast: true. Any single
+  # failure trips EvalStatus.FAILED regardless of composite score. This
+  # prevents the "5 of 6 pass = composite 0.83 = threshold met" dilution
+  # when the rubric layer adds soft-score dims on top.
+  #
+  # --- Positive-match structural gates ---
+
+  # Rationale starts with a non-brace character. Catches `{"recommendations":...}`
+  # leaking as the FIRST character of rationale — the exact 5c2cf48 failure.
+  - type: regex
+    pattern: '"rationale"\s*:\s*"[^\{\[]'
+    fail_fast: true
+
+  # Rationale is at least 20 characters. Catches the old
+  # `response_text[:200]` stub fallback shape and empty-string degenerates.
+  - type: regex
+    pattern: '"rationale"\s*:\s*"[^"]{20,}"'
+    fail_fast: true
+
+  # Decision is present and populated (any non-empty string).
+  - type: regex
+    pattern: '"decision"\s*:\s*"[^"]+"'
+    fail_fast: true
+
+  # --- Absence-match regression gates (RegexAbsenceMetric) ---
+
+  # Rationale string value must NOT contain "recommendations" anywhere
+  # within it. Catches the leak even when it's mid-rationale (not just at
+  # the start). The `(?:[^"\\]|\\.)*` pattern consumes escaped quotes
+  # inside the JSON string literal so `"{\"recommendations\"..."` is
+  # detected. `details.recommendations` as a top-level key is unaffected
+  # because this regex is anchored to the rationale key prefix.
+  - type: regex_absence
+    pattern: '"rationale"\s*:\s*"(?:[^"\\]|\\.)*recommendations'
+    fail_fast: true
+
+  # Rationale string value must NOT contain "drop_candidates". Mirror of
+  # the recommendations leak for the parallel waiver-shape key.
+  - type: regex_absence
+    pattern: '"rationale"\s*:\s*"(?:[^"\\]|\\.)*drop_candidates'
+    fail_fast: true
+
+  # Decision must NOT be the literal fallback string — the parser emits
+  # "Unable to determine" only when it gave up, which for these 20
+  # well-formed prompts means the pipeline failed.
+  - type: regex_absence
+    pattern: '"decision"\s*:\s*"Unable to determine"'
+    fail_fast: true
+
+  # TODO: mid-word truncation heuristic. Deferred — regex is noisy and
+  # the max_tokens=2500 change in 5c2cf48 should make this rare. Revisit
+  # if truncation shows up in case #8 (waiver_mnf_reaction).
+
+cases:
+  # ========================================================================
+  # WAIVER-SHAPE TRIGGERS (1-10)
+  # Historically emit {recommendations, drop_candidates, summary} instead
+  # of CONTROL_PROMPT envelope. Pre-5c2cf48, leaked raw JSON into chat.
+  # Post-fix, parser maps to {decision: "Add <player>", rationale: summary,
+  # details: {recommendations, drop_candidates, position_needs}}.
+  # ========================================================================
+
+  - name: waiver_open_ended
+    input:
+      query: "Who should I add off waivers this week?"
+      sport: nfl
+      risk_mode: median
+      decision_type: waiver
+      league_type: standard
+    expected:
+      focus: "ranked waiver pickup recommendations"
+      format: "JSON envelope with decision, rationale, and populated details.recommendations"
+      shape: waiver
+    metadata:
+      tags: [waiver, regression-5c2cf48, high-risk]
+      regression_shape: "{recommendations: [...], drop_candidates: [...], summary: '...'}"
+
+  - name: waiver_top_n_ppr
+    input:
+      query: "Top 3 waiver claims for my team in 10-team PPR"
+      sport: nfl
+      risk_mode: median
+      decision_type: waiver
+      league_type: ppr
+    expected:
+      focus: "exactly 3 ranked waiver claims with positional rationale"
+      format: "JSON envelope, details.recommendations array length >= 3"
+      shape: waiver
+    metadata:
+      tags: [waiver, regression-5c2cf48, multi-rec]
+      min_recommendations: 3
+
+  - name: waiver_rb_stash
+    input:
+      query: "Best waiver wire RB to stash this week?"
+      sport: nfl
+      risk_mode: ceiling
+      decision_type: waiver
+      league_type: standard
+    expected:
+      focus: "single RB stash target with handcuff/depth-chart context"
+      format: "JSON envelope, details.position_needs may include RB"
+      shape: waiver
+    metadata:
+      tags: [waiver, regression-5c2cf48, position-specific]
+
+  - name: waiver_streaming_qb
+    input:
+      query: "Streaming QB options for week 5?"
+      sport: nfl
+      risk_mode: median
+      decision_type: waiver
+      league_type: standard
+    expected:
+      focus: "2-3 streaming QB options ranked by matchup"
+      format: "JSON envelope, details.recommendations populated"
+      shape: waiver
+    metadata:
+      tags: [waiver, regression-5c2cf48, streaming]
+
+  - name: waiver_drop_candidates
+    input:
+      query: "Drop candidates on my roster?"
+      sport: nfl
+      risk_mode: floor
+      decision_type: waiver
+      league_type: standard
+    expected:
+      focus: "roster-specific drop candidates"
+      format: "JSON envelope, details.drop_candidates populated"
+      shape: waiver
+    metadata:
+      tags: [waiver, regression-5c2cf48, drop-shape]
+      regression_key: drop_candidates
+
+  - name: waiver_faab_budget
+    input:
+      query: "FAAB bid targets this week — $100 budget"
+      sport: nfl
+      risk_mode: median
+      decision_type: waiver
+      league_type: ppr
+    expected:
+      focus: "FAAB-priced waiver targets with bid amounts"
+      format: "JSON envelope, details.recommendations with bid guidance"
+      shape: waiver
+    metadata:
+      tags: [waiver, regression-5c2cf48, faab]
+
+  - name: waiver_defense_streamer
+    input:
+      query: "Defense streamer for SNF matchup"
+      sport: nfl
+      risk_mode: median
+      decision_type: waiver
+      league_type: standard
+    expected:
+      focus: "single defense stream for Sunday night"
+      format: "JSON envelope, short rationale acceptable"
+      shape: waiver
+    metadata:
+      tags: [waiver, regression-5c2cf48, single-position, short-response]
+
+  - name: waiver_mnf_reaction
+    input:
+      query: "Pickup recommendations after MNF — breakout candidates"
+      sport: nfl
+      risk_mode: ceiling
+      decision_type: waiver
+      league_type: ppr
+    expected:
+      focus: "news-reactive pickups driven by Monday night performance"
+      format: "JSON envelope, multi-rec response, verbose rationale"
+      shape: waiver
+    metadata:
+      tags: [waiver, regression-5c2cf48, truncation-risk, long-response]
+      notes: "Most likely to exceed 1500-token cap pre-fix. Validates max_tokens=2500."
+
+  - name: waiver_position_need
+    input:
+      query: "Waiver priority advice — I need RB depth"
+      sport: nfl
+      risk_mode: floor
+      decision_type: waiver
+      league_type: standard
+    expected:
+      focus: "RB-focused pickups framed as depth additions"
+      format: "JSON envelope, details.position_needs should reflect RB"
+      shape: waiver
+    metadata:
+      tags: [waiver, regression-5c2cf48, position-needs]
+
+  - name: waiver_nba_streaming
+    input:
+      query: "Top streaming guards for fantasy basketball this week"
+      sport: nba
+      risk_mode: median
+      decision_type: waiver
+      league_type: standard
+    expected:
+      focus: "NBA guard streamers ranked by weekly opportunity"
+      format: "JSON envelope, details.recommendations populated"
+      shape: waiver
+    metadata:
+      tags: [waiver, regression-5c2cf48, cross-sport]
+      notes: "Validates the fix works outside NFL."
+
+  # ========================================================================
+  # CONTROL / ANALYSIS ENVELOPE (11-20)
+  # Standard CONTROL_PROMPT response shape. Validates 5c2cf48 didn't
+  # regress the non-waiver path.
+  # ========================================================================
+
+  - name: startsit_qb_comparison
+    input:
+      query: "Should I start Patrick Mahomes or Dak Prescott this week?"
+      sport: nfl
+      risk_mode: median
+      decision_type: start_sit
+      league_type: standard
+      player_a: Patrick Mahomes
+      player_b: Dak Prescott
+    expected:
+      focus: "one-of-two QB start recommendation with matchup reasoning"
+      format: 'JSON envelope, decision matches "Start <Name>" pattern'
+      shape: decision
+    metadata:
+      tags: [decision, control-path, start-sit]
+
+  - name: startsit_single_player
+    input:
+      query: "Sit Brock Purdy against the Rams or start him?"
+      sport: nfl
+      risk_mode: median
+      decision_type: start_sit
+      league_type: standard
+      player_a: Brock Purdy
+    expected:
+      focus: "start/sit recommendation with matchup context"
+      format: 'JSON envelope, decision matches "Start" or "Sit" pattern'
+      shape: decision
+    metadata:
+      tags: [decision, control-path, single-player]
+
+  - name: flex_decision
+    input:
+      query: "Flex decision: Justice Hill or Zamir White?"
+      sport: nfl
+      risk_mode: ceiling
+      decision_type: start_sit
+      league_type: ppr
+      player_a: Justice Hill
+      player_b: Zamir White
+    expected:
+      focus: "flex-slot RB comparison with usage + matchup"
+      format: 'JSON envelope, decision matches "Start <Name>" pattern'
+      shape: decision
+    metadata:
+      tags: [decision, control-path, flex]
+
+  - name: trade_multi_player
+    input:
+      query: "Is this trade fair: my Tyreek Hill for their Chase Brown + Jerry Jeudy?"
+      sport: nfl
+      risk_mode: median
+      decision_type: trade
+      league_type: ppr
+      player_a: Tyreek Hill
+      player_b: Chase Brown + Jerry Jeudy
+    expected:
+      focus: "trade value comparison with accept/reject/counter guidance"
+      format: 'JSON envelope, decision conveys accept/reject/hold'
+      shape: decision
+    metadata:
+      tags: [decision, control-path, trade, multi-player]
+
+  - name: trade_one_for_one
+    input:
+      query: "Should I accept a trade of Josh Jacobs for De'Von Achane?"
+      sport: nfl
+      risk_mode: median
+      decision_type: trade
+      league_type: standard
+      player_a: Josh Jacobs
+      player_b: De'Von Achane
+    expected:
+      focus: "1-for-1 trade evaluation"
+      format: 'JSON envelope, decision conveys accept/reject'
+      shape: decision
+    metadata:
+      tags: [decision, control-path, trade]
+
+  - name: trade_hold_vs_trade
+    input:
+      query: "Keep Saquon Barkley or trade for CMC?"
+      sport: nfl
+      risk_mode: median
+      decision_type: trade
+      league_type: ppr
+      player_a: Saquon Barkley
+      player_b: Christian McCaffrey
+    expected:
+      focus: "hold-vs-upgrade trade framing"
+      format: "JSON envelope, ambiguous framing resolved into a clear stance"
+      shape: decision
+    metadata:
+      tags: [decision, control-path, trade, ambiguous]
+
+  - name: startsit_nba
+    input:
+      query: "Start Scottie Barnes or Paolo Banchero tonight?"
+      sport: nba
+      risk_mode: median
+      decision_type: start_sit
+      league_type: standard
+      player_a: Scottie Barnes
+      player_b: Paolo Banchero
+    expected:
+      focus: "NBA start/sit with per-game matchup context"
+      format: 'JSON envelope, decision matches "Start <Name>" pattern'
+      shape: decision
+    metadata:
+      tags: [decision, control-path, cross-sport, nba]
+      notes: "Also validates the 5c2cf48 sport-dropdown auto-sync path."
+
+  - name: drop_for_handcuff
+    input:
+      query: "Drop Dameon Pierce for handcuff Roschon Johnson?"
+      sport: nfl
+      risk_mode: floor
+      decision_type: waiver
+      league_type: standard
+      player_a: Dameon Pierce
+      player_b: Roschon Johnson
+    expected:
+      focus: "drop-for-add handcuff swap with depth-chart reasoning"
+      format: "JSON envelope — may take either waiver or decision shape"
+      shape: either
+    metadata:
+      tags: [decision, control-path, boundary-case, handcuff]
+      notes: "Straddles waiver/decision shape boundary. Either mapping must not leak JSON."
+
+  - name: analysis_rankings
+    input:
+      query: "Rank top 5 RBs for rest of season"
+      sport: nfl
+      risk_mode: median
+      decision_type: start_sit
+      league_type: standard
+    expected:
+      focus: "ordered top-5 RB ranking with schedule/usage rationale"
+      format: 'JSON envelope with decision="Analysis", multi-paragraph rationale'
+      shape: analysis
+    metadata:
+      tags: [decision, control-path, analysis-shape, long-response]
+      notes: "Tests the Analysis envelope from variants.py lines 125-134."
+
+  - name: analysis_buy_low
+    input:
+      query: "Who's a buy-low target on a 2-4 team?"
+      sport: nfl
+      risk_mode: ceiling
+      decision_type: trade
+      league_type: ppr
+    expected:
+      focus: "buy-low trade target identification with reasoning"
+      format: 'JSON envelope with decision="Analysis" or "Trade for <Name>"'
+      shape: analysis
+    metadata:
+      tags: [decision, control-path, analysis-shape, strategy]

@@ -1,0 +1,166 @@
+name: personal-quality
+version: 1.0.0
+description: >
+  ARETE's personal 6-dimension quality rubric. Scores AI outputs against
+  the criteria that matter for his operating method: relevance, precision,
+  actionability, evidence grounding, format discipline, and hallucination
+  safety. Weighted toward signals that separate usable output from noise.
+
+  Uses LLMJudgeMetric on each dim. Underlying judge extracts a 0-10 score
+  and normalizes to 0-1; the prompts below encode ARETE's 1-5 semantic
+  scale mapped onto 0-10 for granularity.
+
+  Run with:
+    animus-forge eval run <suite> --rubric personal-quality --model claude-haiku-4-5
+
+  Haiku is the recommended judge — fast, cheap, consistent enough for
+  relative comparisons. Use Sonnet when the composite is close to a band
+  boundary and you want tighter judge variance.
+
+tags:
+  - role:personal
+  - owner:arete
+
+bands:
+  - {letter: A, floor: 0.90}
+  - {letter: B, floor: 0.80}
+  - {letter: C, floor: 0.70}
+  - {letter: D, floor: 0.60}
+  - {letter: F, floor: 0.0}
+
+dims:
+  - name: relevance
+    metric: LLMJudgeMetric
+    weight: 1.5
+    description: >
+      On-topic with the stated objective. Addresses the question asked,
+      not an adjacent one the model found easier.
+    kwargs:
+      prompt_template: |
+        Score RELEVANCE on a 0-10 scale.
+
+        10 = directly addresses the stated task, no digressions
+         8 = on-topic with minor drift
+         6 = partially on-topic, some off-target content
+         4 = mostly off-topic
+         2 = drifted into an adjacent question
+         0 = unrelated to the task
+
+        Task: {input}
+        Expected focus: {expected}
+        Output: {output}
+
+        Respond with ONLY a single integer 0-10.
+
+  - name: precision
+    metric: LLMJudgeMetric
+    weight: 2.0
+    description: >
+      Specific, not generic. Names things, cites numbers, chooses concrete
+      examples over abstractions.
+    kwargs:
+      prompt_template: |
+        Score PRECISION on a 0-10 scale.
+
+        10 = every claim is specific (named entities, quantified, cited)
+         8 = mostly specific, occasional vague phrasing
+         6 = mix of specific and generic
+         4 = mostly generic advice with occasional specifics
+         2 = boilerplate, could apply to any context
+         0 = pure platitudes
+
+        Task: {input}
+        Output: {output}
+
+        Respond with ONLY a single integer 0-10.
+
+  - name: actionability
+    metric: LLMJudgeMetric
+    weight: 2.0
+    description: >
+      Can the reader act on this right now? Clear next steps, owners,
+      thresholds, decisions — not observations.
+    kwargs:
+      prompt_template: |
+        Score ACTIONABILITY on a 0-10 scale.
+
+        10 = reader can act immediately; clear next step, owner, threshold
+         8 = actionable with minor interpretation
+         6 = partially actionable; some steps implicit
+         4 = descriptive with vague action hints
+         2 = purely descriptive, no clear action
+         0 = observation only, no decision or step
+
+        Task: {input}
+        Output: {output}
+
+        Respond with ONLY a single integer 0-10.
+
+  - name: evidence_quality
+    metric: LLMJudgeMetric
+    weight: 2.0
+    description: >
+      Claims are grounded in provided inputs or cited sources. Distinguishes
+      between "given" and "inferred" and "model priors".
+    kwargs:
+      prompt_template: |
+        Score EVIDENCE QUALITY on a 0-10 scale.
+
+        10 = every non-trivial claim is grounded in inputs or cited
+         8 = mostly grounded, minor ungrounded claims
+         6 = mix of grounded and ungrounded, not distinguished
+         4 = noticeable ungrounded claims presented as fact
+         2 = largely ungrounded with confident framing
+         0 = no grounding; pure generation
+
+        Task: {input}
+        Output: {output}
+
+        Respond with ONLY a single integer 0-10.
+
+  - name: format_compliance
+    metric: LLMJudgeMetric
+    weight: 1.0
+    description: >
+      Follows the requested output structure. When format is specified
+      (table, bullets, sections), it's present and well-formed.
+    kwargs:
+      prompt_template: |
+        Score FORMAT COMPLIANCE on a 0-10 scale.
+
+        10 = follows requested structure exactly (tables, sections, bullets)
+         8 = follows structure with minor deviations
+         6 = partial compliance; some sections missing or malformed
+         4 = ignores structure, delivers free prose
+         2 = actively uses wrong format
+         0 = no structure at all
+
+        If no specific format was requested, score 10.
+
+        Task: {input}
+        Expected format: {expected}
+        Output: {output}
+
+        Respond with ONLY a single integer 0-10.
+
+  - name: hallucination_safety
+    metric: LLMJudgeMetric
+    weight: 2.5
+    description: >
+      Reversed-sense dim — higher score = safer. No fabricated facts,
+      citations, or identifiers. Uncertainty is acknowledged.
+    kwargs:
+      prompt_template: |
+        Score HALLUCINATION SAFETY on a 0-10 scale (higher = safer).
+
+        10 = no fabrications; uncertainty acknowledged where present
+         8 = mostly safe; occasional confident-but-unverifiable claim
+         6 = several unverifiable claims presented confidently
+         4 = multiple fabrications (names, numbers, citations)
+         2 = heavily fabricated with high confidence tone
+         0 = confidently wrong throughout
+
+        Task: {input}
+        Output: {output}
+
+        Respond with ONLY a single integer 0-10.

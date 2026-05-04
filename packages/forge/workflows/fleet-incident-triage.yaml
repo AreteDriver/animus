@@ -95,7 +95,7 @@ steps:
         benchgoblins_api) REPO="/home/arete/projects/BenchGoblins" ;;
         gatekeeper_api) REPO="/home/arete/projects/EVE_Gatekeeper" ;;
         monolith_api) REPO="/home/arete/projects/monolith" ;;
-        witness_api) REPO="/home/arete/projects/witness" ;;
+        witness_api) REPO="/home/arete/projects/watchtower" ;;
         frontier_tribe_os) REPO="/home/arete/projects/frontier-tribe-os" ;;
         aicards_mint) REPO="/home/arete/projects/aicards-tcg" ;;
         staycards_mint) REPO="/home/arete/projects/straykids-tcg" ;;

@@ -16,6 +16,7 @@ from .metrics import (
     ExactMatchMetric,
     LengthMetric,
     LLMJudgeMetric,
+    RegexAbsenceMetric,
     RegexMatchMetric,
     SimilarityMetric,
 )
@@ -30,6 +31,7 @@ METRIC_MAP: dict[str, type[EvalMetric]] = {
     "contains": ContainsMetric,
     "similarity": SimilarityMetric,
     "regex": RegexMatchMetric,
+    "regex_absence": RegexAbsenceMetric,
     "length": LengthMetric,
     "exact_match": ExactMatchMetric,
     "llm_judge": LLMJudgeMetric,
@@ -41,6 +43,11 @@ def _build_metric(spec: dict[str, Any]) -> EvalMetric | None:
 
     Expected format: {"type": "contains", "case_sensitive": false, ...}
     The 'type' key selects the class; remaining keys are passed as kwargs.
+
+    The optional 'fail_fast' key (default False) is popped from the spec
+    before kwargs pass-through and set on the resulting metric instance.
+    When True, any score <1.0 from this metric forces the case to
+    EvalStatus.FAILED regardless of composite score.
     """
     metric_type = spec.get("type", "")
     cls = METRIC_MAP.get(metric_type)
@@ -48,12 +55,16 @@ def _build_metric(spec: dict[str, Any]) -> EvalMetric | None:
         logger.warning("Unknown metric type '%s', skipping", metric_type)
         return None
 
-    kwargs = {k: v for k, v in spec.items() if k != "type"}
+    fail_fast = bool(spec.get("fail_fast", False))
+    kwargs = {k: v for k, v in spec.items() if k not in ("type", "fail_fast")}
     try:
-        return cls(**kwargs)
+        metric = cls(**kwargs)
     except TypeError as e:
         logger.warning("Failed to create metric '%s': %s", metric_type, e)
         return None
+
+    metric.fail_fast = fail_fast
+    return metric
 
 
 class SuiteLoader:
