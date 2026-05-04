@@ -14,8 +14,10 @@ if TYPE_CHECKING:
     from animus_bootstrap.identity import IdentityFileManager
     from animus_bootstrap.intelligence.feedback import FeedbackStore
     from animus_bootstrap.intelligence.memory import MemoryManager
+    from animus_bootstrap.intelligence.memory_scores import MemoryScoreStore
     from animus_bootstrap.intelligence.proactive.engine import ProactiveEngine
     from animus_bootstrap.intelligence.proactive.outcomes import OutcomeStore
+    from animus_bootstrap.intelligence.recall_log import RecallLog
     from animus_bootstrap.intelligence.router import IntelligentRouter
     from animus_bootstrap.intelligence.tools.executor import ToolExecutor
     from animus_bootstrap.intelligence.tools.mcp_bridge import MCPBridge
@@ -44,6 +46,8 @@ class AnimusRuntime:
         self.tool_executor: ToolExecutor | None = None
         self.proactive_engine: ProactiveEngine | None = None
         self._outcome_store: OutcomeStore | None = None
+        self._recall_log: RecallLog | None = None
+        self._memory_score_store: MemoryScoreStore | None = None
         self.automation_engine: Any = None
         self.router: IntelligentRouter | None = None
         self.cognitive_backend: Any = None
@@ -115,6 +119,11 @@ class AnimusRuntime:
             self._tool_history_store = ToolHistoryStore(history_db)
             self.tool_executor.set_history_store(self._tool_history_store)
             logger.info("Tool history store initialized: %s", history_db)
+
+            if self.memory_manager is not None:
+                self.memory_manager.add_action_observer(
+                    _make_tool_history_observer(self._tool_history_store)
+                )
 
             logger.info(
                 "Tool executor initialized: %d tools registered",
@@ -285,6 +294,8 @@ class AnimusRuntime:
                 self.proactive_engine.add_action_observer(
                     _make_task_store_observer(self._task_store)
                 )
+            if self.memory_manager is not None:
+                self.memory_manager.add_action_observer(_make_task_store_observer(self._task_store))
 
         # 10. Feedback store
         from animus_bootstrap.intelligence.feedback import FeedbackStore
@@ -399,7 +410,14 @@ class AnimusRuntime:
             logger.info("Persona storage closed")
 
         if self.memory_manager is not None:
+            await self.memory_manager.shutdown()
             self.memory_manager.close()
+        if getattr(self, "_recall_log", None) is not None:
+            self._recall_log.close()
+            self._recall_log = None
+        if getattr(self, "_memory_score_store", None) is not None:
+            self._memory_score_store.close()
+            self._memory_score_store = None
             logger.info("Memory manager closed")
 
         if self.session_manager is not None:
@@ -497,19 +515,18 @@ class AnimusRuntime:
 
     def _create_memory_manager(self) -> Any:
         """Create memory manager based on config."""
-        from animus_bootstrap.intelligence.memory import MemoryManager
-
         backend_type = self._config.intelligence.memory_backend
         db_path = Path(self._config.intelligence.memory_db_path).expanduser()
         db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        self._init_memory_instrumentation()
 
         if backend_type == "sqlite":
             from animus_bootstrap.intelligence.memory_backends.sqlite_backend import (
                 SQLiteMemoryBackend,
             )
 
-            backend = SQLiteMemoryBackend(db_path)
-            return MemoryManager(backend)
+            return self._build_memory_manager(SQLiteMemoryBackend(db_path))
 
         if backend_type == "chromadb":
             try:
@@ -518,16 +535,16 @@ class AnimusRuntime:
                 )
 
                 persist_dir = str(self._config.get_data_path() / "chromadb")
-                backend = ChromaDBMemoryBackend(persist_directory=persist_dir)
-                return MemoryManager(backend)
+                return self._build_memory_manager(
+                    ChromaDBMemoryBackend(persist_directory=persist_dir)
+                )
             except (RuntimeError, ImportError):
                 logger.warning("ChromaDB not available, falling back to SQLite")
                 from animus_bootstrap.intelligence.memory_backends.sqlite_backend import (
                     SQLiteMemoryBackend,
                 )
 
-                backend = SQLiteMemoryBackend(db_path)
-                return MemoryManager(backend)
+                return self._build_memory_manager(SQLiteMemoryBackend(db_path))
 
         if backend_type == "animus":
             from animus_bootstrap.intelligence.memory_backends.animus_backend import (
@@ -535,16 +552,45 @@ class AnimusRuntime:
             )
 
             animus_dir = str(self._config.get_data_path() / "animus_memory")
-            backend = AnimusMemoryBackend(data_dir=animus_dir)
-            return MemoryManager(backend)
+            return self._build_memory_manager(AnimusMemoryBackend(data_dir=animus_dir))
 
         # Default to SQLite
         from animus_bootstrap.intelligence.memory_backends.sqlite_backend import (
             SQLiteMemoryBackend,
         )
 
-        backend = SQLiteMemoryBackend(db_path)
-        return MemoryManager(backend)
+        return self._build_memory_manager(SQLiteMemoryBackend(db_path))
+
+    def _init_memory_instrumentation(self) -> None:
+        """Build the recall log + score store. Idempotent."""
+        from animus_bootstrap.intelligence.memory_scores import MemoryScoreStore
+        from animus_bootstrap.intelligence.recall_log import RecallLog
+
+        if (
+            getattr(self, "_recall_log", None) is not None
+            and getattr(self, "_memory_score_store", None) is not None
+        ):
+            return
+        data_dir = self._config.get_data_path()
+        if not isinstance(data_dir, Path):
+            # Mock config in tests — skip persistent instrumentation
+            self._recall_log = None
+            self._memory_score_store = None
+            return
+        data_dir.mkdir(parents=True, exist_ok=True)
+        self._recall_log = RecallLog(data_dir / "recall_log.db")
+        self._memory_score_store = MemoryScoreStore(data_dir / "memory_scores.db")
+        logger.info("Memory instrumentation initialized at %s", data_dir)
+
+    def _build_memory_manager(self, backend: Any) -> Any:
+        """Wrap a backend with the recall log + score store."""
+        from animus_bootstrap.intelligence.memory import MemoryManager
+
+        return MemoryManager(
+            backend=backend,
+            recall_log=self._recall_log,
+            score_store=self._memory_score_store,
+        )
 
     def _create_tool_executor(self) -> Any:
         """Create tool executor with built-in tools registered."""
