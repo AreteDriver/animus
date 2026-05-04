@@ -84,7 +84,10 @@ class IntelligentRouter(MessageRouter):
         memory_context: MemoryContext | None = None
         if self._memory:
             try:
-                memory_context = await self._memory.recall(message.text)
+                context_hint = f"gateway:{message.channel}:{session.id}"
+                memory_context = await self._memory.recall(
+                    message.text, context_hint=context_hint
+                )
             except Exception:
                 logger.exception("Memory recall failed")
 
