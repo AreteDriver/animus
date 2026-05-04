@@ -148,6 +148,13 @@ class MemoryManager:
         """Full-text search across memory stores."""
         return await self._backend.search(query, memory_type=memory_type, limit=limit)
 
+    async def get_by_id(self, memory_id: str) -> dict | None:
+        """Resolve a memory ID to its full content. None if backend lacks lookup."""
+        get_by_id = getattr(self._backend, "get_by_id", None)
+        if get_by_id is None:
+            return None
+        return await get_by_id(memory_id)
+
     async def get_stats(self) -> dict:
         """Return memory statistics (counts per type, storage size)."""
         return await self._backend.get_stats()

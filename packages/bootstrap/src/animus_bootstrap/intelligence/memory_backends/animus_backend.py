@@ -83,6 +83,10 @@ class AnimusMemoryBackend:
         """
         return await asyncio.to_thread(self._search_sync, query, memory_type, limit)
 
+    async def get_by_id(self, memory_id: str) -> dict | None:
+        """Fetch a single memory by ID. Returns None if not found."""
+        return await asyncio.to_thread(self._get_by_id_sync, memory_id)
+
     async def delete(self, memory_id: str) -> bool:
         """Delete a memory by ID.
 
@@ -151,6 +155,15 @@ class AnimusMemoryBackend:
             limit=limit,
         )
         return [self._memory_to_dict(m) for m in memories]
+
+    def _get_by_id_sync(self, memory_id: str) -> dict | None:
+        try:
+            memory = self._core.store.get(memory_id)
+        except (AttributeError, KeyError, ValueError):
+            return None
+        if memory is None:
+            return None
+        return self._memory_to_dict(memory)
 
     def _delete_sync(self, memory_id: str) -> bool:
         return self._core.store.delete(memory_id)
