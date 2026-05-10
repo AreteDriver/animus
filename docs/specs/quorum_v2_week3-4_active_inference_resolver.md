@@ -86,16 +86,29 @@ Six kinds: `TEST_PASS`, `TEST_FAIL`, `CODE_COMMITTED`, `CONSUMED_BY_OTHER`, `CON
 
 Available rubrics: `personal-quality`, `code-edit`, `briefing-quality`. None exists for stability scoring. v1 spec adds a new rubric file: `packages/forge/rubrics/stability-scoring.yaml`.
 
+### 3.5 Naming collision — `convergent.scoring` already exists
+
+Discovered during Week 1 wiring (commit `0133fd0`, 2026-05-10): `packages/quorum/python/convergent/scoring.py` is an **existing module** that defines `PhiScorer` for vote weighting (used by Triumvirate). It is unrelated to stability scoring conceptually — `PhiScorer` weights agent votes by trust history; `StabilityScorer` weights evidence by Bayesian surprise.
+
+To avoid colliding with the existing module without forcing a migration of the `from convergent.scoring import PhiScorer` import sites, this spec places all v1 active-inference code under **`convergent/stability/`** instead of `convergent/scoring/`. Two unrelated concerns get two clearly named packages:
+
+| Package | Purpose | Existing? |
+|---|---|---|
+| `convergent.scoring` | Vote weighting (`PhiScorer`) | Yes — leave alone |
+| `convergent.stability` | Intent stability scoring (this spec) | New in this spec |
+
+Long-term refactor option (defer past re-eval gate): convert `convergent/scoring.py` to `convergent/scoring/__init__.py`, move `PhiScorer` to `convergent/scoring/vote_weighting.py`, and surface stability scoring under `convergent/scoring/stability/`. v1 explicitly does not do this — the migration touches all `PhiScorer` import sites and provides no current-workload benefit.
+
 ---
 
 ## 4. Acceptance criteria (measurable)
 
-- [ ] **AC1** — `StabilityScorer` Protocol in `convergent/scoring/protocol.py`. Single method: `score(intent: Intent) -> float`. Optional method: `curiosity(intent: Intent) -> float` (defaults to `0.0` for stateless scorers).
-- [ ] **AC2** — `WeightedSumStabilityScorer` in `convergent/scoring/weighted_sum.py` reproduces current `Intent.compute_stability()` byte-identically. Verified by parameterized test over 100 random evidence lists.
-- [ ] **AC3** — `ActiveInferenceStabilityScorer` in `convergent/scoring/active_inference.py` implements conjugate Gaussian posterior update over evidence stream. State is `dict[intent_id, GaussianPosterior]`.
-- [ ] **AC4** — Scorer registry in `convergent/scoring/registry.py`: `set_default_scorer(scorer)`, `get_default_scorer() -> StabilityScorer`. Default value is `WeightedSumStabilityScorer()`. Thread-safe (single module-level reference, atomic Python rebind).
+- [ ] **AC1** — `StabilityScorer` Protocol in `convergent/stability/protocol.py`. Single method: `score(intent: Intent) -> float`. Optional method: `curiosity(intent: Intent) -> float` (defaults to `0.0` for stateless scorers).
+- [ ] **AC2** — `WeightedSumStabilityScorer` in `convergent/stability/weighted_sum.py` reproduces current `Intent.compute_stability()` byte-identically. Verified by parameterized test over 100 random evidence lists.
+- [ ] **AC3** — `ActiveInferenceStabilityScorer` in `convergent/stability/active_inference.py` implements conjugate Gaussian posterior update over evidence stream. State is `dict[intent_id, GaussianPosterior]`.
+- [ ] **AC4** — Scorer registry in `convergent/stability/registry.py`: `set_default_scorer(scorer)`, `get_default_scorer() -> StabilityScorer`. Default value is `WeightedSumStabilityScorer()`. Thread-safe (single module-level reference, atomic Python rebind).
 - [ ] **AC5** — `Intent.compute_stability()` body becomes `return get_default_scorer().score(self)`. All other Intent fields unchanged.
-- [ ] **AC6** — Feature flag selection: `convergent.scoring.configure_from_env()` reads `QUORUM_SCORER` env var (`"weighted_sum"` | `"active_inference"`). Default `"weighted_sum"`. Bootstrap composition calls this at startup.
+- [ ] **AC6** — Feature flag selection: `convergent.stability.configure_from_env()` reads `QUORUM_SCORER` env var (`"weighted_sum"` | `"active_inference"`). Default `"weighted_sum"`. Bootstrap composition calls this at startup.
 - [ ] **AC7** — Curiosity readout: `intent.curiosity_score: float` property added to Intent (computed from `get_default_scorer().curiosity(self)`). Returns 0.0 when scorer is stateless.
 - [ ] **AC8** — Surprise property: `WeightedSumStabilityScorer` and `ActiveInferenceStabilityScorer` both expose `score()`; only `ActiveInferenceStabilityScorer` produces non-zero `curiosity()`. Verified by test.
 - [ ] **AC9** — Evidence-flooding test: 1 `MANUAL_APPROVAL` then 1000 `TEST_PASS` events on the same intent. Weighted-sum scorer score = 1.0 (saturated). Active-inference scorer variance approaches zero, mean stable around 0.95±0.02.
@@ -114,7 +127,7 @@ Available rubrics: `personal-quality`, `code-edit`, `briefing-quality`. None exi
 ### 5.1 Module layout
 
 ```
-packages/quorum/python/convergent/scoring/
+packages/quorum/python/convergent/stability/
 ├── __init__.py             # re-exports + configure_from_env()
 ├── protocol.py             # StabilityScorer Protocol
 ├── weighted_sum.py         # WeightedSumStabilityScorer (current logic)
@@ -126,7 +139,7 @@ packages/quorum/python/convergent/scoring/
 ### 5.2 Protocol
 
 ```python
-# scoring/protocol.py
+# stability/protocol.py
 from typing import Protocol, runtime_checkable
 from convergent.intent import Intent
 
@@ -146,9 +159,9 @@ class StabilityScorer(Protocol):
 ### 5.3 Registry
 
 ```python
-# scoring/registry.py
+# stability/registry.py
 import os
-from convergent.scoring.protocol import StabilityScorer
+from convergent.stability.protocol import StabilityScorer
 
 _default: StabilityScorer | None = None
 
@@ -159,7 +172,7 @@ def set_default_scorer(scorer: StabilityScorer) -> None:
 def get_default_scorer() -> StabilityScorer:
     global _default
     if _default is None:
-        from convergent.scoring.weighted_sum import (
+        from convergent.stability.weighted_sum import (
             WeightedSumStabilityScorer,
         )
         _default = WeightedSumStabilityScorer()
@@ -168,12 +181,12 @@ def get_default_scorer() -> StabilityScorer:
 def configure_from_env() -> None:
     name = os.environ.get("QUORUM_SCORER", "weighted_sum")
     if name == "active_inference":
-        from convergent.scoring.active_inference import (
+        from convergent.stability.active_inference import (
             ActiveInferenceStabilityScorer,
         )
         set_default_scorer(ActiveInferenceStabilityScorer())
     else:
-        from convergent.scoring.weighted_sum import (
+        from convergent.stability.weighted_sum import (
             WeightedSumStabilityScorer,
         )
         set_default_scorer(WeightedSumStabilityScorer())
@@ -182,7 +195,7 @@ def configure_from_env() -> None:
 ### 5.4 Weighted-sum scorer (refactor of current logic)
 
 ```python
-# scoring/weighted_sum.py
+# stability/weighted_sum.py
 from convergent.intent import EvidenceKind, Intent
 
 class WeightedSumStabilityScorer:
@@ -221,7 +234,7 @@ class WeightedSumStabilityScorer:
 ### 5.5 GaussianPosterior
 
 ```python
-# scoring/posterior.py
+# stability/posterior.py
 from dataclasses import dataclass
 import math
 
@@ -267,9 +280,9 @@ class GaussianPosterior:
 ### 5.6 ActiveInferenceStabilityScorer
 
 ```python
-# scoring/active_inference.py
+# stability/active_inference.py
 from convergent.intent import EvidenceKind, Intent
-from convergent.scoring.posterior import GaussianPosterior
+from convergent.stability.posterior import GaussianPosterior
 
 # (claim, observation_noise) per evidence kind.
 # Claim: where this kind of evidence pulls the posterior toward.
@@ -339,24 +352,24 @@ class ActiveInferenceStabilityScorer:
 # intent.py — replace compute_stability body
 def compute_stability(self) -> float:
     """Compute stability from evidence via the registered scorer."""
-    from convergent.scoring.registry import get_default_scorer
+    from convergent.stability.registry import get_default_scorer
     return get_default_scorer().score(self)
 
 @property
 def curiosity_score(self) -> float:
     """Posterior uncertainty if active scorer is stateful, else 0."""
-    from convergent.scoring.registry import get_default_scorer
+    from convergent.stability.registry import get_default_scorer
     return get_default_scorer().curiosity(self)
 ```
 
-Lazy import inside method body avoids import cycles between `scoring/` and `intent.py`.
+Lazy import inside method body avoids import cycles between `stability/` and `intent.py`.
 
 ### 5.8 Bootstrap wiring
 
 In Bootstrap startup (location TBD by Bootstrap maintainer):
 
 ```python
-from convergent.scoring import configure_from_env
+from convergent.stability import configure_from_env
 configure_from_env()
 ```
 
@@ -397,7 +410,7 @@ Ground-truth oracle source: hand-labeled subset of intents from a captured Animu
 
 ## 6. Test plan
 
-### 6.1 Protocol contract (new: `tests/test_scoring_protocol.py`)
+### 6.1 Protocol contract (new: `tests/test_stability_protocol.py`)
 
 - `test_weighted_sum_satisfies_protocol`
 - `test_active_inference_satisfies_protocol`
@@ -433,7 +446,7 @@ Ground-truth oracle source: hand-labeled subset of intents from a captured Animu
 - `test_surprise_grows_quadratically_with_distance`
 - `test_repeated_updates_converge_to_observation_when_obs_certain`
 
-### 6.5 Integration with existing Quorum (new: `tests/test_scoring_integration.py`)
+### 6.5 Integration with existing Quorum (new: `tests/test_stability_integration.py`)
 
 - `test_intent_compute_stability_uses_registry`
 - `test_switching_scorer_changes_compute_stability`
@@ -458,18 +471,18 @@ Manual: capture 2 weeks of EventLog data from real Animus runs, hand-label 50 in
 
 | File | Change | LOC |
 |---|---|---|
-| `packages/quorum/python/convergent/scoring/__init__.py` | New | +30 |
-| `packages/quorum/python/convergent/scoring/protocol.py` | New | +30 |
-| `packages/quorum/python/convergent/scoring/posterior.py` | New | +60 |
-| `packages/quorum/python/convergent/scoring/weighted_sum.py` | New (refactor) | +50 |
-| `packages/quorum/python/convergent/scoring/active_inference.py` | New | +90 |
-| `packages/quorum/python/convergent/scoring/registry.py` | New | +50 |
+| `packages/quorum/python/convergent/stability/__init__.py` | New | +30 |
+| `packages/quorum/python/convergent/stability/protocol.py` | New | +30 |
+| `packages/quorum/python/convergent/stability/posterior.py` | New | +60 |
+| `packages/quorum/python/convergent/stability/weighted_sum.py` | New (refactor) | +50 |
+| `packages/quorum/python/convergent/stability/active_inference.py` | New | +90 |
+| `packages/quorum/python/convergent/stability/registry.py` | New | +50 |
 | `packages/quorum/python/convergent/intent.py` | Replace `compute_stability()` body, add `curiosity_score` property | -25 +20 |
-| `packages/quorum/tests/test_scoring_protocol.py` | New | +90 |
+| `packages/quorum/tests/test_stability_protocol.py` | New | +90 |
 | `packages/quorum/tests/test_weighted_sum_parity.py` | New | +60 |
 | `packages/quorum/tests/test_active_inference.py` | New | +180 |
 | `packages/quorum/tests/test_posterior.py` | New | +80 |
-| `packages/quorum/tests/test_scoring_integration.py` | New | +100 |
+| `packages/quorum/tests/test_stability_integration.py` | New | +100 |
 | `packages/forge/src/animus_forge/evaluation/scorer_ab.py` | New | +120 |
 | `packages/forge/tests/test_scorer_ab.py` | New | +90 |
 | `packages/forge/rubrics/stability-scoring.yaml` | New | +30 |
@@ -523,6 +536,7 @@ Manual: capture 2 weeks of EventLog data from real Animus runs, hand-label 50 in
 - **Bootstrap dashboard intent uncertainty tile** — show variance bars alongside mean stability.
 - **Future Rust scorer upgrade** — Python active-inference proves out the math before porting to PyO3 (post-re-eval gate).
 - **TIAID assessment artifact** — "your AI doesn't know what it doesn't know" becomes a concrete demonstration. Curiosity is the visible signal of epistemic humility.
+- **Closes Week 1 deferred sites** — `SCORE_UPDATED` and `INTENT_RESOLVED` event emission (deferred from Week 1 spec §3.3 because no clean hook existed) lands here. The `StabilityScorer` protocol's `score()` and `curiosity()` methods are the right hook point: emit `SCORE_UPDATED` from the registry's facade when score changes, and emit `INTENT_RESOLVED` when score crosses `min_stability` downward. Add this as part of AC5's `Intent.compute_stability()` refactor — keep the emission in the registry layer so all scorers benefit.
 
 ---
 
