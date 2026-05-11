@@ -156,6 +156,66 @@ jobs:
         env:
           PYTHONPATH: packages/bootstrap/src
 
+  mypy:
+    name: Type Check (${{ matrix.package }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [core, forge, quorum, bootstrap]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-mypy-${{ matrix.package }}-${{ hashFiles(format('packages/{0}/pyproject.toml', matrix.package)) }}
+          restore-keys: ${{ runner.os }}-pip-mypy-${{ matrix.package }}-
+
+      - name: Install package + mypy
+        run: |
+          pip install mypy
+          if [ "${{ matrix.package }}" = "core" ]; then
+            pip install -e "packages/core/[dev,api]"
+          else
+            pip install -e "packages/${{ matrix.package }}/[dev]"
+          fi
+
+      - name: Count mypy errors
+        id: count
+        run: |
+          set +e
+          count=$(scripts/mypy-count.sh ${{ matrix.package }})
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "Current: $count errors"
+
+      - name: Compare against baseline
+        run: |
+          baseline=$(python3 -c "import json; print(json.load(open('.github/mypy-baseline.json'))['${{ matrix.package }}'])")
+          current="${{ steps.count.outputs.count }}"
+          echo "Baseline: $baseline"
+          echo "Current:  $current"
+          if [ "$current" -gt "$baseline" ]; then
+            echo ""
+            echo "::error::mypy regression in ${{ matrix.package }}: $current errors (baseline $baseline, +$((current - baseline)) new)"
+            echo ""
+            echo "If you intentionally added strict typing that surfaced these,"
+            echo "run scripts/mypy-count.sh locally and update"
+            echo ".github/mypy-baseline.json with the new counts."
+            echo ""
+            echo "If they're unintentional, fix them or revert the change."
+            exit 1
+          fi
+          if [ "$current" -lt "$baseline" ]; then
+            echo "::notice::mypy improvement in ${{ matrix.package }}: $current errors ($((baseline - current)) fewer than baseline). Consider lowering baseline in .github/mypy-baseline.json."
+          fi
+
   security:
     name: Security
     runs-on: ubuntu-latest

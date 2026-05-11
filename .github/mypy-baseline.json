@@ -1,0 +1,9 @@
+{
+  "_comment": "Per-package mypy error count baselines. CI fails when a package's count grows beyond its baseline (regression). Baselines were captured 2026-05-10 with mypy --ignore-missing-imports against the package source dirs. To update after intentionally fixing errors, run scripts/mypy-count.sh and write the new lower number here. Do not raise these numbers — that defeats the purpose. New code must not introduce new errors.",
+  "_captured": "2026-05-10",
+  "_command": "scripts/mypy-count.sh",
+  "core": 184,
+  "forge": 725,
+  "quorum": 23,
+  "bootstrap": 126
+}
