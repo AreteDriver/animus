@@ -43,7 +43,8 @@ outputs:
   - audit_report
   - findings_count
 
-token_budget: 0  # Ollama-routed; no Anthropic token cost
+# token_budget left at default (100000). Ollama triage doesn't consume tokens,
+# so the budget is effectively unused. Keep > 1000 to pass loader validation.
 timeout_seconds: 600
 
 steps:
@@ -316,33 +317,27 @@ metadata:
 evolution_notes:
   - "2026-05-10 v1.0.0 initial scaffold. Validated SAST tool chain end-to-end on memboot (see memboot/SECURITY_FINDINGS.md, commit b9ea664). YAML syntax valid."
   - |
-    2026-05-10 Phase 4 validation finding: `animus-forge run <path>` CLI does NOT
-    load YAML workflows from `packages/forge/workflows/`. There are TWO parallel
-    workflow systems in this repo that don't talk to each other:
+    2026-05-10 Phase 4 validation REVISED — initial finding was wrong:
+    The `animus-forge run` CLI DOES load YAML workflows from
+    `packages/forge/workflows/`. `cli/commands/workflow.py:61-74` has an
+    explicit YAML branch that calls `animus_forge.workflow.loader.load_workflow()`
+    for any `.yaml`/`.yml` file path.
 
-    1. MODERN (registered, CLI-runnable): `src/animus_forge/workflows/*.json` —
-       flat schema with `type: openai/claude/etc.`, mustache `{{var}}`
-       interpolation, listed by `animus-forge list`.
-    2. LEGACY (orphaned by the CLI, but still has working handlers):
-       `packages/forge/workflows/*.yaml` (signal-audit, fleet-degraded, this
-       one, etc.) — Gorgon-era schema with `inputs/outputs/steps/depends_on`,
-       `${var}` interpolation, step types `shell`/`parallel`/`ollama`/
-       `claude_code` handled by mixin classes (executor_arete.py).
+    My initial dry-run failed only because `token_budget: 0` violated the
+    loader's `>= 1000` validator (loader.py:402). Removing that field
+    (default 100000 — harmless because steps route to Ollama which doesn't
+    consume Anthropic tokens) made the CLI accept the workflow cleanly.
 
-    The step-type handlers for `shell`/`parallel`/`ollama` exist and work in
-    the legacy system. They're just not exposed via `animus-forge run`.
+    Dry-run verified: all 6 steps load with correct types (shell/parallel/
+    ollama recognized), `repo_path` variable bound, no validation errors.
 
-    Implication: this workflow is well-formed for what it does, but cannot be
-    executed via the current CLI. To run it, one of the following needs to
-    land first:
-    a. YAML-loader wired into the modern CLI's workflow registry
-    b. Modern JSON schema gains `shell`/`parallel`/`ollama` step types and
-       this gets ported to JSON
-    c. `animus-forge legacy-run <yaml>` entry point exposed
+    Invocation:
+    `animus-forge run packages/forge/workflows/security-sast-sweep.yaml --var repo_path=/path/to/repo`
 
-    Until then, invoke directly via Python:
-    `WorkflowExecutor().run_workflow_from_file('workflows/security-sast-sweep.yaml',
-    variables={'repo_path': '...'})` — or via the HTTP API at /workflows.
+    The two parallel workflow systems DO exist (modern JSON registry +
+    legacy YAML loader), but they're BOTH wired into the same `run` command.
+    No CLI gap. Earlier evolution_note claiming the CLI couldn't load these
+    YAMLs was wrong and is corrected by this note.
   - "Triage is single-shot (one ollama call for all findings). For repos with >50 findings, qwen2.5:14b 32k context may overflow. Future: chunk findings by file or rule category before triage, or upgrade to a larger context model."
   - "--diff mode (compare to previous SECURITY_FINDINGS.md) is a v2 feature — needs a parse-prev step before consolidate_findings."
   - "--patches mode (generate unified-diff per real finding) is a v2 feature — needs a second ollama call per real finding."
