@@ -1,6 +1,26 @@
 # Animus Known Issues & Gaps
 
-Last updated: 2026-01-27 (v0.6.0)
+> **Status: historical record (frozen 2026-01-27, v0.6.0).**
+>
+> This file captures the issue triage that drove v0.6.0's hardening
+> work. Every item below is marked RESOLVED. The file is kept for
+> provenance — it shows what was wrong and how it was fixed.
+>
+> **Current issues are tracked in GitHub Issues:**
+> https://github.com/AreteDriver/animus/issues
+>
+> **Active development plan:** `docs/ROADMAP.md` (project-wide) +
+> `docs/ROADMAP_quorum_v2.md` (current 5-week extension) +
+> `docs/specs/quorum_v2_*.md` (per-week specs).
+>
+> **Recent hardening (2026-05-10):** plaintext API key migration,
+> webchat tool-execution routing fix, systemd unit cutover, mypy
+> regression gate, test-count badge — see `CHANGELOG.md` and
+> `notes/decisions/2026-05.md` (ADL-20260510-001).
+
+Last updated: 2026-01-27 (v0.6.0). Banner added 2026-05-10 to
+clarify that this file is a historical snapshot, not the live
+issue tracker.
 
 ## Testing Gaps
 

@@ -319,143 +319,84 @@ It knows your schedule, your files, your commitments.
 
 ---
 
-## Phase 5: Self-Learning
+## Phase 5: Self-Learning (in progress)
 
 *Make it grow*
 
-### Goal
-Animus improves through use, within safe boundaries.
+Initially planned 2025-Q3 as a future phase, but work has been
+landing organically through the Bootstrap intelligence layer.
+The original aspirational task list shifted to a more concrete
+implementation:
 
-### Duration
-8-10 weeks
+### Shipped
 
-### Tasks
+- [x] **Self-improvement loop** — `bootstrap/intelligence/proactive/checks/self_heal.py`. Auto-detects tool failures, slow tools, and error rates every 6h; auto-proposes improvements with AI analysis; sandboxes changes via `ImprovementSandbox` (backup + rollback); measures impact via baseline/post metrics scored -100 to +100.
+- [x] **Identity proposal manager** — 20% change threshold for any modification to identity files (`bootstrap/identity/`). Operator approves or rejects.
+- [x] **Active inference IntentResolver** — *spec written, not yet built*. Replaces evidence-counting stability with surprise-weighted Bayesian posterior. See `docs/specs/quorum_v2_week3-4_active_inference_resolver.md` for the next-level "actually learns from evidence" upgrade.
 
-- [ ] Implement pattern detection engine
-- [ ] Build preference inference system
-- [ ] Create workflow optimization suggestions
-- [ ] Design guardrail enforcement layer
-- [ ] Implement approval workflows for significant changes
-- [ ] Build learning transparency dashboard
-- [ ] Create unlearn/rollback functionality
+### Still aspirational
 
-### Learning Categories
+- [ ] Pattern detection engine across the broader event stream (Quorum v2 Week 1's TickEvent log makes this newly possible — see Active Work below)
+- [ ] Preference inference (currently only style/voice via PersonaEngine)
+- [ ] Workflow optimization suggestions (Forge has the eval framework but no auto-suggest layer)
 
-| Category | Example | Approval Required |
-|----------|---------|-------------------|
-| Style | User prefers bullet points | No |
-| Preference | User dislikes morning meetings | No |
-| Workflow | User always does X before Y | Notify |
-| Fact | User's project deadline is... | Confirm |
-| Capability | New tool integration | Yes |
-| Boundary | Expanded access | Yes |
+### Constitutional principles (already enforced)
 
-### Guardrail Implementation
-
-```python
-class Guardrail:
-    rule: str
-    immutable: bool  # Cannot be changed by learning
-    source: str  # user_defined, system
-    
-    def check(self, proposed_action: Action) -> bool:
-        ...
-    
-    def explain_violation(self, action: Action) -> str:
-        ...
-
-# Immutable guardrails
-CORE_GUARDRAILS = [
-    Guardrail("Cannot take actions that harm user", immutable=True),
-    Guardrail("Cannot exfiltrate user data", immutable=True),
-    Guardrail("Cannot modify own guardrails", immutable=True),
-    Guardrail("Must be transparent about capabilities", immutable=True),
-]
-```
-
-### Success Criteria
-- Noticeably improves with use
-- User can see what was learned
-- Can unlearn anything
-- Has never violated a guardrail
-
-### Output
-An AI that gets better at serving you specifically.
+P1–P9 in `docs/CONSTITUTIONAL_PRINCIPLES.md` are the immutable guardrails the original Phase 5 spec called for. They constrain every Forge action and every IntentNode write. No separate `Guardrail` class needed.
 
 ---
 
-## Phase 6: Wearable / Ambient
+## Active Work
+
+Live roadmap for current work has moved to `docs/ROADMAP_quorum_v2.md` (5-week plan extending Quorum, not replacing).
+
+### Quorum v2 — 5-week extension
+
+| Week | Status | Description |
+|------|--------|-------------|
+| 1 | **Shipped 2026-05-10** (PR #36) | EventLog bitemporal-lite + signal_bus bridge + 4 mutation sites wired |
+| 2 | Spec ready | LivenessWatchdog over event stream |
+| 3-4 | Spec ready | Active-inference IntentResolver scorer (the one behavior change) |
+| 5 | Spec ready | Coupling MI dashboard (read-only) |
+
+Per-week specs at `docs/specs/quorum_v2_week*.md`. Decision provenance: ADL-20260510-001 in `notes/decisions/2026-05.md`.
+
+### Hardening pass — 2026-05-10
+
+| Task | Outcome |
+|------|---------|
+| Plaintext API key in config.toml | Migrated to `~/.local/share/animus/secrets.env` (chmod 400). New `secrets.env > env > config.toml` resolution order in `ApiSection`. |
+| Webchat tool-execution gap | Diagnosed root cause (HybridBackend routed agentic queries to Ollama whose `generate_structured` is a stub). Routing classifier extended with 45 agentic verbs + URL/path detection. Tool-use nudge appended to system prompt when ToolExecutor wired. |
+| Systemd user units | Reference units at `packages/bootstrap/contrib/systemd/`. Local install switched to systemd-managed services with `EnvironmentFile=-%h/.local/share/animus/secrets.env`. |
+| Mypy regression gate | Per-package baselines captured (~1,026 errors total). CI fails only when count grows. `scripts/mypy-count.sh` + `.github/mypy-baseline.json`. |
+| Test count visibility | Live shields.io badge from `.github/test-counts.json`. Auto-refreshed by CI on push to main. `scripts/test-count.sh`. |
+
+---
+
+## Phase 6: Wearable / Ambient (deferred)
 
 *Make it present*
 
-### Goal
-Always available without friction.
+Original aspiration: ring/wearable form factor with full Animus capability. **Not on the active roadmap.**
 
-### Duration
-12+ weeks (hardware dependent)
+The current focus is making the existing software substrate (Bootstrap dashboard, message gateway, intelligence layer) actually work end-to-end. Until webchat reliably executes tools and the self-improvement loop is proven across more than the seed checks, hardware form factor is premature.
 
-### Tasks
+Reopen this phase only when:
+- Software stack is operationally stable for 30+ consecutive days
+- Real measured user value justifies the hardware build cost
+- A specific use case can't be served by phone + earbuds (current best-available form factor)
 
-- [ ] Evaluate wearable hardware options
-- [ ] Build low-latency voice interaction
-- [ ] Implement ambient awareness (location, time, context)
-- [ ] Design minimal-attention interaction patterns
-- [ ] Optimize for battery/resource constraints
-- [ ] Vehicle integration (CarPlay/Android Auto)
-- [ ] Storage device mode implementation
-
-### Hardware Options
-
-| Form Factor | Options | Tradeoffs |
-|-------------|---------|-----------|
-| Ring | Custom, existing smart rings | Limited I/O, always present |
-| Watch | Apple Watch, WearOS | Good I/O, established platform |
-| Earbuds | AirPods, custom | Audio only, unobtrusive |
-| Pendant | Custom, Humane-style | More capability, visible |
-| Vehicle | CarPlay, Android Auto | Driving context, large display |
-
-### Vehicle Integration
-
-```
-┌─────────────────────────────────────────┐
-│              Vehicle Mode               │
-├─────────────────────────────────────────┤
-│  • Voice-primary interaction            │
-│  • Location-aware context               │
-│  • Driving-safe UI (minimal visual)     │
-│  • Navigation integration               │
-│  • Calendar/schedule awareness          │
-│  • Hands-free communication drafting    │
-└─────────────────────────────────────────┘
-```
-
-### Storage Device Mode
-
-Animus hardware can function as secure portable storage:
-- Plug into any compatible device
-- Authenticate to unlock
-- Access files through temporary interface
-- No data remains on host device
-- Full Animus capability if host supports it
-
-### Success Criteria
-- Can interact without looking at screen
-- Context-aware suggestions are actually useful
-- Battery life acceptable for daily use
-- Works in vehicle safely
-
-### Output
-The ring. Or close to it.
+The pre-existing detail (form factors, vehicle integration, storage device mode) is preserved in git history — see `git log -- docs/ROADMAP.md` for the original Phase 6 spec.
 
 ---
 
 ## Timeline Overview
 
 ```
-Phase 0: Foundation          ████░░░░░░░░░░░░░░░░  Weeks 1-4
-Phase 1: Memory              ░░░░████████░░░░░░░░  Weeks 5-10
-Phase 2: Cognitive           ░░░░░░░░░░████████░░  Weeks 11-18
-Phase 3: Multi-Interface     ░░░░░░░░░░░░░░░░████  Weeks 19-30
+Phase 0: Foundation          ████░░░░░░░░░░░░░░░░  Weeks 1-4         SHIPPED
+Phase 1: Memory              ░░░░████████░░░░░░░░  Weeks 5-10        SHIPPED
+Phase 2: Cognitive           ░░░░░░░░░░████████░░  Weeks 11-18       SHIPPED
+Phase 3: Multi-Interface     ░░░░░░░░░░░░░░░░████  Weeks 19-30       SHIPPED
 Phase 4: Integration         ░░░░░░░░░░░░░░░░░░░░  Weeks 31-38
 Phase 5: Self-Learning       ░░░░░░░░░░░░░░░░░░░░  Weeks 39-48
 Phase 6: Wearable            ░░░░░░░░░░░░░░░░░░░░  Weeks 49+
