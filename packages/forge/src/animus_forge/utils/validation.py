@@ -102,29 +102,75 @@ def substitute_shell_variables(
     command: str,
     context: dict[str, Any],
     escape: bool = True,
+    var_dir: Path | str | None = None,
 ) -> str:
     """Safely substitute variables into a shell command.
 
-    Variables are referenced as ${name} in the command string.
+    Two substitution forms are supported:
+
+    ``${name}`` — value is interpolated into the command string
+        directly. With ``escape=True`` (default), the value is
+        passed through ``shlex.quote`` to neutralize shell
+        metacharacters. Suitable for short, single-line values.
+        For multi-KB values containing backticks, ``$``, single
+        quotes, or heredoc terminators, this form fundamentally
+        cannot survive bash parsing — see ``${name.file}`` instead.
+
+    ``${name.file}`` — value is written to a temp file under
+        ``var_dir`` and the **path** is interpolated into the
+        command instead. The downstream step reads the file
+        contents (e.g. ``cat ${triage.file}``). This removes the
+        shell-metacharacter escaping problem for arbitrary
+        content. Requires ``var_dir`` to be supplied; otherwise
+        the ``.file`` placeholder is left unresolved (caller
+        choice — substituting the value back would silently
+        defeat the file channel and reintroduce the escaping
+        bug).
+
+    See issue #38 for the discovery context.
 
     Args:
-        command: Command template with ${variable} placeholders
-        context: Dictionary of variable values
-        escape: If True, escape values for shell safety (recommended)
+        command: Command template with ${name} or ${name.file}.
+        context: Dictionary of variable values.
+        escape: If True, escape ${name} values via shlex.quote.
+            Has no effect on ${name.file} — paths are always
+            quoted.
+        var_dir: Directory in which to materialize values for
+            ``${name.file}`` substitution. Required if any
+            ``.file`` placeholder is used. Created if missing.
 
     Returns:
-        Command with variables substituted
+        Command with variables substituted.
 
     Raises:
-        ValidationError: If template command (before substitution) is dangerous
+        ValidationError: If template command (before substitution)
+            is dangerous.
 
     Example:
-        >>> substitute_shell_variables("echo ${msg}", {"msg": "hello"})
-        "echo hello"
-        >>> substitute_shell_variables("echo ${msg}", {"msg": "$(rm -rf /)"})
-        "echo '$(rm -rf /)'"  # Escaped, safe
+        >>> substitute_shell_variables("echo ${msg}", {"msg": "hi"})
+        "echo hi"
+        >>> substitute_shell_variables(
+        ...     "cat ${big.file}",
+        ...     {"big": "multi\\nline\\nvalue"},
+        ...     var_dir="/tmp/forge-vars/abc",
+        ... )
+        "cat '/tmp/forge-vars/abc/big.txt'"
     """
     result = command
+
+    # Resolve ${name.file} first so a value containing the literal
+    # "${name}" doesn't get caught by the .file pass after the
+    # plain pass.
+    if var_dir is not None:
+        var_dir_path = Path(var_dir)
+        for key, value in context.items():
+            file_placeholder = f"${{{key}.file}}"
+            if file_placeholder not in result:
+                continue
+            var_dir_path.mkdir(parents=True, exist_ok=True)
+            target = var_dir_path / f"{key}.txt"
+            target.write_text(str(value), encoding="utf-8")
+            result = result.replace(file_placeholder, escape_shell_arg(str(target)))
 
     for key, value in context.items():
         placeholder = f"${{{key}}}"

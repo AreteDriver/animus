@@ -1,5 +1,6 @@
 """Tests for input validation utilities."""
 
+import shlex
 import tempfile
 from pathlib import Path
 
@@ -179,6 +180,102 @@ class TestSubstituteShellVariables:
             {"msg": "hello"},
         )
         assert "${other}" in result
+
+
+class TestSubstituteShellVariablesFileChannel:
+    """Issue #38: ${name.file} writes the value to a temp file
+    and substitutes the path, so multi-KB LLM outputs containing
+    shell metacharacters can be round-tripped without breaking
+    bash parsing."""
+
+    def test_file_substitution_writes_value_and_returns_path(self, tmp_path):
+
+        result = substitute_shell_variables(
+            "cat ${response.file}",
+            {"response": "hello world"},
+            var_dir=tmp_path,
+        )
+        # Command should be `cat <path>` (path may or may not be quoted)
+        tokens = shlex.split(result)
+        assert tokens[0] == "cat"
+        path = Path(tokens[1])
+        assert path.exists()
+        assert path.read_text() == "hello world"
+        assert path.name == "response.txt"
+
+    def test_file_substitution_handles_shell_metacharacters(self, tmp_path):
+        """The exact scenario that motivated #38: LLM output
+        containing backticks, dollars, single/double quotes, and
+        a heredoc terminator."""
+
+        nasty = (
+            "Backticks: `bad`\n"
+            "Dollars: $PATH and ${PATH}\n"
+            "Quotes: 'sq' \"dq\"\n"
+            "Heredoc: TRIAGE_EOF\n"
+        )
+        result = substitute_shell_variables(
+            "cat ${triage.file}",
+            {"triage": nasty},
+            var_dir=tmp_path,
+        )
+        tokens = shlex.split(result)
+        assert Path(tokens[1]).read_text() == nasty
+
+    def test_file_substitution_without_var_dir_leaves_placeholder(
+        self,
+    ):
+        """When var_dir is None, .file placeholders are NOT
+        resolved. This is intentional — silently substituting the
+        value back would defeat the file channel and reintroduce
+        the bug it exists to fix."""
+        result = substitute_shell_variables(
+            "cat ${response.file}",
+            {"response": "hello"},
+            var_dir=None,
+        )
+        assert result == "cat ${response.file}"
+
+    def test_plain_and_file_channels_coexist(self, tmp_path):
+        """A workflow can use both ${X} (small value, inline) and
+        ${Y.file} (large value, file channel) in the same step."""
+
+        result = substitute_shell_variables(
+            "echo ${prefix} && cat ${big.file}",
+            {"prefix": "hi there", "big": "huge body"},
+            var_dir=tmp_path,
+        )
+        # Plain ${prefix} interpolated, ${big.file} resolved to a path
+        assert "'hi there'" in result  # shlex quotes due to space
+        # Find the path token
+        tokens = shlex.split(result)
+        # Last token is the file path
+        assert Path(tokens[-1]).read_text() == "huge body"
+
+    def test_file_channel_creates_var_dir_lazily(self, tmp_path):
+        """var_dir is created on first .file substitution if missing."""
+        target_dir = tmp_path / "does-not-yet-exist" / "nested"
+        assert not target_dir.exists()
+        substitute_shell_variables(
+            "cat ${x.file}",
+            {"x": "y"},
+            var_dir=target_dir,
+        )
+        assert target_dir.exists()
+        assert (target_dir / "x.txt").read_text() == "y"
+
+    def test_file_channel_no_op_when_no_file_placeholder(self, tmp_path):
+        """If no ${X.file} appears, var_dir is not touched
+        (no empty directory created)."""
+        # tmp_path itself exists, but a subdir we name should not
+        sub = tmp_path / "should-stay-empty"
+        result = substitute_shell_variables(
+            "echo ${msg}",
+            {"msg": "hi"},
+            var_dir=sub,
+        )
+        assert result == "echo hi"
+        assert not sub.exists()
 
 
 class TestValidateSafePath:
