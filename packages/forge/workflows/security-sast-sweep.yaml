@@ -136,6 +136,8 @@ steps:
     type: shell
     description: Merge all tool outputs into one JSON for triage
     depends_on: [sast_parallel]
+    outputs:
+      - findings_json
     params:
       command: |
         python3 << 'PYEOF'
@@ -202,7 +204,9 @@ steps:
         total = sum(len(v) for k, v in out.items() if isinstance(v, list))
         out["total_raw_findings"] = total
         Path("/tmp/forge-sec/all_findings.json").write_text(json.dumps(out, indent=2))
-        print(f"consolidated {total} raw findings")
+        # Print the JSON to stdout so it can be referenced as ${findings_json}
+        # by downstream steps (forge maps the first declared output to stdout).
+        print(json.dumps(out, indent=2))
         PYEOF
       timeout_seconds: 30
 
@@ -213,39 +217,49 @@ steps:
     type: ollama
     description: Triage raw SAST findings — classify real vs false-positive, recommend remediation
     depends_on: [consolidate_findings]
-    model: "${triage_model}"
-    prompt: |
-      You are triaging SAST (static-analysis security testing) findings for the
-      repository at ${repo_path}.
+    outputs:
+      - triage_response
+    # NOTE: model and prompt MUST be under params: — the StepConfig loader
+    # (loader.py:148) only reads `data.get("params", {})`. Top-level fields
+    # like `model:`/`prompt:` get silently dropped. fleet-degraded.yaml and
+    # similar reference workflows have the same latent bug — they probably
+    # never executed via the current executor.
+    params:
+      # Inlined model literal — forge does not currently substitute input
+      # defaults into ${triage_model} when --var isn't provided.
+      model: "qwen2.5:14b"
+      prompt: |
+        You are triaging SAST (static-analysis security testing) findings for the
+        repository at ${repo_path}.
 
-      Raw findings JSON (from semgrep + bandit + gitleaks + pip-audit):
-      ${consolidate_findings}
+        Raw findings JSON (from semgrep + bandit + gitleaks + pip-audit):
+        ${findings_json}
 
-      For each finding, classify:
-      - reality: "real" | "false-positive" | "requires-runtime-test"
-      - severity: "critical" | "high" | "medium" | "low" | "info"
-      - confidence: "high" | "medium" | "low"
-      - reasoning: one paragraph explaining the classification
-      - remediation: one paragraph fix (only for "real" findings)
+        For each finding, classify:
+        - reality: "real" | "false-positive" | "requires-runtime-test"
+        - severity: "critical" | "high" | "medium" | "low" | "info"
+        - confidence: "high" | "medium" | "low"
+        - reasoning: one paragraph explaining the classification
+        - remediation: one paragraph fix (only for "real" findings)
 
-      IMPORTANT triage rules:
-      - CLI tools running on the user's own machine have no remote attack
-        surface. urlopen() or subprocess() with user-provided flags is NOT
-        a vulnerability — it's "user attacking themselves" which is not a
-        credible threat.
-      - Constant-list subprocess args (e.g., ["git", "--version"]) cannot
-        be shell-injected. Mark false-positive with confidence: high.
-      - Real vulns require: untrusted input + sink + reachable code path.
-      - gitleaks and pip-audit findings are almost always real (real
-        secrets in commits, real CVEs in dependencies).
-      - shell=True with non-user input is NOT a vulnerability.
+        IMPORTANT triage rules:
+        - CLI tools running on the user's own machine have no remote attack
+          surface. urlopen() or subprocess() with user-provided flags is NOT
+          a vulnerability — it's "user attacking themselves" which is not a
+          credible threat.
+        - Constant-list subprocess args (e.g., ["git", "--version"]) cannot
+          be shell-injected. Mark false-positive with confidence: high.
+        - Real vulns require: untrusted input + sink + reachable code path.
+        - gitleaks and pip-audit findings are almost always real (real
+          secrets in commits, real CVEs in dependencies).
+        - shell=True with non-user input is NOT a vulnerability.
 
-      Output:
-      1. A markdown table: file:line | tool | severity | reality | confidence | summary
-      2. For each "real" finding: detailed remediation guidance
+        Output:
+        1. A markdown table: file:line | tool | severity | reality | confidence | summary
+        2. For each "real" finding: detailed remediation guidance
 
-      Be calibrated. Severity inflation causes alert fatigue. The point
-      of triage is to filter noise, not amplify it.
+        Be calibrated. Severity inflation causes alert fatigue. The point
+        of triage is to filter noise, not amplify it.
 
   # ---------------------------------------------------------------------------
   # Phase 4 — Write SECURITY_FINDINGS.md
@@ -256,31 +270,52 @@ steps:
     depends_on: [ollama_triage]
     params:
       command: |
-        OUT="${output_path:-${repo_path}/SECURITY_FINDINGS.md}"
-        DATE=$(date -u +%Y-%m-%d)
-        RAW_JSON=$(cat /tmp/forge-sec/all_findings.json)
-        cat > "$OUT" <<MDEOF
-        # Security Audit Report
+        # Write the triage response to a temp file FIRST so we don't have to
+        # escape it for bash heredoc / python triple-quote. forge substitutes
+        # ${triage_response} into this command string before bash runs; the
+        # response can contain backticks, $signs, quotes, """, etc. that break
+        # all the obvious escaping strategies. Round-trip via file is safest.
+        cat > /tmp/forge-sec/triage_response.txt <<'TRIAGE_EOF'
+        ${triage_response}
+        TRIAGE_EOF
+        python3 << 'PYEOF'
+        from pathlib import Path
+        from datetime import datetime, timezone
 
-        **Date:** $DATE
-        **Repo:** ${repo_path}
+        triage = Path('/tmp/forge-sec/triage_response.txt').read_text().strip()
+        raw_json = Path('/tmp/forge-sec/all_findings.json').read_text()
+        repo_path = "${repo_path}"
+        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+        report = f"""# Security Audit Report
+
+        **Date:** {date}
+        **Repo:** {repo_path}
         **Workflow:** security-sast-sweep v1.0.0 (animus-forge)
-        **Triage model:** ${triage_model} (Ollama, \$0 cost)
+        **Triage model:** qwen2.5:14b (Ollama, $0 cost)
 
         ## Raw SAST Findings (Pre-Triage)
 
-        \`\`\`json
-        $RAW_JSON
-        \`\`\`
+        ```json
+        {raw_json}
+        ```
 
         ## Triage Output
 
-        ${ollama_triage}
+        {triage}
 
         ---
 
-        _Auto-generated by \`animus-forge workflow run security-sast-sweep\`._
-        MDEOF
+        _Auto-generated by `animus-forge run packages/forge/workflows/security-sast-sweep.yaml`._
+        """
+        # The f-string is indented 8 spaces to satisfy YAML; strip that uniform
+        # indent so the rendered markdown is left-aligned.
+        report = "\n".join(line[8:] if line.startswith("        ") else line for line in report.splitlines())
+
+        out = Path(repo_path) / "SECURITY_FINDINGS.md"
+        out.write_text(report)
+        print(f"Report written: {out}")
+        PYEOF
         echo "Report written: $OUT"
       timeout_seconds: 10
 
@@ -294,7 +329,7 @@ steps:
     on_failure: skip
     params:
       command: |
-        HIGH_COUNT=$(echo "${ollama_triage}" | grep -ciE 'real.*high|real.*critical' || echo 0)
+        HIGH_COUNT=$(echo "${triage_response}" | grep -ciE 'real.*high|real.*critical' || echo 0)
         if [ "$HIGH_COUNT" -gt 0 ]; then
             echo "ALERT: $HIGH_COUNT real HIGH/CRITICAL findings in ${repo_path}"
             if [ -n "${FLEET_DISCORD_WEBHOOK:-}" ]; then
@@ -333,11 +368,63 @@ evolution_notes:
 
     Invocation:
     `animus-forge run packages/forge/workflows/security-sast-sweep.yaml --var repo_path=/path/to/repo`
+  - |
+    2026-05-10 Phase 4 end-to-end validation — surfaced TWO real forge bugs
+    + 1 architectural limit:
 
-    The two parallel workflow systems DO exist (modern JSON registry +
-    legacy YAML loader), but they're BOTH wired into the same `run` command.
-    No CLI gap. Earlier evolution_note claiming the CLI couldn't load these
-    YAMLs was wrong and is corrected by this note.
+    BUG #1 (fixed in this workflow, latent in others): The StepConfig loader
+    (loader.py:148) reads `params = data.get("params", {})`. Top-level
+    `model:`, `prompt:` fields are SILENTLY DROPPED. The `_execute_ollama`
+    handler (executor_ai.py:218-219) reads from `step.params`, so a step
+    that doesn't nest under `params:` gets an empty prompt and empty model.
+    Reference workflows like fleet-degraded.yaml, fleet-incident-triage.yaml,
+    fleet-service-down.yaml all have this latent bug — they declare ollama
+    fields at the top level and would silently produce empty-prompt Ollama
+    calls if ever executed. They probably never were.
+
+    BUG #2 (workaround attempted, still failing): Step outputs must be
+    explicitly declared via `outputs: [name]` on the producing step to be
+    visible to downstream steps as `${name}` variables. Without that
+    declaration, the step result lives in `step_result.output` but never
+    gets promoted to `_context`. Confirmed via executor_core.py:327-336.
+
+    ARCHITECTURAL LIMIT: forge's variable interpolation happens at the
+    command-string level BEFORE bash parses. When `${triage_response}` is
+    a multi-KB Ollama response containing shell metacharacters (backticks,
+    $signs, single/double quotes, EOF tokens, etc.), no heredoc-quoting
+    strategy in the YAML survives because the substitution is already done
+    by the time bash sees the command. Confirmed via repeated write_report
+    failures with "Command failed with code 2: /bin/sh: <line>".
+
+    Workaround paths (none ideal):
+    a. Have the ollama step output go to disk via memory_manager
+       (forge-internal API, not exposed in YAML).
+    b. Add a forge step type `python` that accepts variables via a safer
+       channel than shell command-string substitution (requires engine work).
+    c. Add a new forge feature: write step outputs to per-step temp files
+       and reference via file path instead of value substitution (engine
+       work).
+    d. Accept this constraint: workflows that need to round-trip large
+       LLM outputs into reports must keep the LLM output to <few hundred
+       bytes OR include their own escape-safe persistence path.
+
+    Current workflow state (2026-05-10):
+    - Phases 1-3 (tool inventory, SAST, consolidate) work end-to-end.
+    - Phase 4 (ollama_triage) runs cleanly, produces real output (2.5K-4.3K
+      tokens of triage analysis observed).
+    - Phase 5 (write_report) fails with shell escape error on the triage
+      output. The SECURITY_FINDINGS.md is not overwritten when write_report
+      fails, so existing reports survive.
+    - Phase 6 (notify_critical) fails as collateral (depends on write_report).
+
+    Until the architectural limit is addressed, fleet sweeps should run
+    via the ai-skills `/security-auditor` skill (which executes inside a
+    Claude Code session and doesn't have this constraint), NOT via this
+    forge workflow. The forge workflow remains useful as scaffolding for
+    when the engine gains a safer variable-passing channel.
+
+    Earlier evolution_note claiming the CLI couldn't load these YAMLs was
+    wrong and corrected by the 2026-05-10 REVISED note above.
   - "Triage is single-shot (one ollama call for all findings). For repos with >50 findings, qwen2.5:14b 32k context may overflow. Future: chunk findings by file or rule category before triage, or upgrade to a larger context model."
   - "--diff mode (compare to previous SECURITY_FINDINGS.md) is a v2 feature — needs a parse-prev step before consolidate_findings."
   - "--patches mode (generate unified-diff per real finding) is a v2 feature — needs a second ollama call per real finding."
