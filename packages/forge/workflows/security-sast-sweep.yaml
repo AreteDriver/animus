@@ -1,0 +1,321 @@
+# Security SAST Sweep — Per-Repo SAST + Ollama Triage Workflow
+#
+# Companion to the ai-skills /security-auditor v3 skill. Runs the same SAST
+# pipeline (semgrep + bandit + gitleaks + pip-audit) but as a forge workflow
+# so it can be scheduled, budget-tracked, and Ollama-routed for $0/run cost.
+#
+# Distinct from the existing security-audit.yaml workflow (which is a pure-
+# Claude conceptual audit with 100K token budget). This one is SAST-first,
+# Ollama-triaged, $0 cost.
+#
+# Writes SECURITY_FINDINGS.md to the audited repo's root.
+#
+# For fleet sweeps, invoke once per repo from a shell loop:
+#
+#   for repo in ~/projects/{EVE_Gatekeeper,anchormd,memboot,BenchGoblins,Argus_Overview,Dossier,tiaid}; do
+#     animus-forge workflow run security-sast-sweep --var repo_path="$repo"
+#   done
+#
+# Cross-repo aggregation is done by /security-sweep (ai-skills), not here.
+
+name: security-sast-sweep
+version: 1.0.0
+description: SAST + Ollama-triaged security audit for one repository (per-repo, $0 cost via Ollama)
+tags: [security, sast, ollama, fleet, free]
+
+inputs:
+  repo_path:
+    type: string
+    required: true
+    description: Absolute path to the repository to audit
+  triage_model:
+    type: string
+    required: false
+    default: "qwen2.5:14b"
+    description: Ollama model used for finding triage
+  output_path:
+    type: string
+    required: false
+    default: ""
+    description: Path to write SECURITY_FINDINGS.md (default = <repo>/SECURITY_FINDINGS.md)
+
+outputs:
+  - audit_report
+  - findings_count
+
+token_budget: 0  # Ollama-routed; no Anthropic token cost
+timeout_seconds: 600
+
+steps:
+  # ---------------------------------------------------------------------------
+  # Phase 0 — Tool inventory
+  # ---------------------------------------------------------------------------
+  - id: tool_inventory
+    type: shell
+    description: Confirm SAST tools are available
+    params:
+      command: |
+        set -u
+        echo "=== Tool Inventory ==="
+        for t in semgrep bandit gitleaks pip-audit; do
+          if command -v "$t" > /dev/null; then echo "OK $t"; else echo "MISSING $t"; fi
+        done
+      timeout_seconds: 10
+
+  # ---------------------------------------------------------------------------
+  # Phase 1 — SAST sweep in parallel (each tool independent)
+  # ---------------------------------------------------------------------------
+  - id: sast_parallel
+    type: parallel
+    description: Run all SAST tools in parallel
+    params:
+      strategy: threading
+      max_workers: 4
+      fail_fast: false
+      steps:
+        - id: semgrep_scan
+          type: shell
+          description: Semgrep multi-language SAST (python+security+secrets+owasp packs)
+          params:
+            command: |
+              cd "${repo_path}"
+              mkdir -p /tmp/forge-sec
+              semgrep --config=p/python --config=p/security-audit \
+                      --config=p/secrets --config=p/owasp-top-ten \
+                      --json --output=/tmp/forge-sec/semgrep.json \
+                      --metrics=off --quiet . 2>&1 || true
+            timeout_seconds: 300
+
+        - id: bandit_scan
+          type: shell
+          description: Bandit Python AST security linter
+          params:
+            command: |
+              cd "${repo_path}"
+              mkdir -p /tmp/forge-sec
+              if [ -d src ]; then
+                bandit -r src/ -f json -o /tmp/forge-sec/bandit.json --quiet 2>&1 || true
+              else
+                echo '{"results":[],"metrics":{"_totals":{"loc":0}}}' > /tmp/forge-sec/bandit.json
+              fi
+            timeout_seconds: 60
+
+        - id: gitleaks_scan
+          type: shell
+          description: Gitleaks secret scan (working tree + git history)
+          params:
+            command: |
+              cd "${repo_path}"
+              mkdir -p /tmp/forge-sec
+              gitleaks detect --report-format=json \
+                      --report-path=/tmp/forge-sec/gitleaks.json \
+                      --no-banner 2>&1 | tail -3 || true
+              test -f /tmp/forge-sec/gitleaks.json || echo '[]' > /tmp/forge-sec/gitleaks.json
+            timeout_seconds: 60
+
+        - id: pip_audit_scan
+          type: shell
+          description: Pip-audit dependency vulnerability scan (venv-local)
+          params:
+            command: |
+              cd "${repo_path}"
+              mkdir -p /tmp/forge-sec
+              if [ -d .venv ]; then
+                .venv/bin/python -m pip_audit --format=json > /tmp/forge-sec/pip-audit.json 2>/dev/null || \
+                  echo '{"dependencies":[]}' > /tmp/forge-sec/pip-audit.json
+              else
+                echo '{"dependencies":[]}' > /tmp/forge-sec/pip-audit.json
+              fi
+            timeout_seconds: 60
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — Consolidate findings for triage
+  # ---------------------------------------------------------------------------
+  - id: consolidate_findings
+    type: shell
+    description: Merge all tool outputs into one JSON for triage
+    depends_on: [sast_parallel]
+    params:
+      command: |
+        python3 << 'PYEOF'
+        import json
+        from pathlib import Path
+
+        out = {"semgrep": [], "bandit": [], "gitleaks": [], "pip_audit": []}
+
+        try:
+            sg = json.load(open("/tmp/forge-sec/semgrep.json"))
+            for r in sg.get("results", []):
+                out["semgrep"].append({
+                    "rule": r["check_id"],
+                    "file": r["path"],
+                    "line": r["start"]["line"],
+                    "severity": r["extra"].get("severity", "unknown"),
+                    "message": r["extra"]["message"][:300],
+                })
+        except Exception as e:
+            out["semgrep_error"] = str(e)
+
+        try:
+            bd = json.load(open("/tmp/forge-sec/bandit.json"))
+            for r in bd.get("results", []):
+                out["bandit"].append({
+                    "rule": r["test_id"],
+                    "file": r["filename"],
+                    "line": r["line_number"],
+                    "severity": r["issue_severity"],
+                    "confidence": r["issue_confidence"],
+                    "message": r["issue_text"][:300],
+                })
+        except Exception as e:
+            out["bandit_error"] = str(e)
+
+        try:
+            gl = json.load(open("/tmp/forge-sec/gitleaks.json"))
+            if isinstance(gl, list):
+                for r in gl:
+                    out["gitleaks"].append({
+                        "rule": r.get("RuleID"),
+                        "file": r.get("File"),
+                        "line": r.get("StartLine"),
+                        "severity": "critical",
+                        "message": r.get("Description", "")[:300],
+                    })
+        except Exception:
+            pass
+
+        try:
+            pa = json.load(open("/tmp/forge-sec/pip-audit.json"))
+            for dep in pa.get("dependencies", []):
+                for v in dep.get("vulns", []):
+                    out["pip_audit"].append({
+                        "package": dep["name"],
+                        "version": dep["version"],
+                        "cve": v["id"],
+                        "severity": v.get("severity", "unknown"),
+                        "fix_versions": v.get("fix_versions", []),
+                    })
+        except Exception as e:
+            out["pip_audit_error"] = str(e)
+
+        total = sum(len(v) for k, v in out.items() if isinstance(v, list))
+        out["total_raw_findings"] = total
+        Path("/tmp/forge-sec/all_findings.json").write_text(json.dumps(out, indent=2))
+        print(f"consolidated {total} raw findings")
+        PYEOF
+      timeout_seconds: 30
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Ollama triage (qwen2.5:14b — $0 cost via HybridBackend)
+  # ---------------------------------------------------------------------------
+  - id: ollama_triage
+    type: ollama
+    description: Triage raw SAST findings — classify real vs false-positive, recommend remediation
+    depends_on: [consolidate_findings]
+    model: "${triage_model}"
+    prompt: |
+      You are triaging SAST (static-analysis security testing) findings for the
+      repository at ${repo_path}.
+
+      Raw findings JSON (from semgrep + bandit + gitleaks + pip-audit):
+      ${consolidate_findings}
+
+      For each finding, classify:
+      - reality: "real" | "false-positive" | "requires-runtime-test"
+      - severity: "critical" | "high" | "medium" | "low" | "info"
+      - confidence: "high" | "medium" | "low"
+      - reasoning: one paragraph explaining the classification
+      - remediation: one paragraph fix (only for "real" findings)
+
+      IMPORTANT triage rules:
+      - CLI tools running on the user's own machine have no remote attack
+        surface. urlopen() or subprocess() with user-provided flags is NOT
+        a vulnerability — it's "user attacking themselves" which is not a
+        credible threat.
+      - Constant-list subprocess args (e.g., ["git", "--version"]) cannot
+        be shell-injected. Mark false-positive with confidence: high.
+      - Real vulns require: untrusted input + sink + reachable code path.
+      - gitleaks and pip-audit findings are almost always real (real
+        secrets in commits, real CVEs in dependencies).
+      - shell=True with non-user input is NOT a vulnerability.
+
+      Output:
+      1. A markdown table: file:line | tool | severity | reality | confidence | summary
+      2. For each "real" finding: detailed remediation guidance
+
+      Be calibrated. Severity inflation causes alert fatigue. The point
+      of triage is to filter noise, not amplify it.
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — Write SECURITY_FINDINGS.md
+  # ---------------------------------------------------------------------------
+  - id: write_report
+    type: shell
+    description: Persist triage output to SECURITY_FINDINGS.md
+    depends_on: [ollama_triage]
+    params:
+      command: |
+        OUT="${output_path:-${repo_path}/SECURITY_FINDINGS.md}"
+        DATE=$(date -u +%Y-%m-%d)
+        RAW_JSON=$(cat /tmp/forge-sec/all_findings.json)
+        cat > "$OUT" <<MDEOF
+        # Security Audit Report
+
+        **Date:** $DATE
+        **Repo:** ${repo_path}
+        **Workflow:** security-sast-sweep v1.0.0 (animus-forge)
+        **Triage model:** ${triage_model} (Ollama, \$0 cost)
+
+        ## Raw SAST Findings (Pre-Triage)
+
+        \`\`\`json
+        $RAW_JSON
+        \`\`\`
+
+        ## Triage Output
+
+        ${ollama_triage}
+
+        ---
+
+        _Auto-generated by \`animus-forge workflow run security-sast-sweep\`._
+        MDEOF
+        echo "Report written: $OUT"
+      timeout_seconds: 10
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — Discord notify on HIGH/CRITICAL (optional, fleet-monitor integration)
+  # ---------------------------------------------------------------------------
+  - id: notify_critical
+    type: shell
+    description: Emit Discord alert via fleet-monitor if real HIGH/CRITICAL findings present
+    depends_on: [ollama_triage]
+    on_failure: skip
+    params:
+      command: |
+        HIGH_COUNT=$(echo "${ollama_triage}" | grep -ciE 'real.*high|real.*critical' || echo 0)
+        if [ "$HIGH_COUNT" -gt 0 ]; then
+            echo "ALERT: $HIGH_COUNT real HIGH/CRITICAL findings in ${repo_path}"
+            if [ -n "${FLEET_DISCORD_WEBHOOK:-}" ]; then
+                curl -s -X POST -H "Content-Type: application/json" \
+                  -d "{\"content\":\"⚠️ Security: ${repo_path} has $HIGH_COUNT real HIGH/CRITICAL findings\"}" \
+                  "$FLEET_DISCORD_WEBHOOK" > /dev/null || true
+            else
+                echo "FLEET_DISCORD_WEBHOOK env var not set — skipping Discord."
+            fi
+        else
+            echo "No HIGH/CRITICAL real findings — no notification."
+        fi
+      timeout_seconds: 10
+
+metadata:
+  author: claude-code
+  category: security
+  tags: [sast, ollama, fleet, free-triage, security]
+
+evolution_notes:
+  - "2026-05-10 v1.0.0 initial scaffold. Validated SAST tool chain end-to-end on memboot (see memboot/SECURITY_FINDINGS.md, commit b9ea664). Ollama triage and forge wiring untested in this YAML form — first invocation will surface schema/parameter issues."
+  - "Triage is single-shot (one ollama call for all findings). For repos with >50 findings, qwen2.5:14b 32k context may overflow. Future: chunk findings by file or rule category before triage, or upgrade to a larger context model."
+  - "--diff mode (compare to previous SECURITY_FINDINGS.md) is a v2 feature — needs a parse-prev step before consolidate_findings."
+  - "--patches mode (generate unified-diff per real finding) is a v2 feature — needs a second ollama call per real finding."
+  - "FLEET_DISCORD_WEBHOOK env var wires Phase 5 alerts. Set in fleet-monitor's env, not in this workflow."
