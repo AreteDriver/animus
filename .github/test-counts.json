@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "label": "tests",
+  "message": "15430",
+  "color": "brightgreen",
+  "core": 2520,
+  "forge": 10010,
+  "quorum": 926,
+  "bootstrap": 1974,
+  "total": 15430,
+  "_captured": "2026-05-10",
+  "_command": "scripts/test-count.sh",
+  "_comment": "Auto-updated by CI on push to main. Format follows shields.io endpoint badge schema (https://shields.io/endpoint). README badge URL: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AreteDriver/animus/main/.github/test-counts.json"
+}

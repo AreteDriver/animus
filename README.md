@@ -5,12 +5,13 @@
 ![CI](https://github.com/AreteDriver/animus/workflows/CI/badge.svg)
 ![CodeQL](https://github.com/AreteDriver/animus/workflows/CodeQL%20Security%20Scan/badge.svg)
 ![Security](https://github.com/AreteDriver/animus/workflows/Security/badge.svg)
+![Tests](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FAreteDriver%2Fanimus%2Fmain%2F.github%2Ftest-counts.json)
 [![PyPI - convergentAI](https://img.shields.io/pypi/v/convergentAI?label=convergentAI&color=blue)](https://pypi.org/project/convergentAI/)
 ![License](https://img.shields.io/github/license/AreteDriver/animus)
 
 Animus coordinates AI agents across complex workflows — with the operational discipline of a manufacturing line. Every agent has a token budget. Every workflow has a cost ceiling. If a pipeline fails at step 4 of 6, it restarts at step 4, not step 1. Inspired by the Toyota Production System: make cost visible, make waste impossible to ignore.
 
-Four independently-installable packages. 13,700+ tests. Zero vendor lock-in (Claude, OpenAI, Ollama).
+Four independently-installable packages. Zero vendor lock-in (Claude, OpenAI, Ollama). Live test count is in the badge above; CI refreshes it on every push to main from `scripts/test-count.sh`.
 
 **[Architecture](docs/ARCHITECTURE.md)** | **[Roadmap](docs/ROADMAP.md)** | **[Whitepaper](docs/whitepaper.pdf)**
 

@@ -156,6 +156,69 @@ jobs:
         env:
           PYTHONPATH: packages/bootstrap/src
 
+  test-counts:
+    name: Test Counts
+    runs-on: ubuntu-latest
+    needs: [test-core, test-quorum, test-forge, test-bootstrap]
+    # Only update the badge JSON on push to main; PRs just measure
+    # and report so a contributor can see the impact.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install all packages
+        run: |
+          pip install -e "packages/quorum/[dev]"
+          pip install -e "packages/forge/[dev]"
+          pip install -e "packages/core/[dev,api]"
+          pip install -e "packages/bootstrap/[dev]"
+
+      - name: Capture counts
+        id: counts
+        run: |
+          json=$(scripts/test-count.sh)
+          echo "$json"
+          echo "$json" > /tmp/new-counts.json
+          # Surface in the run summary
+          {
+            echo "## Test counts"
+            echo ""
+            python3 -c "import json; d = json.load(open('/tmp/new-counts.json')); print(f\"| Package | Tests |\\n|---|---|\"); [print(f'| {k} | {d[k]:,} |') for k in ('core','forge','quorum','bootstrap','total')]"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Update badge JSON on main
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          # Preserve _comment / _captured / _command keys from existing file
+          python3 <<'PY'
+          import json, datetime
+          new = json.load(open('/tmp/new-counts.json'))
+          existing = json.load(open('.github/test-counts.json'))
+          for k in ('_comment', '_captured', '_command'):
+              if k in existing:
+                  new[k] = existing[k]
+          new['_captured'] = datetime.date.today().isoformat()
+          json.dump(new, open('.github/test-counts.json', 'w'), indent=2)
+          open('.github/test-counts.json', 'a').write('\n')
+          PY
+          if git diff --quiet .github/test-counts.json; then
+            echo "No change in test counts."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/test-counts.json
+          git commit -m "chore(ci): refresh test-counts badge JSON [skip ci]"
+          git push
+
   mypy:
     name: Type Check (${{ matrix.package }})
     runs-on: ubuntu-latest
