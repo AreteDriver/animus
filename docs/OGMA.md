@@ -222,3 +222,58 @@ The design call-out — Google AI memory compression work (likely [Titans: Learn
 - Confidence: 0.6 (promising but early)
 
 That's the shape. Summary bots can't produce it; Ogma's grounding rules make it possible.
+
+---
+
+## v0 Implementation Plan — Code (added 2026-05-11)
+
+Everything above is the *vision* (v1 skill / v2 Forge workflow / v3 MCP). This section is the *buildable v0* — grounded in a recon of what already exists. The driving use case: a podcast-transcript harvest that's been run by hand (yt-dlp → clean → analyze, 15 episodes, 2026-05-11) and should be code. That harvest is, in this architecture, **a missing Lugh source + the missing Ogma `read` flow**.
+
+### What already exists (recon 2026-05-11)
+
+- **Lugh is fully built.** `packages/core/animus/lugh/sources/`:
+  - `base.py` — `Source` Protocol (`source_id: str`; `fetch(self, limit) -> Iterable[SourceItem]`) + `SourceItem` dataclass (`source_id, item_id, title, url, published, summary, author, tags, raw_text, metadata`; `.fingerprint` = SHA-256 of `(source_id, item_id)` for dedup) + `SourceCache`.
+  - `registry.py` — JSON-driven registry at `~/.animus/lugh_sources.json`; `load_registry()` materializes entries → Source instances; entries shaped like `{"kind": "arxiv", "category": "cs.LG"}`, `{"kind": "hn", "query_id": "front_page"}`, `{"kind": "podcast", "show_id": "all-in", "feed_url": "...", "fetch_transcripts": false}`.
+  - Existing sources: `arxiv.py` (category RSS), `hn.py` (Algolia API), `podcasts.py` (RSS + optional iTunes transcript fetch srt/vtt/json→plaintext), `rss.py` (feed helpers).
+  - `relevance.py` — `KeywordScorer(default_keywords).score(item) -> float` (0.0–1.0); wired into `SourceCache.put_many(scorer=...)`.
+  - `watchlist.py` — periodic-scan scheduler (7-day default), `run_watchlist_scan()` async, exposed as the `animus_watchlist_scan` MCP tool. **This is the recurring-harvest mechanism — Ogma doesn't need its own scheduler.**
+- **Ogma has zero code.** Only `~/.claude/skills/ogma/SKILL.md` (the v1 skill spec) and `~/projects/notes/ogma/` (4 example outputs from a 2026-04-19 hand-run + a `digests/` subdir).
+- **LLM calls in core**: `packages/core/animus/cognitive.py` — `CognitiveLayer(ModelConfig.ollama()/.anthropic()/.openai()).generate(prompt, system)`. Note the HybridBackend lesson (ADL-20260511-001 #2): 401/403 must fail loud, not fall back to Ollama's tool-ignoring stub.
+- **Conventions** (`packages/core/pyproject.toml`): ruff `["E","F","I","N","W","UP"]`, line-length 100, `target-version py310`; pytest in `tests/`; 97% coverage target; deps are `ollama, chromadb, pyyaml, pydantic, rich, prompt-toolkit` — **no `typer`, no `yt-dlp`**. Shell out to the system `yt-dlp` (`~/.local/bin/yt-dlp`) via `subprocess`; don't add the library dep.
+- **MCP tools** (`packages/core/animus/mcp_server.py`): FastMCP `@mcp.tool()` decorators for simple ones; explicit `Tool` dataclasses (`name/description/parameters/handler/category`) in `lugh/watchlist_tools.py` for the richer ones. v0 builds **no MCP tool** — that's v3.
+
+### v0 deliverables (two phases)
+
+**Phase 1 — the harvest half (Lugh `YouTubeSource`)** — *this is the immediate win; self-contained; build + test first.*
+
+`packages/core/animus/lugh/sources/youtube.py`:
+- `class YouTubeSource` implementing the `Source` Protocol. Construction: `YouTubeSource(channel: str, show_name: str, *, fetch_captions: bool = True, raw_dir: Path | None = None)`. `source_id = f"youtube:{channel}"`.
+- `fetch(limit)` — shell out to `yt-dlp --flat-playlist --playlist-end N --print "%(id)s ::: %(title)s" "https://www.youtube.com/{channel}/videos"` to list recent videos; for each new video (not already in cache), optionally `yt-dlp --skip-download --write-auto-subs --sub-lang en --sub-format vtt -o ...` then **clean the VTT** (the dedupe/strip logic we already proved: drop `WEBVTT`/`Kind:`/`Language:`/timestamp/`align:` lines, strip inline `<...>` tags, dedupe consecutive identical lines) → `SourceItem(raw_text=cleaned_transcript, summary=<first ~500 chars>, metadata={"video_id":..., "channel":..., "show_name":..., "has_captions":...})`.
+- Raw VTT → a gitignored dir (default `~/.animus/lugh_raw/youtube/`), never committed (IP discipline — same posture as Aurora Arcology's "Aurora does not redistribute creator transcripts"). The `SourceItem` carries the cleaned text; the raw VTT is a local cache only.
+- Graceful degradation: `yt-dlp` missing → log + return empty (fail-open, like the other sources); a video with no captions → emit the `SourceItem` with `has_captions=False` and `raw_text=""` (title/description only); throttle with a small sleep between caption pulls.
+- A `default_youtube_sources()` returning the Core feed list (the seeds — `@AIDailyBrief` daily; `@LatentSpacePod`, `@NoPriorsPodcast`, `@a16z` weekly; `@allin`, `@PeterDiamandis`, `@DwarkeshPatel`, `@CognitiveRevolutionPodcast`, `@LennysPodcast` as Watch-tier). See `~/projects/notes/ideas/podcast-harvest-2026-q2.md` §"Tracked sources" for the full list + handles (verified 2026-05-11).
+
+`packages/core/animus/lugh/sources/registry.py` — add a `youtube` kind: `{"kind": "youtube", "channel": "@AIDailyBrief", "show_name": "The AI Daily Brief", "fetch_captions": true}`; `load_registry()` instantiates `YouTubeSource` for each; seed `default_youtube_sources()` on first run (parallel to how arxiv/hn seed but podcasts don't — YouTube can seed since the channel handles are stable). Also a `lugh sources add-youtube <channel>` CLI command, mirroring `add-podcast`.
+
+`tests/test_lugh_youtube_source.py` — mock `subprocess.run` for both the list call and the caption pull; assert: VTT cleaning produces deduped prose; `SourceItem`s have correct `source_id`/`fingerprint`/`metadata`; missing-yt-dlp → empty; no-captions video → `has_captions=False` item; the registry round-trips a `youtube` entry. Plus a unit test for the VTT cleaner as a pure function (extract it as `clean_vtt(text: str) -> str`).
+
+**Phase 2 — the synthesis half (Ogma `read`)** — *bigger, LLM-heavy; clean-room this.*
+
+`packages/core/animus/ogma/` (new sub-package, mirrors `lugh/`; import `from animus.ogma import ...`):
+- `models.py` — `OgmaOutput` dataclass with the external-contract fields (`concept, novelty, animus_gap, weaknesses, proposal, roi, risks, confidence, sources_cited`) + an internal variant (`what_works, cross_portfolio_overlap, rebuild_proposal, incremental_path` ...). `to_markdown(self) -> str` rendering the SKILL.md output format; `write(self, dir: Path = ~/projects/notes/ogma) -> Path` with the `YYYY-MM-DD-<slug>.md` naming.
+- `grounding.py` — `verify_animus_gap(concept) -> GapResult` (grep/read the animus repo; the rule: no animus file path in output unless it was actually read), `git_activity(target)`, `test_surface(target)` (`pytest --collect-only`).
+- `read.py` — `read(item: SourceItem | str, *, model: str = ...) -> OgmaOutput`: assemble the source text + grounding context → `CognitiveLayer.generate(prompt, system=<the Ogma persona prompt from SKILL.md>)` → parse the response into `OgmaOutput` → `.write()`. **Tiered relevance gate before the expensive read**: if the `SourceItem`'s `KeywordScorer` score < threshold, skip (or downgrade to a one-line note); Tier-1 keywords (model release, MCP, pricing, AI-security, FDE/AI-enablement hiring) get flagged for immediate surfacing in the output.
+- `brief.py` — `brief(since="7d", min_score=0.5) -> Path`: batch over the lugh cache, one composite briefing.
+- `cli.py` — `ogma read <id>`, `ogma brief`, `ogma gap "<concept>"`; wire into `packages/core/animus/__main__.py`'s REPL as `/ogma ...` so the existing skill actually executes instead of just describing.
+- `gap.py`, `audit.py`, `sweep.py` — stubs in v0 (the SKILL.md verbs); fill in v0.x.
+- `tests/test_ogma_*.py` — `OgmaOutput.to_markdown()` round-trips the contract; `grounding.verify_animus_gap` doesn't emit unread paths; `read()` with a mocked `CognitiveLayer` produces a well-formed `OgmaOutput` and writes the file; the relevance gate skips low-score items.
+
+**Wiring it together (the recurring harvest):** add the `youtube` entries to `~/.animus/lugh_sources.json`; the existing `watchlist.py` scheduler picks them up on its scan interval (daily for AIDB — may need a per-source interval override, currently 7-day global; add `"interval_days"` to the registry entry if so); harvested `SourceItem`s land in `SourceCache` with relevance scores; Ogma `brief` (run on a cron, or invoked via the skill) reads the high-scoring new items → composite briefing → `~/projects/notes/ogma/digests/YYYY-MM-DD.md`; Tier-1 items get surfaced immediately (push notification via the bootstrap proactive engine, or top-of-next-session). The full external-feeds list (curator blogs, lab blogs, MCP changelog, governance) in the harvest MD §"Tracked sources" maps onto Lugh's existing `rss.py` source — those are easier than YouTube and can be added the same way.
+
+### Out of scope for v0
+
+- The MCP tool surface (v3). The Forge weekly-workflow version (v2 — though `brief` on a cron approximates it). The `audit`/`sweep` internal-subsystem flows (v0.x — `read`/`brief`/`gap` first). Outcome feedback (v3.1). Quorum-gated proposals (v3.2). Per the spec's own staging, automatic execution of Ogma proposals stays out — Ogma writes proposals, the operator decides.
+
+### Status
+
+Branch `feat/ogma-v0-youtube-source` off `main`. `animus.service` stopped (mandatory during commit work — the proactive engine self-commits otherwise; see `~/.claude/projects/-home-arete-projects/memory/project_animus_dev_gotchas.md`). Phase 1 (`YouTubeSource` + registry + tests) is the immediate build. Phase 2 (the `ogma/` package) is a clean follow-up — the patterns to mirror are `lugh/sources/base.py` (the contract) and `~/.claude/skills/ogma/SKILL.md` (the output format + persona prompt).
