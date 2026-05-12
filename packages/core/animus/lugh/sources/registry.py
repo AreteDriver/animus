@@ -29,6 +29,7 @@ from animus.lugh.sources.arxiv import DEFAULT_CATEGORIES, ArxivSource
 from animus.lugh.sources.base import Source
 from animus.lugh.sources.hn import HackerNewsSource
 from animus.lugh.sources.hn import default_sources as _default_hn
+from animus.lugh.sources.mer import MERSource
 from animus.lugh.sources.podcasts import PodcastSource
 from animus.lugh.sources.youtube import DEFAULT_CHANNELS, YouTubeSource
 
@@ -63,6 +64,8 @@ def default_registry() -> list[dict]:
                 "tags": list(tags),
             }
         )
+    # One MER tracker — there's a single Monthly Economic Report series.
+    entries.append({"kind": "mer", "lookback_months": 3, "tags": ["eve-economy", "eve"]})
     return entries
 
 
@@ -129,6 +132,13 @@ def instantiate(entries: list[dict]) -> list[Source]:
                         show_name=raw.get("show_name", ""),
                         fetch_captions=bool(raw.get("fetch_captions", True)),
                         tags=_as_tag_list(raw.get("tags")),
+                    )
+                )
+            elif kind == "mer":
+                out.append(
+                    MERSource(
+                        lookback_months=int(raw.get("lookback_months", 3)),
+                        tags=_as_tag_list(raw.get("tags")) or None,
                     )
                 )
             else:
@@ -211,6 +221,8 @@ def _entry_source_id(entry: dict) -> str:
         return f"podcast:{entry.get('show_id', '')}"
     if kind == "youtube":
         return f"youtube:{entry.get('channel', '')}"
+    if kind == "mer":
+        return "mer"
     return ""
 
 

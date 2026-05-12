@@ -11,6 +11,7 @@ v1 scope:
     hn       — HN Algolia API
     podcasts — config-driven RSS subscriber
     youtube  — channel subscriber via yt-dlp auto-captions
+    mer      — EVE Online Monthly Economic Report availability tracker
 
 v2 (not yet wired):
     ChromaDB write path, MCP tool surface, cron integration.
@@ -23,6 +24,7 @@ from animus.lugh.sources.arxiv import default_sources as default_arxiv_sources
 from animus.lugh.sources.base import Scorer, Source, SourceCache, SourceItem
 from animus.lugh.sources.hn import HackerNewsSource
 from animus.lugh.sources.hn import default_sources as default_hn_sources
+from animus.lugh.sources.mer import MERSource, default_mer_sources
 from animus.lugh.sources.podcasts import PodcastSource, probe_feed
 from animus.lugh.sources.registry import (
     add_podcast,
@@ -47,10 +49,12 @@ __all__ = [
     # sources
     "ArxivSource",
     "HackerNewsSource",
+    "MERSource",
     "PodcastSource",
     "YouTubeSource",
     "default_arxiv_sources",
     "default_hn_sources",
+    "default_mer_sources",
     "default_youtube_sources",
     # base
     "FeedEntry",
