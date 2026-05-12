@@ -7,6 +7,8 @@ Examples:
     python -m animus.lugh.sources.cli probe https://feeds.example.com/rss
     python -m animus.lugh.sources.cli recent --source hn:front_page --limit 10
     python -m animus.lugh.sources.cli add-podcast all-in https://... --name "All-In"
+    python -m animus.lugh.sources.cli add-youtube @AIDailyBrief --name "The AI Daily Brief"
+    python -m animus.lugh.sources.cli probe-youtube @LatentSpacePod
     python -m animus.lugh.sources.cli remove podcast:all-in
     python -m animus.lugh.sources.cli explain <source_id> <item_id>
 """
@@ -22,11 +24,13 @@ from animus.lugh.sources.base import SourceCache
 from animus.lugh.sources.podcasts import probe_feed
 from animus.lugh.sources.registry import (
     add_podcast,
+    add_youtube,
     instantiate,
     load_registry,
     remove_source,
 )
 from animus.lugh.sources.relevance import default_scorer
+from animus.lugh.sources.youtube import probe_channel
 
 
 def cmd_list(args: argparse.Namespace) -> int:
@@ -137,6 +141,29 @@ def cmd_add_podcast(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_add_youtube(args: argparse.Namespace) -> int:
+    tags = [t.strip() for t in (args.tags or "").split(",") if t.strip()]
+    ok = add_youtube(
+        channel=args.channel,
+        show_name=args.name or "",
+        fetch_captions=not args.no_captions,
+        tags=tags,
+        path=args.registry,
+    )
+    if not ok:
+        print(f"youtube:{args.channel} already exists", file=sys.stderr)
+        return 1
+    mode = "list-only" if args.no_captions else "with captions"
+    print(f"added youtube:{args.channel} ({mode})")
+    return 0
+
+
+def cmd_probe_youtube(args: argparse.Namespace) -> int:
+    result = probe_channel(args.channel)
+    print(json.dumps(result, indent=2))
+    return 0 if result.get("ok") else 1
+
+
 def cmd_remove(args: argparse.Namespace) -> int:
     if remove_source(args.source_id, path=args.registry):
         print(f"removed {args.source_id}")
@@ -212,6 +239,22 @@ def main(argv: list[str] | None = None) -> int:
     sub_add.add_argument("--name", default=None)
     sub_add.add_argument("--transcripts", action="store_true", help="Fetch iTunes transcripts")
     sub_add.set_defaults(func=cmd_add_podcast)
+
+    sub_add_yt = sub.add_parser("add-youtube", help="Register a YouTube channel (via yt-dlp)")
+    sub_add_yt.add_argument("channel", help="Channel handle, e.g. @AIDailyBrief")
+    sub_add_yt.add_argument("--name", default=None)
+    sub_add_yt.add_argument("--tags", default=None, help="Comma-separated tags")
+    sub_add_yt.add_argument(
+        "--no-captions",
+        action="store_true",
+        dest="no_captions",
+        help="List videos only; don't download auto-captions",
+    )
+    sub_add_yt.set_defaults(func=cmd_add_youtube)
+
+    sub_probe_yt = sub.add_parser("probe-youtube", help="Validate a YouTube channel handle")
+    sub_probe_yt.add_argument("channel")
+    sub_probe_yt.set_defaults(func=cmd_probe_youtube)
 
     sub_remove = sub.add_parser("remove", help="Remove a source by source_id")
     sub_remove.add_argument("source_id")

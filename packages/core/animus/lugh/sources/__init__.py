@@ -8,8 +8,9 @@ scored for relevance against the user's portfolio.
 
 v1 scope:
     arxiv    — per-category RSS feeds
-    hn       — HN Algolia API (planned)
-    podcasts — config-driven RSS subscriber (planned)
+    hn       — HN Algolia API
+    podcasts — config-driven RSS subscriber
+    youtube  — channel subscriber via yt-dlp auto-captions
 
 v2 (not yet wired):
     ChromaDB write path, MCP tool surface, cron integration.
@@ -25,6 +26,7 @@ from animus.lugh.sources.hn import default_sources as default_hn_sources
 from animus.lugh.sources.podcasts import PodcastSource, probe_feed
 from animus.lugh.sources.registry import (
     add_podcast,
+    add_youtube,
     default_registry,
     instantiate,
     load_registry,
@@ -33,14 +35,23 @@ from animus.lugh.sources.registry import (
 )
 from animus.lugh.sources.relevance import DEFAULT_KEYWORDS, KeywordScorer, default_scorer
 from animus.lugh.sources.rss import FeedEntry, fetch_feed, parse_feed
+from animus.lugh.sources.youtube import (
+    DEFAULT_CHANNELS,
+    YouTubeSource,
+    clean_vtt,
+    default_youtube_sources,
+    probe_channel,
+)
 
 __all__ = [
     # sources
     "ArxivSource",
     "HackerNewsSource",
     "PodcastSource",
+    "YouTubeSource",
     "default_arxiv_sources",
     "default_hn_sources",
+    "default_youtube_sources",
     # base
     "FeedEntry",
     "Scorer",
@@ -50,8 +61,13 @@ __all__ = [
     # RSS
     "fetch_feed",
     "parse_feed",
+    # youtube
+    "DEFAULT_CHANNELS",
+    "clean_vtt",
+    "probe_channel",
     # registry
     "add_podcast",
+    "add_youtube",
     "default_registry",
     "instantiate",
     "load_registry",

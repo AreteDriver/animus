@@ -8,11 +8,15 @@ Stored as JSON at ~/.animus/lugh_sources.json. Each entry is one of:
     {"kind": "podcast", "show_id": "all-in",
      "feed_url": "https://...", "show_name": "All-In",
      "fetch_transcripts": false}
+    {"kind": "youtube", "channel": "@AIDailyBrief",
+     "show_name": "The AI Daily Brief", "fetch_captions": true,
+     "tags": ["ai-news", "core"]}
 
 `load_registry()` materializes these into Source instances. On first run
-we seed the default arXiv categories + HN queries — podcasts start empty
-so the user adds their real feed URLs via `lugh sources add-podcast`
-rather than us guessing.
+we seed the default arXiv categories + HN queries + the curated YouTube
+channel list — podcasts start empty (the user adds real RSS feed URLs via
+`lugh sources add-podcast` rather than us guessing), but YouTube handles
+are stable and curated, so they seed.
 """
 
 from __future__ import annotations
@@ -26,6 +30,7 @@ from animus.lugh.sources.base import Source
 from animus.lugh.sources.hn import HackerNewsSource
 from animus.lugh.sources.hn import default_sources as _default_hn
 from animus.lugh.sources.podcasts import PodcastSource
+from animus.lugh.sources.youtube import DEFAULT_CHANNELS, YouTubeSource
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +51,16 @@ def default_registry() -> list[dict]:
                 "tags": hn.tags,
                 "min_points": hn.min_points,
                 "hits_per_page": hn.hits_per_page,
+            }
+        )
+    for channel, show_name, fetch_captions, tags in DEFAULT_CHANNELS:
+        entries.append(
+            {
+                "kind": "youtube",
+                "channel": channel,
+                "show_name": show_name,
+                "fetch_captions": fetch_captions,
+                "tags": list(tags),
             }
         )
     return entries
@@ -107,6 +122,15 @@ def instantiate(entries: list[dict]) -> list[Source]:
                         fetch_transcripts=bool(raw.get("fetch_transcripts", False)),
                     )
                 )
+            elif kind == "youtube":
+                out.append(
+                    YouTubeSource(
+                        channel=raw["channel"],
+                        show_name=raw.get("show_name", ""),
+                        fetch_captions=bool(raw.get("fetch_captions", True)),
+                        tags=_as_tag_list(raw.get("tags")),
+                    )
+                )
             else:
                 logger.warning("registry: unknown kind %r — skipping", kind)
         except (KeyError, TypeError, ValueError) as e:
@@ -138,6 +162,30 @@ def add_podcast(
     return True
 
 
+def add_youtube(
+    channel: str,
+    show_name: str = "",
+    fetch_captions: bool = True,
+    tags: list[str] | None = None,
+    path: Path | None = None,
+) -> bool:
+    """Append a YouTube channel entry. Returns False if the channel already exists."""
+    entries = load_registry(path=path)
+    if any(e.get("kind") == "youtube" and e.get("channel") == channel for e in entries):
+        return False
+    entries.append(
+        {
+            "kind": "youtube",
+            "channel": channel,
+            "show_name": show_name,
+            "fetch_captions": fetch_captions,
+            "tags": list(tags) if tags else [],
+        }
+    )
+    save_registry(entries, path=path)
+    return True
+
+
 def remove_source(source_id: str, path: Path | None = None) -> bool:
     """Remove an entry by its fully-qualified source_id. Returns False if absent."""
     entries = load_registry(path=path)
@@ -161,4 +209,15 @@ def _entry_source_id(entry: dict) -> str:
         return f"hn:{entry.get('query_id', '')}"
     if kind == "podcast":
         return f"podcast:{entry.get('show_id', '')}"
+    if kind == "youtube":
+        return f"youtube:{entry.get('channel', '')}"
     return ""
+
+
+def _as_tag_list(value: object) -> list[str]:
+    """Accept a JSON list or a comma-separated string; return a clean tag list."""
+    if isinstance(value, list):
+        return [str(t).strip() for t in value if str(t).strip()]
+    if isinstance(value, str):
+        return [t.strip() for t in value.split(",") if t.strip()]
+    return []
