@@ -181,10 +181,16 @@ steps:
     timeout_seconds: 15
 
   - id: synthesize_briefing
-    type: claude_code
-    description: Synthesize a focused intel briefing for ARETE's bounty recon
+    type: ollama
+    description: Synthesize a focused intel briefing for ARETE's bounty recon (local Ollama, no API key required)
     params:
-      role: analyst
+      model: qwen2.5:14b
+      temperature: 0.3
+      max_tokens: 1200
+      system_prompt: |
+        You are a terse intel analyst writing briefings for a security
+        researcher hunting Anthropic HackerOne bounties. Output markdown,
+        no preamble, no hedging, no caveats. Strict word budget.
       prompt: |
         Read the diff document below and produce a TIGHT intel briefing for ARETE
         — a security researcher hunting bounties on Anthropic's HackerOne program,
@@ -221,8 +227,32 @@ steps:
           opportunistic angle #3 from the bounty plan (no carved hours).
 
         Be direct. No preamble. No hedging.
-      output_file: "${state_dir}/daily-{{date}}.md"
-    timeout_seconds: 90
+    outputs:
+      - briefing_text
+    timeout_seconds: 180
+    on_failure: skip
+
+  - id: save_briefing
+    type: shell
+    description: Persist the briefing markdown to a dated daily file
+    params:
+      command: |
+        python3 - <<'PY'
+        import os
+        from datetime import datetime, timezone
+        from pathlib import Path
+
+        state_dir = Path("${state_dir}")
+        briefing = """${briefing_text}"""
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        dest = state_dir / f"daily-{today}.md"
+        if briefing.strip():
+            dest.write_text(briefing)
+            print(f"Wrote briefing to {dest} ({len(briefing)} bytes)")
+        else:
+            print("No briefing text in context — skipping daily file")
+        PY
+    timeout_seconds: 5
     on_failure: skip
 
   - id: log_run
