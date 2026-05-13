@@ -3,7 +3,14 @@
 Track, allocate, and enforce token budgets across workflow executions.
 """
 
-from .manager import BudgetConfig, BudgetManager, BudgetStatus, UsageRecord
+from .manager import (
+    DEFAULT_MODEL_MULTIPLIERS,
+    BudgetConfig,
+    BudgetManager,
+    BudgetStatus,
+    UsageRecord,
+    effective_tokens,
+)
 from .models import (
     Budget,
     BudgetCreate,
@@ -62,6 +69,8 @@ __all__ = [
     "BudgetConfig",
     "BudgetStatus",
     "UsageRecord",
+    "effective_tokens",
+    "DEFAULT_MODEL_MULTIPLIERS",
     "AllocationStrategy",
     "EqualAllocation",
     "PriorityAllocation",
