@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Animus Bounty Watcher daily at 07:00 local
+Requires=animus-bounty-watcher.service
+
+[Timer]
+OnCalendar=*-*-* 07:00:00
+Persistent=true
+RandomizedDelaySec=300
+Unit=animus-bounty-watcher.service
+
+[Install]
+WantedBy=timers.target
