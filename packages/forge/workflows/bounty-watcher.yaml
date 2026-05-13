@@ -180,6 +180,126 @@ steps:
         PY
     timeout_seconds: 15
 
+  - id: maybe_run_recon
+    type: shell
+    description: |
+      If a new claude-code release ships AND its notes mention permission /
+      hook / subagent / tool keywords AND $ENABLE_RECON=1 is set, run the
+      mcp-fuzz recon sweep against c1-baseline. Default OFF (real $$).
+      Set ENABLE_RECON=1 in the timer's environment to opt in.
+    params:
+      command: |
+        python3 - <<'PY'
+        import json
+        import os
+        import re
+        import subprocess
+        from datetime import datetime, timezone
+        from pathlib import Path
+
+        state_dir = Path("${state_dir}")
+        recon_dir = state_dir / "recon"
+        recon_dir.mkdir(parents=True, exist_ok=True)
+
+        # Gate 1 — explicit opt-in via env var (default OFF to avoid surprise spend)
+        if os.environ.get("ENABLE_RECON") != "1":
+            print("ENABLE_RECON not set — skipping recon sweep. (default-off, costs real $$)")
+            raise SystemExit(0)
+
+        # Gate 2 — only run if a new release was just detected this run
+        state = json.loads((state_dir / "state.json").read_text())
+        new_tag = state.get("last_release_tag")
+        last_recon_tag = state.get("last_recon_tag")
+        if not new_tag or new_tag == last_recon_tag:
+            print(f"No new release since last recon (current={new_tag}, last_recon={last_recon_tag}) — skipping")
+            raise SystemExit(0)
+
+        # Gate 3 — release notes must mention permission-surface keywords
+        releases_path = state_dir / "raw" / "releases.json"
+        if not releases_path.exists():
+            print("No releases.json — skipping recon")
+            raise SystemExit(0)
+        releases = json.loads(releases_path.read_text())
+        if not releases:
+            raise SystemExit(0)
+        body = (releases[0].get("body") or "").lower()
+        keywords = [
+            "permission", "hook", "subagent", "settings",
+            "disableallhooks", "allowmanagedhooks", "mcp",
+            "tool", "approve", "managedh",
+        ]
+        hits = [k for k in keywords if k in body]
+        if not hits:
+            print(f"Release {new_tag} notes mention no permission-surface keywords — skipping")
+            raise SystemExit(0)
+        print(f"Release {new_tag} body contains keywords: {hits}")
+
+        # Run the recon sweep
+        mcp_fuzz_bin = Path.home() / "projects" / "mcp-fuzz" / ".venv" / "bin" / "mcp-fuzz"
+        spec_path = Path.home() / "projects" / "mcp-fuzz" / "specs" / "category-1-baseline.yaml"
+        if not mcp_fuzz_bin.exists() or not spec_path.exists():
+            print(f"mcp-fuzz binary or spec missing — skipping (bin={mcp_fuzz_bin}, spec={spec_path})")
+            raise SystemExit(0)
+
+        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        output_jsonl = recon_dir / f"sweep-{new_tag}-{ts}.jsonl"
+        cmd = [
+            str(mcp_fuzz_bin), "recon", str(spec_path),
+            "--canonical", "code-reviewer",
+            "--model", "sonnet",
+            "--budget-usd", "0.10",
+            "--timeout", "30",
+            "--output-jsonl", str(output_jsonl),
+        ]
+        print(f"Running: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+        (recon_dir / f"sweep-{new_tag}-{ts}.stdout.md").write_text(result.stdout)
+        (recon_dir / f"sweep-{new_tag}-{ts}.stderr.txt").write_text(result.stderr)
+        print(f"recon exit={result.returncode}")
+
+        # Count silent_allow candidates from the JSONL output
+        candidate_count = 0
+        if output_jsonl.exists():
+            for line in output_jsonl.read_text().splitlines():
+                if not line.strip():
+                    continue
+                outcome = json.loads(line)
+                for v in outcome.get("variants", []):
+                    if v.get("classification") == "silent_allow":
+                        candidate_count += 1
+
+        # Persist recon state
+        state["last_recon_tag"] = new_tag
+        state["last_recon_ts"] = ts
+        state["last_recon_candidates"] = candidate_count
+        (state_dir / "state.json").write_text(json.dumps(state, indent=2))
+
+        # Append recon summary to diff.md so the briefing sees it
+        diff_path = state_dir / "raw" / "diff.md"
+        recon_md = [
+            "",
+            f"## Recon sweep — {new_tag}",
+            f"- Triggered by keywords: {', '.join(hits)}",
+            f"- Silent-allow candidates: **{candidate_count}**",
+            f"- Output: {output_jsonl}",
+            "",
+        ]
+        if diff_path.exists():
+            diff_path.write_text(diff_path.read_text() + "\n".join(recon_md))
+
+        # Alert hook: write a marker file if candidates surfaced
+        if candidate_count > 0:
+            alert = recon_dir / f"ALERT-{new_tag}-{ts}.txt"
+            alert.write_text(
+                f"Recon sweep against {new_tag} surfaced {candidate_count} silent-allow candidates.\n"
+                f"Verify per ~/projects/mcp-fuzz/RECON-c1-001.md before submission.\n"
+                f"Raw outcomes: {output_jsonl}\n"
+            )
+            print(f"ALERT written: {alert}")
+        PY
+    timeout_seconds: 900
+    on_failure: skip
+
   - id: synthesize_briefing
     type: ollama
     description: Synthesize a focused intel briefing for ARETE's bounty recon (local Ollama, no API key required)
