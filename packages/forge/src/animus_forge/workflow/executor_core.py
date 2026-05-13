@@ -16,6 +16,7 @@ from .executor_agents import AgentStepHandlerMixin
 from .executor_ai import AIHandlersMixin
 from .executor_approval import ApprovalHandlerMixin
 from .executor_arete import AreteToolsHandlerMixin
+from .executor_cost_audit import CostAuditHandlerMixin
 from .executor_error import ErrorHandlerMixin
 from .executor_integrations import IntegrationHandlersMixin
 from .executor_loop import LoopHandlerMixin
@@ -41,6 +42,7 @@ class WorkflowExecutor(
     LoopHandlerMixin,
     AreteToolsHandlerMixin,
     AgentStepHandlerMixin,
+    CostAuditHandlerMixin,
 ):
     """Executes workflows with contract validation and state persistence.
 
@@ -124,6 +126,8 @@ class WorkflowExecutor(
             # Agent handlers
             "autonomy": self._execute_autonomy,
             "handoff": self._execute_handoff,
+            # Cost audit (Effective-Tokens anomaly detector)
+            "cost_audit": self._execute_cost_audit,
         }
         self._context: dict = {}
         self._current_workflow_id: str | None = None

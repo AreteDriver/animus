@@ -108,6 +108,7 @@ class StepConfig:
         "approval",
         "autonomy",
         "handoff",
+        "cost_audit",
     ]
     params: dict = field(default_factory=dict)
     condition: ConditionConfig | None = None

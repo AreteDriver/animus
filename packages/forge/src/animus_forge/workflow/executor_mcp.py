@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from typing import Any
+
+from animus_forge.monitoring.mcp_tool_usage import record_mcp_tool_usage
 
 from .loader import StepConfig
 
@@ -71,16 +74,40 @@ class MCPHandlersMixin:
         server_url = server.url
         server_type = server.type
 
-        result = call_mcp_tool(
-            server_type=server_type,
-            server_url=server_url,
-            tool_name=tool_name,
-            arguments=arguments,
-            headers=headers,
-        )
+        start_ms = time.monotonic()
+        try:
+            result = call_mcp_tool(
+                server_type=server_type,
+                server_url=server_url,
+                tool_name=tool_name,
+                arguments=arguments,
+                headers=headers,
+            )
+        except Exception:
+            # Record the failed attempt so the pruner can see which tools
+            # are flaky as well as which go unused.
+            record_mcp_tool_usage(
+                workflow_id=getattr(self, "_current_workflow_id", "") or "",
+                step_id=step.id,
+                server=server.name,
+                tool=tool_name,
+                duration_ms=int((time.monotonic() - start_ms) * 1000),
+                is_error=True,
+            )
+            raise
 
+        duration_ms = int((time.monotonic() - start_ms) * 1000)
         content = result.get("content", "")
         is_error = result.get("is_error", False)
+
+        record_mcp_tool_usage(
+            workflow_id=getattr(self, "_current_workflow_id", "") or "",
+            step_id=step.id,
+            server=server.name,
+            tool=tool_name,
+            duration_ms=duration_ms,
+            is_error=is_error,
+        )
 
         if is_error:
             raise RuntimeError(
