@@ -1,0 +1,15 @@
+[Unit]
+Description=Animus Bounty Watcher — Anthropic HackerOne intel digest
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/projects/animus/packages/forge
+ExecStart=%h/projects/animus/packages/forge/.venv/bin/animus-forge run workflows/bounty-watcher.yaml --var state_dir=%h/.animus/bounty_intel
+StandardOutput=append:%h/.animus/bounty_intel/cron.log
+StandardError=append:%h/.animus/bounty_intel/cron.log
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target
