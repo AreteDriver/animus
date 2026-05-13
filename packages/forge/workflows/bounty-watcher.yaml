@@ -1,0 +1,239 @@
+# Bounty Watcher — daily intel pass on Anthropic HackerOne + Claude Code releases
+#
+# Purpose: surface new attack surface within 24hr of any change so focused recon
+# stays informed. Targets the Mac Studio bounty-funded ROI path.
+#
+# State: ~/.animus/bounty_intel/state.json (last seen release tag, prior stats)
+# Output: ~/.animus/bounty_intel/daily-YYYY-MM-DD.md
+# Log:    ~/.animus/bounty_intel/log.jsonl
+#
+# Run daily via cron (see scripts/install-bounty-watcher.sh in this dir) or:
+#   cd packages/forge && animus-forge run bounty-watcher
+
+name: bounty-watcher
+version: 1.0.0
+description: Daily intel digest of Anthropic HackerOne program changes + Claude Code releases
+tags: [bounty, intel, security, hackerone, claude-code]
+
+inputs:
+  state_dir:
+    type: string
+    description: Directory for state + output files
+    default: "/home/arete/.animus/bounty_intel"
+
+timeout_seconds: 180
+estimated_tokens: 1500
+
+steps:
+  - id: ensure_state_dir
+    type: shell
+    description: Ensure state directory exists with a baseline state file
+    command: |
+      mkdir -p "${state_dir}"
+      if [ ! -f "${state_dir}/state.json" ]; then
+        echo '{"last_release_tag":null,"last_stats":{},"last_run":null}' > "${state_dir}/state.json"
+      fi
+      mkdir -p "${state_dir}/raw"
+    timeout_seconds: 5
+
+  - id: fetch_claude_code_releases
+    type: shell
+    description: Pull latest releases for anthropics/claude-code
+    command: |
+      AUTH_HEADER=""
+      if [ -n "$GITHUB_TOKEN" ]; then
+        AUTH_HEADER="Authorization: Bearer $GITHUB_TOKEN"
+      fi
+      curl -sS -H "Accept: application/vnd.github+json" \
+        ${AUTH_HEADER:+-H "$AUTH_HEADER"} \
+        "https://api.github.com/repos/anthropics/claude-code/releases?per_page=10" \
+        -o "${state_dir}/raw/releases.json"
+      LATEST=$(python3 -c "import json; r=json.load(open('${state_dir}/raw/releases.json')); print(r[0]['tag_name'] if r else 'none')")
+      echo "Latest claude-code release: $LATEST"
+    timeout_seconds: 20
+    on_failure: skip
+
+  - id: fetch_program_stats
+    type: shell
+    description: |
+      Read HackerOne program stats from manual paste file. The HackerOne page is
+      JS-rendered so curl returns only the shell — see scripts/paste-h1-stats.sh
+      to refresh ${state_dir}/raw/h1-paste.txt by pasting the page content.
+    command: |
+      python3 - <<'PY'
+      import json
+      import re
+      from pathlib import Path
+
+      state_dir = Path("${state_dir}")
+      paste = state_dir / "raw" / "h1-paste.txt"
+      stats = {}
+      stats_source = "missing"
+      if paste.exists():
+          text = paste.read_text(errors="ignore")
+          patterns = {
+              "total_paid": r"Total bounties paid\s*\$([0-9,]+)",
+              "paid_90d": r"Bounties paid \| 90 days\s*\$([0-9,]+)",
+              "reports_90d": r"Reports received \| 90 days\s*([0-9,]+)",
+              "reports_resolved": r"Reports resolved\s*([0-9,]+)",
+              "hackers_thanked": r"Hackers thanked\s*([0-9,]+)",
+              "response_efficiency": r"Response efficiency:\s*([0-9]+)%",
+              "assets_in_scope": r"Assets In Scope\s*([0-9,]+)",
+          }
+          for key, pat in patterns.items():
+              m = re.search(pat, text)
+              if m:
+                  stats[key] = m.group(1).replace(",", "")
+          stats_source = "paste"
+      stats["_source"] = stats_source
+      (state_dir / "raw" / "stats.json").write_text(json.dumps(stats, indent=2))
+      print(f"Captured {len(stats) - 1} stat fields (source: {stats_source})")
+      PY
+    timeout_seconds: 10
+    on_failure: skip
+
+  - id: fetch_anthropic_news
+    type: shell
+    description: Pull last 5 entries from Anthropic news feed (for cross-correlation with releases)
+    command: |
+      curl -sS -A "animus-bounty-watcher/1.0" \
+        "https://www.anthropic.com/news" \
+        -o "${state_dir}/raw/anthropic_news.html" || true
+      python3 - <<'PY'
+      import re
+      from pathlib import Path
+
+      state_dir = Path("${state_dir}")
+      html = (state_dir / "raw" / "anthropic_news.html").read_text(errors="ignore")
+      titles = re.findall(r'<h[123][^>]*>([^<]{15,120})</h[123]>', html)[:8]
+      (state_dir / "raw" / "news_titles.txt").write_text("\n".join(titles))
+      for t in titles:
+          print(t.strip())
+      PY
+    timeout_seconds: 20
+    on_failure: skip
+
+  - id: compute_diff
+    type: shell
+    description: Diff current snapshots against last state, write diff.md
+    command: |
+      python3 - <<'PY'
+      import json
+      from datetime import datetime, timezone
+      from pathlib import Path
+
+      state_dir = Path("${state_dir}")
+      state = json.loads((state_dir / "state.json").read_text())
+      diff_lines = ["# Bounty Intel Diff — " + datetime.now(timezone.utc).strftime("%Y-%m-%d")]
+      diff_lines.append("")
+
+      # Releases
+      releases_path = state_dir / "raw" / "releases.json"
+      if releases_path.exists():
+          releases = json.loads(releases_path.read_text())
+          if releases:
+              latest = releases[0]
+              tag = latest.get("tag_name")
+              if tag and tag != state.get("last_release_tag"):
+                  diff_lines.append(f"## NEW claude-code release: {tag}")
+                  diff_lines.append(f"- Published: {latest.get('published_at')}")
+                  body = (latest.get("body") or "")[:1500]
+                  diff_lines.append(f"- Notes:\n\n```\n{body}\n```\n")
+                  state["last_release_tag"] = tag
+              else:
+                  diff_lines.append(f"## claude-code: no new release (last seen {tag})")
+          diff_lines.append("")
+
+      # Program stats
+      stats_path = state_dir / "raw" / "stats.json"
+      if stats_path.exists():
+          stats = json.loads(stats_path.read_text())
+          prior = state.get("last_stats", {})
+          diff_lines.append("## HackerOne program stats")
+          for k, v in stats.items():
+              prior_v = prior.get(k, "—")
+              marker = "" if str(prior_v) == str(v) else f"  ← was {prior_v}"
+              diff_lines.append(f"- {k}: {v}{marker}")
+          state["last_stats"] = stats
+          diff_lines.append("")
+
+      # News titles
+      titles_path = state_dir / "raw" / "news_titles.txt"
+      if titles_path.exists():
+          diff_lines.append("## Recent Anthropic news (top 8 titles)")
+          for line in titles_path.read_text().splitlines()[:8]:
+              diff_lines.append(f"- {line.strip()}")
+          diff_lines.append("")
+
+      state["last_run"] = datetime.now(timezone.utc).isoformat()
+      (state_dir / "state.json").write_text(json.dumps(state, indent=2))
+      (state_dir / "raw" / "diff.md").write_text("\n".join(diff_lines))
+      print("Diff written to raw/diff.md")
+      PY
+    timeout_seconds: 15
+
+  - id: synthesize_briefing
+    type: claude_code
+    description: Synthesize a focused intel briefing for ARETE's bounty recon
+    params:
+      role: analyst
+      prompt: |
+        Read the diff document below and produce a TIGHT intel briefing for ARETE
+        — a security researcher hunting bounties on Anthropic's HackerOne program,
+        with a focus on Claude Code permission-bypass classes and MCP Apps iframe
+        security.
+
+        Context — Anthropic's named in-scope Claude Code categories:
+        1. Permission-prompt bypass for command execution
+        2. Permission-prompt bypass for out-of-CWD file writes
+        3. Tool/parameter misrepresentation in permission prompts
+        4. Invisible execution
+        (Plus the newer MCP Apps surface: iframe sandbox + postMessage on claudemcpcontent.com)
+
+        Diff document:
+        ```
+        $(cat ${state_dir}/raw/diff.md)
+        ```
+
+        Output structure (markdown, under 400 words):
+        ## Headline
+        One line: most-important change since last run.
+
+        ## New attack surface
+        - Specific named items from the release notes or news that create a new
+          probe target for any of the 5 categories. Map each to a category if possible.
+
+        ## Stats trend
+        - Anything notable about volume, payout pace, or response efficiency
+          changes since last run. Skip if all flat.
+
+        ## Recon priority for the next 4-hour block
+        - One concrete probe to run, scoped to a single category, with the rationale.
+        - If diff is empty (nothing new), say so plainly and recommend continuing
+          opportunistic angle #3 from the bounty plan (no carved hours).
+
+        Be direct. No preamble. No hedging.
+      output_file: "${state_dir}/daily-{{date}}.md"
+    timeout_seconds: 90
+    on_failure: skip
+
+  - id: log_run
+    type: shell
+    description: Append run record to log.jsonl
+    command: |
+      python3 - <<'PY'
+      import json
+      from datetime import datetime, timezone
+      from pathlib import Path
+
+      state_dir = Path("${state_dir}")
+      log_path = state_dir / "log.jsonl"
+      record = {
+          "ts": datetime.now(timezone.utc).isoformat(),
+          "state": json.loads((state_dir / "state.json").read_text()),
+      }
+      with log_path.open("a") as f:
+          f.write(json.dumps(record) + "\n")
+      print(f"Logged run to {log_path}")
+      PY
+    timeout_seconds: 5
