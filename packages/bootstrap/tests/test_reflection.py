@@ -110,6 +110,60 @@ class TestReflectionCheck:
         learned = identity_mgr.read("LEARNED.md")
         assert "concise answers" in learned
 
+    def test_runs_with_memory_signal_no_feedback(self, identity_mgr):
+        """Reflection should proceed when memory has signal even without feedback.
+
+        Regression test for the original bug: reflection check fired
+        but bailed immediately when feedback was empty, never updating
+        LEARNED.md across 78 days of normal use.
+        """
+        # Empty feedback
+        feedback = MagicMock()
+        feedback.get_stats.return_value = {"total": 0}
+
+        # Mock memory with results
+        mock_memory = AsyncMock()
+        mock_memory.search.return_value = [
+            {"content": "User prefers terse phone-remote sessions during work shifts"},
+            {"content": "Phone-remote terminal pattern is now the default workflow"},
+        ]
+
+        mock_backend = AsyncMock()
+        mock_backend.generate_response.return_value = (
+            "- User's default workflow is phone-remote terminal during shifts\n"
+        )
+
+        set_reflection_deps(
+            identity_manager=identity_mgr,
+            feedback_store=feedback,
+            memory_manager=mock_memory,
+            cognitive_backend=mock_backend,
+        )
+
+        result = _run(_run_reflection())
+        assert result is not None
+        assert "1 new insights" in result
+
+        learned = identity_mgr.read("LEARNED.md")
+        assert "phone-remote" in learned
+
+    def test_skips_when_memory_signal_empty_too(self, identity_mgr):
+        """Reflection still bails when both feedback and memory are empty."""
+        feedback = MagicMock()
+        feedback.get_stats.return_value = {"total": 0}
+
+        mock_memory = AsyncMock()
+        mock_memory.search.return_value = []
+
+        set_reflection_deps(
+            identity_manager=identity_mgr,
+            feedback_store=feedback,
+            memory_manager=mock_memory,
+        )
+
+        result = _run(_run_reflection())
+        assert result is None
+
     def test_ai_reflection_fallback_on_error(self, identity_mgr, feedback_store):
         feedback_store.record("q1", "a1", -1, comment="bad")
         feedback_store.record("q2", "a2", 1)
