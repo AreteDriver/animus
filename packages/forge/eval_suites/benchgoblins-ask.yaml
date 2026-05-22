@@ -61,20 +61,21 @@ metrics:
 
   # --- Absence-match regression gates (RegexAbsenceMetric) ---
 
-  # Rationale string value must NOT contain "recommendations" anywhere
-  # within it. Catches the leak even when it's mid-rationale (not just at
-  # the start). The `(?:[^"\\]|\\.)*` pattern consumes escaped quotes
-  # inside the JSON string literal so `"{\"recommendations\"..."` is
-  # detected. `details.recommendations` as a top-level key is unaffected
-  # because this regex is anchored to the rationale key prefix.
+  # Rationale must NOT contain a leaked JSON key `\"recommendations\":`.
+  # Anchored to the escaped-quote key shape so it catches raw waiver-JSON
+  # leaking mid-rationale WITHOUT false-firing on the plain English word
+  # "recommendations" in ordinary prose. (2026-05-22: the prior bare-word
+  # match flagged 5 valid offseason-hedge responses as failures, eval run
+  # 6ea664d3; tightened to the escaped-key shape.) `details.recommendations`
+  # as a top-level key is unaffected — anchored to the rationale value.
   - type: regex_absence
-    pattern: '"rationale"\s*:\s*"(?:[^"\\]|\\.)*recommendations'
+    pattern: '"rationale"\s*:\s*"(?:[^"\\]|\\.)*\\"recommendations\\"\s*:'
     fail_fast: true
 
-  # Rationale string value must NOT contain "drop_candidates". Mirror of
-  # the recommendations leak for the parallel waiver-shape key.
+  # Rationale must NOT contain a leaked JSON key `\"drop_candidates\":`.
+  # Mirror of the recommendations leak gate, same escaped-key anchoring.
   - type: regex_absence
-    pattern: '"rationale"\s*:\s*"(?:[^"\\]|\\.)*drop_candidates'
+    pattern: '"rationale"\s*:\s*"(?:[^"\\]|\\.)*\\"drop_candidates\\"\s*:'
     fail_fast: true
 
   # Decision must NOT be the literal fallback string — the parser emits
