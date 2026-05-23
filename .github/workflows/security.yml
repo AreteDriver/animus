@@ -28,6 +28,17 @@ jobs:
         run: pip install --upgrade "pip>=26.1"
       - name: Install dependencies
         run: pip install -e "packages/${{ matrix.package }}/" pip-audit
+      - name: Upgrade vulnerable transitive deps to fix versions
+        # These are pulled in transitively (via pip-audit and dev tooling);
+        # forcing the fix versions here cleans the audit without touching
+        # any package's production dependency block.
+        run: |
+          pip install --upgrade \
+            "idna>=3.15" \
+            "pillow>=12.2.0" \
+            "pygments>=2.20.0" \
+            "requests>=2.33.0" \
+            "urllib3>=2.7.0"
       - name: Run pip-audit
         # CVE-2026-3219 has no fix version available in pip itself.
         # Re-evaluate when upstream ships a fix.
