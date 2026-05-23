@@ -1,6 +1,6 @@
 # Specification — Animus Agent Platform v0
 
-**Status:** v0.1.0 — 2026-05-23 (decisions locked)
+**Status:** v0.1.1 — 2026-05-23 (decisions locked; OQ4 skill-count patch applied — 135→127 per RE Task #1 inventory)
 **Mode:** /specification (decision committed; do not re-litigate)
 **Related:** [[project-animus-agent-platform]] (memory: `project_animus_agent_platform.md`)
 **Implementation start gate:** After Quorum v2 wk5 re-eval (per Resolved Decision RD7)
@@ -9,7 +9,7 @@
 
 ## 1. Summary
 
-`animus-agent run <task>` is a one-shot autonomous agent CLI that takes a single natural-language task, executes it via a free-form tool-use loop against a pure-local LLM (Qwen3-32B via Ollama), and emits a structured JSON receipt. It ships as a submodule inside Animus Forge (`packages/forge/src/animus_forge/agent/`), inherits Forge's Provider abstraction + BudgetManager + audit log, and wraps `smolagents.CodeAgent` with a Claude-Code-pattern skill registry (loading all 135 skills from `~/.claude/skills/`) and a pre/post-tool-use hook gate system. It exists to baseline a pure-local agent's task-success rate, cost/throughput envelope, and 30-project fleet autonomy against Claude Code — the resulting eval suite lands in `arete-evals`.
+`animus-agent run <task>` is a one-shot autonomous agent CLI that takes a single natural-language task, executes it via a free-form tool-use loop against a pure-local LLM (Qwen3-32B via Ollama), and emits a structured JSON receipt. It ships as a submodule inside Animus Forge (`packages/forge/src/animus_forge/agent/`), inherits Forge's Provider abstraction + BudgetManager + audit log, and wraps `smolagents.CodeAgent` with a Claude-Code-pattern skill registry (loading all 127 skills from `~/.claude/skills/`, snapshot 2026-05-23) and a pre/post-tool-use hook gate system. It exists to baseline a pure-local agent's task-success rate, cost/throughput envelope, and 30-project fleet autonomy against Claude Code — the resulting eval suite lands in `arete-evals`.
 
 ---
 
@@ -22,7 +22,7 @@
 3. Route every LLM call through Forge's `BudgetManager`. For local Ollama calls, BudgetManager records `usd_cost = 0.0` and persists `tokens_in`, `tokens_out`, `wall_seconds`, and (when available via OS sensor) `watt_hours` in dedicated compute-metric columns alongside the existing USD column. Every call appears in the same audit log used by other Forge workflows.
 4. Use Ollama as the LLM runtime, calling `qwen3:32b` by default; model overridable via `--model` and `FORGE_AGENT_MODEL` env (precedence: CLI > env > config > default).
 5. Expose exactly 5 starter tools to the agent: `ReadFile`, `WriteFile`, `EditFile`, `Bash`, `Grep` (interfaces in §4.2–§4.6).
-6. Implement a Skill Registry that loads all skills from `~/.claude/skills/` at agent startup and resolves them by name. The registry is **independent** of Animus's existing YAML skill resolver — v0 reads Claude Code skill format (markdown + YAML frontmatter) only. Registry MUST load all 135 currently-installed skills without raising.
+6. Implement a Skill Registry that loads all skills from `~/.claude/skills/` at agent startup and resolves them by name. The registry is **independent** of Animus's existing YAML skill resolver — v0 reads Claude Code skill format (markdown + YAML frontmatter) only. Registry MUST load all currently-installed skills without raising — floor of 127 (snapshot 2026-05-23; floor MAY be re-asserted upward at v0 implementation kickoff against then-current `~/.claude/skills/` count).
 7. Implement Hook Gates with 4 lifecycle events: `agent_start`, `pre_tool_use`, `post_tool_use`, `agent_end`. Hooks loaded from `~/.config/animus/agent/hooks.d/*.py`; a `pre_tool_use` returning `Deny(reason)` MUST abort the tool call and feed the denial back into agent context.
 8. Emit a JSON receipt (schema §4.9) to stdout on completion. When `--receipt <path>` is set, ALSO write to that path.
 9. Return exit code 0 only on `success`. Non-success exit codes: 1 = max_turns, 2 = budget_exceeded, 3 = wall_time_exceeded, 4 = tool_error, 5 = agent_quit, 6 = internal_error.
@@ -59,7 +59,7 @@
 | C1 | Python 3.12 (Forge requirement) | `python --version` ≥ 3.12; CI matrix pins 3.12 |
 | C2 | New dep: `smolagents >= 1.0` | `pip show smolagents` succeeds; `import smolagents` succeeds in forge venv |
 | C3 | New dep: `ollama` client in Forge deps | `import ollama` succeeds in forge venv |
-| C4 | Skill loader loads all installed skills | `tests/agent/test_skill_registry.py::test_loads_all_installed_skills` asserts `len(registry.list()) >= 135` |
+| C4 | Skill loader loads all installed skills | `tests/agent/test_skill_registry.py::test_loads_all_installed_skills` asserts `len(registry.list()) >= 127` (snapshot floor; raise at v0 implementation if `~/.claude/skills/` has grown) |
 | C5 | Test coverage ≥ 95% (Forge package gate) | `pytest --cov=src/animus_forge/agent tests/agent/ --cov-fail-under=95` passes |
 | C6 | Lint clean | `ruff check packages/forge/src/animus_forge/agent/ packages/forge/tests/agent/` exits 0 |
 | C7 | Format clean | `ruff format --check` on same paths exits 0 |
@@ -208,7 +208,7 @@ Every criterion maps to a pytest test, a benchmark, or an arete-evals artifact.
 
 1. **A1 — CLI exists and runs:** `animus-agent run "echo hello world"` exits 0 within 60 s on default rig with Ollama + Qwen3-32B installed. Verified by `tests/agent/test_e2e_hello.py`.
 2. **A2 — Receipt schema valid:** Receipt validates against §4.9 schema. Verified by `tests/agent/test_receipt_schema.py` using `jsonschema`.
-3. **A3 — Skill loader covers all installed:** `len(registry.list()) >= 135` against current `~/.claude/skills/`. Verified by `tests/agent/test_skill_registry.py::test_loads_all_installed_skills`.
+3. **A3 — Skill loader covers all installed:** `len(registry.list()) >= 127` against current `~/.claude/skills/` (snapshot floor, 2026-05-23). Verified by `tests/agent/test_skill_registry.py::test_loads_all_installed_skills`.
 4. **A4 — All 5 tools functionally complete:** Each tool has `test_<tool>_happy_path.py` + `test_<tool>_path_escape_denied.py` + `test_<tool>_<specific_error>.py`. All pass.
 5. **A5 — User hook gate denies tool call:** Fixture hook in `tests/agent/fixtures/hooks/deny_bash.py` returns `Deny("test")` on `pre_tool_use` for `Bash`; agent loop continues and receipt records denial. Verified by `tests/agent/test_hook_deny.py`.
 6. **A6 — BudgetManager integration with compute metrics:** Every LLM call appears in audit log with non-null `tokens_in`, `tokens_out`, `wall_seconds`. Verified by `tests/agent/test_budget_integration.py` asserting count + field non-null.
