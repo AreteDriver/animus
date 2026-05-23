@@ -24,7 +24,11 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+      - name: Upgrade pip (fixes CVE-2026-6357)
+        run: pip install --upgrade "pip>=26.1"
       - name: Install dependencies
         run: pip install -e "packages/${{ matrix.package }}/" pip-audit
       - name: Run pip-audit
-        run: pip-audit
+        # CVE-2026-3219 has no fix version available in pip itself.
+        # Re-evaluate when upstream ships a fix.
+        run: pip-audit --ignore-vuln CVE-2026-3219
