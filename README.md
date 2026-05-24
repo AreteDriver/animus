@@ -18,7 +18,7 @@ Four independently-installable packages. 13,700+ tests. Proactive engine with 6 
 
 ## The Architecture
 
-Three-layer stack. Each layer solves exactly one problem and is independently useful.
+Four-layer stack. Each layer solves exactly one problem and is independently useful.
 
 ```
 ┌─────────────────────────────────────────┐
