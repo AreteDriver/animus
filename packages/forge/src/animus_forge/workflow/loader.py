@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 import yaml
 
@@ -120,9 +120,39 @@ class StepConfig:
     default_output: dict = field(default_factory=dict)  # For continue_with_default mode
     circuit_breaker_key: str | None = None  # Key for circuit breaker tracking
 
+    # Top-level keys recognized by from_dict. Any other key in the
+    # YAML step block is treated as a step-handler param and merged
+    # into ``params`` (issue #37 — fleet-*.yaml workflows had been
+    # silently dropping ``model:`` and ``prompt:`` fields).
+    _RECOGNIZED_TOP_LEVEL: ClassVar[frozenset[str]] = frozenset(
+        {
+            "id",
+            "type",
+            "params",
+            "condition",
+            "on_failure",
+            "max_retries",
+            "timeout_seconds",
+            "outputs",
+            "depends_on",
+            "fallback",
+            "default_output",
+            "circuit_breaker_key",
+            "description",  # Documentation field, ignored by executor
+        }
+    )
+
     @classmethod
     def from_dict(cls, data: dict) -> StepConfig:
-        """Create StepConfig from dictionary."""
+        """Create StepConfig from dictionary.
+
+        Unknown top-level keys are normalized into ``params`` rather
+        than dropped silently. Explicit ``params:`` entries take
+        precedence — if a user writes both ``prompt: A`` at top
+        level and ``params: {prompt: B}``, B wins.
+
+        See issue #37 for the silent-drop bug this fixes.
+        """
         condition = None
         if "condition" in data:
             cond_data = data["condition"]
@@ -142,10 +172,37 @@ class StepConfig:
         if "fallback" in data:
             fallback = FallbackConfig.from_dict(data["fallback"])
 
+        # Normalize unknown top-level keys into params. Explicit
+        # ``params:`` wins over top-level for the same key.
+        explicit_params = data.get("params", {})
+        promoted: dict = {}
+        for key, value in data.items():
+            if key in cls._RECOGNIZED_TOP_LEVEL:
+                continue
+            if key in explicit_params:
+                # Explicit nested wins; warn so the duplication is
+                # auditable.
+                logger.warning(
+                    "Step %r: top-level key %r overridden by params.%s",
+                    data.get("id", "<unnamed>"),
+                    key,
+                    key,
+                )
+                continue
+            promoted[key] = value
+        if promoted:
+            logger.debug(
+                "Step %r: promoted %d top-level key(s) into params: %s",
+                data.get("id", "<unnamed>"),
+                len(promoted),
+                sorted(promoted.keys()),
+            )
+        merged_params = {**promoted, **explicit_params}
+
         return cls(
             id=data["id"],
             type=data["type"],
-            params=data.get("params", {}),
+            params=merged_params,
             condition=condition,
             on_failure=data.get("on_failure", "abort"),
             max_retries=data.get("max_retries", 3),

@@ -85,6 +85,100 @@ class TestStepConfigFromDict:
         assert step.timeout_seconds == 600
 
 
+class TestStepConfigTopLevelPromotion:
+    """Issue #37: top-level fields used to be silently dropped.
+    Now they're promoted into params unless they're recognized
+    StepConfig fields."""
+
+    def test_top_level_model_and_prompt_promoted(self):
+        # Exact pattern from fleet-degraded.yaml + siblings
+        step = StepConfig.from_dict(
+            {
+                "id": "assess",
+                "type": "ollama",
+                "description": "Assess severity and recommend action",
+                "model": "qwen2.5:14b",
+                "prompt": "A fleet service is degraded...",
+            }
+        )
+        assert step.params["model"] == "qwen2.5:14b"
+        assert step.params["prompt"] == "A fleet service is degraded..."
+        assert step.id == "assess"
+        assert step.type == "ollama"
+
+    def test_explicit_params_take_precedence_over_top_level(self):
+        # If a user writes both, explicit nested wins
+        step = StepConfig.from_dict(
+            {
+                "id": "s1",
+                "type": "ollama",
+                "model": "TOP-LEVEL-LOSES",
+                "params": {"model": "PARAMS-WIN"},
+            }
+        )
+        assert step.params["model"] == "PARAMS-WIN"
+
+    def test_recognized_top_level_keys_not_promoted(self):
+        # depends_on, on_failure, etc. must NOT end up in params
+        step = StepConfig.from_dict(
+            {
+                "id": "s1",
+                "type": "shell",
+                "depends_on": ["other"],
+                "on_failure": "skip",
+                "outputs": ["x"],
+                "max_retries": 7,
+                "command": "echo hi",  # Promoted
+            }
+        )
+        assert "depends_on" not in step.params
+        assert "on_failure" not in step.params
+        assert "outputs" not in step.params
+        assert "max_retries" not in step.params
+        assert step.params["command"] == "echo hi"
+
+    def test_description_at_top_level_not_promoted(self):
+        # description is a documentation field, ignored by executor.
+        # Should not pollute params.
+        step = StepConfig.from_dict(
+            {
+                "id": "s1",
+                "type": "ollama",
+                "description": "Just a comment",
+                "prompt": "hi",
+            }
+        )
+        assert "description" not in step.params
+        assert step.params["prompt"] == "hi"
+
+    def test_promotion_preserves_other_top_level_unrecognized(self):
+        # Multiple unknown keys all merge into params
+        step = StepConfig.from_dict(
+            {
+                "id": "s1",
+                "type": "custom",
+                "foo": 1,
+                "bar": "two",
+                "baz": [3],
+            }
+        )
+        assert step.params == {"foo": 1, "bar": "two", "baz": [3]}
+
+    def test_no_promotion_when_only_recognized_keys(self):
+        # Backward-compat: legacy workflows that only use known
+        # top-level keys + nested params behave exactly as before
+        step = StepConfig.from_dict(
+            {
+                "id": "s1",
+                "type": "shell",
+                "params": {"command": "ls"},
+                "outputs": ["files"],
+            }
+        )
+        assert step.params == {"command": "ls"}
+        assert step.outputs == ["files"]
+
+
 class TestConditionConfig:
     def test_equals(self):
         cond = ConditionConfig(field="status", operator="equals", value="success")

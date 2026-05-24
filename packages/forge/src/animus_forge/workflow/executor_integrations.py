@@ -9,7 +9,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import subprocess
+import tempfile
 from datetime import UTC
+from pathlib import Path
 
 from .loader import StepConfig
 
@@ -24,6 +26,24 @@ class IntegrationHandlersMixin:
     - _context: dict
     - fallback_callbacks: dict
     """
+
+    def _get_var_dir(self, step: StepConfig) -> Path:
+        """Per-execution temp directory for ${name.file} payloads.
+
+        Lazily created on first shell-step substitution. Reused
+        across all shell steps in the same executor instance so
+        downstream steps can find the files written upstream.
+        Survives the workflow run for debugging; cleanup is the
+        caller's responsibility (typically not needed since temp
+        files are short-lived OS-managed paths).
+        """
+        existing = getattr(self, "_shell_var_dir", None)
+        if existing is not None:
+            return existing
+        prefix = f"forge-vars-{step.id or 'workflow'}-"
+        var_dir = Path(tempfile.mkdtemp(prefix=prefix))
+        self._shell_var_dir = var_dir  # type: ignore[attr-defined]
+        return var_dir
 
     def _execute_shell(self, step: StepConfig, context: dict) -> dict:
         """Execute a shell command step with resource limits.
@@ -63,9 +83,16 @@ class IntegrationHandlersMixin:
         allow_dangerous = step.params.get("allow_dangerous", False)
         validate_shell_command(command, allow_dangerous=allow_dangerous)
 
-        # Safely substitute context variables with shell escaping
+        # Safely substitute context variables with shell escaping.
+        # ``var_dir`` enables ${name.file} substitution (issue #38)
+        # by writing values to disk and substituting paths instead
+        # of inline strings — required for multi-KB LLM outputs that
+        # would otherwise break shell parsing on heredocs/quotes.
         escape_variables = step.params.get("escape_variables", True)
-        command = substitute_shell_variables(command, context, escape=escape_variables)
+        var_dir = self._get_var_dir(step)
+        command = substitute_shell_variables(
+            command, context, escape=escape_variables, var_dir=var_dir
+        )
 
         # Determine timeout: use step timeout if set, otherwise use global setting
         timeout = step.timeout_seconds or settings.shell_timeout_seconds
