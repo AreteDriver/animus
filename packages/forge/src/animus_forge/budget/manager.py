@@ -26,13 +26,93 @@ class BudgetStatus(Enum):
 
 @dataclass
 class UsageRecord:
-    """Record of token usage."""
+    """Record of token usage.
+
+    ``tokens`` is the rolled-up total (kept for back-compat). When the
+    underlying provider returns a breakdown, ``input_tokens`` /
+    ``output_tokens`` / ``cache_read_tokens`` carry it so we can score
+    workflows with the *Effective Tokens* cost metric (see ``effective_tokens``).
+    Breakdown fields default to 0 when the caller doesn't supply them.
+    """
 
     agent_id: str
     tokens: int
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     operation: str = ""
     metadata: dict = field(default_factory=dict)
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_read_tokens: int = 0
+    model: str | None = None
+
+
+# Effective-Tokens weighting — input/cache/output have very different costs.
+# GitHub's "Improving token efficiency in agentic workflows" (2026-05) reports
+# the same weighting under the name ET = m × (1.0·I + 0.1·C + 4.0·O).
+ET_INPUT_WEIGHT = 1.0
+ET_CACHE_READ_WEIGHT = 0.1
+ET_OUTPUT_WEIGHT = 4.0
+
+
+# Default model-tier multipliers (m), normalised so Sonnet = 1.0. Reflect
+# Anthropic's published price ratios — Haiku is the cheap tier, Opus the
+# expensive one. Override via ``BudgetConfig.model_multipliers``; unknown
+# models fall back to 1.0 (Sonnet-equivalent).
+DEFAULT_MODEL_MULTIPLIERS: dict[str, float] = {
+    "haiku": 0.08,
+    "claude-haiku": 0.08,
+    "claude-haiku-4-5": 0.08,
+    "sonnet": 1.0,
+    "claude-sonnet": 1.0,
+    "claude-sonnet-4-6": 1.0,
+    "opus": 5.0,
+    "claude-opus": 5.0,
+    "claude-opus-4-7": 5.0,
+    "gpt-4o-mini": 0.05,
+    "gpt-4o": 0.5,
+    "gpt-5": 0.7,
+    "ollama": 0.0,  # local — no $ cost (compute is the cost, not tokens)
+}
+
+
+def _resolve_model_multiplier(
+    model: str | None,
+    table: dict[str, float] | None,
+) -> float:
+    """Look up a model's tier multiplier, with a substring fallback for
+    versioned ids (e.g. "claude-sonnet-4-6-1m" → "claude-sonnet")."""
+    if not model:
+        return 1.0
+    table = table if table is not None else DEFAULT_MODEL_MULTIPLIERS
+    m = model.lower()
+    if m in table:
+        return table[m]
+    for key, val in table.items():
+        if key in m:
+            return val
+    return 1.0
+
+
+def effective_tokens(
+    record: UsageRecord,
+    model_multipliers: dict[str, float] | None = None,
+) -> float:
+    """The cost-weighted Effective-Tokens value for one usage record.
+
+    ``ET = m × (1.0·I + 0.1·C + 4.0·O)``. When the record carries no
+    breakdown (legacy callers that only pass ``tokens``), we conservatively
+    treat the whole total as output-equivalent so a budget tracked in
+    raw-token terms doesn't undercount the most expensive part of the call.
+    """
+    m = _resolve_model_multiplier(record.model, model_multipliers)
+    if record.input_tokens or record.output_tokens or record.cache_read_tokens:
+        return m * (
+            ET_INPUT_WEIGHT * record.input_tokens
+            + ET_CACHE_READ_WEIGHT * record.cache_read_tokens
+            + ET_OUTPUT_WEIGHT * record.output_tokens
+        )
+    # No breakdown — treat the rolled-up total as output (worst case).
+    return m * ET_OUTPUT_WEIGHT * record.tokens
 
 
 @dataclass
@@ -46,6 +126,7 @@ class BudgetConfig:
     per_step_limit: int | None = None
     reserve_tokens: int = 5000  # Reserved for retries/overhead
     daily_token_limit: int = 0  # 0 = disabled
+    model_multipliers: dict[str, float] | None = None  # None → DEFAULT_MODEL_MULTIPLIERS
 
 
 class BudgetManager:
@@ -199,26 +280,46 @@ class BudgetManager:
     def record_usage(
         self,
         agent_id: str,
-        tokens: int,
+        tokens: int = 0,
         operation: str = "",
         metadata: dict = None,
+        *,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        cache_read_tokens: int = 0,
+        model: str | None = None,
     ) -> UsageRecord:
         """Record actual token usage.
 
         Args:
-            agent_id: Agent identifier
-            tokens: Tokens consumed
-            operation: Operation description
-            metadata: Additional metadata
+            agent_id: Agent identifier.
+            tokens: Rolled-up total. If 0 *and* a breakdown is supplied below,
+                the breakdown sum is used.
+            operation: Operation description.
+            metadata: Additional metadata.
+            input_tokens / output_tokens / cache_read_tokens: optional
+                per-direction breakdown. When supplied, lets ``effective_tokens``
+                / ``total_effective_tokens`` compute a cost-weighted score —
+                cache reads count ~0.1× input, output ~4× input.
+            model: optional model id (e.g. ``"claude-sonnet-4-6"``); used to
+                pick a tier multiplier for Effective-Tokens.
 
         Returns:
-            Usage record
+            Usage record.
         """
+        # If only the breakdown is supplied, derive the rolled-up total.
+        if tokens == 0 and (input_tokens or output_tokens or cache_read_tokens):
+            tokens = input_tokens + output_tokens + cache_read_tokens
+
         record = UsageRecord(
             agent_id=agent_id,
             tokens=tokens,
             operation=operation,
             metadata=metadata or {},
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cache_read_tokens=cache_read_tokens,
+            model=model,
         )
 
         self._usage_history.append(record)
@@ -270,6 +371,24 @@ class BudgetManager:
             return None
         used = self._agent_usage.get(agent_id, 0)
         return max(0, self.config.per_agent_limit - used)
+
+    def total_effective_tokens(self) -> float:
+        """Sum the Effective-Tokens score across the in-memory usage history.
+
+        Useful for comparing workflows on a single cost axis across model
+        tiers and input/cache/output mix — see ``effective_tokens``.
+        """
+        weights = self.config.model_multipliers
+        return sum(effective_tokens(r, weights) for r in self._usage_history)
+
+    def effective_tokens_by_agent(self) -> dict[str, float]:
+        """Effective-Tokens score grouped by ``agent_id`` (one entry per
+        agent observed in the in-memory history)."""
+        weights = self.config.model_multipliers
+        out: dict[str, float] = {}
+        for r in self._usage_history:
+            out[r.agent_id] = out.get(r.agent_id, 0.0) + effective_tokens(r, weights)
+        return out
 
     def get_usage_history(
         self,
