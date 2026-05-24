@@ -21,6 +21,7 @@ from convergent.intent import (
 )
 
 if TYPE_CHECKING:
+    from convergent.event_log import EventLog
     from convergent.semantic import SemanticMatcher, TrajectoryPrediction
 
 logger = logging.getLogger(__name__)
@@ -41,10 +42,18 @@ class GraphBackend(Protocol):
 
 class PythonGraphBackend:
     """Pure Python intent graph for development and testing.
-    Production should use the Rust-backed IntentGraph."""
+    Production should use the Rust-backed IntentGraph.
 
-    def __init__(self) -> None:
+    Args:
+        event_log: Optional EventLog. When supplied, every
+            published intent emits an INTENT_PUBLISHED event with
+            ``correlation_id = intent.id``. Closes the P3
+            (Transparency) gap on intent creation.
+    """
+
+    def __init__(self, event_log: EventLog | None = None) -> None:
         self._intents: list[Intent] = []
+        self._event_log = event_log
 
     def publish(self, intent: Intent) -> float:
         """Publish intent and return computed stability."""
@@ -54,6 +63,19 @@ class PythonGraphBackend:
             f"Published intent '{intent.intent}' from {intent.agent_id} "
             f"(stability: {stability:.2f})"
         )
+        if self._event_log is not None:
+            from convergent.event_log import EventType
+
+            self._event_log.record(
+                EventType.INTENT_PUBLISHED,
+                agent_id=intent.agent_id,
+                payload={
+                    "intent_id": intent.id,
+                    "intent": intent.intent,
+                    "stability": stability,
+                },
+                correlation_id=intent.id,
+            )
         return stability
 
     def query_all(self, min_stability: float | None = None) -> list[Intent]:

@@ -15,6 +15,9 @@ class MemoryBackend(Protocol):
     async def search(self, query: str, memory_type: str = "all", limit: int = 5) -> list[dict]:
         """Search memories by query text."""
 
+    async def get_by_id(self, memory_id: str) -> dict | None:
+        """Fetch a single memory by ID. Returns None if not found."""
+
     async def delete(self, memory_id: str) -> bool:
         """Delete a memory by ID."""
 

@@ -10,7 +10,7 @@
 
 Animus coordinates AI agents across complex workflows — with the operational discipline of a manufacturing line. Every agent has a token budget. Every workflow has a cost ceiling. If a pipeline fails at step 4 of 6, it restarts at step 4, not step 1. Inspired by the Toyota Production System: make cost visible, make waste impossible to ignore.
 
-Four independently-installable packages. 13,700+ tests. Zero vendor lock-in (Claude, OpenAI, Ollama).
+Four independently-installable packages. 13,700+ tests. Proactive engine with 6 self-healing checks and an autonomous improvement loop verified end-to-end against local inference.
 
 **[Architecture](docs/ARCHITECTURE.md)** | **[Roadmap](docs/ROADMAP.md)** | **[Whitepaper](docs/whitepaper.pdf)**
 

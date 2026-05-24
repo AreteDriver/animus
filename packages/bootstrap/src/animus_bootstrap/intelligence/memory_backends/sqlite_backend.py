@@ -88,6 +88,10 @@ class SQLiteMemoryBackend:
         """Search memories via FTS5, ranked by BM25 relevance."""
         return await asyncio.to_thread(self._search_sync, query, memory_type, limit)
 
+    async def get_by_id(self, memory_id: str) -> dict | None:
+        """Fetch a single memory by ID. Returns None if not found."""
+        return await asyncio.to_thread(self._get_by_id_sync, memory_id)
+
     async def delete(self, memory_id: str) -> bool:
         """Delete a memory by ID."""
         return await asyncio.to_thread(self._delete_sync, memory_id)
@@ -177,6 +181,15 @@ class SQLiteMemoryBackend:
                 )
 
         return [self._row_to_dict(row) for row in cur.fetchall()]
+
+    def _get_by_id_sync(self, memory_id: str) -> dict | None:
+        cur = self._conn.cursor()
+        cur.execute(
+            "SELECT id, type, content, metadata, created_at, updated_at FROM memories WHERE id = ?",
+            (memory_id,),
+        )
+        row = cur.fetchone()
+        return self._row_to_dict(row) if row else None
 
     def _delete_sync(self, memory_id: str) -> bool:
         cur = self._conn.cursor()

@@ -109,6 +109,32 @@ class ChromaDBMemoryBackend:
         results.sort(key=lambda r: r.get("distance", float("inf")))
         return results[:limit]
 
+    async def get_by_id(self, memory_id: str) -> dict | None:
+        """Fetch a single memory by ID across all collections."""
+        for memory_type, collection in self._collections.items():
+
+            def _get(c=collection):
+                try:
+                    return c.get(ids=[memory_id])
+                except (ValueError, RuntimeError):
+                    return None
+
+            result = await asyncio.to_thread(_get)
+            if not result:
+                continue
+            ids = result.get("ids", []) or []
+            if not ids:
+                continue
+            docs = result.get("documents", []) or []
+            metas = result.get("metadatas", []) or []
+            return {
+                "id": memory_id,
+                "type": memory_type,
+                "content": docs[0] if docs else "",
+                "metadata": metas[0] if metas else {},
+            }
+        return None
+
     async def delete(self, memory_id: str) -> bool:
         """Delete a memory by ID from all collections."""
         deleted = False
