@@ -175,7 +175,9 @@ class TestIntelligentRouter:
 
         memory.recall.assert_awaited_once()
         call = memory.recall.call_args
-        assert call.args == ("hello",) or call.kwargs.get("query") == "hello" or "hello" in call.args
+        assert (
+            call.args == ("hello",) or call.kwargs.get("query") == "hello" or "hello" in call.args
+        )
         assert call.kwargs.get("context_hint", "").startswith("gateway:")
         call_kwargs = cognitive.generate_response.call_args
         system = call_kwargs.kwargs["system_prompt"]

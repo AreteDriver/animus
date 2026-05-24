@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from convergent.coordination_config import CoordinationConfig
 from convergent.protocol import (
@@ -26,6 +27,9 @@ from convergent.protocol import (
 )
 from convergent.scoring import PhiScorer
 
+if TYPE_CHECKING:
+    from convergent.event_log import EventLog
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,6 +39,10 @@ class Triumvirate:
     Args:
         scorer: PhiScorer for weighting votes by agent trust.
         config: Coordination configuration.
+        store: Optional ScoreStore for decision persistence.
+        event_log: Optional EventLog. When supplied, ``submit_vote``
+            emits VOTE_CAST and ``evaluate`` emits DECISION_MADE
+            events with ``correlation_id = request_id``.
     """
 
     def __init__(
@@ -42,10 +50,12 @@ class Triumvirate:
         scorer: PhiScorer,
         config: CoordinationConfig,
         store: object | None = None,
+        event_log: EventLog | None = None,
     ) -> None:
         self._scorer = scorer
         self._config = config
         self._store = store  # Optional ScoreStore for decision persistence
+        self._event_log = event_log
         self._requests: dict[str, ConsensusRequest] = {}
         self._votes: dict[str, list[Vote]] = {}
         self._decisions: dict[str, Decision] = {}
@@ -110,6 +120,19 @@ class Triumvirate:
             vote.choice.value,
             weighted_vote.weighted_score,
         )
+        if self._event_log is not None:
+            from convergent.event_log import EventType
+
+            self._event_log.record(
+                EventType.VOTE_CAST,
+                agent_id=vote.agent.agent_id,
+                payload={
+                    "request_id": request_id,
+                    "choice": vote.choice.value,
+                    "weight": weighted_vote.weighted_score,
+                },
+                correlation_id=request_id,
+            )
 
     def evaluate(self, request_id: str) -> Decision:
         """Evaluate votes and produce a decision for a consensus request.
@@ -208,16 +231,33 @@ class Triumvirate:
         return [d for d in self._decisions.values() if d.request.task_id == task_id]
 
     def _persist_decision(self, decision: Decision) -> None:
-        """Persist a decision to the score store (graceful degradation)."""
-        if self._store is None:
-            return
-        try:
-            self._store.record_decision(decision)  # type: ignore[attr-defined]
-        except Exception:
-            logger.warning(
-                "Failed to persist decision %s",
-                decision.request.request_id,
-                exc_info=True,
+        """Persist a decision to the score store (graceful
+        degradation). Also emits a DECISION_MADE event when an
+        EventLog is wired."""
+        if self._store is not None:
+            try:
+                self._store.record_decision(  # type: ignore[attr-defined]
+                    decision
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to persist decision %s",
+                    decision.request.request_id,
+                    exc_info=True,
+                )
+        if self._event_log is not None:
+            from convergent.event_log import EventType
+
+            self._event_log.record(
+                EventType.DECISION_MADE,
+                agent_id="triumvirate",
+                payload={
+                    "request_id": decision.request.request_id,
+                    "task_id": decision.request.task_id,
+                    "outcome": decision.outcome.value,
+                    "vote_count": len(decision.votes),
+                },
+                correlation_id=decision.request.request_id,
             )
 
     @staticmethod

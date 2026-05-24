@@ -124,6 +124,13 @@ jobs:
 
       - name: Test with coverage
         working-directory: packages/forge
+        env:
+          # animus_forge.api_state imports the OpenAI client at
+          # module-load time; pytest collection fails without a key.
+          # Dummy values are sufficient — the suite does not make
+          # real network calls.
+          OPENAI_API_KEY: "sk-dummy-ci-no-network-calls"
+          ANTHROPIC_API_KEY: "sk-dummy-ci-no-network-calls"
         run: pytest tests/ -v --tb=short --cov=animus_forge --cov-report=term-missing
 
   test-bootstrap:

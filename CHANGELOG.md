@@ -5,6 +5,19 @@ All notable changes to the Animus monorepo will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added — Quorum v2 Week 1: EventLog bitemporal + signal bridge
+
+- **Bitemporal-lite on `CoordinationEvent`** — `valid_from` (world-time) and `recorded_at` (observation-time) fields ported from memboot's pattern. Backward-compatible: `timestamp` preserved as alias.
+- **Idempotent SQLite migration** — `EventLog._migrate()` adds the two columns and backfills both from `timestamp` on legacy databases; safe to re-run.
+- **`EventLog.query()` bitemporal range filters** — `valid_from_since` / `valid_from_until` for world-time windows; `since` / `until` continue to filter by observation-time.
+- **Signal bridge** — `EventLog(signal_bus=bus)` mirrors every recorded event onto the bus as `Signal(signal_type=f"event.{event_type.value}")`. Best-effort; failures swallowed so bus issues never break `record()`.
+- **4 of 5 mutation sites wired** to `EventLog.record()` — closes Constitutional Principle P3 (Transparency) on `INTENT_PUBLISHED` (resolver), `VOTE_CAST` (triumvirate), `DECISION_MADE` (triumvirate), `MARKER_LEFT` (stigmergy). `SCORE_UPDATED` and `INTENT_RESOLVED` defer to Week 3-4 scorer registry.
+- Quorum test count: 920 → 957 (+37 tests across 4 new test files).
+
+See `docs/specs/quorum_v2_week1_event_log_extension.md` and ADL-20260510-001.
+
 ## [2.2.0] - 2026-03-05
 
 ### Added
