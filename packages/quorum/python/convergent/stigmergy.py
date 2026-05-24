@@ -20,8 +20,12 @@ import math
 import sqlite3
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from convergent.protocol import StigmergyMarker
+
+if TYPE_CHECKING:
+    from convergent.event_log import EventLog
 
 logger = logging.getLogger(__name__)
 
@@ -56,10 +60,12 @@ class StigmergyField:
         db_path: str = ":memory:",
         evaporation_rate: float = 0.1,
         min_strength: float = 0.05,
+        event_log: EventLog | None = None,
     ) -> None:
         self._db_path = db_path
         self._evaporation_rate = evaporation_rate
         self._min_strength = min_strength
+        self._event_log = event_log
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
@@ -114,6 +120,21 @@ class StigmergyField:
             target,
             strength,
         )
+        if self._event_log is not None:
+            from convergent.event_log import EventType
+
+            self._event_log.record(
+                EventType.MARKER_LEFT,
+                agent_id=agent_id,
+                payload={
+                    "marker_id": marker_id,
+                    "marker_type": marker_type,
+                    "target": target,
+                    "strength": strength,
+                    "expires_at": expires_at,
+                },
+                correlation_id=target,
+            )
         return marker
 
     def get_markers(self, target: str) -> list[StigmergyMarker]:

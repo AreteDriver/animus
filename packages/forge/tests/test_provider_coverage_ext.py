@@ -174,6 +174,39 @@ class TestOllamaBuildRequest:
         assert "num_predict" not in payload["options"]
         assert "stop" not in payload["options"]
 
+    def test_with_tools(self):
+        from animus_forge.providers.ollama_provider import OllamaProvider
+
+        p = OllamaProvider(model="phi3")
+        tools = [{"type": "function", "function": {"name": "read_file", "parameters": {}}}]
+        req = _basic_request(tools=tools)
+        payload = p._build_request(req)
+        assert payload["tools"] == tools
+
+    def test_no_tools_omits_field(self):
+        from animus_forge.providers.ollama_provider import OllamaProvider
+
+        p = OllamaProvider(model="phi3")
+        req = _basic_request()
+        payload = p._build_request(req)
+        assert "tools" not in payload
+
+    def test_with_tool_choice(self):
+        from animus_forge.providers.ollama_provider import OllamaProvider
+
+        p = OllamaProvider(model="phi3")
+        req = _basic_request(tool_choice="auto")
+        payload = p._build_request(req)
+        assert payload["tool_choice"] == "auto"
+
+    def test_no_tool_choice_omits_field(self):
+        from animus_forge.providers.ollama_provider import OllamaProvider
+
+        p = OllamaProvider(model="phi3")
+        req = _basic_request()
+        payload = p._build_request(req)
+        assert "tool_choice" not in payload
+
 
 class TestOllamaComplete:
     def _make_provider(self):

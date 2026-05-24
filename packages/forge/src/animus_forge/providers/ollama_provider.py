@@ -29,6 +29,7 @@ except ImportError:
 # Ordered preference lists per tier — first available model wins
 DEFAULT_TIER_MODELS: dict[str, list[str]] = {
     "reasoning": [
+        "qwen3:32b",
         "deepseek-coder-v2",
         "qwen2.5:72b",
         "deepseek-r1:70b",
@@ -191,6 +192,9 @@ class OllamaProvider(Provider):
 
         if request.tools:
             payload["tools"] = request.tools
+
+        if request.tool_choice:
+            payload["tool_choice"] = request.tool_choice
 
         return payload
 
