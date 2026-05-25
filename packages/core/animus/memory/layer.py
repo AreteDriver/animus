@@ -223,6 +223,7 @@ class MemoryLayer:
         source: str | None = None,
         min_confidence: float = 0.0,
         limit: int = 10,
+        allowed_tiers: set[Sensitivity] | None = None,
     ) -> list[Memory]:
         """
         Retrieve relevant memories with optional filters.
@@ -234,11 +235,25 @@ class MemoryLayer:
             source: Optional filter by source
             min_confidence: Minimum confidence threshold
             limit: Maximum results
+            allowed_tiers: Disclosure tiers permitted for this caller. When
+                provided, results are filtered to memories whose
+                ``sensitivity`` is in the set. MCP-egress callers should pass
+                ``{Sensitivity.PUBLIC}``; local-CLI callers typically pass
+                ``{PUBLIC, PERSONAL, CONFIDENTIAL}``. ``None`` (default) skips
+                the filter — backward-compat for pre-Stage-2.B callers.
 
         Returns:
             List of relevant memories
         """
-        return self.store.search(query, memory_type, tags, source, min_confidence, limit)
+        return self.store.search(
+            query,
+            memory_type,
+            tags,
+            source,
+            min_confidence,
+            limit,
+            allowed_tiers=allowed_tiers,
+        )
 
     def recall_by_tags(self, tags: list[str], limit: int = 10) -> list[Memory]:
         """Retrieve memories that have all specified tags."""

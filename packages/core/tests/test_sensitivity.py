@@ -147,3 +147,72 @@ class TestMemoryLayerIntegration:
         for tier in Sensitivity:
             mem = layer.remember(content=f"tier={tier.value}", sensitivity=tier)
             assert mem.sensitivity is tier
+
+
+class TestAllowedTiersGate:
+    """Adversarial tests — recall(allowed_tiers=...) must enforce the tier gate."""
+
+    def _seed_all_tiers(self, tmp_path):
+        from animus.memory.layer import MemoryLayer
+
+        layer = MemoryLayer(data_dir=tmp_path, backend="local")
+        layer.remember(content="public fact about TRIM", sensitivity=Sensitivity.PUBLIC)
+        layer.remember(content="my own draft notes", sensitivity=Sensitivity.PERSONAL)
+        layer.remember(content="TIAID client kickoff", sensitivity=Sensitivity.CONFIDENTIAL)
+        layer.remember(content="sk-ant-fake-credential-stub", sensitivity=Sensitivity.SECRET)
+        return layer
+
+    def test_public_scope_only_sees_public(self, tmp_path):
+        layer = self._seed_all_tiers(tmp_path)
+        results = layer.recall(query="", allowed_tiers={Sensitivity.PUBLIC})
+        assert len(results) == 1
+        assert results[0].sensitivity is Sensitivity.PUBLIC
+        assert "TRIM" in results[0].content
+
+    def test_confidential_scope_invisible_to_public(self, tmp_path):
+        """The headline adversarial test — TIAID material cannot leak to MCP."""
+        layer = self._seed_all_tiers(tmp_path)
+        results = layer.recall(query="TIAID", allowed_tiers={Sensitivity.PUBLIC})
+        assert results == []
+
+    def test_secret_scope_invisible_to_public(self, tmp_path):
+        layer = self._seed_all_tiers(tmp_path)
+        results = layer.recall(query="credential", allowed_tiers={Sensitivity.PUBLIC})
+        assert results == []
+
+    def test_local_cli_scope_sees_three_tiers(self, tmp_path):
+        layer = self._seed_all_tiers(tmp_path)
+        results = layer.recall(
+            query="",
+            allowed_tiers={
+                Sensitivity.PUBLIC,
+                Sensitivity.PERSONAL,
+                Sensitivity.CONFIDENTIAL,
+            },
+            limit=100,
+        )
+        tiers = {r.sensitivity for r in results}
+        assert tiers == {
+            Sensitivity.PUBLIC,
+            Sensitivity.PERSONAL,
+            Sensitivity.CONFIDENTIAL,
+        }
+        # Secret is excluded — explicit opt-in required
+        assert Sensitivity.SECRET not in tiers
+
+    def test_no_filter_returns_all_backward_compat(self, tmp_path):
+        layer = self._seed_all_tiers(tmp_path)
+        results = layer.recall(query="", limit=100)
+        # No allowed_tiers → no filter → all 4 tiers visible
+        assert len(results) == 4
+
+    def test_empty_set_returns_nothing(self, tmp_path):
+        layer = self._seed_all_tiers(tmp_path)
+        results = layer.recall(query="", allowed_tiers=set(), limit=100)
+        assert results == []
+
+    def test_secret_explicit_opt_in(self, tmp_path):
+        layer = self._seed_all_tiers(tmp_path)
+        results = layer.recall(query="", allowed_tiers={Sensitivity.SECRET})
+        assert len(results) == 1
+        assert results[0].sensitivity is Sensitivity.SECRET
