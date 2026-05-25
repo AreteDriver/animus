@@ -16,6 +16,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from animus.logging import get_logger
+from animus.network import EgressDeniedError
 from animus.protocols.intelligence import IntelligenceProvider
 from animus.register import RegisterTranslator
 
@@ -429,8 +430,21 @@ class AnthropicModel(ModelInterface):
         logger.debug(f"AnthropicModel initialized with {config.model_name}")
 
     def _get_client(self) -> Any:
-        """Return a cached Anthropic client instance."""
+        """Return a cached Anthropic client instance.
+
+        Stage 3.C — refuses to construct the cloud client when ANIMUS_OFFLINE=1.
+        Egress to api.anthropic.com is the load-bearing cloud LLM exit and
+        the offline sentinel must block it at the point of first use.
+        """
         if self._client is None:
+            from animus.network import is_egress_allowed
+
+            if not is_egress_allowed("https://api.anthropic.com"):
+                raise EgressDeniedError(
+                    "ANIMUS_OFFLINE=1 — Anthropic cloud LLM blocked. "
+                    "Unset the env var or route through a local provider (Ollama)."
+                )
+
             import anthropic
 
             self._client = anthropic.Anthropic(api_key=self.config.api_key)
@@ -487,6 +501,9 @@ class AnthropicModel(ModelInterface):
         except ImportError:
             logger.error("anthropic package not installed")
             return "[Error: anthropic package not installed]"
+        except EgressDeniedError as e:
+            logger.warning(f"Egress blocked: {e}")
+            return f"[Egress blocked: {e}]"
         except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
             logger.error(f"Anthropic error: {e}")
             return f"[Error communicating with Anthropic: {e}]"
