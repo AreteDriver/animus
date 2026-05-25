@@ -88,9 +88,7 @@ class TestToolResult:
         assert r.error is None
 
     def test_tool_result_with_error(self):
-        r = ToolResult(
-            tool="Bash", status="error", output=None, wall_ms=0.5, error="exit 1"
-        )
+        r = ToolResult(tool="Bash", status="error", output=None, wall_ms=0.5, error="exit 1")
         assert r.error == "exit 1"
 
 
@@ -135,9 +133,7 @@ class TestAgentContext:
         assert ctx.metadata == {}
 
     def test_started_at_default_is_utc(self, tmp_path: Path):
-        ctx = AgentContext(
-            task="x", project_root=tmp_path, provider="llamacpp", model="m"
-        )
+        ctx = AgentContext(task="x", project_root=tmp_path, provider="llamacpp", model="m")
         assert ctx.started_at.tzinfo is UTC
 
     def test_metadata_is_per_instance(self, tmp_path: Path):
