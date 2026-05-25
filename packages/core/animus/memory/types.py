@@ -31,6 +31,22 @@ class MemorySource(Enum):
     LEARNED = "learned"  # Pattern detected over time
 
 
+class Sensitivity(Enum):
+    """Disclosure classification for a memory.
+
+    Used by the per-tier ChromaDB collection split (Stage 2.B) and the
+    MCP-egress scope gate. Stricter tiers require explicit opt-in via
+    ``MemoryLayer.recall(allowed_tiers=...)``.
+
+    Ordering (least → most sensitive): PUBLIC < PERSONAL < CONFIDENTIAL < SECRET.
+    """
+
+    PUBLIC = "public"  # Safe to surface anywhere — public refs, podcast facts
+    PERSONAL = "personal"  # Default for own-notes — emails, drafts, decisions
+    CONFIDENTIAL = "confidential"  # Client / legal / employer — TIAID notes, Toyota context
+    SECRET = "secret"  # Credentials, financial, anything that must never cross boundaries
+
+
 @dataclass
 class Memory:
     """A single memory entry with structured metadata."""
@@ -51,6 +67,8 @@ class Memory:
     parent_id: str | None = None  # previous version's memory ID
     change_summary: str | None = None  # what changed from parent
     provenance: str = "direct"  # "direct" | "sync" | "consolidation" | "import" | "mcp"
+    # Stage 2 hardening — disclosure tier (default PUBLIC for backward compat)
+    sensitivity: Sensitivity = Sensitivity.PUBLIC
 
     def to_dict(self) -> dict:
         return {
@@ -68,6 +86,7 @@ class Memory:
             "parent_id": self.parent_id,
             "change_summary": self.change_summary,
             "provenance": self.provenance,
+            "sensitivity": self.sensitivity.value,
         }
 
     @classmethod
@@ -87,6 +106,7 @@ class Memory:
             parent_id=data.get("parent_id"),
             change_summary=data.get("change_summary"),
             provenance=data.get("provenance", "direct"),
+            sensitivity=Sensitivity(data.get("sensitivity", Sensitivity.PUBLIC.value)),
         )
 
     @classmethod
@@ -103,6 +123,7 @@ class Memory:
         parent_id: str | None = None,
         change_summary: str | None = None,
         provenance: str = "direct",
+        sensitivity: Sensitivity = Sensitivity.PUBLIC,
     ) -> Memory:
         """Factory method to create a Memory with auto-generated id and timestamps."""
         now = datetime.now()
@@ -121,6 +142,7 @@ class Memory:
             parent_id=parent_id,
             change_summary=change_summary,
             provenance=provenance,
+            sensitivity=sensitivity,
         )
 
     def add_tag(self, tag: str) -> None:

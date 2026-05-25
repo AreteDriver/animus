@@ -17,6 +17,7 @@ from animus.memory.types import (
     MemoryType,
     Procedure,
     SemanticFact,
+    Sensitivity,
 )
 
 if TYPE_CHECKING:
@@ -72,6 +73,7 @@ class MemoryLayer:
         confidence: float = 1.0,
         subtype: str | None = None,
         provenance: str = "direct",
+        sensitivity: Sensitivity = Sensitivity.PUBLIC,
     ) -> Memory:
         """
         Store a new memory.
@@ -85,6 +87,10 @@ class MemoryLayer:
             confidence: Confidence level 0.0-1.0
             subtype: Optional subtype (e.g., "fact", "preference")
             provenance: Origin of the memory (direct/sync/consolidation/import/mcp)
+            sensitivity: Disclosure tier (PUBLIC/PERSONAL/CONFIDENTIAL/SECRET).
+                Defaults to PUBLIC; callers handling private material should
+                set this explicitly. Read-side filtering happens via
+                ``recall(allowed_tiers=...)``.
 
         Returns:
             The created Memory object
@@ -115,6 +121,7 @@ class MemoryLayer:
             confidence=confidence,
             subtype=subtype,
             provenance=provenance,
+            sensitivity=sensitivity,
         )
 
         self.store.store(memory)
