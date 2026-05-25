@@ -13,9 +13,11 @@ import json
 import os
 from datetime import datetime
 
+from animus.audit import EgressAuditLog
 from animus.config import AnimusConfig
 from animus.logging import get_logger
 from animus.memory import MemoryLayer, MemoryType
+from animus.memory.redaction import redact
 from animus.memory.types import Sensitivity
 from animus.tasks import TaskTracker
 
@@ -34,6 +36,23 @@ def _check_auth(api_key: str = "") -> str | None:
     return "Authentication required. Pass api_key parameter matching ANIMUS_MCP_API_KEY."
 
 
+def _scrub_egress(text: str) -> tuple[str, int]:
+    """Second-line DLP filter on MCP tool responses (Stage 3.A).
+
+    Even though Stage 1 redacts at ingest and Stage 2 gates by tier, this
+    catches:
+      - legacy memories written before Stage 1 redaction was deployed
+      - PII patterns added to the redaction set after the memory was stored
+      - any leak path that bypasses ingest (e.g., direct ChromaDB writes)
+
+    Returns ``(scrubbed_text, redaction_count)``.
+    """
+    if not text:
+        return text, 0
+    scrubbed, hits = redact(text)
+    return scrubbed, len(hits)
+
+
 def create_mcp_server():
     """Create and configure the Animus MCP server."""
     try:
@@ -47,6 +66,7 @@ def create_mcp_server():
     config.ensure_dirs()
     memory = MemoryLayer(config.data_dir, backend=config.memory.backend)
     tasks = TaskTracker(config.data_dir)
+    audit_log = EgressAuditLog(config.data_dir)
 
     mcp = FastMCP("animus", instructions="Animus exocortex — persistent memory, tasks, and tools.")
 
@@ -90,8 +110,10 @@ def create_mcp_server():
         """
         # Stage 2.C — MCP egress is the load-bearing exfil boundary.
         # Pin recall scope to PUBLIC; confidential/secret tiers stay local.
-        results = memory.recall(query=query, limit=limit, allowed_tiers={Sensitivity.PUBLIC})
+        scope = {Sensitivity.PUBLIC}
+        results = memory.recall(query=query, limit=limit, allowed_tiers=scope)
         if not results:
+            audit_log.record("animus_recall", scope, 0, 0, 24)
             return "No matching memories found."
 
         lines = []
@@ -109,7 +131,11 @@ def create_mcp_server():
                 "\n⚠ Some memories are >1 day old. Verify claims about code "
                 "behavior or file paths against current state before asserting as fact."
             )
-        return "\n".join(lines)
+        # Stage 3.A — second-line DLP scrub before response leaves the MCP boundary.
+        response, redaction_count = _scrub_egress("\n".join(lines))
+        # Stage 3.B — audit log. Never records content; only metadata.
+        audit_log.record("animus_recall", scope, len(results), redaction_count, len(response))
+        return response
 
     @mcp.tool()
     def animus_search_tags(tags: str, limit: int = 10) -> str:
@@ -125,11 +151,12 @@ def create_mcp_server():
 
         # Stage 2.C — pin tag search to PUBLIC for the same egress reason
         # as animus_recall.
-        results = memory.recall_by_tags(
-            tags=tag_list, limit=limit, allowed_tiers={Sensitivity.PUBLIC}
-        )
+        scope = {Sensitivity.PUBLIC}
+        results = memory.recall_by_tags(tags=tag_list, limit=limit, allowed_tiers=scope)
         if not results:
-            return f"No memories found with tags: {', '.join(tag_list)}"
+            response = f"No memories found with tags: {', '.join(tag_list)}"
+            audit_log.record("animus_search_tags", scope, 0, 0, len(response))
+            return response
 
         now = datetime.now()
         lines = []
@@ -145,7 +172,11 @@ def create_mcp_server():
                 "\n⚠ Some memories are >1 day old. Verify claims about code "
                 "behavior or file paths against current state before asserting as fact."
             )
-        return "\n".join(lines)
+        # Stage 3.A — second-line DLP scrub before response leaves the MCP boundary.
+        response, redaction_count = _scrub_egress("\n".join(lines))
+        # Stage 3.B — audit log.
+        audit_log.record("animus_search_tags", scope, len(results), redaction_count, len(response))
+        return response
 
     @mcp.tool()
     def animus_memory_stats() -> str:
@@ -255,17 +286,24 @@ def create_mcp_server():
         """
         query = topic or "recent important context"
         # Stage 2.C — brief assembles context for an MCP client, same gate.
-        recent = memory.recall(query=query, limit=10, allowed_tiers={Sensitivity.PUBLIC})
+        scope = {Sensitivity.PUBLIC}
+        recent = memory.recall(query=query, limit=10, allowed_tiers=scope)
 
         if not recent:
-            return "No relevant context in memory."
+            response = "No relevant context in memory."
+            audit_log.record("animus_brief", scope, 0, 0, len(response))
+            return response
 
         lines = ["## Animus Briefing", ""]
         for m in recent:
             prefix = f"[{m.memory_type.value}]" if hasattr(m, "memory_type") else ""
             lines.append(f"- {prefix} {m.content[:300]}")
 
-        return "\n".join(lines)
+        # Stage 3.A — second-line DLP scrub before response leaves the MCP boundary.
+        response, redaction_count = _scrub_egress("\n".join(lines))
+        # Stage 3.B — audit log.
+        audit_log.record("animus_brief", scope, len(recent), redaction_count, len(response))
+        return response
 
     # -----------------------------------------------------------------------
     # Workflow tools
