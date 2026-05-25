@@ -308,7 +308,7 @@ class TestExecuteGitHubExtended:
         )
 
     @patch("animus_forge.api_clients.GitHubClient")
-    def test_create_issue_with_context_substitution(self, MockGH):
+    def test_create_issue_with_context_substitution(self, MockGH, monkeypatch):
         """Context variables substituted in title, body."""
         client = MagicMock()
         client.is_configured.return_value = True
@@ -326,6 +326,7 @@ class TestExecuteGitHubExtended:
                 "labels": [],
             },
         )
+        monkeypatch.setenv("ANIMUS_ALLOW_AUTONOMOUS_ISSUES", "1")
         out = exe._execute_github(step, {"module": "auth"})
         assert out["issue_number"] == 1
         client.create_issue.assert_called_once_with(

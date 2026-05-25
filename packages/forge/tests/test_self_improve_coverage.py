@@ -1103,7 +1103,9 @@ class TestSelfImproveOrchestrator:
             assert result.success is False
             assert "timed out" in result.error.lower() or "expired" in result.error.lower()
 
-    def test_run_full_workflow_auto_approve(self, tmp_path: Path, safety_config: SafetyConfig):
+    def test_run_full_workflow_auto_approve(
+        self, tmp_path: Path, safety_config: SafetyConfig, monkeypatch
+    ):
         """Run full workflow with auto-approve through all stages."""
         src = tmp_path / "src" / "animus_forge"
         src.mkdir(parents=True)
@@ -1141,6 +1143,7 @@ class TestSelfImproveOrchestrator:
             mock_run.return_value = MagicMock(
                 returncode=0, stdout="https://github.com/test/pull/1\n"
             )
+            monkeypatch.setenv("ANIMUS_FORGE_ALLOW_AUTO_APPROVE", "1")
             result = asyncio.run(orch.run(auto_approve=True))
 
         # With auto_approve and human_approval_merge, it may return at
