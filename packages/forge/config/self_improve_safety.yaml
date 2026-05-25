@@ -35,6 +35,24 @@ protected_files:
     - "docker-compose*.yml"
     - ".github/workflows/**"
 
+# Stage 4.B — Allow-list enforcement. When non-empty, ONLY files matching
+# these patterns can be modified or added. Deny-list rules above still
+# apply (and take precedence). Default-deny via allow-list closes the gap
+# where Forge could touch anything not explicitly forbidden.
+allowed_files:
+  # Source code under per-package src trees
+  - "packages/*/src/**/*.py"
+  - "packages/*/animus/**/*.py"
+  - "packages/*/python/convergent/**/*.py"
+  # Tests
+  - "packages/*/tests/**/*.py"
+  # Docs + workflows (YAML evolution is the safe fast path per
+  # non-negotiable #7)
+  - "packages/*/workflows/**/*.yaml"
+  - "packages/*/workflows/**/*.yml"
+  - "docs/**/*.md"
+  - "packages/*/docs/**/*.md"
+
 # Change limits per PR
 limits:
   max_files_per_pr: 10

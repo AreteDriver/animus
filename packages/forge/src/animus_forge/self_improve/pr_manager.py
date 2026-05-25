@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import shutil
 import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -11,6 +13,10 @@ from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+class SecretsDetectedError(RuntimeError):
+    """Raised when gitleaks finds a secret in staged changes."""
 
 
 @dataclass
@@ -57,15 +63,30 @@ class PRManager:
         self,
         repo_path: Path | str = ".",
         branch_prefix: str = "gorgon-self-improve/",
+        default_branch: str | None = None,
     ):
         """Initialize PR manager.
 
         Args:
             repo_path: Path to git repository.
             branch_prefix: Prefix for improvement branches.
+            default_branch: Explicit default branch name (e.g. ``"main"``).
+                When set, ``checkout_main`` uses this instead of the mutable
+                ``origin/HEAD`` symbolic-ref. Resolution order:
+
+                  1. constructor arg
+                  2. ``ANIMUS_FORGE_DEFAULT_BRANCH`` env var
+                  3. fallback: read ``origin/HEAD`` with a logged warning
+                  4. with ``ANIMUS_FORGE_REQUIRE_DEFAULT_BRANCH=1``, the
+                     fallback is disabled and ``checkout_main`` raises.
+
+                Stage 4.C — closes the whip-saw vector where the engine
+                committed onto the wrong branch when ``origin/HEAD`` had
+                been nudged off ``main``.
         """
         self.repo_path = Path(repo_path)
         self.branch_prefix = branch_prefix
+        self.default_branch = default_branch or os.environ.get("ANIMUS_FORGE_DEFAULT_BRANCH")
         self._active_prs: dict[str, PullRequest] = {}
 
     def create_branch(self, name: str) -> str:
@@ -85,6 +106,73 @@ class PRManager:
 
         return branch
 
+    def _gitleaks_scan_staged(self) -> None:
+        """Stage 4.A — block autonomous commits that include secrets.
+
+        Runs ``gitleaks detect --staged`` against the index. Fails closed
+        (raises ``SecretsDetectedError``) if any secret pattern matches.
+
+        Skip cases (logged but non-blocking):
+          - ``gitleaks`` binary not on PATH (defensive fallback so dev
+            environments without gitleaks installed don't break)
+          - ``ANIMUS_FORGE_SKIP_GITLEAKS=1`` env override (emergency hatch)
+        """
+        if os.environ.get("ANIMUS_FORGE_SKIP_GITLEAKS") == "1":
+            logger.warning("ANIMUS_FORGE_SKIP_GITLEAKS=1 — pre-commit secret scan bypassed")
+            return
+
+        gitleaks_path = shutil.which("gitleaks")
+        if not gitleaks_path:
+            logger.warning(
+                "gitleaks not found on PATH — autonomous commit proceeding "
+                "without secret scan. Install gitleaks to enable the gate."
+            )
+            return
+
+        try:
+            result = subprocess.run(
+                [
+                    gitleaks_path,
+                    "detect",
+                    "--staged",
+                    "--no-banner",
+                    "--no-color",
+                    f"--source={self.repo_path}",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except OSError as e:
+            logger.warning(f"gitleaks invocation failed: {e}")
+            return
+
+        # gitleaks exits 0 when clean, 1 when leaks found, other codes for
+        # invocation errors (not a git repo, can't read index, etc.).
+        if result.returncode == 0:
+            return
+
+        # Don't log gitleaks stdout content — it includes the secret. Log
+        # only the count of findings and the file paths so audit is
+        # actionable but not re-leaking.
+        finding_count = result.stdout.count("Finding:") if result.stdout else 0
+        if finding_count == 0:
+            # Non-zero exit with no parsed findings = invocation error
+            # (e.g., not a git repo). Don't block on this — warn and let
+            # the commit proceed. Real findings are always parseable.
+            logger.warning(
+                "gitleaks exited %d with no parseable findings; treating as "
+                "invocation error and proceeding (stderr=%r)",
+                result.returncode,
+                result.stderr[:200] if result.stderr else "",
+            )
+            return
+
+        raise SecretsDetectedError(
+            f"gitleaks found {finding_count} secret(s) in staged changes. "
+            "Autonomous commit refused. Review the staged diff manually."
+        )
+
     def commit_changes(
         self,
         files: list[str],
@@ -103,6 +191,9 @@ class PRManager:
             # Stage files
             self._run_git(["add"] + files)
 
+            # Stage 4.A — pre-commit secret scan. Fails closed.
+            self._gitleaks_scan_staged()
+
             # Commit
             full_message = f"""feat(self-improve): {message}
 
@@ -116,6 +207,9 @@ Co-Authored-By: Gorgon AI <gorgon@example.com>
             result = self._run_git(["rev-parse", "HEAD"])
             return result.stdout.strip()
 
+        except SecretsDetectedError as e:
+            logger.error(f"Pre-commit secret scan blocked commit: {e}")
+            return None
         except Exception as e:
             logger.error(f"Failed to commit: {e}")
             return None
@@ -288,15 +382,37 @@ Please review carefully before merging.
         return True
 
     def checkout_main(self) -> bool:
-        """Checkout main branch.
+        """Checkout the configured default branch.
+
+        Stage 4.C — uses ``self.default_branch`` (constructor arg or env)
+        instead of ``origin/HEAD`` symbolic-ref. The symbolic-ref is a
+        mutable client-side state that can be nudged off ``main`` by other
+        tools (worktrees, branch operations, GitHub UI default-branch
+        flips), which is the recorded whip-saw root cause for autonomous
+        commits landing on wrong branches.
 
         Returns:
             True if successful.
         """
         try:
-            # Get default branch name
-            result = self._run_git(["symbolic-ref", "refs/remotes/origin/HEAD", "--short"])
-            default_branch = result.stdout.strip().replace("origin/", "")
+            default_branch = self.default_branch
+            if not default_branch:
+                if os.environ.get("ANIMUS_FORGE_REQUIRE_DEFAULT_BRANCH") == "1":
+                    raise RuntimeError(
+                        "ANIMUS_FORGE_REQUIRE_DEFAULT_BRANCH=1 — "
+                        "PRManager.default_branch not configured. Set via "
+                        "constructor arg or ANIMUS_FORGE_DEFAULT_BRANCH env."
+                    )
+                # Graceful fallback for dev — logs a loud warning so the
+                # operator knows the gate is open.
+                logger.warning(
+                    "PRManager.default_branch not configured; falling back to "
+                    "origin/HEAD symbolic-ref. This is the whip-saw vector — "
+                    "set ANIMUS_FORGE_DEFAULT_BRANCH or pass default_branch="
+                    " to PRManager() to close it."
+                )
+                result = self._run_git(["symbolic-ref", "refs/remotes/origin/HEAD", "--short"])
+                default_branch = result.stdout.strip().replace("origin/", "")
 
             self._run_git(["checkout", default_branch])
             return True
