@@ -75,7 +75,7 @@ class MockChromaCollection:
 
 
 class MockChromaClient:
-    def __init__(self, path: str | None = None):
+    def __init__(self, path: str | None = None, settings: object | None = None):
         self._collections: dict[str, MockChromaCollection] = {}
 
     def get_or_create_collection(self, name: str, metadata: dict | None = None):

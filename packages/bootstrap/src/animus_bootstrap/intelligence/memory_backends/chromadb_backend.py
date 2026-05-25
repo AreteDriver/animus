@@ -32,10 +32,14 @@ class ChromaDBMemoryBackend:
             msg = "chromadb not installed. pip install animus-bootstrap[chromadb]"
             raise RuntimeError(msg)
 
+        telemetry_off = chromadb.Settings(anonymized_telemetry=False)  # type: ignore[union-attr]
         if persist_directory:
-            self._client = chromadb.PersistentClient(path=persist_directory)  # type: ignore[union-attr]
+            self._client = chromadb.PersistentClient(  # type: ignore[union-attr]
+                path=persist_directory,
+                settings=telemetry_off,
+            )
         else:
-            self._client = chromadb.Client()  # type: ignore[union-attr]
+            self._client = chromadb.Client(settings=telemetry_off)  # type: ignore[union-attr]
 
         self._collections = {
             t: self._client.get_or_create_collection(name=f"{t}_memories") for t in self.VALID_TYPES

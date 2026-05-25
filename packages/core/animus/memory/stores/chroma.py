@@ -64,7 +64,10 @@ class ChromaMemoryStore(MemoryStore):
             self.chroma_dir = data_dir / "chroma"
             self.chroma_dir.mkdir(parents=True, exist_ok=True)
 
-            self.client = chromadb.PersistentClient(path=str(self.chroma_dir))
+            self.client = chromadb.PersistentClient(
+                path=str(self.chroma_dir),
+                settings=chromadb.Settings(anonymized_telemetry=False),
+            )
             self.collection = self.client.get_or_create_collection(
                 name=collection_name,
                 metadata={"hnsw:space": "cosine"},

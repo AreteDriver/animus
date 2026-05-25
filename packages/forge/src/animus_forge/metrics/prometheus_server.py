@@ -82,7 +82,7 @@ class PrometheusMetricsServer:
     def __init__(
         self,
         collector: MetricsCollector,
-        host: str = "0.0.0.0",
+        host: str = "127.0.0.1",
         port: int = 9090,
         prefix: str = "gorgon",
     ):
