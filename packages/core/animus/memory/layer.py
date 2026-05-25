@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from animus.logging import get_logger
+from animus.memory.redaction import redact
 from animus.memory.types import (
     Conversation,
     Memory,
@@ -91,13 +92,24 @@ class MemoryLayer:
         now = datetime.now()
         normalized_tags = [t.lower().strip() for t in (tags or []) if t.strip()]
 
+        redacted_content, hits = redact(content)
+        combined_metadata = dict(metadata or {})
+        if hits:
+            combined_metadata["_redaction_count"] = len(hits)
+            combined_metadata["_redaction_types"] = ",".join(sorted({h.type for h in hits}))
+            logger.info(
+                "redacted %d secret(s) from memory ingest: %s",
+                len(hits),
+                combined_metadata["_redaction_types"],
+            )
+
         memory = Memory(
             id=str(uuid.uuid4()),
-            content=content,
+            content=redacted_content,
             memory_type=memory_type,
             created_at=now,
             updated_at=now,
-            metadata=metadata or {},
+            metadata=combined_metadata,
             tags=normalized_tags,
             source=source,
             confidence=confidence,
