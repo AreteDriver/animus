@@ -36,6 +36,7 @@ class ModelProvider(Enum):
     OLLAMA = "ollama"
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
+    LLAMACPP = "llamacpp"
     MOCK = "mock"
 
 
@@ -218,6 +219,23 @@ class ModelConfig:
             provider=ModelProvider.OPENAI,
             model_name=model,
             api_key=os.environ.get("OPENAI_API_KEY"),
+        )
+
+    @classmethod
+    def llamacpp(
+        cls,
+        model: str = "qwen3.6-research",
+        base_url: str = "http://127.0.0.1:11435/v1",
+    ) -> "ModelConfig":
+        """Local llama.cpp server (OpenAI-compatible).
+
+        Defaults target the Qwen3.6-35B-A3B research alias on port 11435.
+        """
+        return cls(
+            provider=ModelProvider.LLAMACPP,
+            model_name=model,
+            base_url=base_url,
+            api_key="sk-no-key-required",
         )
 
     @classmethod
@@ -623,6 +641,81 @@ class OpenAIModel(ModelInterface):
         yield self.generate(prompt, system)
 
 
+class LlamaCppModel(OpenAIModel):
+    """Local llama.cpp server interface (Qwen3.6-tuned).
+
+    Wraps the OpenAI-compatible /v1 endpoint exposed by `llama-server`.
+    Qwen3.6 ships with thinking mode ON by default — a short generation
+    will spend its entire token budget inside `<think>...</think>` and
+    return empty content. We disable thinking unless the caller opts in
+    via `config.metadata["enable_thinking"] = True`.
+    """
+
+    def generate(
+        self,
+        prompt: str,
+        system: str | None = None,
+        stream_callback: Callable[[str], None] | None = None,
+    ) -> str:
+        try:
+            import openai
+
+            client_kwargs: dict = {}
+            if self.config.api_key:
+                client_kwargs["api_key"] = self.config.api_key
+            if self.config.base_url:
+                client_kwargs["base_url"] = self.config.base_url
+
+            client = openai.OpenAI(**client_kwargs)
+
+            messages: list[dict] = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+
+            enable_thinking = bool(getattr(self.config, "_enable_thinking", False))
+            extra_body = {
+                "chat_template_kwargs": {"enable_thinking": enable_thinking},
+            }
+
+            logger.debug(
+                f"llama.cpp request: model={self.config.model_name}, "
+                f"prompt_len={len(prompt)}, thinking={enable_thinking}"
+            )
+
+            if stream_callback:
+                parts: list[str] = []
+                stream = client.chat.completions.create(
+                    model=self.config.model_name,
+                    messages=messages,
+                    stream=True,
+                    extra_body=extra_body,
+                )
+                for chunk in stream:
+                    delta = chunk.choices[0].delta
+                    if delta.content:
+                        parts.append(delta.content)
+                        stream_callback(delta.content)
+                result = "".join(parts)
+            else:
+                response = client.chat.completions.create(
+                    model=self.config.model_name,
+                    messages=messages,
+                    extra_body=extra_body,
+                )
+                result = response.choices[0].message.content or ""
+
+            logger.debug(f"llama.cpp response: len={len(result)}")
+            return result
+
+        except ImportError:
+            logger.error("openai package not installed")
+            return "[Error: openai package not installed. Install with: pip install openai]"
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
+            logger.error(f"llama.cpp error: {e}")
+            return f"[Error communicating with llama.cpp server: {e}]"
+
+
 def create_model(config: ModelConfig) -> ModelInterface:
     """Factory function to create the appropriate model interface."""
     if config.provider == ModelProvider.MOCK:
@@ -633,6 +726,8 @@ def create_model(config: ModelConfig) -> ModelInterface:
         return AnthropicModel(config)
     elif config.provider == ModelProvider.OPENAI:
         return OpenAIModel(config)
+    elif config.provider == ModelProvider.LLAMACPP:
+        return LlamaCppModel(config)
     else:
         raise ValueError(f"Unsupported provider: {config.provider}")
 

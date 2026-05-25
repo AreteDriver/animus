@@ -21,6 +21,7 @@ from .base import (
 )
 from .bedrock_provider import BedrockProvider
 from .hardware import HardwareProfile, detect_hardware
+from .llamacpp_provider import LlamaCppProvider
 from .manager import (
     ProviderManager,
     get_manager,
@@ -52,6 +53,7 @@ __all__ = [
     "BedrockProvider",
     "VertexProvider",
     "OllamaProvider",
+    "LlamaCppProvider",
     # Manager
     "ProviderManager",
     "get_provider",

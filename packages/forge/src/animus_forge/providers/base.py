@@ -39,6 +39,7 @@ class ProviderType(Enum):
     BEDROCK = "bedrock"
     VERTEX = "vertex"
     OLLAMA = "ollama"
+    LLAMACPP = "llamacpp"
 
 
 class ModelTier(Enum):

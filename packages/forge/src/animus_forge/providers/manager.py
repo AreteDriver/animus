@@ -18,6 +18,7 @@ from .base import (
     RateLimitError,
 )
 from .bedrock_provider import BedrockProvider
+from .llamacpp_provider import LlamaCppProvider
 from .ollama_provider import OllamaProvider
 from .openai_provider import OpenAIProvider
 from .vertex_provider import VertexProvider
@@ -44,6 +45,7 @@ class ProviderManager:
         ProviderType.BEDROCK: BedrockProvider,
         ProviderType.VERTEX: VertexProvider,
         ProviderType.OLLAMA: OllamaProvider,
+        ProviderType.LLAMACPP: LlamaCppProvider,
     }
 
     def __init__(self):
