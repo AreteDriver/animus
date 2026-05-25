@@ -1,9 +1,11 @@
 # Specification — Animus Agent Platform v0
 
-**Status:** v0.1.1 — 2026-05-23 (decisions locked; OQ4 skill-count patch applied — 135→127 per RE Task #1 inventory)
+**Status:** v0.1.2 — 2026-05-24 (RD7 overridden; provider default flipped to LlamaCpp per RD9)
 **Mode:** /specification (decision committed; do not re-litigate)
-**Related:** [[project-animus-agent-platform]] (memory: `project_animus_agent_platform.md`)
-**Implementation start gate:** After Quorum v2 wk5 re-eval (per Resolved Decision RD7)
+**Related:**
+  - [[project-animus-agent-platform]] (memory: `project_animus_agent_platform.md`)
+  - [[project-research-assistant-roadmap]] (memory + `docs/ROADMAP_research_assistant.md` — 2026-05-24)
+**Implementation start gate:** ~~After Quorum v2 wk5 re-eval~~ **Overridden 2026-05-24** — RA-0 implementation begins immediately on `feat/animus-agent-loop` parallel to Quorum v2 wk2-5 (per roadmap D1)
 
 ---
 
@@ -20,7 +22,7 @@
 1. Provide CLI entry `animus-agent run <task>` accepting a positional task string and the flags enumerated in §4.1.
 2. Execute the task via ReAct-style tool-use loop terminating on: agent declares completion, max-turns exceeded, token budget exceeded, wall-time exceeded, or unrecoverable tool error after one retry.
 3. Route every LLM call through Forge's `BudgetManager`. For local Ollama calls, BudgetManager records `usd_cost = 0.0` and persists `tokens_in`, `tokens_out`, `wall_seconds`, and (when available via OS sensor) `watt_hours` in dedicated compute-metric columns alongside the existing USD column. Every call appears in the same audit log used by other Forge workflows.
-4. Use Ollama as the LLM runtime, calling `qwen3:32b` by default; model overridable via `--model` and `FORGE_AGENT_MODEL` env (precedence: CLI > env > config > default).
+4. Use a pure-local LLM runtime via Forge's Provider abstraction. **Default: `LlamaCppProvider` calling `qwen3.6-research`** (Qwen3.6-35B-A3B served by `llama-server` on port 11435; landed 2026-05-24 per RD9). Provider AND model overridable via `--provider`/`--model` CLI flags and `FORGE_AGENT_PROVIDER`/`FORGE_AGENT_MODEL` env (precedence: CLI > env > config > default). Documented alternate: `OllamaProvider` with any installed Ollama model (e.g. `qwen3:32b` once pulled, or the existing `qwen2.5:14b-instruct-q8_0`).
 5. Expose exactly 5 starter tools to the agent: `ReadFile`, `WriteFile`, `EditFile`, `Bash`, `Grep` (interfaces in §4.2–§4.6).
 6. Implement a Skill Registry that loads all skills from `~/.claude/skills/` at agent startup and resolves them by name. The registry is **independent** of Animus's existing YAML skill resolver — v0 reads Claude Code skill format (markdown + YAML frontmatter) only. Registry MUST load all currently-installed skills without raising — floor of 127 (snapshot 2026-05-23; floor MAY be re-asserted upward at v0 implementation kickoff against then-current `~/.claude/skills/` count).
 7. Implement Hook Gates with 4 lifecycle events: `agent_start`, `pre_tool_use`, `post_tool_use`, `agent_end`. Hooks loaded from `~/.config/animus/agent/hooks.d/*.py`; a `pre_tool_use` returning `Deny(reason)` MUST abort the tool call and feed the denial back into agent context.
@@ -82,7 +84,8 @@ Internal type names (`AgentContext`, `ToolResult`, `Receipt`, `Allow`, `Deny`, `
 ```
 animus-agent run <task>
   [--project <path>]            default: cwd
-  [--model <model>]             default: qwen3:32b
+  [--provider <name>]           default: llamacpp (alternates: ollama)
+  [--model <model>]             default: qwen3.6-research (alternates: any installed model on chosen provider)
   [--max-turns <int>]           default: 50
   [--budget-tokens <int>]       default: 200_000
   [--wall-seconds <int>]        default: 1800 (30 min)
@@ -261,6 +264,7 @@ Decisions locked 2026-05-23 by user choice. Listed here for traceability; reason
 - **RD6 — Eval-suite task definitions:** Authored in separate `/specification` pass before v0 ships. A12 keeps the count gate (≥ 10 tasks); task content is the separate spec's deliverable. Recorded in A12 + OOS.
 - **RD7 — Quorum v2 vs Agent v0 sequencing:** Sequence after Quorum v2 wk5 re-eval gate (currently wk1–2). Quorum learnings may shape agent design; no parallel-package contention. Recorded as Implementation start gate in header.
 - **RD8 — Directory naming:** Keep `agent/` (singular). Semantically distinct from `agents/` (orchestration); cosmetic collision accepted as low-cost.
+- **RD9 — Default provider/model (2026-05-24 amendment):** `LlamaCppProvider` + `qwen3.6-research` is the default (Qwen3.6-35B-A3B served by `llama-server` on port 11435). Spec was originally written 2026-05-23 with `OllamaProvider` + `qwen3:32b`; LlamaCpp wiring landed 2026-05-24 (commit `79e1037`) and `qwen3:32b` is not currently installed in Ollama. Both providers are pure-local, both flow through `Provider.complete()`, both inherit `BudgetManager`/audit-log integration. Implemented in R4, §4.1.
 
 ---
 
