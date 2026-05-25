@@ -697,11 +697,15 @@ def _store_in_memory(memory_layer: Any, result: HarvestResult) -> None:
             f"Testing: {result.testing_approach}"
         )
 
+        # Stage 2.C — harvest pulls from public GitHub repos; PUBLIC tier.
+        from animus.memory.types import Sensitivity
+
         memory_layer.remember(
             content=content,
             memory_type=MemoryType.SEMANTIC,
             tags=["harvest", "discovery", result.repo.replace("/", "-")],
             source="harvest",
+            sensitivity=Sensitivity.PUBLIC,
         )
         logger.info("Stored harvest findings in memory for %s", result.repo)
     except Exception as e:

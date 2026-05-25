@@ -465,6 +465,9 @@ class BootstrapLoop:
             f"Consensus: {consensus.summary}"
         )
 
+        # Stage 2.C — self-reflection on own work; PERSONAL tier.
+        from animus.memory.types import Sensitivity
+
         self.memory.remember(
             content=content,
             memory_type=MemoryType.PROCEDURAL,
@@ -472,6 +475,7 @@ class BootstrapLoop:
             source="learned",
             confidence=0.9 if consensus.approved else 0.5,
             subtype="self-reflection",
+            sensitivity=Sensitivity.PERSONAL,
         )
 
     @property

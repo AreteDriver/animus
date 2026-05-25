@@ -173,7 +173,12 @@ class TestMemoryTools:
         mock_memory.recall_by_tags.return_value = [_make_memory("tagged item")]
         result = _run(server.call_tool("animus_search_tags", {"tags": "python,code"}))
         assert "tagged item" in result[0][0].text
-        mock_memory.recall_by_tags.assert_called_once_with(tags=["python", "code"], limit=10)
+        # Stage 2.C — MCP scope is pinned to PUBLIC for egress protection.
+        from animus.memory.types import Sensitivity
+
+        mock_memory.recall_by_tags.assert_called_once_with(
+            tags=["python", "code"], limit=10, allowed_tiers={Sensitivity.PUBLIC}
+        )
 
     def test_search_tags_empty(self, server, mock_memory):
         result = _run(server.call_tool("animus_search_tags", {"tags": ""}))
@@ -775,7 +780,12 @@ class TestBriefMemoryType:
     def test_brief_default_topic(self, server, mock_memory):
         mock_memory.recall.return_value = [_make_memory("data")]
         _run(server.call_tool("animus_brief", {}))
-        mock_memory.recall.assert_called_with(query="recent important context", limit=10)
+        # Stage 2.C — brief query is MCP egress; pinned to PUBLIC tier.
+        from animus.memory.types import Sensitivity
+
+        mock_memory.recall.assert_called_with(
+            query="recent important context", limit=10, allowed_tiers={Sensitivity.PUBLIC}
+        )
 
 
 class TestMcpImportError:

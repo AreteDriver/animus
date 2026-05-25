@@ -16,6 +16,7 @@ from datetime import datetime
 from animus.config import AnimusConfig
 from animus.logging import get_logger
 from animus.memory import MemoryLayer, MemoryType
+from animus.memory.types import Sensitivity
 from animus.tasks import TaskTracker
 
 logger = get_logger("mcp_server")
@@ -87,7 +88,9 @@ def create_mcp_server():
             query: What to search for.
             limit: Maximum results to return (default 5).
         """
-        results = memory.recall(query=query, limit=limit)
+        # Stage 2.C — MCP egress is the load-bearing exfil boundary.
+        # Pin recall scope to PUBLIC; confidential/secret tiers stay local.
+        results = memory.recall(query=query, limit=limit, allowed_tiers={Sensitivity.PUBLIC})
         if not results:
             return "No matching memories found."
 
@@ -120,7 +123,11 @@ def create_mcp_server():
         if not tag_list:
             return "No tags provided."
 
-        results = memory.recall_by_tags(tags=tag_list, limit=limit)
+        # Stage 2.C — pin tag search to PUBLIC for the same egress reason
+        # as animus_recall.
+        results = memory.recall_by_tags(
+            tags=tag_list, limit=limit, allowed_tiers={Sensitivity.PUBLIC}
+        )
         if not results:
             return f"No memories found with tags: {', '.join(tag_list)}"
 
@@ -247,7 +254,8 @@ def create_mcp_server():
             topic: Optional topic to focus the briefing on.
         """
         query = topic or "recent important context"
-        recent = memory.recall(query=query, limit=10)
+        # Stage 2.C — brief assembles context for an MCP client, same gate.
+        recent = memory.recall(query=query, limit=10, allowed_tiers={Sensitivity.PUBLIC})
 
         if not recent:
             return "No relevant context in memory."

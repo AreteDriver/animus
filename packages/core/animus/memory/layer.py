@@ -255,10 +255,22 @@ class MemoryLayer:
             allowed_tiers=allowed_tiers,
         )
 
-    def recall_by_tags(self, tags: list[str], limit: int = 10) -> list[Memory]:
-        """Retrieve memories that have all specified tags."""
+    def recall_by_tags(
+        self,
+        tags: list[str],
+        limit: int = 10,
+        allowed_tiers: set[Sensitivity] | None = None,
+    ) -> list[Memory]:
+        """Retrieve memories that have all specified tags.
+
+        ``allowed_tiers`` (Stage 2.B) restricts results to memories whose
+        ``sensitivity`` is in the set. ``None`` skips the filter
+        (backward-compat for pre-Stage-2.B callers).
+        """
         all_memories = self.store.list_all()
         matching = [m for m in all_memories if all(t in m.tags for t in tags)]
+        if allowed_tiers is not None:
+            matching = [m for m in matching if m.sensitivity in allowed_tiers]
         return matching[:limit]
 
     def get_memory(self, memory_id: str) -> Memory | None:
