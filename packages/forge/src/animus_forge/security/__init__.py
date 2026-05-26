@@ -16,6 +16,7 @@ from animus_forge.security.brute_force import (
     get_brute_force_protection,
 )
 from animus_forge.security.field_encryption import FieldEncryptor, get_field_encryptor
+from animus_forge.security.pi_wrap import PI_DEFENSE_FOOTER, wrap_untrusted
 from animus_forge.security.request_limits import (
     RequestLimitConfig,
     RequestSizeLimitMiddleware,
@@ -40,4 +41,7 @@ __all__ = [
     # Field encryption
     "FieldEncryptor",
     "get_field_encryptor",
+    # Prompt-injection defense (Stage 5 sibling adopter)
+    "PI_DEFENSE_FOOTER",
+    "wrap_untrusted",
 ]
