@@ -90,6 +90,18 @@ class AnthropicProvider(Provider):
         if not self.config.api_key:
             raise ProviderNotConfiguredError("Anthropic API key not configured")
 
+        # Stage 3.C sibling adopter — refuse to construct the cloud client when
+        # ANIMUS_OFFLINE=1. Egress to api.anthropic.com is blocked at the point
+        # of first use so callers get a clean error instead of a network timeout.
+        from animus_forge.network import EgressDeniedError, is_egress_allowed
+
+        endpoint = self.config.base_url or "https://api.anthropic.com"
+        if not is_egress_allowed(endpoint):
+            raise EgressDeniedError(
+                f"ANIMUS_OFFLINE=1 — Anthropic provider blocked from {endpoint}. "
+                "Unset the env var or route through a local provider."
+            )
+
         self._client = anthropic.Anthropic(
             api_key=self.config.api_key,
             base_url=self.config.base_url,

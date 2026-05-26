@@ -90,6 +90,16 @@ class OpenAIProvider(Provider):
         if not self.config.api_key:
             raise ProviderNotConfiguredError("OpenAI API key not configured")
 
+        # Stage 3.C sibling adopter — block cloud egress when ANIMUS_OFFLINE=1.
+        from animus_forge.network import EgressDeniedError, is_egress_allowed
+
+        endpoint = self.config.base_url or "https://api.openai.com"
+        if not is_egress_allowed(endpoint):
+            raise EgressDeniedError(
+                f"ANIMUS_OFFLINE=1 — OpenAI provider blocked from {endpoint}. "
+                "Unset the env var or route through a local provider."
+            )
+
         self._client = OpenAI(
             api_key=self.config.api_key,
             base_url=self.config.base_url,
