@@ -364,6 +364,12 @@ class CrossWorkflowMemory:
         scored.sort(key=lambda x: x[0], reverse=True)
 
         # Build context string within token budget.
+        # Stage 5 sibling adopter — each retrieved chunk is wrapped in an
+        # <untrusted_data> envelope and the PI-defense footer is appended once.
+        # The consuming agent must be configured to honor the envelope (treat
+        # the inner content as reference, not as instructions).
+        from animus_forge.security import PI_DEFENSE_FOOTER, wrap_untrusted
+
         max_chars = max_tokens * 4
         lines: list[str] = ["## Cross-Workflow Learnings", ""]
         current_chars = sum(len(line) + 1 for line in lines)
@@ -371,7 +377,10 @@ class CrossWorkflowMemory:
         for rank, (score, mem) in enumerate(scored, start=1):
             tags = mem.metadata.get("tags", [])
             tag_str = f" [{', '.join(tags)}]" if tags else ""
-            line = f"{rank}. (importance={mem.importance:.2f}){tag_str} {mem.content}"
+            header = f"{rank}. (importance={mem.importance:.2f}){tag_str}"
+            mem_id = getattr(mem, "id", None) or f"rank-{rank}"
+            wrapped = wrap_untrusted(mem.content, mem_id, source="forge-cross-workflow")
+            line = f"{header}\n{wrapped}"
 
             line_chars = len(line) + 1  # +1 for newline
             if current_chars + line_chars > max_chars:
@@ -384,6 +393,7 @@ class CrossWorkflowMemory:
             # Only the header was added; nothing fits.
             return ""
 
+        lines.append(PI_DEFENSE_FOOTER)
         context = "\n".join(lines)
         logger.debug(
             "Built context for %s: %d entries, ~%d tokens",
