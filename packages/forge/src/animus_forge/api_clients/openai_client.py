@@ -15,6 +15,14 @@ class OpenAIClient:
     """
 
     def __init__(self):
+        # Stage 3.C sibling adopter — refuse to construct when ANIMUS_OFFLINE=1.
+        from animus_forge.network import EgressDeniedError, is_egress_allowed
+
+        if not is_egress_allowed("https://api.openai.com"):
+            raise EgressDeniedError(
+                "ANIMUS_OFFLINE=1 — OpenAI client blocked. "
+                "Unset the env var or route through a local provider."
+            )
         settings = get_settings()
         self.client = OpenAI(api_key=settings.openai_api_key)
         self._async_client: AsyncOpenAI | None = None

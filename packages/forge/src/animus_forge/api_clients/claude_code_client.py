@@ -156,6 +156,17 @@ class ClaudeCodeClient:
         self._inject_skill_context(settings)
 
         if self.mode == "api" and self.api_key and anthropic:
+            # Stage 3.C sibling adopter — block cloud client construction when
+            # ANIMUS_OFFLINE=1. The CLI mode (subprocess) is untouched here
+            # because subprocess egress goes through Claude Code itself which
+            # has its own egress posture.
+            from animus_forge.network import EgressDeniedError, is_egress_allowed
+
+            if not is_egress_allowed("https://api.anthropic.com"):
+                raise EgressDeniedError(
+                    "ANIMUS_OFFLINE=1 — ClaudeCodeClient (api mode) blocked. "
+                    "Switch to CLI mode or unset the env var."
+                )
             self.client = anthropic.Anthropic(api_key=self.api_key)
             self.async_client = anthropic.AsyncAnthropic(api_key=self.api_key)
         else:

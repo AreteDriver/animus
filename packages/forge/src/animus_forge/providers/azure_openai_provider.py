@@ -117,6 +117,16 @@ class AzureOpenAIProvider(Provider):
         if not self.config.base_url:
             raise ProviderNotConfiguredError("Azure OpenAI endpoint not configured")
 
+        # Stage 3.C sibling adopter — Azure endpoints aren't loopback so
+        # ANIMUS_OFFLINE=1 will block them.
+        from animus_forge.network import EgressDeniedError, is_egress_allowed
+
+        if not is_egress_allowed(self.config.base_url):
+            raise EgressDeniedError(
+                f"ANIMUS_OFFLINE=1 — Azure OpenAI provider blocked from "
+                f"{self.config.base_url}. Unset the env var or route locally."
+            )
+
         api_version = self.config.metadata.get("api_version", "2024-02-01")
 
         self._client = AzureOpenAI(
