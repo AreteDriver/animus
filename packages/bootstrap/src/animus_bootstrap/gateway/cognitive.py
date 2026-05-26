@@ -12,6 +12,25 @@ from animus_bootstrap.gateway.cognitive_types import CognitiveResponse, ToolCall
 logger = logging.getLogger(__name__)
 
 
+# Animus hardening Stage 3.C sibling adopter.
+# Soft-import the egress helper so bootstrap can run without animus-core
+# installed (the standalone deployment path). When core is present, every
+# Anthropic call passes through ``is_egress_allowed`` and respects
+# ``ANIMUS_OFFLINE=1`` + tier policy. Absent core, behavior is unchanged
+# from pre-hardening — fail-open by design for the standalone case.
+try:
+    from animus.network import EgressDeniedError, is_egress_allowed
+
+    _EGRESS_GATE_AVAILABLE = True
+except ImportError:  # pragma: no cover — exercised only when core is absent
+    EgressDeniedError = RuntimeError  # type: ignore[misc,assignment]
+
+    def is_egress_allowed(destination: str, tier=None) -> bool:  # type: ignore[no-redef]
+        return True
+
+    _EGRESS_GATE_AVAILABLE = False
+
+
 class CognitiveBackend(Protocol):
     """Protocol that all LLM backends must satisfy."""
 
@@ -42,6 +61,22 @@ class AnthropicBackend:
         self._api_key = api_key
         self._model = model
 
+    def _check_egress(self) -> None:
+        """Stage 3.C sibling adopter — refuse the cloud call when policy blocks it.
+
+        ``ANIMUS_OFFLINE=1`` disables all non-loopback egress; tier policy
+        (when wired in a future tier-aware-dispatch pass) refuses
+        CONFIDENTIAL/SECRET traffic to cloud endpoints. Raises
+        ``EgressDeniedError`` when denied so callers can surface a clean
+        error instead of timing out on the wire.
+        """
+        if not is_egress_allowed(self.API_URL):
+            raise EgressDeniedError(
+                "ANIMUS_OFFLINE=1 — bootstrap Anthropic gateway blocked. "
+                "Unset the env var or route through a local backend (Ollama / "
+                "DualOllama)."
+            )
+
     async def generate_response(
         self,
         messages: list[dict],
@@ -70,6 +105,7 @@ class AnthropicBackend:
             "content-type": "application/json",
         }
 
+        self._check_egress()
         async with httpx.AsyncClient() as client:
             resp = await client.post(self.API_URL, json=payload, headers=headers, timeout=120)
             resp.raise_for_status()
@@ -110,6 +146,7 @@ class AnthropicBackend:
             "content-type": "application/json",
         }
 
+        self._check_egress()
         async with httpx.AsyncClient() as client:
             resp = await client.post(self.API_URL, json=payload, headers=headers, timeout=120)
             resp.raise_for_status()
