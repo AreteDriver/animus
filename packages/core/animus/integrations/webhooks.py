@@ -174,7 +174,7 @@ class WebhookIntegration(BaseIntegration):
             WebhookHandler.integration = self
 
             # Create and start server
-            self._server = HTTPServer(("0.0.0.0", self._port), WebhookHandler)
+            self._server = HTTPServer(("127.0.0.1", self._port), WebhookHandler)
             self._server_thread = Thread(target=self._server.serve_forever, daemon=True)
             self._server_thread.start()
 

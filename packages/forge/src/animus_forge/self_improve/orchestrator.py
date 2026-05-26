@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -161,11 +162,19 @@ class SelfImproveOrchestrator:
 
         Args:
             focus_category: Optional category to focus on.
-            auto_approve: If True, auto-approve all stages (for testing).
+            auto_approve: If True, auto-approve all stages. **Test-only.** In
+                production this requires the env opt-in
+                ``ANIMUS_FORGE_ALLOW_AUTO_APPROVE=1`` or raises ``RuntimeError``.
 
         Returns:
             Result of the improvement run.
         """
+        if auto_approve and os.environ.get("ANIMUS_FORGE_ALLOW_AUTO_APPROVE") != "1":
+            raise RuntimeError(
+                "auto_approve=True is blocked in production. "
+                "Set ANIMUS_FORGE_ALLOW_AUTO_APPROVE=1 only in test environments. "
+                "Human approval is mandatory for the self-improvement workflow."
+            )
         try:
             # Stage 1: Analyze
             self._current_stage = WorkflowStage.ANALYZING

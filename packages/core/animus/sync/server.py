@@ -106,7 +106,7 @@ class SyncServer:
         try:
             self._server = await websockets.serve(
                 self._handle_connection,
-                "0.0.0.0",
+                "127.0.0.1",
                 self.port,
             )
             self._running = True

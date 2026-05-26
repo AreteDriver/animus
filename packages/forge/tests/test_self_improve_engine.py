@@ -586,7 +586,7 @@ class TestFullPipeline:
         assert "Failed to apply changes" in result.error
 
     def test_pipeline_full_success_auto_approve(
-        self, codebase: Path, permissive_config: SafetyConfig
+        self, codebase: Path, permissive_config: SafetyConfig, monkeypatch
     ):
         """Full pipeline succeeds with auto-approve and mocked components."""
         src = codebase / "src" / "animus_forge"
@@ -623,6 +623,7 @@ class TestFullPipeline:
             mock_run.return_value = MagicMock(
                 returncode=0, stdout="https://github.com/test/pull/1\n"
             )
+            monkeypatch.setenv("ANIMUS_FORGE_ALLOW_AUTO_APPROVE", "1")
             result = asyncio.run(orch.run(auto_approve=True))
 
         assert result.plan is not None

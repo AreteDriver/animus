@@ -518,7 +518,7 @@ class TestExecuteGitHub:
         assert "DRY RUN" in out["result"]
 
     @patch("animus_forge.api_clients.GitHubClient")
-    def test_create_issue(self, MockGH):
+    def test_create_issue(self, MockGH, monkeypatch):
         client = MagicMock()
         client.is_configured.return_value = True
         client.create_issue.return_value = {"number": 42, "url": "https://gh/42"}
@@ -535,9 +535,33 @@ class TestExecuteGitHub:
                 "labels": ["bug"],
             },
         )
+        monkeypatch.setenv("ANIMUS_ALLOW_AUTONOMOUS_ISSUES", "1")
         out = exe._execute_github(step, {})
         assert out["issue_number"] == 42
         client.create_issue.assert_called_once()
+
+    @patch("animus_forge.api_clients.GitHubClient")
+    def test_create_issue_blocked_without_env_opt_in(self, MockGH, monkeypatch):
+        """The autonomous-issue gate raises RuntimeError unless explicitly enabled."""
+        client = MagicMock()
+        client.is_configured.return_value = True
+        MockGH.return_value = client
+
+        exe = _bare_executor(dry_run=False)
+        step = _make_step(
+            step_type="github",
+            params={
+                "action": "create_issue",
+                "repo": "owner/repo",
+                "title": "Bug",
+                "body": "details",
+                "labels": [],
+            },
+        )
+        monkeypatch.delenv("ANIMUS_ALLOW_AUTONOMOUS_ISSUES", raising=False)
+        with pytest.raises(RuntimeError, match="Autonomous gh issue create is blocked"):
+            exe._execute_github(step, {})
+        client.create_issue.assert_not_called()
 
     @patch("animus_forge.api_clients.GitHubClient")
     def test_unknown_action_raises(self, MockGH):

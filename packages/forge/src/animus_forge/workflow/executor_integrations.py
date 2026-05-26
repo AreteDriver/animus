@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import subprocess
 import tempfile
 from datetime import UTC
@@ -189,6 +190,12 @@ class IntegrationHandlersMixin:
             raise RuntimeError("GitHub client not configured. Check GITHUB_TOKEN.")
 
         if action == "create_issue":
+            if os.environ.get("ANIMUS_ALLOW_AUTONOMOUS_ISSUES") != "1":
+                raise RuntimeError(
+                    "Autonomous gh issue create is blocked. "
+                    "Set ANIMUS_ALLOW_AUTONOMOUS_ISSUES=1 to enable, or route "
+                    "issue filing through send_approval for human-in-the-loop."
+                )
             title = step.params.get("title", "")
             body = step.params.get("body", "")
             labels = step.params.get("labels", [])

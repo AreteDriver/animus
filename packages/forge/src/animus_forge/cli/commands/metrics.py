@@ -70,7 +70,7 @@ def metrics_export(
 @metrics_app.command("serve")
 def metrics_serve(
     port: int = typer.Option(9090, "--port", "-p", help="Port to serve metrics on"),
-    host: str = typer.Option("0.0.0.0", "--host", "-h", help="Host to bind to"),
+    host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host to bind to"),
 ):
     """Start Prometheus metrics HTTP server."""
     try:

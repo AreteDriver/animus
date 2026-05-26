@@ -430,7 +430,9 @@ class TestSandboxWithOllama:
 class TestFullPipelineWithOllama:
     """End-to-end pipeline run with live Ollama, mocking only git/PR ops."""
 
-    def test_full_pipeline_auto_approve(self, agent_provider, synthetic_project, permissive_config):
+    def test_full_pipeline_auto_approve(
+        self, agent_provider, synthetic_project, permissive_config, monkeypatch
+    ):
         """Full orchestrator.run(auto_approve=True) with live LLM."""
         from animus_forge.self_improve.orchestrator import SelfImproveOrchestrator, WorkflowStage
 
@@ -449,6 +451,7 @@ class TestFullPipelineWithOllama:
             mock_run.return_value = MagicMock(
                 returncode=0, stdout="https://github.com/test/pull/1\n"
             )
+            monkeypatch.setenv("ANIMUS_FORGE_ALLOW_AUTO_APPROVE", "1")
             result = asyncio.run(orch.run(auto_approve=True))
 
         elapsed = time.time() - start
