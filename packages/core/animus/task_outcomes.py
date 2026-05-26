@@ -103,12 +103,16 @@ class TaskOutcomeTracker:
         for tool in outcome.tools_used:
             tags.append(f"tool:{tool}")
 
+        # Stage 2.C — task outcomes describe the user's own work; PERSONAL tier.
+        from animus.memory.types import Sensitivity
+
         mem = self.memory.remember(
             content=content,
             memory_type=MemoryType.PROCEDURAL,
             tags=tags,
             source="task_tracker",
             metadata={"outcome_json": outcome.to_json()},
+            sensitivity=Sensitivity.PERSONAL,
         )
         logger.debug(f"Recorded task outcome: {outcome.request[:60]}... success={outcome.success}")
         return mem.id

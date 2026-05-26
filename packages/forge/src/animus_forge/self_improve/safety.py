@@ -27,6 +27,10 @@ class SafetyConfig:
     # Protected files
     critical_files: list[str] = field(default_factory=list)
     sensitive_files: list[str] = field(default_factory=list)
+    # Stage 4.B — explicit allow-list. When non-empty, *only* files
+    # matching these patterns can be modified. Empty = no allow-list
+    # enforcement (legacy deny-list-only behavior).
+    allowed_files: list[str] = field(default_factory=list)
 
     # Limits
     max_files_per_pr: int = 10
@@ -90,6 +94,7 @@ class SafetyConfig:
         return cls(
             critical_files=protected.get("critical", []),
             sensitive_files=protected.get("sensitive", []),
+            allowed_files=data.get("allowed_files", []),
             max_files_per_pr=limits.get("max_files_per_pr", 10),
             max_lines_changed=limits.get("max_lines_changed", 500),
             max_deleted_files=limits.get("max_deleted_files", 0),
@@ -151,6 +156,20 @@ class SafetyChecker:
             True if file is sensitive.
         """
         return self._matches_patterns(file_path, self.config.sensitive_files)
+
+    def is_allowed_file(self, file_path: str) -> bool:
+        """Check if a file is permitted under the Stage 4.B allow-list.
+
+        Returns True if no allow-list is configured (legacy mode — fall
+        back to deny-list-only). Otherwise returns True iff the file
+        matches at least one allow pattern.
+
+        Args:
+            file_path: Path to check.
+        """
+        if not self.config.allowed_files:
+            return True  # no allow-list enforcement
+        return self._matches_patterns(file_path, self.config.allowed_files)
 
     def _matches_patterns(self, file_path: str, patterns: list[str]) -> bool:
         """Check if file matches any pattern.
@@ -252,6 +271,23 @@ class SafetyChecker:
                         file_path=file_path,
                         violation_type="protected_file",
                         message=f"File is protected and cannot be modified: {file_path}",
+                    )
+                )
+
+        # Stage 4.B — allow-list enforcement. If config.allowed_files is
+        # non-empty, every modified/added file must match at least one
+        # allow pattern. Deletions are still governed by max_deleted_files
+        # above; an allow-list violation on a deleted file is not raised
+        # separately to avoid double-counting against protected_file.
+        for file_path in files_modified + files_added:
+            if not self.is_allowed_file(file_path):
+                violations.append(
+                    SafetyViolation(
+                        file_path=file_path,
+                        violation_type="not_allow_listed",
+                        message=(
+                            f"File is outside the allow-list and cannot be modified: {file_path}"
+                        ),
                     )
                 )
 

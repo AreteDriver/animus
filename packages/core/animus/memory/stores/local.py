@@ -7,7 +7,7 @@ from pathlib import Path
 
 from animus.logging import get_logger
 from animus.memory.stores.base import MemoryStore
-from animus.memory.types import Memory, MemoryType
+from animus.memory.types import Memory, MemoryType, Sensitivity
 
 logger = get_logger("memory")
 
@@ -70,8 +70,13 @@ class LocalMemoryStore(MemoryStore):
         source: str | None = None,
         min_confidence: float = 0.0,
         limit: int = 10,
+        allowed_tiers: set[Sensitivity] | None = None,
     ) -> list[Memory]:
-        """Substring search with filters."""
+        """Substring search with filters.
+
+        ``allowed_tiers`` restricts results to memories whose sensitivity is
+        in the set. ``None`` skips the filter (backward-compat).
+        """
         results = []
         query_lower = query.lower()
 
@@ -84,6 +89,8 @@ class LocalMemoryStore(MemoryStore):
             if source and memory.source != source:
                 continue
             if memory.confidence < min_confidence:
+                continue
+            if allowed_tiers is not None and memory.sensitivity not in allowed_tiers:
                 continue
             # Content match
             if query_lower in memory.content.lower():

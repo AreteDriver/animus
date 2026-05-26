@@ -17,6 +17,7 @@ from animus.memory.types import (
     MemoryType,
     Procedure,
     SemanticFact,
+    Sensitivity,
 )
 
 if TYPE_CHECKING:
@@ -72,6 +73,7 @@ class MemoryLayer:
         confidence: float = 1.0,
         subtype: str | None = None,
         provenance: str = "direct",
+        sensitivity: Sensitivity = Sensitivity.PUBLIC,
     ) -> Memory:
         """
         Store a new memory.
@@ -85,6 +87,10 @@ class MemoryLayer:
             confidence: Confidence level 0.0-1.0
             subtype: Optional subtype (e.g., "fact", "preference")
             provenance: Origin of the memory (direct/sync/consolidation/import/mcp)
+            sensitivity: Disclosure tier (PUBLIC/PERSONAL/CONFIDENTIAL/SECRET).
+                Defaults to PUBLIC; callers handling private material should
+                set this explicitly. Read-side filtering happens via
+                ``recall(allowed_tiers=...)``.
 
         Returns:
             The created Memory object
@@ -115,6 +121,7 @@ class MemoryLayer:
             confidence=confidence,
             subtype=subtype,
             provenance=provenance,
+            sensitivity=sensitivity,
         )
 
         self.store.store(memory)
@@ -216,6 +223,7 @@ class MemoryLayer:
         source: str | None = None,
         min_confidence: float = 0.0,
         limit: int = 10,
+        allowed_tiers: set[Sensitivity] | None = None,
     ) -> list[Memory]:
         """
         Retrieve relevant memories with optional filters.
@@ -227,16 +235,42 @@ class MemoryLayer:
             source: Optional filter by source
             min_confidence: Minimum confidence threshold
             limit: Maximum results
+            allowed_tiers: Disclosure tiers permitted for this caller. When
+                provided, results are filtered to memories whose
+                ``sensitivity`` is in the set. MCP-egress callers should pass
+                ``{Sensitivity.PUBLIC}``; local-CLI callers typically pass
+                ``{PUBLIC, PERSONAL, CONFIDENTIAL}``. ``None`` (default) skips
+                the filter — backward-compat for pre-Stage-2.B callers.
 
         Returns:
             List of relevant memories
         """
-        return self.store.search(query, memory_type, tags, source, min_confidence, limit)
+        return self.store.search(
+            query,
+            memory_type,
+            tags,
+            source,
+            min_confidence,
+            limit,
+            allowed_tiers=allowed_tiers,
+        )
 
-    def recall_by_tags(self, tags: list[str], limit: int = 10) -> list[Memory]:
-        """Retrieve memories that have all specified tags."""
+    def recall_by_tags(
+        self,
+        tags: list[str],
+        limit: int = 10,
+        allowed_tiers: set[Sensitivity] | None = None,
+    ) -> list[Memory]:
+        """Retrieve memories that have all specified tags.
+
+        ``allowed_tiers`` (Stage 2.B) restricts results to memories whose
+        ``sensitivity`` is in the set. ``None`` skips the filter
+        (backward-compat for pre-Stage-2.B callers).
+        """
         all_memories = self.store.list_all()
         matching = [m for m in all_memories if all(t in m.tags for t in tags)]
+        if allowed_tiers is not None:
+            matching = [m for m in matching if m.sensitivity in allowed_tiers]
         return matching[:limit]
 
     def get_memory(self, memory_id: str) -> Memory | None:

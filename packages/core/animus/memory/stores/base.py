@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from animus.memory.types import Memory, MemoryType
+from animus.memory.types import Memory, MemoryType, Sensitivity
 
 
 class MemoryStore(ABC):
@@ -34,8 +34,14 @@ class MemoryStore(ABC):
         source: str | None = None,
         min_confidence: float = 0.0,
         limit: int = 10,
+        allowed_tiers: set[Sensitivity] | None = None,
     ) -> list[Memory]:
-        """Search memories with filters."""
+        """Search memories with filters.
+
+        When ``allowed_tiers`` is provided, results are restricted to memories
+        whose ``sensitivity`` is in the set. When ``None`` (default), no tier
+        filter is applied — backward-compatible with pre-Stage-2.B callers.
+        """
         pass
 
     @abstractmethod

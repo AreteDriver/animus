@@ -70,6 +70,9 @@ def sync_verdict_to_memory(memory_layer, decision: dict) -> object | None:
     if review_date:
         metadata["review_date"] = review_date
 
+    # Stage 2.C — decision-log entries are the user's own decisions; PERSONAL tier.
+    from animus.memory.types import Sensitivity
+
     return memory_layer.remember(
         content=content,
         memory_type=MemoryType.EPISODIC,
@@ -77,6 +80,7 @@ def sync_verdict_to_memory(memory_layer, decision: dict) -> object | None:
         source="learned",
         confidence=0.95,
         subtype="decision",
+        sensitivity=Sensitivity.PERSONAL,
         metadata=metadata,
     )
 

@@ -9,7 +9,7 @@ from pathlib import Path
 from animus.logging import get_logger
 from animus.memory.fusion import _rrf_fuse
 from animus.memory.stores.base import MemoryStore
-from animus.memory.types import Memory, MemoryType
+from animus.memory.types import Memory, MemoryType, Sensitivity
 
 logger = get_logger("memory")
 
@@ -125,6 +125,7 @@ class ChromaMemoryStore(MemoryStore):
                             "parent_id",
                             "change_summary",
                             "provenance",
+                            "sensitivity",
                         )
                     },
                     tags=tags,
@@ -135,6 +136,7 @@ class ChromaMemoryStore(MemoryStore):
                     parent_id=metadata.get("parent_id") or None,
                     change_summary=metadata.get("change_summary") or None,
                     provenance=metadata.get("provenance", "direct"),
+                    sensitivity=Sensitivity(metadata.get("sensitivity", Sensitivity.PUBLIC.value)),
                 )
         except Exception as e:
             logger.warning(f"Failed to load metadata from ChromaDB: {e}")
@@ -179,6 +181,7 @@ class ChromaMemoryStore(MemoryStore):
             "confidence": memory.confidence,
             "version": str(memory.version),
             "provenance": memory.provenance,
+            "sensitivity": memory.sensitivity.value,
         }
         if memory.subtype:
             metadata["subtype"] = memory.subtype
@@ -222,10 +225,15 @@ class ChromaMemoryStore(MemoryStore):
         source: str | None = None,
         min_confidence: float = 0.0,
         limit: int = 10,
+        allowed_tiers: set[Sensitivity] | None = None,
     ) -> list[Memory]:
         """Hybrid search: dense vector (ChromaDB) + BM25 keyword, fused with RRF.
 
         Falls back to vector-only if rank_bm25 is not installed.
+
+        ``allowed_tiers`` restricts results to memories whose sensitivity is
+        in the set (gates MCP egress in Stage 2.C). ``None`` skips the filter
+        — backward-compat for pre-Stage-2.B callers.
         """
         fetch_limit = limit * 3 if tags else limit * 2
 
@@ -237,6 +245,9 @@ class ChromaMemoryStore(MemoryStore):
             where_conditions.append({"source": source})
         if min_confidence > 0:
             where_conditions.append({"confidence": {"$gte": min_confidence}})
+        if allowed_tiers is not None:
+            tier_values = [t.value for t in allowed_tiers]
+            where_conditions.append({"sensitivity": {"$in": tier_values}})
 
         where_filter = None
         if len(where_conditions) == 1:
@@ -306,6 +317,9 @@ class ChromaMemoryStore(MemoryStore):
                         parent_id=metadata.get("parent_id") or None,
                         change_summary=metadata.get("change_summary") or None,
                         provenance=metadata.get("provenance", "direct"),
+                        sensitivity=Sensitivity(
+                            metadata.get("sensitivity", Sensitivity.PUBLIC.value)
+                        ),
                     )
                 elif not memory:
                     continue  # BM25-only result not in ChromaDB response
