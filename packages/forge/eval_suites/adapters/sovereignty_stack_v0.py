@@ -79,12 +79,18 @@ def _call_oai_compat(query: str, model: str, base_url: str, max_tokens: int) -> 
 
 
 def _call_provider(query: str, model: str, max_tokens: int) -> str:
-    """Call the configured Forge provider with ``model`` as default."""
+    """Call the configured Forge provider with ``model`` overriding per-call.
+
+    Important: we set ``model`` on the ``CompletionRequest`` itself rather
+    than mutating ``provider.config.default_model``. ``get_provider()``
+    returns a process-wide singleton — when the rubric judge shares this
+    same provider, mutating its default would silently retarget the judge
+    every time the adapter ran. Per-call override avoids that race.
+    """
     from animus_forge.providers import get_provider
     from animus_forge.providers.base import CompletionRequest
 
     provider = get_provider()
-    provider.config.default_model = model
     req = CompletionRequest(
         prompt=query,
         model=model,

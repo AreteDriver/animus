@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import typer
@@ -10,6 +11,48 @@ from rich.table import Table
 from ..helpers import console
 
 eval_app = typer.Typer(help="Agent evaluation and benchmarking")
+
+
+def _ensure_provider_for_model(model: str | None) -> None:
+    """Idempotently register a provider from env when one is missing.
+
+    The provider stack only auto-populates if something explicitly calls
+    ``manager.register()``. ``eval run`` historically only worked in
+    ``--mock`` mode because of this. When the user passes ``--model`` and
+    a matching ``*_API_KEY`` is present in the environment, register the
+    appropriate provider and set it as default. Safe to call repeatedly
+    — bails out if a default is already configured.
+    """
+    from animus_forge.providers import get_manager
+    from animus_forge.providers.base import ProviderType
+
+    manager = get_manager()
+    if manager.get_default() is not None:
+        return
+
+    candidates: list[tuple[str, ProviderType, str]] = []
+    name = (model or "").lower()
+    if "claude" in name or "anthropic" in name:
+        candidates = [("anthropic", ProviderType.ANTHROPIC, "ANTHROPIC_API_KEY")]
+    elif "gpt" in name or "openai" in name or name.startswith("o1") or name.startswith("o3"):
+        candidates = [("openai", ProviderType.OPENAI, "OPENAI_API_KEY")]
+    else:
+        # No model hint — try Anthropic first (project's primary), then OpenAI.
+        candidates = [
+            ("anthropic", ProviderType.ANTHROPIC, "ANTHROPIC_API_KEY"),
+            ("openai", ProviderType.OPENAI, "OPENAI_API_KEY"),
+        ]
+
+    for provider_name, ptype, key_env in candidates:
+        api_key = os.environ.get(key_env)
+        if api_key:
+            manager.register(
+                name=provider_name,
+                provider_type=ptype,
+                api_key=api_key,
+                set_default=True,
+            )
+            return
 
 
 @eval_app.command("run")
@@ -39,6 +82,13 @@ def eval_run(
 ) -> None:
     """Run an evaluation suite against an agent."""
     from animus_forge.evaluation.loader import SuiteLoader
+
+    # Bootstrap the provider stack from env once. Both the adapter (for
+    # UUT calls) and the rubric judge (for LLMJudgeMetric) read from the
+    # same singleton, so a single registration here serves both. Skipped
+    # for --mock since mock mode never touches the provider stack.
+    if not mock:
+        _ensure_provider_for_model(model)
 
     # Load suite
     loader = SuiteLoader(Path(suites_dir) if suites_dir else None)

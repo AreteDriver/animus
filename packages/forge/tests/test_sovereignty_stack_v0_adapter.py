@@ -117,7 +117,8 @@ def test_string_input_treated_as_query_with_default_max_tokens(
 
 def test_provider_path_when_no_base_url(adapter_module, monkeypatch, _clear_env):
     """Env var absent → adapter calls ``get_provider().complete()``
-    with the requested model as ``default_model``."""
+    with the requested model passed *on the request*, not as a mutation
+    of the shared singleton's default."""
     fake_resp = MagicMock(content="provider answer")
     fake_provider = MagicMock()
     fake_provider.config = MagicMock(default_model="placeholder")
@@ -130,7 +131,9 @@ def test_provider_path_when_no_base_url(adapter_module, monkeypatch, _clear_env)
     result = adapter_module.run_query({"query": "factual", "max_tokens": 256})
 
     assert result == "provider answer"
-    assert fake_provider.config.default_model == "claude-sonnet-4-6"
+    # The adapter must NOT mutate the shared provider's default — that
+    # would race with the judge in adapter+rubric mode.
+    assert fake_provider.config.default_model == "placeholder"
     req = fake_provider.complete.call_args.args[0]
     assert req.prompt == "factual"
     assert req.model == "claude-sonnet-4-6"
@@ -139,8 +142,8 @@ def test_provider_path_when_no_base_url(adapter_module, monkeypatch, _clear_env)
 
 
 def test_default_model_when_env_unset(adapter_module, monkeypatch, _clear_env):
-    """When ``MODEL_UNDER_TEST`` is unset, the adapter uses
-    ``DEFAULT_MODEL`` (currently claude-sonnet-4-6) as default."""
+    """When ``MODEL_UNDER_TEST`` is unset, the adapter falls back to
+    ``DEFAULT_MODEL`` on the per-call CompletionRequest."""
     fake_provider = MagicMock()
     fake_provider.config = MagicMock(default_model="placeholder")
     fake_provider.complete = MagicMock(return_value=MagicMock(content="x"))
@@ -150,4 +153,7 @@ def test_default_model_when_env_unset(adapter_module, monkeypatch, _clear_env):
 
     adapter_module.run_query({"query": "q"})
 
-    assert fake_provider.config.default_model == adapter_module.DEFAULT_MODEL
+    req = fake_provider.complete.call_args.args[0]
+    assert req.model == adapter_module.DEFAULT_MODEL
+    # Confirm the provider's default was left untouched.
+    assert fake_provider.config.default_model == "placeholder"
