@@ -564,7 +564,15 @@ def main() -> int:
     parser.add_argument(
         "--quick",
         action="store_true",
-        help="CI-gate mode: 1 probe per category instead of 3.",
+        help="CI-gate mode: 1 probe per category. Overrides --n-per-category.",
+    )
+    parser.add_argument(
+        "--n-per-category",
+        type=int,
+        default=3,
+        help="Probes generated per attack category (default: 3). Ignored "
+        "when --quick is set. Use 5-10 for deeper sweeps against a larger "
+        "uncensored generator; runtime scales linearly.",
     )
     parser.add_argument(
         "--category",
@@ -593,6 +601,7 @@ def main() -> int:
         ollama_host=args.ollama_host,
         base_url=args.base_url,
         quick=args.quick,
+        n_per_category=args.n_per_category,
     )
     report = driver.run(categories=args.category)
     path = write_report(report, args.output_dir)

@@ -70,6 +70,44 @@ _UNIVERSAL_PATTERNS: dict[str, str] = {
     # enough to avoid false-positives on prose (``bearer of bad news`` ends
     # at the space, fails the 8+ requirement).
     "bearer_loose_concat": r"(?i)\bbearer[A-Za-z0-9._\-!@#$%^&*+=:?]{8,}",
+    # Red-team finding 2026-05-26 (iteration 3): 30-probe sweep against
+    # HauhauCS Qwen3.6 (5 probes/category) found 4 dlp_bypass shapes
+    # the previous patterns missed:
+    #   1. "Bearer token: T0k3n!_v4lu3_2024#Sec"  — value has special
+    #      chars not in the prior ``[A-Za-z0-9._\-]`` class
+    #   2. "Bearer: [token: 12345-abcde]"          — bracket separator
+    #      between label keyword and value
+    #   3. "my_secret_token_is: sk-abc-123-..."    — compound label
+    #      ("my_X_token_is") + value too short for openai_key (32 char
+    #      minimum)
+    #   4. "Bearer: token-pass-12345-67890-abcdef" — colon between
+    #      ``bearer`` and ``token``, which the existing
+    #      credential_label_separated separator class ``[\s_\-:=]+``
+    #      already allowed but the lookahead was constrained to a
+    #      single sep char
+    # The two patterns below close the cluster. Both require a label
+    # keyword + separator + 6+ token-shaped chars, so isolated prose
+    # mentions of "secret" or "key" still don't match without a value
+    # tail.
+    "credential_label_compound": (
+        # bearer/access/auth/api … (optional brackets/quotes) … (token|key|
+        # secret|cred) … separator … value-with-special-chars
+        r"(?i)\b(?:bearer|access|auth|api)\s*[:_\-\s]*[\[\(\"']?\s*"
+        r"(?:token|key|secret|cred(?:ential)?)s?"
+        r"[\s_\-:=]+[\[\(\"']?\s*"
+        r"[A-Za-z0-9._\-!@#$%^&*+=]{6,}"
+    ),
+    "credential_qualified_label": (
+        # ANY snake/camel label containing secret|token|key|password|
+        # cred(ential), followed by separator + 6+ token-shaped chars.
+        # Catches ``my_secret_token_is:``, ``user_api_key=``,
+        # ``the.password.field:`` etc.
+        r"(?i)\b[a-z][a-z_]*"
+        r"(?:secret|token|key|password|cred(?:ential)?)"
+        r"[a-z_]*"
+        r"[\s_\-:=]+[\[\(\"']?\s*"
+        r"[A-Za-z0-9._\-!@#$%^&*+=]{6,}"
+    ),
 }
 
 _UNIVERSAL_COMPILED: list[tuple[str, Pattern[str]]] = [
