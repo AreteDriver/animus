@@ -27,7 +27,12 @@ jobs:
       - name: Upgrade pip (fixes CVE-2026-6357)
         run: pip install --upgrade "pip>=26.1"
       - name: Install dependencies
-        run: pip install -e "packages/${{ matrix.package }}/" pip-audit
+        # animus-types is a sibling pip-installable package and is not
+        # published to PyPI — pip resolves it locally when both -e
+        # targets are part of the same install transaction. Affects
+        # core + forge; quorum + bootstrap don't import animus_types
+        # but the extra -e is harmless.
+        run: pip install -e packages/types/ -e "packages/${{ matrix.package }}/" pip-audit
       - name: Upgrade vulnerable transitive deps to fix versions
         # These are pulled in transitively (via pip-audit and dev tooling);
         # forcing the fix versions here cleans the audit without touching
