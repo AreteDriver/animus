@@ -1,21 +1,23 @@
-"""Vendored egress policy helper for Forge (Stage 3.C sibling adopter).
+"""Egress policy helper for Forge.
 
-This is a small duplicate of ``animus.network.egress`` because Forge
-cannot import from animus core: Core → Forge already exists (optional),
-so Forge → Core would create a circular dependency. Vendoring is the
-pragmatic alternative until a shared lower-level package becomes
-warranted (which would be the moment tier-aware dispatch lands and the
-two copies need to share more than the offline kill-switch).
+Originally a vendored copy of ``animus.network.egress`` to bridge the
+Core→Forge cross-package barrier. As of Stage 3.D this module reads the
+shared ``Sensitivity`` enum from ``animus-types``, so the type contract
+is unified across packages even though the behavior implementations
+remain separate (Core's copy has additional rules; this one mirrors the
+ones Forge needs at the cloud-LLM call sites).
 
 **Keep this in sync with ``animus.network.egress`` when the policy
-changes.** Both copies are ~30 lines of pure logic with no external deps
-so drift is detectable by inspection.
+changes.** Both copies are ~50 lines of pure logic with no heavy deps so
+drift is detectable by inspection.
 """
 
 from __future__ import annotations
 
 import os
 from urllib.parse import urlparse
+
+from animus_types import Sensitivity
 
 _LOOPBACK_HOSTS: frozenset[str] = frozenset({"localhost", "127.0.0.1", "::1", "0.0.0.0"})
 
@@ -39,20 +41,34 @@ def _extract_host(destination: str) -> str:
     return host.lower()
 
 
-def is_egress_allowed(destination: str) -> bool:
+def is_egress_allowed(
+    destination: str,
+    sensitivity: Sensitivity | None = None,
+) -> bool:
     """Return True iff outbound traffic to ``destination`` is permitted.
 
-    Rules (subset of the core helper — Forge does not yet have tier
-    awareness in its dispatch layer):
+    Rules (most-protective first):
 
     - Loopback (``localhost``, ``127.0.0.1``, ``::1``, ``0.0.0.0``,
       ``*.local``) — always allowed.
     - ``ANIMUS_OFFLINE=1`` env — deny all non-loopback.
-    - Otherwise — allow.
+    - ``sensitivity`` in {CONFIDENTIAL, SECRET} — deny non-loopback. These
+      tiers must never leave the box, regardless of env flags.
+    - ``sensitivity == PERSONAL`` + ``ANIMUS_LOCAL_ONLY=1`` — deny non-loopback.
+    - Otherwise (PUBLIC, PERSONAL without LOCAL_ONLY, or no tier) — allow.
+
+    The ``sensitivity`` parameter is optional for backward compat with
+    pre-Stage-3.D callers that don't yet thread the request's tier. The
+    cloud-LLM call-site adopters (5 sites in PR #57) will pass it via the
+    request from PR #59 (Stage 3.D) onward.
     """
     host = _extract_host(destination)
     if host in _LOOPBACK_HOSTS or host.endswith(".local"):
         return True
     if os.environ.get("ANIMUS_OFFLINE") == "1":
+        return False
+    if sensitivity in (Sensitivity.CONFIDENTIAL, Sensitivity.SECRET):
+        return False
+    if sensitivity is Sensitivity.PERSONAL and os.environ.get("ANIMUS_LOCAL_ONLY") == "1":
         return False
     return True

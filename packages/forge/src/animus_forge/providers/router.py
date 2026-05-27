@@ -7,10 +7,13 @@ and force-local mode for air-gapped deployments.
 from __future__ import annotations
 
 import logging
+import os
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
+
+from animus_types import Sensitivity
 
 from .base import (
     CompletionRequest,
@@ -233,6 +236,19 @@ class TierRouter:
         forced_local = self._force_local
         reason_parts: list[str] = []
 
+        # Stage 3.D — disclosure sensitivity overrides everything else.
+        # CONFIDENTIAL/SECRET requests must NEVER reach a cloud provider,
+        # regardless of routing mode, budget, or user preferences.
+        # PERSONAL respects ANIMUS_LOCAL_ONLY for consistency with the
+        # vendored egress helper.
+        sensitivity = getattr(request, "sensitivity", Sensitivity.PUBLIC)
+        if sensitivity in (Sensitivity.CONFIDENTIAL, Sensitivity.SECRET):
+            forced_local = True
+            reason_parts.append(f"sensitivity={sensitivity.value} → force local")
+        elif sensitivity is Sensitivity.PERSONAL and os.environ.get("ANIMUS_LOCAL_ONLY") == "1":
+            forced_local = True
+            reason_parts.append("sensitivity=personal + ANIMUS_LOCAL_ONLY → force local")
+
         # Budget check: force local if remaining tokens are low
         if not forced_local and self._budget is not None:
             remaining = getattr(self._budget, "remaining", None)
@@ -243,6 +259,12 @@ class TierRouter:
         # Determine candidate set
         if forced_local or self._config.mode == RoutingMode.LOCAL:
             candidates = self._get_local_providers()
+            if not candidates and sensitivity in (Sensitivity.CONFIDENTIAL, Sensitivity.SECRET):
+                # Stage 3.D — never silently fall back to cloud for sensitive tiers.
+                raise ProviderError(
+                    f"No local provider available for sensitivity={sensitivity.value} "
+                    "request. Register an Ollama provider or downgrade the request."
+                )
             if not reason_parts:
                 reason_parts.append("force_local" if self._force_local else "mode=LOCAL")
         elif self._config.mode == RoutingMode.CLOUD:

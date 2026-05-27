@@ -333,6 +333,173 @@ def scenario_stage5_pi_footer_warns_consumer(data_dir: Path) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Stage 3.D — Tier-aware LLM dispatch
+# ---------------------------------------------------------------------------
+
+
+def scenario_stage3d_completion_request_carries_sensitivity(data_dir: Path) -> str:
+    """``CompletionRequest`` accepts a sensitivity field defaulting to PUBLIC."""
+    from animus_forge.providers.base import CompletionRequest
+
+    req_default = CompletionRequest(prompt="x")
+    assert req_default.sensitivity is Sensitivity.PUBLIC
+    req_explicit = CompletionRequest(prompt="x", sensitivity=Sensitivity.CONFIDENTIAL)
+    assert req_explicit.sensitivity is Sensitivity.CONFIDENTIAL
+    return "CompletionRequest carries sensitivity (default PUBLIC, explicit preserved)"
+
+
+def scenario_stage3d_forge_egress_blocks_confidential(data_dir: Path) -> str:
+    """Forge vendored egress helper refuses cloud for CONFIDENTIAL/SECRET tiers."""
+    import os
+
+    from animus_forge.network import is_egress_allowed as forge_is_egress_allowed
+
+    saved = os.environ.get("ANIMUS_OFFLINE")
+    try:
+        os.environ.pop("ANIMUS_OFFLINE", None)  # ensure online
+        assert (
+            forge_is_egress_allowed(
+                "https://api.anthropic.com", sensitivity=Sensitivity.CONFIDENTIAL
+            )
+            is False
+        )
+        assert (
+            forge_is_egress_allowed("https://api.openai.com", sensitivity=Sensitivity.SECRET)
+            is False
+        )
+        assert (
+            forge_is_egress_allowed("https://api.anthropic.com", sensitivity=Sensitivity.PUBLIC)
+            is True
+        )
+    finally:
+        if saved is not None:
+            os.environ["ANIMUS_OFFLINE"] = saved
+    return "forge egress helper enforces tier gate"
+
+
+def scenario_stage3d_anthropic_provider_refuses_confidential(data_dir: Path) -> str:
+    """Forge AnthropicProvider.complete() refuses CONFIDENTIAL requests
+    before invoking the cloud client."""
+    from unittest.mock import MagicMock
+
+    from animus_forge.network import EgressDeniedError
+    from animus_forge.providers.anthropic_provider import AnthropicProvider
+    from animus_forge.providers.base import (
+        CompletionRequest,
+        ProviderConfig,
+        ProviderType,
+    )
+
+    cfg = ProviderConfig(provider_type=ProviderType.ANTHROPIC, api_key="dummy")
+    provider = AnthropicProvider(config=cfg)
+    provider._initialized = True
+    provider._client = MagicMock()
+    provider._egress_endpoint = "https://api.anthropic.com"
+
+    req = CompletionRequest(prompt="x", sensitivity=Sensitivity.CONFIDENTIAL)
+    raised = False
+    try:
+        provider.complete(req)
+    except EgressDeniedError:
+        raised = True
+    assert raised, "AnthropicProvider did not block confidential request"
+    provider._client.messages.create.assert_not_called()
+    return "AnthropicProvider refuses confidential before cloud invocation"
+
+
+def scenario_stage3d_tier_router_forces_local_for_secret(data_dir: Path) -> str:
+    """TierRouter routes SECRET requests to local providers."""
+    from unittest.mock import MagicMock
+
+    from animus_forge.providers.base import (
+        CompletionRequest,
+        ProviderType,
+    )
+    from animus_forge.providers.manager import ProviderManager
+    from animus_forge.providers.router import RoutingConfig, TierRouter
+
+    pm = MagicMock(spec=ProviderManager)
+    pm.list_providers.return_value = ["ollama", "anthropic"]
+
+    def get(name):
+        p = MagicMock()
+        p.provider_type = ProviderType.OLLAMA if name == "ollama" else ProviderType.ANTHROPIC
+        return p
+
+    pm.get.side_effect = get
+    router = TierRouter(pm, RoutingConfig())
+    req = CompletionRequest(prompt="x", sensitivity=Sensitivity.SECRET)
+    decision = router._select_provider(req)
+    assert decision.provider_name == "ollama"
+    assert "sensitivity=secret" in decision.reason
+    return "TierRouter routes SECRET to local"
+
+
+def scenario_stage3d_tier_router_raises_when_no_local(data_dir: Path) -> str:
+    """When only cloud providers are registered, CONFIDENTIAL requests
+    raise instead of silently falling back."""
+    from unittest.mock import MagicMock
+
+    from animus_forge.providers.base import (
+        CompletionRequest,
+        ProviderError,
+        ProviderType,
+    )
+    from animus_forge.providers.manager import ProviderManager
+    from animus_forge.providers.router import RoutingConfig, TierRouter
+
+    pm = MagicMock(spec=ProviderManager)
+    pm.list_providers.return_value = ["anthropic"]
+
+    def get(name):
+        p = MagicMock()
+        p.provider_type = ProviderType.ANTHROPIC
+        return p
+
+    pm.get.side_effect = get
+    router = TierRouter(pm, RoutingConfig())
+    req = CompletionRequest(prompt="x", sensitivity=Sensitivity.CONFIDENTIAL)
+    raised = False
+    try:
+        router._select_provider(req)
+    except ProviderError as e:
+        raised = "No local provider" in str(e)
+    assert raised, "TierRouter silently fell back to cloud for confidential"
+    return "TierRouter raises when no local provider for sensitive tier"
+
+
+def scenario_stage3d_rag_assembled_propagates_max_tier(data_dir: Path) -> str:
+    """``build_context_for_agent_assembled`` returns the max tier of the
+    chunks included so callers can populate CompletionRequest.sensitivity."""
+    from datetime import UTC, datetime
+    from unittest.mock import MagicMock
+
+    from animus_forge.intelligence.cross_workflow_memory import (
+        AssembledContext,
+        CrossWorkflowMemory,
+    )
+
+    agent_memory = MagicMock()
+    mems = []
+    for sens in ["public", "confidential", "personal"]:
+        m = MagicMock()
+        m.id = f"mem-{sens}"
+        m.content = f"chunk-{sens}"
+        m.importance = 0.5
+        m.created_at = datetime.now(UTC)
+        m.metadata = {"tags": [], "sensitivity": sens}
+        mems.append(m)
+    agent_memory.recall.return_value = mems
+    wf = CrossWorkflowMemory(agent_memory)
+    result = wf.build_context_for_agent_assembled(
+        agent_role="x", task_description="y", max_tokens=2048
+    )
+    assert isinstance(result, AssembledContext)
+    assert result.max_sensitivity is Sensitivity.CONFIDENTIAL
+    return "RAG assembler propagates max tier (public+personal+confidential → confidential)"
+
+
+# ---------------------------------------------------------------------------
 # Composition — multi-stage end-to-end
 # ---------------------------------------------------------------------------
 
@@ -409,6 +576,36 @@ SCENARIOS: list[tuple[str, str, Callable[[Path], str]]] = [
         scenario_stage4_safety_allow_list_blocks_random_file,
     ),
     ("default_branch_strict_mode", "4.C", scenario_stage4_default_branch_strict_mode),
+    (
+        "completion_request_carries_sensitivity",
+        "3.D",
+        scenario_stage3d_completion_request_carries_sensitivity,
+    ),
+    (
+        "forge_egress_blocks_confidential",
+        "3.D",
+        scenario_stage3d_forge_egress_blocks_confidential,
+    ),
+    (
+        "anthropic_provider_refuses_confidential",
+        "3.D",
+        scenario_stage3d_anthropic_provider_refuses_confidential,
+    ),
+    (
+        "tier_router_forces_local_for_secret",
+        "3.D",
+        scenario_stage3d_tier_router_forces_local_for_secret,
+    ),
+    (
+        "tier_router_raises_when_no_local",
+        "3.D",
+        scenario_stage3d_tier_router_raises_when_no_local,
+    ),
+    (
+        "rag_assembled_propagates_max_tier",
+        "3.D",
+        scenario_stage3d_rag_assembled_propagates_max_tier,
+    ),
     ("pi_wrapper_envelopes_chunk", "5", scenario_stage5_pi_wrapper_envelopes_chunk),
     (
         "pi_wrapper_escapes_break_out_attempt",

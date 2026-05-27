@@ -93,6 +93,8 @@ class AnthropicProvider(Provider):
         # Stage 3.C sibling adopter — refuse to construct the cloud client when
         # ANIMUS_OFFLINE=1. Egress to api.anthropic.com is blocked at the point
         # of first use so callers get a clean error instead of a network timeout.
+        # Stage 3.D — per-request tier checks happen in complete()/complete_async()
+        # below; construction-time check is offline-only (no request context yet).
         from animus_forge.network import EgressDeniedError, is_egress_allowed
 
         endpoint = self.config.base_url or "https://api.anthropic.com"
@@ -101,6 +103,7 @@ class AnthropicProvider(Provider):
                 f"ANIMUS_OFFLINE=1 — Anthropic provider blocked from {endpoint}. "
                 "Unset the env var or route through a local provider."
             )
+        self._egress_endpoint = endpoint
 
         self._client = anthropic.Anthropic(
             api_key=self.config.api_key,
@@ -114,6 +117,20 @@ class AnthropicProvider(Provider):
         )
         self._initialized = True
 
+    def _check_request_egress(self, request: CompletionRequest) -> None:
+        """Stage 3.D — refuse a request whose sensitivity is incompatible
+        with this cloud endpoint. Raises ``EgressDeniedError`` before the
+        cloud client is invoked, so the request never crosses the wire.
+        """
+        from animus_forge.network import EgressDeniedError, is_egress_allowed
+
+        endpoint = getattr(self, "_egress_endpoint", "https://api.anthropic.com")
+        if not is_egress_allowed(endpoint, sensitivity=request.sensitivity):
+            raise EgressDeniedError(
+                f"Request with sensitivity={request.sensitivity.value} blocked from "
+                f"{endpoint}. Route this through a local provider."
+            )
+
     def complete(self, request: CompletionRequest) -> CompletionResponse:
         """Generate completion using Anthropic API."""
         if not self._initialized:
@@ -121,6 +138,8 @@ class AnthropicProvider(Provider):
 
         if not self._client:
             raise ProviderNotConfiguredError("Anthropic client not initialized")
+
+        self._check_request_egress(request)
 
         model = request.model or self.default_model
         messages = self._build_messages(request)
@@ -231,6 +250,8 @@ class AnthropicProvider(Provider):
 
         if not self._async_client:
             raise ProviderNotConfiguredError("Anthropic async client not initialized")
+
+        self._check_request_egress(request)
 
         model = request.model or self.default_model
         messages = self._build_messages(request)
