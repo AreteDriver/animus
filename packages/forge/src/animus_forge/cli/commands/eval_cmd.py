@@ -155,6 +155,26 @@ def eval_run(
     # Swap suite metrics for rubric-built metrics if rubric is in use
     if rubric is not None:
         provider_for_metrics = None if mock else getattr(evaluator, "provider", None)
+        # Adapter-mode evaluators don't carry a .provider attr — without one,
+        # LLMJudgeMetric scores 0.5 on every dim. Stand up a separate judge
+        # provider from --model when the caller explicitly opted into a
+        # rubric (i.e. they want real scoring).
+        if provider_for_metrics is None and adapter and not mock:
+            try:
+                from animus_forge.providers import get_provider
+
+                judge_provider = get_provider()
+                if model:
+                    judge_provider.config.default_model = model
+                provider_for_metrics = judge_provider
+                console.print(
+                    f"[dim]Judge provider: {model or judge_provider.config.default_model}[/dim]"
+                )
+            except Exception as e:
+                console.print(
+                    f"[yellow]Warning:[/yellow] judge provider unavailable ({e}); "
+                    "rubric will score 0.5 on every dim."
+                )
         eval_suite.metrics = rubric.build_metrics(provider_for_metrics)
         console.print(
             f"[dim]Applying rubric: {rubric.name}@{rubric.version} ({len(rubric.dims)} dims)[/dim]"

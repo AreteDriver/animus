@@ -26,24 +26,9 @@ Captures latency + token throughput for three prompts (factual / reasoning / for
 
 ## Eval suite — first runs
 
-```bash
-# Pin local judge — fully sovereign run
-animus-forge eval run sovereignty-stack-v0 \
-  --rubric personal-quality \
-  --model hf.co/HauhauCS/Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive:Q6_K_P \
-  --prompt-version v0-local-judge
+Adapter is at `eval_suites/adapters/sovereignty_stack_v0.py`. Routes each case's `input.query` to the UUT (parameterized via `MODEL_UNDER_TEST` env). When `ANIMUS_SOVEREIGNTY_BASE_URL` is set, the adapter calls llama-server's OpenAI-compat endpoint directly; without it, it routes through the standard Forge provider stack.
 
-# Cloud baseline — Haiku judge
-animus-forge eval run sovereignty-stack-v0 \
-  --rubric personal-quality \
-  --model claude-haiku-4-5 \
-  --prompt-version v0-cloud-judge
-
-# A/B compare
-animus-forge eval compare v0-cloud-judge v0-local-judge --suite sovereignty-stack-v0
-```
-
-Note: the suite's `agent_role: sovereignty-stack-v0` needs an adapter at `eval_suites/adapters/sovereignty_stack_v0.py` that routes each case's `input.query` to the model under test. Pattern mirrors `eval_suites/adapters/benchgoblins_ask.py` (to be written). Parameterize the model-under-test via env var (`MODEL_UNDER_TEST=...`) so the same suite runs against Claude, GPT, Qwen3.6 without yaml edits.
+See the **Run log** section below for the exact commands that work today. Sovereign-judge runs (local UUT + local judge) require a llama-server provider in `get_provider()` — tracked as follow-up.
 
 ## Fallback configuration example
 
@@ -103,7 +88,46 @@ Behavior:
 - `reasoning_multistep`: model's arithmetic is correct through the truncation point ($3,456 input cost, would have summed to ~$12,096/month). The suite's original `ground_truth: "~$363/month"` was wrong — the cited formula dropped per-event token counts; corrected to `~$12,096/month` in the same commit as this run-log entry. **First useful finding of the research arc: the eval suite checks itself before it checks the model.**
 - `format_structured`: valid JSON, all keys present, model self-named accurately. Clean format compliance.
 
-**First eval run**: pending — needs `eval_suites/adapters/sovereignty_stack_v0.py` adapter (see comment in the YAML).
+**First eval run** — 2026-05-26, adapter-only mode (no rubric judge yet)
+
+```bash
+MODEL_UNDER_TEST=hauhaucs \
+  ANIMUS_SOVEREIGNTY_BASE_URL=http://127.0.0.1:8081 \
+  animus-forge eval run sovereignty-stack-v0 \
+    --adapter eval_suites.adapters.sovereignty_stack_v0:run_query \
+    --suites-dir eval_suites \
+    --prompt-version v0-smoke
+```
+
+- 5/5 PASS, total 155.6 s wall-clock
+- Run stored as `005cd045`
+- Score = 1.0 per case because the suite has empty `metrics: []` (intended — v0 measures rubric scores, not regression invariants). This run validates the pipeline (adapter → llama-server → store), not output quality.
+
+**Next**: full rubric run
+
+```bash
+# Cloud baseline UUT (Claude Sonnet), cloud judge (Haiku)
+MODEL_UNDER_TEST=claude-sonnet-4-6 \
+  animus-forge eval run sovereignty-stack-v0 \
+    --adapter eval_suites.adapters.sovereignty_stack_v0:run_query \
+    --rubric personal-quality \
+    --model claude-haiku-4-5 \
+    --prompt-version v0-cloud-baseline
+
+# Local UUT (Qwen3.6 via llama-server), cloud judge (Haiku)
+MODEL_UNDER_TEST=hauhaucs \
+  ANIMUS_SOVEREIGNTY_BASE_URL=http://127.0.0.1:8081 \
+  animus-forge eval run sovereignty-stack-v0 \
+    --adapter eval_suites.adapters.sovereignty_stack_v0:run_query \
+    --rubric personal-quality \
+    --model claude-haiku-4-5 \
+    --prompt-version v0-local-uut
+
+# A/B compare
+animus-forge eval compare v0-cloud-baseline v0-local-uut --suite sovereignty-stack-v0
+```
+
+The sovereign-judge run (local UUT + local judge) is blocked on a llama-server provider in the Forge provider stack — `get_provider()` doesn't currently route to port 8081. Tracked as follow-up.
 
 ## Provenance
 
