@@ -24,10 +24,33 @@ def _ensure_provider_for_model(model: str | None) -> None:
     — bails out if a default is already configured.
     """
     from animus_forge.providers import get_manager
-    from animus_forge.providers.base import ProviderType
+    from animus_forge.providers.base import ProviderConfig, ProviderType
 
     manager = get_manager()
     if manager.get_default() is not None:
+        return
+
+    # Highest precedence: ANIMUS_SOVEREIGNTY_BASE_URL points at a
+    # llama-server instance (built from llama.cpp source). When set,
+    # both UUT (via adapter) and rubric judge route through the local
+    # endpoint — no cloud dependency. This is the path that loads
+    # qwen35moe models ollama's vendored llama.cpp can't handle (ollama
+    # issue #15898).
+    sovereignty_url = os.environ.get("ANIMUS_SOVEREIGNTY_BASE_URL")
+    if sovereignty_url:
+        base = sovereignty_url.rstrip("/")
+        if not base.endswith("/v1"):
+            base = base + "/v1"
+        manager.register(
+            name="llamacpp",
+            config=ProviderConfig(
+                provider_type=ProviderType.LLAMACPP,
+                base_url=base,
+                api_key="sk-no-key-required",
+                default_model=model or "qwen3.6-research",
+            ),
+            set_default=True,
+        )
         return
 
     candidates: list[tuple[str, ProviderType, str]] = []

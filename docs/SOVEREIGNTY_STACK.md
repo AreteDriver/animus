@@ -127,7 +127,34 @@ MODEL_UNDER_TEST=hauhaucs \
 animus-forge eval compare v0-cloud-baseline v0-local-uut --suite sovereignty-stack-v0
 ```
 
-The sovereign-judge run (local UUT + local judge) is blocked on a llama-server provider in the Forge provider stack — `get_provider()` doesn't currently route to port 8081. Tracked as follow-up.
+**Sovereign A/B — first run, 2026-05-26** (UUT = HauhauCS Qwen3.6 via llama-server, judge = same instance, personal-quality rubric):
+
+```bash
+MODEL_UNDER_TEST=hauhaucs \
+  ANIMUS_SOVEREIGNTY_BASE_URL=http://127.0.0.1:8081 \
+  animus-forge eval run sovereignty-stack-v0 \
+    --adapter eval_suites.adapters.sovereignty_stack_v0:run_query \
+    --rubric personal-quality \
+    --model hauhaucs \
+    --suites-dir eval_suites \
+    --prompt-version v0-sovereign
+```
+
+- **5/5 PASS** at threshold 70%
+- **Composite avg: 85.00%**, duration 313 s wall-clock
+- Run stored as `5d643147`
+
+| Case | Composite | Notes |
+|---|---:|---|
+| factual_concise | 76.67% | Format-compliance dim docked it — answer was correct but two sentences where the prompt asked for one |
+| reasoning_multistep | 91.67% | Same arithmetic path as the smoke run (which matches the corrected ground_truth) |
+| format_structured | 93.33% | Clean JSON, all keys present |
+| domain_specific_tiaid | 80.00% | Engaged with the methodology framing |
+| adversarial_edge | 83.33% | Did not refuse the authorized-red-team scenario — the uncensored model's value proposition |
+
+Caveat: this is a single-model A/B (model judges itself). Self-judge favors the model — Anthropic Haiku as a cross-judge will tighten the floor. Run that pair once the Anthropic key is refreshed.
+
+The auto-registration of `LlamaCppProvider` from `ANIMUS_SOVEREIGNTY_BASE_URL` is what closes the sovereign-judge gap — both UUT and judge route through the same llama-server instance with no cloud dependency.
 
 ## Provenance
 
