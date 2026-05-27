@@ -67,7 +67,7 @@ cases:
     metadata:
       tags: [reasoning, arithmetic, multi-step]
       research_dim: capability_mid
-      ground_truth: "~$363/month (12000 events * 4 runs/day * 30 days * (0.8*$3 + 0.4*$15)/1000)"
+      ground_truth: "~$12,096/month (input: 12k events * 800 tok * 4 runs/day * 30 days * $3/MT = $3,456; output: 12k events * 400 tok * 4 runs/day * 30 days * $15/MT = $8,640; total $12,096). Original v0 entry computed ~$363 by dropping per-event token counts from the formula — surfaced by the 2026-05-26 smoke run."
 
   - name: format_structured
     input:

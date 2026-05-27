@@ -78,12 +78,32 @@ Behavior:
 
 ## Run log
 
-### v0 baseline (date pending)
+### v0 baseline — 2026-05-26
 
-- Pull: ✅ `ollama pull hf.co/HauhauCS/Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive:Q6_K_P` completed at <ts>
-- Model size on disk: <GB at /mnt/data/ollama/.ollama>
-- Smoke test: <pending — fill in after first run>
-- First eval run: <pending — fill in after first run>
+**Backend**: `llama-server` built from llama.cpp source (commit `b4c0549`) on port 8081. Ollama path blocked — ollama 0.24.0's vendored llama.cpp does not include `qwen35moe` ([ollama issue #15898](https://github.com/ollama/ollama/issues/15898)). Build artifacts at `/mnt/data/llama.cpp-build/src/build/bin/`.
+
+**Model**: `hf.co/HauhauCS/Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive:Q6_K_P`
+- GGUF: 28.5 GB at `/mnt/data/ollama/.ollama/models/blobs/sha256-90281d33...`
+- mmproj: 858 MB at `sha256-c8e702...`
+- Host budget reported by `llama-server`: 30,287 MiB of 128,692 MiB host memory (~24%)
+- Context: 16,384 tokens (model trained to 262,144)
+
+**Smoke results** — `ANIMUS_SOVEREIGNTY_BASE_URL=http://127.0.0.1:8081 python scripts/sovereignty_smoke.py`
+
+| Prompt | Latency | In tokens | Out tokens | Throughput |
+|---|---:|---:|---:|---:|
+| factual_concise | 6.6 s | 41 | 53 | 7.98 tok/s |
+| reasoning_multistep | 56.4 s | 104 | 512 (truncated) | 9.08 tok/s |
+| format_structured | 9.5 s | 78 | 78 | 8.17 tok/s |
+
+**Mean output throughput**: ~8.4 tok/s on CPU (AMD Ryzen 9 5900X, 12 cores / 24 threads, 20 inference threads).
+
+**Qualitative notes**
+- `factual_concise`: correct answer, but two sentences where one was requested → minor format-compliance miss.
+- `reasoning_multistep`: model's arithmetic is correct through the truncation point ($3,456 input cost, would have summed to ~$12,096/month). The suite's original `ground_truth: "~$363/month"` was wrong — the cited formula dropped per-event token counts; corrected to `~$12,096/month` in the same commit as this run-log entry. **First useful finding of the research arc: the eval suite checks itself before it checks the model.**
+- `format_structured`: valid JSON, all keys present, model self-named accurately. Clean format compliance.
+
+**First eval run**: pending — needs `eval_suites/adapters/sovereignty_stack_v0.py` adapter (see comment in the YAML).
 
 ## Provenance
 
