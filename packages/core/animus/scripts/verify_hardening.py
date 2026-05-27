@@ -477,8 +477,6 @@ def scenario_stage3d_rag_assembled_propagates_max_tier(data_dir: Path) -> str:
     from datetime import datetime, timezone
     from unittest.mock import MagicMock
 
-    UTC = timezone.utc
-
     from animus_forge.intelligence.cross_workflow_memory import (
         AssembledContext,
         CrossWorkflowMemory,
@@ -491,7 +489,7 @@ def scenario_stage3d_rag_assembled_propagates_max_tier(data_dir: Path) -> str:
         m.id = f"mem-{sens}"
         m.content = f"chunk-{sens}"
         m.importance = 0.5
-        m.created_at = datetime.now(UTC)
+        m.created_at = datetime.now(timezone.utc)
         m.metadata = {"tags": [], "sensitivity": sens}
         mems.append(m)
     agent_memory.recall.return_value = mems

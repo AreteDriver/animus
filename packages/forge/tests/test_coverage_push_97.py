@@ -13,7 +13,6 @@ import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import click
 import pytest
 import typer
 
