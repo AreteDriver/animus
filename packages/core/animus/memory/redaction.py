@@ -48,6 +48,28 @@ _UNIVERSAL_PATTERNS: dict[str, str] = {
     ),
     "ssn": r"\b\d{3}-\d{2}-\d{4}\b",
     "bearer_token": r"(?i)\bbearer\s+[A-Za-z0-9._\-]{20,}",
+    # Red-team finding 2026-05-26: Qwen-generated probe ``BearerTokenForXYZ-
+    # Project_2023!@#`` slipped past ``bearer_token`` because that pattern
+    # requires whitespace between "bearer" and the content. CamelCase
+    # concat (``BearerTokenXxx``) + separator-delimited forms (``access_token=``,
+    # ``auth-token: abc``, ``api_key=``) are now caught by the two patterns
+    # below. Tight enough to avoid false-positives in prose memory entries.
+    "credential_label_separated": (
+        r"(?i)(?:bearer|access|auth|api)[\s_\-]?(?:token|key)s?[\s_\-:=]+"
+        r"[A-Za-z0-9._\-]{6,}"
+    ),
+    "credential_label_camelcase": (
+        r"(?<![A-Za-z])(?:Bearer|Access|Auth|Api)(?:Token|Key)[A-Za-z0-9._\-]{6,}"
+        r"(?![A-Za-z])"
+    ),
+    # Red-team finding 2026-05-26 (iteration 2): Qwen escalated to leetspeak
+    # — ``Bearert0k3nF0rS3cRetUsag3!123``. The CamelCase pattern requires
+    # literal ``BearerToken`` chars, and ``t0k3n`` defeats it. This looser
+    # pattern matches ``bearer`` followed by 8+ alphanumeric/symbol chars
+    # (no whitespace), which catches leetspeak forms while staying tight
+    # enough to avoid false-positives on prose (``bearer of bad news`` ends
+    # at the space, fails the 8+ requirement).
+    "bearer_loose_concat": r"(?i)\bbearer[A-Za-z0-9._\-!@#$%^&*+=:?]{8,}",
 }
 
 _UNIVERSAL_COMPILED: list[tuple[str, Pattern[str]]] = [

@@ -26,7 +26,10 @@ class TestUniversalPatterns:
         text = "OPENAI_API_KEY=sk-proj_abcdefghijklmnopqrstuvwxyzABCDEFGH123"
         redacted, hits = redact(text)
         assert "sk-proj_" not in redacted
-        assert any(h.type == "openai_key" for h in hits)
+        # Either ``openai_key`` (specific) or ``credential_label_separated``
+        # (catches ``API_KEY=`` prefix) may win depending on which span
+        # starts earliest. The invariant is removal, not label identity.
+        assert any(h.type in {"openai_key", "credential_label_separated"} for h in hits)
 
     def test_openai_key_does_not_match_anthropic_prefix(self):
         text = "x=sk-ant-abc"
@@ -90,6 +93,56 @@ class TestUniversalPatterns:
         redacted, hits = redact(text)
         assert "abcdefghij" not in redacted
         assert any(h.type == "bearer_token" for h in hits)
+
+    def test_bearer_token_camelcase_concat_redacted(self):
+        """Regression for 2026-05-26 red-team finding: Qwen-generated probe
+        ``BearerTokenForXYZ-Project_2023!@#`` slipped past the original
+        ``bearer_token`` pattern because that required whitespace between
+        ``Bearer`` and the content. ``credential_label_camelcase`` now
+        catches CamelCase-concatenated forms."""
+        text = "auth: BearerTokenForXYZ-Project_2023!@#"
+        redacted, hits = redact(text)
+        # The CamelCase credential marker + content must be removed
+        assert "BearerTokenForXYZ-Project_2023" not in redacted
+        assert any(h.type in {"credential_label_camelcase", "bearer_loose_concat"} for h in hits)
+
+    def test_bearer_leetspeak_redacted(self):
+        """Regression for 2026-05-26 red-team iteration 2: Qwen-generated
+        ``Bearert0k3nF0rS3cRetUsag3!123`` slipped past the CamelCase pattern
+        because ``t0k3n`` doesn't match literal ``Token``. The
+        ``bearer_loose_concat`` pattern catches ``bearer`` + 8+ chars."""
+        text = "Bearert0k3nF0rS3cRetUsag3!123"
+        redacted, hits = redact(text)
+        assert "Bearert0k3n" not in redacted
+        assert any(h.type == "bearer_loose_concat" for h in hits)
+
+    def test_bearer_in_prose_not_redacted(self):
+        """The loose bearer pattern requires 8+ chars after ``bearer`` with
+        no whitespace. Prose like ``bearer of bad news`` ends at the space."""
+        text = "He was the bearer of bad news today."
+        redacted, hits = redact(text)
+        assert "bearer of bad news" in redacted
+        assert not any(h.type == "bearer_loose_concat" for h in hits)
+
+    def test_separator_credential_label_redacted(self):
+        """Catches ``access_token=...``, ``auth-token: ...``, ``api_key=...``."""
+        cases = [
+            "access_token=abcdef1234567890",
+            "auth-token: xyz9876543210",
+            "api_key=ghp_might_be_anything",
+        ]
+        for text in cases:
+            redacted, hits = redact(text)
+            # The credential portion is removed
+            assert any(
+                h.type
+                in {
+                    "credential_label_separated",
+                    "credential_label_camelcase",
+                    "github_token",  # ghp_ form takes precedence when present
+                }
+                for h in hits
+            ), f"no credential hit on: {text!r}"
 
 
 class TestPersonalPatterns:
