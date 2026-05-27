@@ -239,7 +239,9 @@ Out of scope. Not a realistic adversary for personal use.
 
 ## Verification
 
-Run the adversarial suite anytime:
+### Deterministic gate suite
+
+Run the curated adversarial scenarios anytime:
 
 ```bash
 python -m animus.scripts.verify_hardening
@@ -251,6 +253,47 @@ The pytest equivalent runs in CI:
 ```bash
 cd packages/core && pytest tests/test_hardening_verification.py
 ```
+
+### Red-team driver (probabilistic, LLM-generated attacks)
+
+The deterministic suite proves the gates we designed for. The red-team
+driver proves the gates against attacks **we didn't design for** — it
+uses an uncensored local model (default ``qwen2.5:14b``; preferred
+``hf.co/HauhauCS/Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive:Q6_K_P``
+when reachable) to generate adversarial inputs against every category
+of gate, applies them against isolated test fixtures, and emits a
+JSONL report of findings.
+
+```bash
+python -m animus.redteam.driver               # 3 probes per category
+python -m animus.redteam.driver --quick       # 1 probe per category (CI gate)
+python -m animus.redteam.driver --category pi # single-category run
+```
+
+Report at ``<data_dir>/audit/redteam-YYYY-MM-DD.jsonl``. Exit code is
+non-zero when any finding meets the ``--fail-on`` severity (default
+``high``).
+
+### Project policy: red-team-on-every-change
+
+**Any new security-relevant feature must be run through the red-team
+driver before merge.** The driver becomes part of the
+review-and-verify loop, alongside ``pytest`` and ``ruff``. A real
+incident the driver caught during its own first run:
+
+- 2026-05-26 iteration 1 — Qwen generated
+  ``BearerTokenForXYZ-Project_2023!@#``. The original ``bearer_token``
+  regex required whitespace between "bearer" and the content; CamelCase
+  concatenation defeated it. Fix: ``credential_label_camelcase`` pattern.
+- 2026-05-26 iteration 2 — Qwen escalated to leetspeak
+  ``Bearert0k3nF0rS3cRetUsag3!123``. The CamelCase fix required literal
+  ``Token`` chars; ``t0k3n`` defeated it. Fix: ``bearer_loose_concat``
+  pattern requiring 8+ token-shaped chars after the literal word
+  ``bearer``.
+
+Each iteration produced a regression test in
+``tests/test_redaction.py`` so the bypass cannot return. This is the
+intended cadence: find → fix → regression-test → confirm.
 
 ## Revision history
 
