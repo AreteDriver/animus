@@ -91,6 +91,10 @@ class TestTierGating:
         assert is_egress_allowed("https://api.anthropic.com") is True
 
 
+@pytest.mark.skipif(
+    pytest.importorskip("anthropic", reason="anthropic SDK is optional dep") is None,
+    reason="anthropic client mocking requires the anthropic SDK",
+)
 class TestAnthropicModelHonorsOffline:
     """The cognitive layer's AnthropicModel refuses to construct under ANIMUS_OFFLINE=1."""
 
