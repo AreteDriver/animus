@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from animus.lugh.sources import registry as reg
 from animus.lugh.sources.youtube import (
     DEFAULT_CHANNELS,
     YouTubeSource,
+    _parse_upload_date,
     clean_vtt,
     default_youtube_sources,
     probe_channel,
@@ -82,7 +84,9 @@ class TestYouTubeSource:
         monkeypatch.setattr("animus.lugh.sources.youtube.shutil.which", lambda _: "/usr/bin/yt-dlp")
         monkeypatch.setattr(
             "animus.lugh.sources.youtube._run",
-            lambda cmd, *, timeout: "abc123\tFirst Video\nxyz789\tSecond Video\n",
+            lambda cmd, *, timeout: (
+                "abc123\tFirst Video\t20260527\nxyz789\tSecond Video\t20260526\n"
+            ),
         )
         src = YouTubeSource(channel="@x", show_name="Show X", fetch_captions=False, tags=["t1"])
         items = list(src.fetch())
@@ -95,6 +99,8 @@ class TestYouTubeSource:
         assert first.author == "Show X"
         assert first.tags == ["t1"]
         assert first.raw_text == ""
+        assert first.published == datetime(2026, 5, 27, tzinfo=timezone.utc)
+        assert items[1].published == datetime(2026, 5, 26, tzinfo=timezone.utc)
         assert first.metadata == {
             "video_id": "abc123",
             "channel": "@x",
@@ -110,7 +116,7 @@ class TestYouTubeSource:
         monkeypatch.setattr("animus.lugh.sources.youtube.shutil.which", lambda _: "/usr/bin/yt-dlp")
         monkeypatch.setattr(
             "animus.lugh.sources.youtube._run",
-            lambda cmd, *, timeout: "vid1\tThe Episode\n",
+            lambda cmd, *, timeout: "vid1\tThe Episode\t20260520\n",
         )
         monkeypatch.setattr(
             YouTubeSource, "_fetch_captions", lambda self, vid: "cleaned transcript text here"
@@ -120,6 +126,7 @@ class TestYouTubeSource:
         assert item.raw_text == "cleaned transcript text here"
         assert item.summary == "cleaned transcript text here"
         assert item.metadata["has_captions"] is True
+        assert item.published == datetime(2026, 5, 20, tzinfo=timezone.utc)
 
     def test_fetch_respects_limit(self, monkeypatch):
         monkeypatch.setattr("animus.lugh.sources.youtube.shutil.which", lambda _: "/usr/bin/yt-dlp")
@@ -127,7 +134,7 @@ class TestYouTubeSource:
 
         def fake_run(cmd, *, timeout):
             seen_cmds.append(cmd)
-            return "a\tA\nb\tB\nc\tC\n"
+            return "a\tA\t20260101\nb\tB\t20260102\nc\tC\t20260103\n"
 
         monkeypatch.setattr("animus.lugh.sources.youtube._run", fake_run)
         src = YouTubeSource(channel="@x", fetch_captions=False)
@@ -135,6 +142,33 @@ class TestYouTubeSource:
         # the limit is passed through to yt-dlp's --playlist-end
         assert "--playlist-end" in seen_cmds[0]
         assert seen_cmds[0][seen_cmds[0].index("--playlist-end") + 1] == "2"
+        # --flat-playlist is intentionally NOT used (drops upload_date) — animus#68
+        assert "--flat-playlist" not in seen_cmds[0]
+        # the print template must include upload_date so SourceItem.published populates
+        idx = seen_cmds[0].index("--print")
+        assert "%(upload_date)s" in seen_cmds[0][idx + 1]
+
+    def test_fetch_published_none_when_yt_dlp_emits_na(self, monkeypatch):
+        monkeypatch.setattr("animus.lugh.sources.youtube.shutil.which", lambda _: "/usr/bin/yt-dlp")
+        monkeypatch.setattr(
+            "animus.lugh.sources.youtube._run",
+            lambda cmd, *, timeout: "live1\tLive Premiere\tNA\n",
+        )
+        src = YouTubeSource(channel="@x", fetch_captions=False)
+        (item,) = list(src.fetch())
+        assert item.published is None
+
+    def test_fetch_published_none_when_upload_date_column_missing(self, monkeypatch):
+        # Defensive: a registry/test that emits the legacy 2-col format must still parse.
+        monkeypatch.setattr("animus.lugh.sources.youtube.shutil.which", lambda _: "/usr/bin/yt-dlp")
+        monkeypatch.setattr(
+            "animus.lugh.sources.youtube._run",
+            lambda cmd, *, timeout: "old1\tOld Format\n",
+        )
+        src = YouTubeSource(channel="@x", fetch_captions=False)
+        (item,) = list(src.fetch())
+        assert item.item_id == "old1"
+        assert item.published is None
 
     def test_run_returning_none_yields_no_items(self, monkeypatch):
         monkeypatch.setattr("animus.lugh.sources.youtube.shutil.which", lambda _: "/usr/bin/yt-dlp")
@@ -146,11 +180,30 @@ class TestYouTubeSource:
         monkeypatch.setattr("animus.lugh.sources.youtube.shutil.which", lambda _: "/usr/bin/yt-dlp")
         monkeypatch.setattr(
             "animus.lugh.sources.youtube._run",
-            lambda cmd, *, timeout: "\tno id line\ngood1\tGood One\n  \tblank\n",
+            lambda cmd, *, timeout: (
+                "\tno id line\t20260101\ngood1\tGood One\t20260102\n  \tblank\t20260103\n"
+            ),
         )
         src = YouTubeSource(channel="@x", fetch_captions=False)
         items = list(src.fetch())
         assert [i.item_id for i in items] == ["good1"]
+
+
+class TestParseUploadDate:
+    def test_yyyymmdd_parses_to_utc_datetime(self):
+        assert _parse_upload_date("20260527") == datetime(2026, 5, 27, tzinfo=timezone.utc)
+
+    def test_na_yields_none(self):
+        assert _parse_upload_date("NA") is None
+
+    def test_empty_yields_none(self):
+        assert _parse_upload_date("") is None
+        assert _parse_upload_date("   ") is None
+
+    def test_garbage_yields_none(self):
+        assert _parse_upload_date("2026-05-27") is None
+        assert _parse_upload_date("yesterday") is None
+        assert _parse_upload_date("20261332") is None
 
 
 class TestFetchCaptions:
@@ -205,7 +258,7 @@ class TestDefaults:
         monkeypatch.setattr("animus.lugh.sources.youtube.shutil.which", lambda _: "/usr/bin/yt-dlp")
         monkeypatch.setattr(
             "animus.lugh.sources.youtube._run",
-            lambda cmd, *, timeout: "a\tAlpha\nb\tBeta\nc\tGamma\n",
+            lambda cmd, *, timeout: "a\tAlpha\t20260101\nb\tBeta\tNA\nc\tGamma\t20260103\n",
         )
         result = probe_channel("@x")
         assert result["ok"] is True
