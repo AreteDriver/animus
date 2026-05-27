@@ -31,20 +31,12 @@ class MemorySource(Enum):
     LEARNED = "learned"  # Pattern detected over time
 
 
-class Sensitivity(Enum):
-    """Disclosure classification for a memory.
-
-    Used by the per-tier ChromaDB collection split (Stage 2.B) and the
-    MCP-egress scope gate. Stricter tiers require explicit opt-in via
-    ``MemoryLayer.recall(allowed_tiers=...)``.
-
-    Ordering (least → most sensitive): PUBLIC < PERSONAL < CONFIDENTIAL < SECRET.
-    """
-
-    PUBLIC = "public"  # Safe to surface anywhere — public refs, podcast facts
-    PERSONAL = "personal"  # Default for own-notes — emails, drafts, decisions
-    CONFIDENTIAL = "confidential"  # Client / legal / employer — TIAID notes, Toyota context
-    SECRET = "secret"  # Credentials, financial, anything that must never cross boundaries
+# Stage 3.D — Sensitivity hoisted to the shared ``animus-types`` package so
+# Forge providers can import it without violating the Core → Forge dep
+# direction. Re-exported here to keep the legacy import path
+# ``from animus.memory.types import Sensitivity`` working for every existing
+# caller. The two are the exact same enum (identity-preserving).
+from animus_types import Sensitivity  # noqa: E402,F401  # re-export, intentional
 
 
 @dataclass

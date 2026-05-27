@@ -10,11 +10,38 @@ from __future__ import annotations
 import logging
 import math
 import re
+import warnings
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from animus_types import Sensitivity
+
 from animus_forge.state.memory import AgentMemory, MemoryEntry
+
+# Tier ladder for max-sensitivity comparison
+_TIER_ORDER = {
+    Sensitivity.PUBLIC: 0,
+    Sensitivity.PERSONAL: 1,
+    Sensitivity.CONFIDENTIAL: 2,
+    Sensitivity.SECRET: 3,
+}
+
+
+@dataclass
+class AssembledContext:
+    """Return shape for ``build_context_for_agent_assembled`` (Stage 3.D).
+
+    Carries both the rendered context string and the highest disclosure
+    tier of any included chunk so callers can propagate
+    ``CompletionRequest.sensitivity`` correctly. The combined value lets
+    TierRouter refuse cloud egress when assembled context includes
+    confidential material.
+    """
+
+    text: str
+    max_sensitivity: Sensitivity = Sensitivity.PUBLIC
+
 
 logger = logging.getLogger(__name__)
 
@@ -395,6 +422,16 @@ class CrossWorkflowMemory:
 
         lines.append(PI_DEFENSE_FOOTER)
         context = "\n".join(lines)
+        # Stage 3.D — DEPRECATED. Use ``build_context_for_agent_assembled``
+        # which returns an ``AssembledContext`` carrying the max_sensitivity
+        # so callers can propagate the tier into CompletionRequest. This
+        # legacy method drops that information.
+        warnings.warn(
+            "build_context_for_agent returns plain str without sensitivity tier; "
+            "use build_context_for_agent_assembled to propagate tier into routing.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         logger.debug(
             "Built context for %s: %d entries, ~%d tokens",
             agent_role,
@@ -402,6 +439,95 @@ class CrossWorkflowMemory:
             current_chars // 4,
         )
         return context
+
+    def build_context_for_agent_assembled(
+        self,
+        agent_role: str,
+        task_description: str,
+        max_tokens: int = 1024,
+    ) -> AssembledContext:
+        """Tier-aware sibling of ``build_context_for_agent`` (Stage 3.D).
+
+        Returns the same rendered context string PLUS the maximum disclosure
+        tier among included chunks. Callers should propagate
+        ``result.max_sensitivity`` into ``CompletionRequest.sensitivity`` so
+        ``TierRouter`` and provider gates can refuse cloud egress when any
+        retrieved chunk was CONFIDENTIAL or SECRET.
+
+        The legacy ``build_context_for_agent`` emits a ``DeprecationWarning``
+        when called; it remains available for backward compat but drops the
+        tier signal.
+        """
+        # Implementation note: delegate to the legacy method's logic via a
+        # local copy. We intentionally don't call the deprecated method
+        # (it'd emit the warning), so the chunk-scoring + wrapping logic is
+        # duplicated here. Keep the two synced when the scoring rules
+        # change.
+        agent_id = self._agent_id_for_role(agent_role)
+        memories = self._memory.recall(
+            agent_id=agent_id,
+            memory_type="learned",
+            limit=200,
+        )
+        if not memories:
+            return AssembledContext(text="", max_sensitivity=Sensitivity.PUBLIC)
+
+        task_keywords = self._extract_keywords(task_description.lower())
+        now = datetime.now(UTC)
+
+        scored: list[tuple[float, MemoryEntry]] = []
+        for mem in memories:
+            score = mem.importance
+            if mem.created_at:
+                age_days = max((now - mem.created_at).total_seconds() / 86400, 0)
+                recency = math.exp(-0.693 * age_days / 30)
+            else:
+                recency = 0.1
+            score += 0.3 * recency
+            content_lower = mem.content.lower()
+            if task_keywords:
+                overlap = sum(1 for kw in task_keywords if kw in content_lower)
+                score += 0.2 * min(overlap / max(len(task_keywords), 1), 1.0)
+            scored.append((score, mem))
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        from animus_forge.security import PI_DEFENSE_FOOTER, wrap_untrusted
+
+        max_chars = max_tokens * 4
+        lines: list[str] = ["## Cross-Workflow Learnings", ""]
+        current_chars = sum(len(line) + 1 for line in lines)
+        max_tier = Sensitivity.PUBLIC
+
+        for rank, (score, mem) in enumerate(scored, start=1):
+            tags = mem.metadata.get("tags", [])
+            tag_str = f" [{', '.join(tags)}]" if tags else ""
+            header = f"{rank}. (importance={mem.importance:.2f}){tag_str}"
+            mem_id = getattr(mem, "id", None) or f"rank-{rank}"
+            wrapped = wrap_untrusted(mem.content, mem_id, source="forge-cross-workflow")
+            line = f"{header}\n{wrapped}"
+
+            line_chars = len(line) + 1
+            if current_chars + line_chars > max_chars:
+                break
+
+            lines.append(line)
+            current_chars += line_chars
+
+            # Track the highest tier seen
+            chunk_tier_raw = mem.metadata.get("sensitivity")
+            if chunk_tier_raw:
+                try:
+                    chunk_tier = Sensitivity(chunk_tier_raw)
+                    if _TIER_ORDER[chunk_tier] > _TIER_ORDER[max_tier]:
+                        max_tier = chunk_tier
+                except ValueError:
+                    pass  # unknown sensitivity string; keep current max
+
+        if len(lines) <= 2:
+            return AssembledContext(text="", max_sensitivity=max_tier)
+
+        lines.append(PI_DEFENSE_FOOTER)
+        return AssembledContext(text="\n".join(lines), max_sensitivity=max_tier)
 
     def detect_patterns(
         self,

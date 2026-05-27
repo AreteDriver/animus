@@ -126,6 +126,7 @@ class AzureOpenAIProvider(Provider):
                 f"ANIMUS_OFFLINE=1 — Azure OpenAI provider blocked from "
                 f"{self.config.base_url}. Unset the env var or route locally."
             )
+        self._egress_endpoint = self.config.base_url
 
         api_version = self.config.metadata.get("api_version", "2024-02-01")
 
@@ -148,6 +149,17 @@ class AzureOpenAIProvider(Provider):
         """Get deployment name, falling back to model name."""
         return self.config.metadata.get("deployment") or model or self.default_model
 
+    def _check_request_egress(self, request: CompletionRequest) -> None:
+        """Stage 3.D — refuse requests with sensitivity incompatible with cloud."""
+        from animus_forge.network import EgressDeniedError, is_egress_allowed
+
+        endpoint = getattr(self, "_egress_endpoint", self.config.base_url or "")
+        if not is_egress_allowed(endpoint, sensitivity=request.sensitivity):
+            raise EgressDeniedError(
+                f"Request with sensitivity={request.sensitivity.value} blocked from "
+                f"{endpoint}. Route this through a local provider."
+            )
+
     def complete(self, request: CompletionRequest) -> CompletionResponse:
         """Generate completion using Azure OpenAI API."""
         if not self._initialized:
@@ -155,6 +167,8 @@ class AzureOpenAIProvider(Provider):
 
         if not self._client:
             raise ProviderNotConfiguredError("Azure OpenAI client not initialized")
+
+        self._check_request_egress(request)
 
         model = request.model or self.default_model
         deployment = self._get_deployment(model)
@@ -230,6 +244,8 @@ class AzureOpenAIProvider(Provider):
 
         if not self._async_client:
             raise ProviderNotConfiguredError("Azure OpenAI async client not initialized")
+
+        self._check_request_egress(request)
 
         model = request.model or self.default_model
         deployment = self._get_deployment(model)

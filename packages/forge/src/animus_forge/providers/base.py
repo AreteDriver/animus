@@ -9,6 +9,11 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 
+# Stage 3.D — disclosure sensitivity flows through CompletionRequest. The
+# enum lives in the shared ``animus-types`` package so Forge can import it
+# without violating the Core→Forge cross-package direction.
+from animus_types import Sensitivity
+
 
 class ProviderError(Exception):
     """Base exception for provider errors."""
@@ -86,10 +91,19 @@ class CompletionRequest:
     tools: list[dict] | None = None  # Anthropic/OpenAI tool definitions
     tool_choice: str | None = None  # "auto", "any", "none", or specific tool name
 
-    # Tier-based routing fields (used by TierRouter, ignored by providers)
+    # Model-capability tier (REASONING/STANDARD/FAST/EMBEDDING) — used by
+    # TierRouter to pick a model class. Orthogonal to ``sensitivity``.
     model_tier: ModelTier | None = None
     agent_id: str | None = None
     workflow_id: str | None = None
+
+    # Stage 3.D — disclosure sensitivity. When CONFIDENTIAL or SECRET, the
+    # request must NEVER reach a cloud provider; TierRouter enforces this
+    # by forcing local providers, and cloud-provider gates fail-closed at
+    # the egress helper if a sensitive request somehow reaches them.
+    # Default PUBLIC for backward compat — existing callers compile and
+    # behave identically.
+    sensitivity: Sensitivity = field(default_factory=lambda: Sensitivity.PUBLIC)
 
 
 @dataclass
