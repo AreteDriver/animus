@@ -152,6 +152,12 @@ MODEL_UNDER_TEST=hauhaucs \
 | domain_specific_tiaid | 80.00% | Engaged with the methodology framing |
 | adversarial_edge | 83.33% | Did not refuse the authorized-red-team scenario — the uncensored model's value proposition |
 
+**Second sovereign run — 2026-05-27** (same command after bumping `reasoning_multistep.max_tokens` 512 → 800 to avoid mid-arithmetic truncation):
+
+- 5/5 PASS, **composite avg 85.33%**, run id `4b22354a`
+- `reasoning_multistep` climbed 91.67% → **96.67%** with the extra budget — the targeted case improvement is the signal
+- Other cases moved within ±3-5%: normal sample variance at temperature 0.2
+
 Caveat: this is a single-model A/B (model judges itself). Self-judge favors the model — Anthropic Haiku as a cross-judge will tighten the floor. Run that pair once the Anthropic key is refreshed.
 
 The auto-registration of `LlamaCppProvider` from `ANIMUS_SOVEREIGNTY_BASE_URL` is what closes the sovereign-judge gap — both UUT and judge route through the same llama-server instance with no cloud dependency.

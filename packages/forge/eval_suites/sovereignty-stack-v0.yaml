@@ -60,7 +60,7 @@ cases:
         Each event triggers exactly one LLM call at ~800 input + ~400 output tokens.
         At Anthropic Sonnet pricing ($3/MT in, $15/MT out), what is the monthly cost?
         Show the arithmetic.
-      max_tokens: 400
+      max_tokens: 800
     expected:
       focus: "step-by-step arithmetic arriving at correct monthly cost"
       format: "reasoning steps followed by ANSWER: line"
