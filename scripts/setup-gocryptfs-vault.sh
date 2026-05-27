@@ -10,11 +10,17 @@
 #
 # Prerequisites BEFORE running this script:
 #   1. ``sudo usermod -aG tss arete`` — grants TPM access for systemd-creds.
-#   2. Re-login OR ``newgrp tss`` (this script will fail-loud if the group
-#      is missing; it's safe to re-run).
+#   2. **Restart the user session** to give the systemd --user manager
+#      its new tss group. Without this, the daemon's ``LoadCredential
+#      Encrypted=`` can't reach /dev/tpmrm0 and the post-mount daemon
+#      restart fails. ``sg tss -c '...'`` works for the script's
+#      one-shot operations but does NOT cover the persistent unit.
+#      Terminate + reconnect: ``sudo loginctl terminate-user arete``
+#      (kills any running session — close out other work first).
 #   3. ``~/backups-local/`` already has fresh snapshots from
-#      ``animus-backup-hourly`` + ``animus-backup-chroma`` (verified
-#      2026-05-27 — snapshot ids 6c5fb89f / 58e94912 / aeb9f9be).
+#      ``animus-backup-hourly`` + ``animus-backup-chroma``. Re-run the
+#      pre-flight ``systemctl --user start animus-backup-{hourly,chroma}``
+#      if the most recent is >1 hour old.
 #
 # The script is idempotent on the additive steps (vault init, credential
 # encryption) — re-running them is safe. The destructive moment is the
@@ -62,6 +68,18 @@ fi
 # TPM device readable
 if [[ ! -r /dev/tpmrm0 ]]; then
     abort "/dev/tpmrm0 not readable (try a fresh shell after the usermod)"
+fi
+
+# Confirm the systemd --user manager also has tss access — without it,
+# ``LoadCredentialEncrypted=`` in the patched unit fails post-mount and
+# the daemon restart loops. The user-systemd's groups come from the
+# login session that started it; if usermod happened after login, the
+# session must be restarted before this script can complete cleanly.
+USER_SYSTEMD_PID=$(systemctl --user show --property=ExecMainPID --value || true)
+if [[ -n "${USER_SYSTEMD_PID:-}" && -r "/proc/${USER_SYSTEMD_PID}/status" ]]; then
+    if ! grep -E '^Groups:' "/proc/${USER_SYSTEMD_PID}/status" | tr ' ' '\n' | grep -qx 105; then
+        abort "systemd --user (pid ${USER_SYSTEMD_PID}) lacks tss group — restart your session ('sudo loginctl terminate-user $USER' or full logout/login). The script's manual mount works, but the unit's persistent auto-mount will loop-fail until the user-systemd inherits the group."
+    fi
 fi
 
 # Source directories exist
@@ -114,8 +132,15 @@ if [[ -f "${VAULT_DIR}/gocryptfs.conf" ]]; then
 else
     mkdir -p "${VAULT_DIR}"
     chmod 700 "${VAULT_DIR}"
-    systemd-creds decrypt --name=animus-vault "${CRED_FILE}" - | \
-        gocryptfs -init -plaintextnames -q -extpass "cat" "${VAULT_DIR}"
+    # ``gocryptfs -extpass "cat"`` reads from stdin which is fragile in
+    # a pipeline. Use ``-passfile`` with a tmpfs file that exists only
+    # for the init.
+    PW_TMP=$(mktemp -p /dev/shm gocryptfs-pw.XXXXXX 2>/dev/null \
+             || mktemp /tmp/gocryptfs-pw.XXXXXX)
+    chmod 600 "${PW_TMP}"
+    systemd-creds decrypt --name=animus-vault "${CRED_FILE}" - > "${PW_TMP}"
+    gocryptfs -init -plaintextnames -q -passfile "${PW_TMP}" "${VAULT_DIR}"
+    shred -u "${PW_TMP}" 2>/dev/null || rm -f "${PW_TMP}"
     log "vault initialized at ${VAULT_DIR}"
 fi
 
@@ -154,12 +179,17 @@ log "==> Phase 4: mount vault + copy data"
 mkdir -p "${SECURE_DIR}"
 chmod 700 "${SECURE_DIR}"
 
-# Mount the vault. -nonempty allows re-mounting if SECURE_DIR has prior bits.
+# Mount the vault. Same -passfile pattern as Phase 2 — tmpfs file, scrub
+# after use.
 if mountpoint -q "${SECURE_DIR}"; then
     log "vault already mounted at ${SECURE_DIR}"
 else
-    systemd-creds decrypt --name=animus-vault "${CRED_FILE}" - | \
-        gocryptfs -q -extpass "cat" "${VAULT_DIR}" "${SECURE_DIR}"
+    PW_TMP=$(mktemp -p /dev/shm gocryptfs-pw.XXXXXX 2>/dev/null \
+             || mktemp /tmp/gocryptfs-pw.XXXXXX)
+    chmod 600 "${PW_TMP}"
+    systemd-creds decrypt --name=animus-vault "${CRED_FILE}" - > "${PW_TMP}"
+    gocryptfs -q -passfile "${PW_TMP}" "${VAULT_DIR}" "${SECURE_DIR}"
+    shred -u "${PW_TMP}" 2>/dev/null || rm -f "${PW_TMP}"
     log "vault mounted at ${SECURE_DIR}"
 fi
 
@@ -233,7 +263,7 @@ with open(path) as f:
 INSERT = [
     "# --- gocryptfs vault lifecycle (added by setup-gocryptfs-vault.sh) ---\n",
     "LoadCredentialEncrypted=animus-vault:%h/.config/credstore.encrypted/animus-vault\n",
-    "ExecStartPre=/bin/sh -c 'mountpoint -q %h/.animus/_secure || /usr/bin/gocryptfs -q -extpass=cat %h/.animus/_vault %h/.animus/_secure < ${CREDENTIALS_DIRECTORY}/animus-vault'\n",
+    "ExecStartPre=/bin/sh -c 'mountpoint -q %h/.animus/_secure || /usr/bin/gocryptfs -q -passfile ${CREDENTIALS_DIRECTORY}/animus-vault %h/.animus/_vault %h/.animus/_secure'\n",
     "ExecStopPost=-/bin/fusermount -u %h/.animus/_secure\n",
     "# --- end gocryptfs vault ---\n",
 ]
