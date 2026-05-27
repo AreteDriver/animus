@@ -1,0 +1,36 @@
+[Unit]
+Description=Animus standing red-team sweep
+Documentation=man:animus(7) file://%h/projects/animus/packages/core/animus/redteam/standing.py
+After=network.target
+# Don't fight the daemon for resources mid-shift; sweep should run when
+# the box is otherwise idle. Adjust if the timer drifts into busy hours.
+
+[Service]
+Type=oneshot
+# Hardening — matches the animus.service pattern. The standing sweep
+# only needs to read the codebase, write to the audit dir, and reach
+# the loopback inference endpoint. Nothing else.
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.animus/audit
+PrivateTmp=true
+NoNewPrivileges=true
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+# Network: localhost only — the model lives on this box.
+IPAddressDeny=any
+IPAddressAllow=127.0.0.0/8 ::1/128
+
+# Defaults — override with: systemctl --user edit animus-redteam
+Environment="ANIMUS_REDTEAM_MODEL=qwen2.5:14b"
+Environment="ANIMUS_REDTEAM_BASE_URL="
+# Set ANIMUS_REDTEAM_BASE_URL=http://127.0.0.1:8081 to route through a
+# llama-server build (HauhauCS Qwen3.6 etc.); leave empty to use ollama.
+WorkingDirectory=%h/projects/animus
+ExecStart=%h/projects/animus/.venv/bin/python -m animus.redteam.standing --n-per-category 5 --alert-on high
+
+[Install]
+WantedBy=default.target

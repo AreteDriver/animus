@@ -1,0 +1,17 @@
+[Unit]
+Description=Run the Animus standing red-team sweep on a weekly cadence
+Documentation=file://%h/projects/animus/packages/core/animus/redteam/systemd/animus-redteam.service
+
+[Timer]
+# Weekly sweep every Sunday at 04:00 local. The model is roughly 5
+# minutes per probe at ~8 tok/s on CPU; --n-per-category 5 → 30 probes
+# → ~5 minutes total. Adjust if the runtime grows.
+OnCalendar=Sun 04:00
+# Catch up if the box was off when the timer fired.
+Persistent=true
+# Jitter so two co-installed boxes don't lockstep into the same minute.
+RandomizedDelaySec=30min
+Unit=animus-redteam.service
+
+[Install]
+WantedBy=timers.target
