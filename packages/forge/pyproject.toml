@@ -52,6 +52,14 @@ dependencies = [
     "cryptography>=46.0.5,<47",
     "textual>=8.0.0,<9",
     "convergentai>=1.1.0,<2",
+    # Shared types — sibling package in the monorepo. Editable-installed
+    # from ``packages/types/`` during development; satisfied by pip's
+    # local resolution when ``packages/types/`` is part of the same
+    # ``pip install -e ...`` invocation. Hard requirement: every
+    # ``from animus_types import Sensitivity`` site in forge (router,
+    # providers/base, network/egress, intelligence/cross_workflow_memory)
+    # would crash without it.
+    "animus-types>=0.1.0,<1",
 ]
 
 [project.optional-dependencies]

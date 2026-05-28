@@ -13,8 +13,8 @@ import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import click
 import pytest
+import typer
 
 from animus_forge.state.backends import SQLiteBackend
 
@@ -128,7 +128,7 @@ class TestDevCommandCoverage:
             "animus_forge.cli.commands.dev.detect_codebase_context", return_value={"path": "."}
         ):
             with patch("animus_forge.cli.commands.dev.format_context_for_prompt", return_value=""):
-                with pytest.raises((SystemExit, click.exceptions.Exit)):
+                with pytest.raises((SystemExit, typer.Exit)):
                     do_task(task="test", workflow="nonexistent_workflow_xyz")
 
     def test_do_task_yaml_parse_error(self):
@@ -143,7 +143,7 @@ class TestDevCommandCoverage:
                         "animus_forge.workflow.loader.load_workflow",
                         side_effect=Exception("parse error"),
                     ):
-                        with pytest.raises((SystemExit, click.exceptions.Exit)):
+                        with pytest.raises((SystemExit, typer.Exit)):
                             do_task(task="test", workflow="bad")
 
     def test_do_task_json_output(self):

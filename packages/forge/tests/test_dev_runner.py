@@ -10,7 +10,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from click.exceptions import Exit
+from typer import Exit
 
 from animus_forge.agents.task_runner import TaskResult
 

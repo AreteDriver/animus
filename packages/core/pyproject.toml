@@ -30,6 +30,13 @@ dependencies = [
     "pydantic>=2.6.0,<3",
     "rich>=13.7.0,<15",
     "prompt-toolkit>=3.0.43,<4",
+    # Shared types — sibling package in the monorepo. Editable-installed
+    # from ``packages/types/`` during development; satisfied by pip's
+    # local resolution when ``packages/types/`` is part of the same
+    # ``pip install -e ...`` invocation. Hard requirement: every
+    # ``from animus_types import Sensitivity`` site in core would crash
+    # without it.
+    "animus-types>=0.1.0,<1",
 ]
 
 [project.optional-dependencies]

@@ -24,7 +24,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -e "packages/forge/[dev]"
+        # animus-types is a sibling pip-installable package not on
+        # PyPI; pip resolves it locally when both -e targets share the
+        # same install transaction.
+        run: pip install -e packages/types/ -e "packages/forge/[dev]"
 
       - name: Run tests
         working-directory: packages/forge

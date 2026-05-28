@@ -70,7 +70,10 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-core-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: pip install -e "packages/core/[dev,api]"
+        # animus-types is a sibling pip-installable package and is not
+        # published to PyPI — pip resolves it from the local path when
+        # both -e targets are part of the same install transaction.
+        run: pip install -e packages/types/ -e "packages/core/[dev,api]"
 
       - name: Test with coverage
         run: pytest packages/core/tests/ -v --tb=short --cov=animus --cov-report=term-missing
@@ -120,7 +123,10 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-forge-
 
       - name: Install dependencies
-        run: pip install -e "packages/forge/[dev]"
+        # animus-types is a sibling pip-installable package and is not
+        # published to PyPI — pip resolves it from the local path when
+        # both -e targets are part of the same install transaction.
+        run: pip install -e packages/types/ -e "packages/forge/[dev]"
 
       - name: Test with coverage
         working-directory: packages/forge
@@ -206,6 +212,7 @@ jobs:
 
       - name: Install all packages
         run: |
+          pip install -e packages/types/
           pip install -e "packages/quorum/[dev]"
           pip install -e "packages/forge/[dev]"
           pip install -e "packages/core/[dev,api]"
