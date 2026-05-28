@@ -1154,6 +1154,14 @@ def main():
             # End Phase 2 commands
             # =========================================================
 
+            # Ogma — reverse-engineering synthesis (read/brief/gap/audit/sweep)
+            if user_input.startswith("/ogma"):
+                from animus.ogma.cli import handle_ogma
+
+                argv = user_input.split()[1:]  # drop the "/ogma" prefix
+                handle_ogma(argv)
+                continue
+
             # =========================================================
             # Phase 3: API Server and Voice commands
             # =========================================================
