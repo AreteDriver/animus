@@ -117,6 +117,9 @@ class Settings(BaseSettings):
 
     # API Keys
     openai_api_key: str = Field(default="", description="OpenAI API key")
+    openrouter_api_key: str | None = Field(
+        None, description="OpenRouter API key (open-weights gateway, PUBLIC-only egress)"
+    )
     github_token: str | None = Field(None, description="GitHub personal access token")
     notion_token: str | None = Field(None, description="Notion integration token")
     gmail_credentials_path: str | None = Field(None, description="Path to Gmail OAuth credentials")

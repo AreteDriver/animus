@@ -45,6 +45,7 @@ class ProviderType(Enum):
     VERTEX = "vertex"
     OLLAMA = "ollama"
     LLAMACPP = "llamacpp"
+    OPENROUTER = "openrouter"
 
 
 class ModelTier(Enum):

@@ -55,7 +55,22 @@ def create_provider_manager() -> ProviderManager:
     except Exception as e:
         logger.debug(f"Ollama not available: {e}")
 
+    # OpenRouter — open-weights gateway, PUBLIC-only egress. Registered only
+    # if a key is set, and intentionally NEVER an auto-default (local-default
+    # posture): cloud egress must be an explicit per-request choice.
+    if settings.openrouter_api_key:
+        try:
+            manager.register(
+                "openrouter",
+                provider_type=ProviderType.OPENROUTER,
+                api_key=settings.openrouter_api_key,
+            )
+            registered.append("openrouter")
+        except Exception as e:
+            logger.warning(f"Failed to register OpenRouter: {e}")
+
     # Set default: anthropic > openai > ollama > first available
+    # (OpenRouter is deliberately excluded from the default chain.)
     default_set = False
     for preferred in ("anthropic", "openai", "ollama"):
         if preferred in registered:

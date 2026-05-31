@@ -21,6 +21,7 @@ from .bedrock_provider import BedrockProvider
 from .llamacpp_provider import LlamaCppProvider
 from .ollama_provider import OllamaProvider
 from .openai_provider import OpenAIProvider
+from .openrouter_provider import OpenRouterProvider
 from .vertex_provider import VertexProvider
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ class ProviderManager:
         ProviderType.VERTEX: VertexProvider,
         ProviderType.OLLAMA: OllamaProvider,
         ProviderType.LLAMACPP: LlamaCppProvider,
+        ProviderType.OPENROUTER: OpenRouterProvider,
     }
 
     def __init__(self):
