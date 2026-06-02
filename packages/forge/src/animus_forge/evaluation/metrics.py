@@ -346,24 +346,45 @@ class CodeExecutionMetric(EvalMetric):
         return ""
 
     def _execute_python(self, code: str) -> str:
-        """Execute Python code in a sandbox."""
+        """Execute model-generated Python in an isolated subprocess.
+
+        This runs the current interpreter (``sys.executable``, never a bare
+        ``python``) in isolated mode (``-I``: ignores environment variables,
+        user site-packages, and ``PYTHONPATH``) with a scrubbed environment and
+        a timeout. This bounds, but does not fully sandbox, the execution: it is
+        defense against accidental host coupling, not against deliberately
+        hostile code. Callers must only score code from trusted eval fixtures.
+        """
+        import os
         import subprocess
+        import sys
         import tempfile
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write(code)
-            f.flush()
+        tmp_path: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+                f.write(code)
+                f.flush()
+                tmp_path = f.name
 
-            try:
-                result = subprocess.run(
-                    ["python", f.name],
-                    capture_output=True,
-                    text=True,
-                    timeout=self._timeout,
-                )
-                return result.stdout + result.stderr
-            except subprocess.TimeoutExpired:
-                return "TIMEOUT"
+            result = subprocess.run(
+                [sys.executable, "-I", tmp_path],
+                capture_output=True,
+                text=True,
+                timeout=self._timeout,
+                env={"PATH": os.environ.get("PATH", "")},
+                cwd=tempfile.gettempdir(),
+                check=False,
+            )
+            return result.stdout + result.stderr
+        except subprocess.TimeoutExpired:
+            return "TIMEOUT"
+        finally:
+            if tmp_path is not None:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
 
 class FactualityMetric(EvalMetric):

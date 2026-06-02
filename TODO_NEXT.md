@@ -65,3 +65,37 @@ Unify entry points, expose Animus as an MCP server, stabilize all packages.
 - Bootstrap: 1739 tests (in venv), 97% coverage
 - Chat Agent TODO complete (5/5 phases)
 - Ollama live smoke test passing (deepseek-coder-v2 tool use works)
+
+## Phase N: Whitepaper-audit follow-ups (2026-06-02)
+
+> **Full remediation plan: [`docs/ROADMAP_TO_10.md`](docs/ROADMAP_TO_10.md)**
+> — dependency-ordered, 8-dimension 10/10 scorecard, completeness matrix.
+> The two items below are roadmap A1 + A2 (the deferred breaking changes);
+> everything else is tracked in the roadmap. Working rule: when an item lands,
+> flip its `CANON.md` status, tick the roadmap, and delete it here — same PR.
+
+Context: branch `fix/p0-whitepaper-refinements` landed 5 P0 fixes from the
+2026-06 whitepaper audit (egress unify, content-taxonomy wiring, eval exec
+isolation, ET opt-in ceiling, tier-contract docs + `recall_for_egress`).
+Two items were intentionally deferred because they are breaking design
+decisions, not clean fixes:
+
+- [ ] **Flip Effective-Tokens to the DEFAULT enforced budget unit.** The opt-in
+      ceiling shipped (`BudgetConfig.effective_token_budget`, off by default).
+      Making ET the default redefines what every workflow's `token_budget:`
+      YAML field means (raw tokens → cost-weighted ET) and will touch a large
+      slice of the 9.7k forge tests + 30+ workflow definitions. Decide the
+      semantics first: (a) reinterpret `total_budget` as ET, or (b) keep raw
+      `total_budget` and auto-derive `effective_token_budget` from it. Then
+      migrate workflows + tests in one deliberate pass. **This is the "flip".**
+- [ ] **`BudgetManager.allocate()` real reservation** (whitepaper refinement #5,
+      P1). Currently `allocate()` checks `can_allocate` but records nothing, so
+      parallel auto-steps can each pass and collectively overspend. Track
+      pending allocations; decrement on `record_usage` or explicit release.
+      Pairs naturally with the ET flip since both touch the accounting path.
+- [ ] Optional: route the 3 MCP egress sites through `MemoryLayer.EGRESS_SCOPE`
+      once test mocks are updated (left as literal `{Sensitivity.PUBLIC}` for
+      now to keep MagicMock-based tests simple).
+- [ ] `_restore_from_db()` does not rebuild `_total_effective` (DB stores raw
+      tokens only); ET under-counts after a session restore. Fine while ET is
+      opt-in; fix when the flip lands.

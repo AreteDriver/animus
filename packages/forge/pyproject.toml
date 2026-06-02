@@ -101,6 +101,16 @@ ignore = ["E501", "UP042", "UP046", "UP047"]  # UP042: StrEnum, UP046/UP047: PEP
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+filterwarnings = [
+    # The Settings security validator correctly warns at runtime when
+    # SECRET_KEY / DATABASE_URL use dev defaults. That is intended app
+    # behavior; in the test env it is just noise. Message-matched (not a
+    # blanket UserWarning ignore) so genuinely new UserWarnings still surface.
+    # NOTE: pytest splits filter specs on ':', so the message regex must not
+    # contain a literal colon. The '.' after "Security" matches the real ": ".
+    "ignore:Security. SECRET_KEY is using insecure default:UserWarning",
+    "ignore:Security. DATABASE_URL is using default SQLite path:UserWarning",
+]
 
 [tool.coverage.run]
 source = ["src/animus_forge"]

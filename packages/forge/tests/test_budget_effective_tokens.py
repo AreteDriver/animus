@@ -133,3 +133,40 @@ class TestManagerAggregateET:
         bm = BudgetManager(BudgetConfig(total_budget=10_000))
         assert bm.total_effective_tokens() == 0.0
         assert bm.effective_tokens_by_agent() == {}
+
+
+class TestEffectiveTokenEnforcement:
+    """Opt-in ET ceiling: enforcement honors cost-weight, off by default."""
+
+    def test_off_by_default_preserves_raw_only_behavior(self):
+        # No effective_token_budget → ET never governs status.
+        mgr = BudgetManager(BudgetConfig(total_budget=10_000))
+        mgr.record_usage("a", output_tokens=1_000, model="claude-opus-4-8")
+        # Raw usage is 1000/10000 = 10% → OK, regardless of huge ET.
+        assert mgr.status.value == "ok"
+        assert mgr.effective_remaining == float("inf")
+
+    def test_et_ceiling_trips_when_raw_reads_healthy(self):
+        # Output-heavy opus run: cheap in raw tokens, expensive in real cost.
+        # Raw budget is generous; ET budget is tight → ET must govern.
+        cfg = BudgetConfig(total_budget=1_000_000, effective_token_budget=10_000)
+        mgr = BudgetManager(cfg)
+        mgr.record_usage("a", output_tokens=5_000, model="claude-opus-4-8")
+        # Raw ratio = 5000/1e6 = 0.5% (OK), but ET = 5.0 * 4 * 5000 = 100k >> 10k.
+        assert mgr.effective_used > cfg.effective_token_budget
+        assert mgr.status.value == "exceeded"
+
+    def test_et_remaining_tracks_budget(self):
+        cfg = BudgetConfig(total_budget=1_000_000, effective_token_budget=10_000)
+        mgr = BudgetManager(cfg)
+        mgr.record_usage("a", input_tokens=1_000)  # no model → m=1.0, ET=1000
+        assert mgr.effective_used == pytest.approx(1_000.0)
+        assert mgr.effective_remaining == pytest.approx(9_000.0)
+
+    def test_reset_clears_effective(self):
+        cfg = BudgetConfig(total_budget=1_000, effective_token_budget=1_000)
+        mgr = BudgetManager(cfg)
+        mgr.record_usage("a", output_tokens=100)
+        assert mgr.effective_used > 0
+        mgr.reset()
+        assert mgr.effective_used == 0.0
