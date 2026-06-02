@@ -160,6 +160,120 @@ So nothing silently drops.
 - Qwen net-new: #4→E11 · #5→E12 · #6→E13 ; reinforced: egress-content→A4, encryption→A5, integrity→A6
 - Appendix limitations not above: consolidation→E3 · sync→E4 · pricing→A3 · evolution-dry-run→B3 · impact-score-quality→(fold into B5/D5i)
 
+## Session plan — demo/structure → fully operational, ASAP, on-spec-or-better
+
+**The goal of this arc:** take every feature that is currently *claimed but not
+actually working* (reporting-only cost, opt-in security gates, dry-run loops,
+plaintext-at-rest) to **fully operational, meeting or exceeding the whitepaper's
+stated contract.** Not new capabilities — the existing system, made real.
+
+**Definition of OPERATIONAL (the milestone, end of Session 6):** no feature in
+the system is reporting-only, opt-in-by-accident, stubbed, or
+trust-the-caller. Every claimed guarantee is enforced and has a test that
+proves it. After this, Animus can be *relied on*, not just demoed.
+
+**On-spec-or-better rule:** each "done when" criterion is at least the
+whitepaper's contract; where cheap, it exceeds it (e.g. egress goes from
+tier-trust to *content-aware*, which is stronger than the spec). Never ship a
+criterion weaker than the documented contract.
+
+**Critical path:** Session 1 (cost keystone) is the highest-leverage block — do
+it first, alone. Sessions 1–6 reach OPERATIONAL. Session 7 is residual security
+hardening (incl. the local security-review items) and can run in parallel with
+later work — it does not gate "operational."
+
+Each session: one coherent cluster, a definition of done that is **a passing
+test or check**, and a clean PR. Pace is yours; a "session" is a focused block,
+not a fixed number of hours. Don't start the next until the prior exits green.
+Sessions can merge if a block runs short; split if it runs long.
+
+### Session 1 — The keystone: enforce cost (roadmap A1)
+**Why first:** every other claim rests on cost being a hard constraint; today it
+isn't. Breaking change, so it gets its own session.
+- [ ] **Decision gate (yours):** A1 semantics — (a) reinterpret `total_budget`
+      as ET, or (b) keep raw `total_budget` and auto-derive
+      `effective_token_budget`. Lean: **(b)** — migratory, doesn't silently
+      change the meaning of every existing workflow number. Decide before coding.
+- [ ] Route `_check_budget_exceeded` / `record_usage` through Effective-Tokens.
+- [ ] Fix `_restore_from_db()` to rebuild `_total_effective` (or persist it).
+- [ ] Migrate the 30+ workflow YAMLs + budget tests to the chosen semantics.
+- **Done when:** a parallel, output-heavy opus run trips `EXCEEDED` in a test
+  while raw tokens read healthy; full forge suite green. D1 → 9.
+
+### Session 2 — Finish the cost cluster + a quick security win (A2, A3, A7)
+- [ ] **A2** `BudgetManager.allocate()` reserves a pending allocation; concurrent
+      `can_allocate` can't collectively overspend (test proves it).
+- [ ] **A3** collapse the two pricing tables into one source.
+- [ ] **A7** random per-install PBKDF2 salt; drop the legacy `gorgon-` constant.
+- **Done when:** budget reservation test passes; one pricing view; salt test. D1 → 10.
+
+### Session 3 — Egress + integrity (A4, A6)
+- [ ] **A4** content-aware egress: DLP/secret scan the payload before allow, not
+      just trust the caller tier. Mis-tagged CONFIDENTIAL body is blocked.
+      (Closes the §8.1 residual + Qwen #1/#2/#3 + TOCTOU surface E13.)
+- [ ] **A6** expand the integrity baseline to all critical-path files + a
+      self-hash (tier-router, providers, pi_wrap, the checker itself).
+- **Done when:** mis-tag egress test blocks; tamper of any tracked file refuses
+  boot. D3 → 9.
+
+### Session 4 — At-rest + durability (A5, A8)
+- [ ] **A5** finish the gocryptfs vault (PR #67) with the memory store inside it;
+      documented recovery; flip ARCHITECTURE/CANON from PLANNED → done.
+- [ ] **A8** `animus export --all` (documented schema) + a timed cold-rebuild
+      that restores state.
+- **Done when:** store is encrypted at rest; a from-scratch rebuild passes.
+  D3 → 10, D7 substrate in place.
+
+### Session 5 — Eval integrity fixes (B1, B4, B6)
+- [ ] **B1** judge failure → ERROR/`judge_error`, never silent 0.5.
+- [ ] **B4** real code-exec sandbox (self-improve Sandbox / restricted ns), not
+      just `-I`.
+- [ ] **B6** `compare` power/sample-size advisor (underpower ≠ "no difference").
+- **Done when:** broken-judge test surfaces an error; sandbox test isolates;
+  small-suite compare reports underpower. D4 → 9.
+
+### Session 6 — Close the Kaizen loop (B2, B3, B5, B7)
+- [ ] **B2** judge-calibration harness vs a human golden set; track judge drift.
+- [ ] **B3** evolution loop: inject a real experiment runner + expose via CLI.
+- [ ] **B5** auto-promotion: a significant `eval compare` win opens a
+      WorkflowEvolution pending patch.
+- [ ] **B7** extract the `StabilityScorer` protocol (prereq for D-phase active
+      inference).
+- **Done when:** calibration metric exists; evolution loop runs a real
+  experiment from the CLI; auto-promotion opens a patch in a test. D4 → 10, D5 → 9.
+
+### Session 7 — Security residual hardening (Qwen review + §8.1 leftovers)
+Does NOT gate "operational" — run it parallel to Phase C/D or right after S6.
+The 2026-06 local security review's 3 net-new items + the remaining §8.1 gaps.
+- [ ] **E13 (Qwen #6) TOCTOU on tier labels** — verify A4 closed it; if A4
+      inspects content at egress time the label-mutation window is moot, but add
+      an explicit re-check-at-use test. *(Mostly covered by Session 3 / A4.)*
+- [ ] **E11 (Qwen #4) self-improve / red-team loop abuse** — the loop that
+      generates and applies changes is an injection surface. Harden: the
+      red-team driver's generated probes can never reach an apply path; the
+      self-improve sandbox rejects probe-shaped input; test an adversarial probe
+      cannot escalate. *(Touches the Session 6 loop — can fold there if timing fits.)*
+- [ ] **E12 (Qwen #5) local-model supply-chain** — pin + checksum the Ollama
+      model blobs Animus trusts; refuse to run a red-team/eval model whose digest
+      changed unexpectedly. Closes the "backdoored open-weight model" vector.
+- [ ] **E9 systemd unit integrity** — version the unit files in the repo and add
+      them to the A6 integrity baseline so an edited unit (which defeats the
+      kernel-plane filter) is detected.
+- [ ] **E10 PI-envelope cross-model testing** — the prompt-injection footer is
+      only tested against Sonnet; add Qwen/Llama cases (the local-first models
+      that are the *actual* primary consumers).
+- **Done when:** supply-chain digest test trips on a changed blob; probe-can't-
+  escalate test passes; unit-tamper trips boot refusal; PI envelope holds on
+  Qwen/Llama. D3 → 10 (fully hardened).
+- [ ] **E14** Ollama upgrade so the uncensored 35B Qwen3.6-A3B loads — then
+      re-run the adversarial review with the *aggressive* model for a stronger pass.
+
+**After Session 6 = OPERATIONAL.** The existing system is fully working,
+on-spec-or-better, every claim enforced and tested. Session 7 hardens the
+security tail. Only *then* do Phases C (daily-tool: RA layer, overnight delegate)
+and D (differentiators: tiered memory, active inference, replay) begin — the
+*build* arc, re-planned into sessions on the now-trustworthy substrate.
+
 ## Working rule
 
 When an item lands, in the **same PR**: flip its status in `CANON.md`, tick it
