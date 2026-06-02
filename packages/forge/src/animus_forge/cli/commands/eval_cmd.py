@@ -174,12 +174,23 @@ def eval_run(
             case_result.rubric_band = rubric.band_for(composite)
 
     from animus_forge.evaluation.failure_taxonomy import tag_results
+    from animus_forge.evaluation.failure_taxonomy_content import (
+        tag_content_failures,
+    )
 
     bucket_counts = tag_results(result.results)
     non_pass_buckets = {k: v for k, v in bucket_counts.items() if k != "passed"}
     if non_pass_buckets:
         summary = ", ".join(f"{k}:{v}" for k, v in sorted(non_pass_buckets.items()))
         console.print(f"[dim]Failure buckets: {summary}[/dim]")
+
+    # Content failure taxonomy (F1-F8). Populates
+    # result.metadata["content_failure_modes"] so `eval compare`'s
+    # content-delta tables have data instead of always reading empty.
+    content_counts = tag_content_failures(result.results)
+    if content_counts:
+        content_summary = ", ".join(f"{k}:{v}" for k, v in sorted(content_counts.items()))
+        console.print(f"[dim]Content failures: {content_summary}[/dim]")
 
     # Report
     from animus_forge.evaluation.reporters import ConsoleReporter

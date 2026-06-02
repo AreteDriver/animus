@@ -127,6 +127,7 @@ class BudgetConfig:
     reserve_tokens: int = 5000  # Reserved for retries/overhead
     daily_token_limit: int = 0  # 0 = disabled
     model_multipliers: dict[str, float] | None = None  # None → DEFAULT_MODEL_MULTIPLIERS
+    effective_token_budget: float | None = None  # None → ET enforcement off
 
 
 class BudgetManager:
@@ -157,6 +158,9 @@ class BudgetManager:
         self._usage_history: list[UsageRecord] = []
         self._agent_usage: dict[str, int] = {}
         self._total_used: int = 0
+        # Cost-weighted accumulator, maintained in lockstep with _total_used.
+        # Only governs enforcement when config.effective_token_budget is set.
+        self._total_effective: float = 0.0
         self._last_status: BudgetStatus = BudgetStatus.OK
 
         if self._backend and self._session_id:
@@ -219,9 +223,32 @@ class BudgetManager:
         return (self._total_used / self.config.total_budget) * 100
 
     @property
+    def effective_used(self) -> float:
+        """Cumulative cost-weighted Effective-Tokens consumed so far."""
+        return self._total_effective
+
+    @property
+    def effective_remaining(self) -> float:
+        """Remaining Effective-Tokens, or ``inf`` when ET enforcement is off."""
+        if self.config.effective_token_budget is None:
+            return float("inf")
+        return max(0.0, self.config.effective_token_budget - self._total_effective)
+
+    @property
     def status(self) -> BudgetStatus:
-        """Get current budget status."""
+        """Get current budget status.
+
+        Governed by the raw-token budget and, when
+        ``config.effective_token_budget`` is set, also by the cost-weighted
+        Effective-Tokens budget. The more-constrained of the two ratios wins,
+        so an output-heavy or opus-tier run that is cheap in raw tokens but
+        expensive in real cost cannot read OK while overspending.
+        """
         ratio = self._total_used / self.config.total_budget if self.config.total_budget > 0 else 1.0
+
+        et_budget = self.config.effective_token_budget
+        if et_budget is not None and et_budget > 0:
+            ratio = max(ratio, self._total_effective / et_budget)
 
         if ratio > 1.0:
             return BudgetStatus.EXCEEDED
@@ -324,6 +351,7 @@ class BudgetManager:
 
         self._usage_history.append(record)
         self._total_used += tokens
+        self._total_effective += effective_tokens(record, self.config.model_multipliers)
         self._agent_usage[agent_id] = self._agent_usage.get(agent_id, 0) + tokens
 
         # Persist to database if backend is available
@@ -468,6 +496,7 @@ class BudgetManager:
         self._usage_history = []
         self._agent_usage = {}
         self._total_used = 0
+        self._total_effective = 0.0
         self._last_status = BudgetStatus.OK
 
         if self._backend and self._session_id:
