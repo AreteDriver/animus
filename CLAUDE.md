@@ -165,8 +165,14 @@ cd packages/bootstrap && pytest tests/ -v
 # Lint + format (always run BOTH)
 ruff check packages/ && ruff format --check packages/
 
-# Install everything for development
-pip install -e "packages/quorum/[dev]" -e "packages/forge/[dev]" -e "packages/core/[dev]" -e "packages/bootstrap/[dev]"
+# Install everything for development (drift-proof: discovers ALL packages/*,
+# installs them editable in one invocation so local-only deps like animus-types
+# always resolve from source). Use this for any venv rebuild.
+bash scripts/setup-venv.sh            # full rebuild
+bash scripts/setup-venv.sh --dry-run  # list discovered packages, install nothing
+
+# Manual equivalent (must include packages/types/ — it is NOT on PyPI):
+pip install -e "packages/types/[dev]" -e "packages/quorum/[dev]" -e "packages/forge/[dev]" -e "packages/core/[dev]" -e "packages/bootstrap/[dev]"
 ```
 
 ## Coding Standards
