@@ -20,6 +20,22 @@ import tempfile
 from pathlib import Path
 
 import markdown
+from markdown.extensions.toc import TocExtension
+
+
+def github_slugify(value: str, separator: str = "-") -> str:
+    """Slugify the way GitHub (and the assembled TOC) does it.
+
+    Each whitespace char becomes a separator with NO run-collapsing, so a
+    heading like "4.4 Security & Hardening" -> "44-security--hardening"
+    (the removed "&" leaves two spaces -> two hyphens). python-markdown's
+    default toc slugify collapses those to a single hyphen, which is what
+    broke the internal TOC links in the rendered PDF.
+    """
+    value = value.strip().lower()
+    value = re.sub(r"[^\w\s-]", "", value)  # drop punctuation, keep word/space/-
+    return re.sub(r"\s", separator, value)  # each space -> separator, no collapse
+
 
 CSS = """
 @page { size: A4; margin: 2cm 2cm 2.2cm 2cm;
@@ -53,7 +69,13 @@ def render(md_path: Path, pdf_path: Path) -> None:
     # Strip the YAML frontmatter so it does not render as a paragraph.
     text = re.sub(r"^---\n.*?\n---\n", "", text, count=1, flags=re.DOTALL)
     html_body = markdown.markdown(
-        text, extensions=["tables", "fenced_code", "toc", "sane_lists"]
+        text,
+        extensions=[
+            "tables",
+            "fenced_code",
+            TocExtension(slugify=github_slugify),
+            "sane_lists",
+        ],
     )
     html = (
         f"<!doctype html><html><head><meta charset='utf-8'>"
