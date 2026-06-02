@@ -36,7 +36,9 @@ disagree, this index wins.
 | `ROADMAP.md` | **HISTORICAL** | Phased plan (Phase 0–6); phases 0–4 largely done, 5–6 aspirational. |
 | `ROADMAP_quorum_v2.md` | **ASPIRATIONAL-SPEC** | 5-week Quorum v2 plan; Week-1 EventLog shipped, weeks 2–5 are specs only. |
 | `ROADMAP_research_assistant.md` | **ASPIRATIONAL-SPEC** | RA-0 locked, RA-1+ to be written. |
-| `TODO_NEXT.md` | **CANONICAL** | Active next-work tracker, including the Effective-Tokens default-flip. |
+| `ROADMAP_TO_10.md` | **CANONICAL** | The remediation roadmap: closes every audit gap to 10/10, dependency-ordered, with a completeness matrix. Cost-enforcement keystone (A1) first. |
+| `TODO_NEXT.md` | **CANONICAL** | Active next-work tracker; the audit work now lives in `ROADMAP_TO_10.md`. |
+| `reviews/qwen-security-review-2026-06-02.md` | **HISTORICAL** (reference) | Local adversarial security review (qwen2.5-14b fallback; the uncensored 35B would not load). ~70% restated known gaps; 3 net-new items folded into `ROADMAP_TO_10.md` Phase E (E11–E13). Model output, triaged. |
 
 ## Known claims that are NOT backed by code (do not repeat as fact)
 

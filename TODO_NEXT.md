@@ -66,7 +66,13 @@ Unify entry points, expose Animus as an MCP server, stabilize all packages.
 - Chat Agent TODO complete (5/5 phases)
 - Ollama live smoke test passing (deepseek-coder-v2 tool use works)
 
-## Phase N: Whitepaper-audit P0 follow-ups (2026-06-02)
+## Phase N: Whitepaper-audit follow-ups (2026-06-02)
+
+> **Full remediation plan: [`docs/ROADMAP_TO_10.md`](docs/ROADMAP_TO_10.md)**
+> — dependency-ordered, 8-dimension 10/10 scorecard, completeness matrix.
+> The two items below are roadmap A1 + A2 (the deferred breaking changes);
+> everything else is tracked in the roadmap. Working rule: when an item lands,
+> flip its `CANON.md` status, tick the roadmap, and delete it here — same PR.
 
 Context: branch `fix/p0-whitepaper-refinements` landed 5 P0 fixes from the
 2026-06 whitepaper audit (egress unify, content-taxonomy wiring, eval exec
