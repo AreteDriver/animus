@@ -177,7 +177,7 @@ class OpenRouterProvider(Provider):
         env flags. The shared ``is_egress_allowed`` is also consulted so
         ``ANIMUS_OFFLINE`` and loopback rules still apply.
         """
-        from animus_forge.network import EgressDeniedError, is_egress_allowed
+        from animus_forge.network import EgressDeniedError
 
         endpoint = getattr(self, "_egress_endpoint", OPENROUTER_BASE_URL)
 
@@ -187,11 +187,11 @@ class OpenRouterProvider(Provider):
                 f"OpenRouter. Only PUBLIC content may egress to the model gateway; "
                 "route this through a local provider (Ollama)."
             )
-        if not is_egress_allowed(endpoint, sensitivity=request.sensitivity):
-            raise EgressDeniedError(
-                f"Egress to {endpoint} blocked by policy (offline mode). "
-                "Route this through a local provider."
-            )
+        # A4 — tier is PUBLIC; still scan the payload for credentials (offline/
+        # loopback rules and content-aware DLP both run in the shared helper).
+        from animus_forge.providers.base import assert_egress_allowed
+
+        assert_egress_allowed(endpoint, request)
 
     def initialize(self) -> None:
         """Initialize the OpenRouter client (OpenAI-compatible)."""

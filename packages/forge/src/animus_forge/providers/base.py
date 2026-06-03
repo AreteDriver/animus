@@ -106,6 +106,52 @@ class CompletionRequest:
     # behave identically.
     sensitivity: Sensitivity = field(default_factory=lambda: Sensitivity.PUBLIC)
 
+    def scannable_text(self) -> str:
+        """All outbound text in this request, for content-aware egress DLP.
+
+        Concatenates the prompt, system prompt, and any message contents so the
+        egress gate can scan for credentials before the request crosses the
+        wire to a cloud provider.
+        """
+        parts: list[str] = [self.prompt or "", self.system_prompt or ""]
+        for msg in self.messages or []:
+            content = msg.get("content") if isinstance(msg, dict) else None
+            if isinstance(content, str):
+                parts.append(content)
+            elif isinstance(content, list):
+                # Anthropic/OpenAI block format: [{"type":"text","text":...}, ...]
+                for block in content:
+                    if isinstance(block, dict) and isinstance(block.get("text"), str):
+                        parts.append(block["text"])
+        return "\n".join(p for p in parts if p)
+
+
+def assert_egress_allowed(endpoint: str, request: CompletionRequest) -> None:
+    """Raise ``EgressDeniedError`` if this request may not leave for ``endpoint``.
+
+    Checks the declared sensitivity tier AND scans the outbound payload for
+    credentials (content-aware DLP), so a secret-bearing body mis-tagged as
+    PUBLIC is blocked rather than trusted on its tag alone (roadmap A4).
+    """
+    from animus_types.secrets import scan_for_secrets
+
+    from animus_forge.network import EgressDeniedError, is_egress_allowed
+
+    content = request.scannable_text()
+    if is_egress_allowed(endpoint, sensitivity=request.sensitivity, content=content):
+        return
+    hits = scan_for_secrets(content)
+    if hits:
+        raise EgressDeniedError(
+            f"Request blocked from {endpoint}: outbound payload contains "
+            f"credential(s) ({', '.join(sorted(set(hits)))}). Remove the secret "
+            f"or route through a local provider."
+        )
+    raise EgressDeniedError(
+        f"Request with sensitivity={request.sensitivity.value} blocked from "
+        f"{endpoint}. Route this through a local provider."
+    )
+
 
 @dataclass
 class ToolCall:

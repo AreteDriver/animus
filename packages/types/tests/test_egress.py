@@ -86,3 +86,37 @@ class TestSharedErrorClass:
         from animus_forge.network import EgressDeniedError as ForgeErr
 
         assert CoreErr is ForgeErr is EgressDeniedError
+
+
+class TestContentAwareEgress:
+    """A4: even when the tier permits egress, a credential-bearing payload is
+    blocked — the gate stops trusting the caller's tier alone."""
+
+    SECRET = "deploy with sk-ant-abc1234567890ABCDEFGHIJ now"
+
+    def test_public_tier_with_secret_payload_is_blocked(self):
+        assert is_egress_allowed("https://api.anthropic.com", Sensitivity.PUBLIC) is True
+        assert (
+            is_egress_allowed("https://api.anthropic.com", Sensitivity.PUBLIC, content=self.SECRET)
+            is False
+        )
+
+    def test_clean_payload_still_allowed(self):
+        assert (
+            is_egress_allowed(
+                "https://api.anthropic.com",
+                Sensitivity.PUBLIC,
+                content="summarize this quarterly budget report",
+            )
+            is True
+        )
+
+    def test_loopback_bypasses_content_scan(self):
+        # Local Ollama is on-box; sending a secret locally is fine.
+        assert (
+            is_egress_allowed("http://localhost:11434", Sensitivity.PUBLIC, content=self.SECRET)
+            is True
+        )
+
+    def test_content_none_is_backward_compatible(self):
+        assert is_egress_allowed("https://api.openai.com", Sensitivity.PUBLIC) is True
