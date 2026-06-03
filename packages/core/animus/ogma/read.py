@@ -9,11 +9,16 @@ Default provider is Ollama (``ModelConfig.ollama()``). Per
 silently fall back to Ollama — exceptions propagate as
 ``OgmaSynthesisError``. Pass an explicit ``model=CognitiveLayer(...)`` to
 opt into a different provider.
+
+An OPTIONAL cheap remote tier routes synthesis through the Forge OpenRouter
+STANDARD tier when the explicit opt-in env ``ANIMUS_OGMA_REMOTE`` is truthy.
+It is never auto-defaulted — see ``_resolve_provider`` for precedence.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -26,6 +31,18 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MIN_RELEVANCE = 0.5
 DEFAULT_FAILURE_DIR = Path("~/projects/notes/ogma/.failures").expanduser()
+
+# Opt-in env flag. When truthy, Ogma synthesis routes through the Forge
+# OpenRouter STANDARD tier (cheap open-weight cloud) instead of local Ollama.
+# This is NEVER auto-defaulted — remote egress only happens on explicit consent.
+REMOTE_ENV_FLAG = "ANIMUS_OGMA_REMOTE"
+_TRUTHY = {"1", "true", "yes", "on"}
+
+
+def _remote_opt_in() -> bool:
+    """True only when ``ANIMUS_OGMA_REMOTE`` is explicitly set to a truthy value."""
+    return os.environ.get(REMOTE_ENV_FLAG, "").strip().lower() in _TRUTHY
+
 
 PERSONA_SYSTEM_PROMPT = """You are Ogma — the reverse-engineering synthesis persona for the Animus exocortex project. Companion to Lugh. Ethos: figure out how it works, then build it better.
 
@@ -198,15 +215,105 @@ def synthesize(
     return output
 
 
+class _OpenRouterModelAdapter:
+    """Adapt a Forge ``OpenRouterProvider`` to the Core ``ModelInterface`` surface.
+
+    ``synthesize`` calls exactly one method on the resolved provider:
+    ``provider.generate(prompt, system=PERSONA_SYSTEM_PROMPT)`` returning a
+    ``str``. This adapter implements that single method — it is intentionally
+    NOT a full ``ModelInterface`` subclass (no streaming / tool surface), only
+    the slice Ogma's call site needs. It does not subclass ``ModelInterface``
+    to avoid importing Forge types into Core's type hierarchy; duck typing on
+    ``.generate`` is all the call site requires.
+
+    Two Forge-side guarantees are load-bearing here and are NOT re-implemented
+    locally (the provider enforces them; we just feed it the right inputs):
+
+    1. **PUBLIC-only egress.** Ogma harvest is public-source by construction,
+       so every request is tagged ``Sensitivity.PUBLIC``. Without this tag the
+       provider's ``_check_request_egress`` fails closed (its default is
+       PUBLIC, but we set it explicitly so intent is unambiguous and a future
+       default change can't silently start leaking).
+    2. **Open-weights only.** The STANDARD-tier model
+       (``deepseek/deepseek-v4-flash`` via ``ANIMUS_OPENROUTER_MODEL_STANDARD``)
+       passes the closed-vendor denylist; the provider's ``_assert_open_weight``
+       is the enforcement point. We do not duplicate that check.
+    """
+
+    def __init__(self) -> None:
+        # Imports are deferred to call time so Core never hard-depends on Forge
+        # at import. The remote tier is opt-in; the local path must keep working
+        # in a Core-only install where ``animus_forge`` is absent.
+        try:
+            from animus_forge.providers.base import ModelTier
+            from animus_forge.providers.openrouter_provider import OpenRouterProvider
+        except ImportError as e:  # pragma: no cover - exercised only without Forge
+            raise OgmaSynthesisError(
+                f"{REMOTE_ENV_FLAG}=1 requested the OpenRouter remote tier, but the "
+                "Forge provider package is not importable (install animus-forge). "
+                f"Underlying import error: {e}"
+            ) from e
+
+        self._provider = OpenRouterProvider()
+        self._standard_tier = ModelTier.STANDARD
+
+    def generate(self, prompt: str, system: str | None = None) -> str:
+        """Run one PUBLIC, STANDARD-tier completion through OpenRouter.
+
+        Matches ``ModelInterface.generate(prompt, system=None) -> str``.
+        """
+        # Imports deferred for the same Core-without-Forge reason as __init__.
+        from animus_forge.providers.base import CompletionRequest
+        from animus_types import Sensitivity
+
+        request = CompletionRequest(
+            prompt=prompt,
+            system_prompt=system,
+            model_tier=self._standard_tier,
+            # PUBLIC is required or the provider's egress gate refuses the call.
+            sensitivity=Sensitivity.PUBLIC,
+            # DeepSeek V4 Flash long-context quality collapses in non-think mode,
+            # so we request high reasoning effort. The OpenRouter provider threads
+            # this into OpenRouter's unified ``reasoning`` param via ``extra_body``
+            # (see ``OpenRouterProvider._reasoning_extra_body``). Valid efforts:
+            # minimal / low / medium / high / xhigh.
+            metadata={"reasoning_effort": "high"},
+        )
+        response = self._provider.complete(request)
+        return response.content
+
+
 def _resolve_provider(
     model: ModelInterface | CognitiveLayer | None,
 ) -> ModelInterface:
-    """Default to Ollama; unwrap a CognitiveLayer's primary provider."""
-    if model is None:
-        return create_model(ModelConfig.ollama())
-    if isinstance(model, CognitiveLayer):
-        return model.primary
-    return model
+    """Resolve the provider for synthesis, in strict precedence order.
+
+    1. **Explicit model arg** — if the caller passes a ``ModelInterface`` or a
+       ``CognitiveLayer``, honour it exactly (unwrapping the layer's primary).
+       An explicit choice always wins; the remote flag never overrides it.
+    2. **Opt-in remote tier** — else, if ``ANIMUS_OGMA_REMOTE`` is truthy,
+       return an ``_OpenRouterModelAdapter`` (Forge OpenRouter STANDARD tier,
+       PUBLIC-tagged, open-weights only). NEVER auto-defaulted.
+    3. **Local default** — else the existing local Ollama default.
+
+    Returns a duck-typed provider exposing ``.generate(prompt, system=None)``;
+    ``_OpenRouterModelAdapter`` satisfies that slice without being a full
+    ``ModelInterface`` subclass.
+    """
+    # (1) explicit model arg always wins.
+    if model is not None:
+        if isinstance(model, CognitiveLayer):
+            return model.primary
+        return model
+    # (2) opt-in remote tier — only on explicit consent.
+    if _remote_opt_in():
+        logger.info(
+            "ogma.read: %s truthy — routing synthesis through OpenRouter STANDARD tier",
+            REMOTE_ENV_FLAG,
+        )
+        return _OpenRouterModelAdapter()  # type: ignore[return-value]
+    # (3) local Ollama default.
+    return create_model(ModelConfig.ollama())
 
 
 def _assemble_prompt(item: SourceItem, source_text: str, gap: GapResult) -> str:
