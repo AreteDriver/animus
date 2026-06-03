@@ -42,6 +42,7 @@ def pipeline_backend():
             "004_executions.sql",
             "010_task_history.sql",
             "011_budget_session_usage.sql",
+            "020_budget_effective_tokens.sql",
         ):
             path = os.path.join(migrations_dir, migration)
             if os.path.exists(path):

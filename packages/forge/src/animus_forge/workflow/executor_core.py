@@ -215,6 +215,15 @@ class WorkflowExecutor(
         """
         if not self.budget_manager:
             return False
+        # Cost-weighted ceiling: if cumulative Effective-Tokens (or raw) has
+        # already pushed status to EXCEEDED, halt before the next step. This is
+        # what makes ET an enforced constraint, not a reported number.
+        from animus_forge.budget import BudgetStatus
+
+        if self.budget_manager.status == BudgetStatus.EXCEEDED:
+            result.status = "failed"
+            result.error = "Budget exceeded (effective-tokens)"
+            return True
         estimated_tokens = step.params.get("estimated_tokens", 1000)
         if not self.budget_manager.can_allocate(estimated_tokens):
             result.status = "failed"

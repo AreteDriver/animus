@@ -99,10 +99,12 @@ def effective_tokens(
 ) -> float:
     """The cost-weighted Effective-Tokens value for one usage record.
 
-    ``ET = m × (1.0·I + 0.1·C + 4.0·O)``. When the record carries no
-    breakdown (legacy callers that only pass ``tokens``), we conservatively
-    treat the whole total as output-equivalent so a budget tracked in
-    raw-token terms doesn't undercount the most expensive part of the call.
+    ``ET = m × (1.0·I + 0.1·C + 4.0·O)`` when an input/output breakdown is
+    present. When the record carries no breakdown (callers that only pass
+    ``tokens``), the output weight cannot be applied to cost we never
+    observed, so ET is model-weighted only (``m × tokens``) — neutral for an
+    unknown model. This keeps ET enforcement non-breaking on the executor's
+    raw-only record path while still penalizing a known-expensive tier.
     """
     m = _resolve_model_multiplier(record.model, model_multipliers)
     if record.input_tokens or record.output_tokens or record.cache_read_tokens:
@@ -111,8 +113,12 @@ def effective_tokens(
             + ET_CACHE_READ_WEIGHT * record.cache_read_tokens
             + ET_OUTPUT_WEIGHT * record.output_tokens
         )
-    # No breakdown — treat the rolled-up total as output (worst case).
-    return m * ET_OUTPUT_WEIGHT * record.tokens
+    # No in/out breakdown: apply the model-tier multiplier but NOT the output
+    # weight. We can't claim output cost we didn't observe, so a raw-only
+    # record stays neutral (ET == raw for an unknown model), which keeps ET
+    # enforcement non-breaking on the executor's raw-only record path while
+    # still penalizing a known-expensive tier (e.g. opus, m=5).
+    return m * record.tokens
 
 
 @dataclass
@@ -127,7 +133,15 @@ class BudgetConfig:
     reserve_tokens: int = 5000  # Reserved for retries/overhead
     daily_token_limit: int = 0  # 0 = disabled
     model_multipliers: dict[str, float] | None = None  # None → DEFAULT_MODEL_MULTIPLIERS
-    effective_token_budget: float | None = None  # None → ET enforcement off
+    # Effective-Tokens enforcement. As of the A1 "flip", ET is an ENFORCED
+    # ceiling by default (not reporting-only). ``effective_token_budget``:
+    #   - None  → derive the ceiling from ``total_budget`` (same number, but
+    #             measured in cost-weighted ET; the worse of raw/ET governs)
+    #   - float → explicit ET ceiling
+    # Set ``enforce_effective_tokens=False`` to opt out and get pure raw-token
+    # behavior (escape hatch; the default is enforce).
+    effective_token_budget: float | None = None
+    enforce_effective_tokens: bool = True
 
 
 class BudgetManager:
@@ -159,7 +173,7 @@ class BudgetManager:
         self._agent_usage: dict[str, int] = {}
         self._total_used: int = 0
         # Cost-weighted accumulator, maintained in lockstep with _total_used.
-        # Only governs enforcement when config.effective_token_budget is set.
+        # Governs enforcement via effective_ceiling (on by default post-flip).
         self._total_effective: float = 0.0
         self._last_status: BudgetStatus = BudgetStatus.OK
 
@@ -167,7 +181,33 @@ class BudgetManager:
             self._restore_from_db()
 
     def _restore_from_db(self) -> None:
-        """Restore usage state from the database."""
+        """Restore usage state from the database.
+
+        Restores both raw ``_total_used`` and the cost-weighted
+        ``_total_effective`` (migration 020). Falls back to a raw-only restore
+        if the ``effective_tokens`` column is absent (un-migrated DB), so an
+        old database still restores raw usage rather than failing outright.
+        """
+        try:
+            rows = self._backend.fetchall(
+                "SELECT agent_id, SUM(tokens) as total, "
+                "SUM(effective_tokens) as eff "
+                "FROM budget_session_usage WHERE session_id = ? "
+                "GROUP BY agent_id",
+                (self._session_id,),
+            )
+            for row in rows:
+                agent_id = row["agent_id"]
+                tokens = int(row["total"])
+                self._agent_usage[agent_id] = tokens
+                self._total_used += tokens
+                self._total_effective += float(row["eff"] or 0.0)
+        except Exception:
+            logger.warning("ET-aware budget restore failed; trying raw-only", exc_info=True)
+            self._restore_from_db_raw_only()
+
+    def _restore_from_db_raw_only(self) -> None:
+        """Fallback restore for databases without the effective_tokens column."""
         try:
             rows = self._backend.fetchall(
                 "SELECT agent_id, SUM(tokens) as total "
@@ -180,17 +220,26 @@ class BudgetManager:
                 tokens = int(row["total"])
                 self._agent_usage[agent_id] = tokens
                 self._total_used += tokens
+                # No persisted ET: neutral fallback (ET == raw), consistent
+                # with the no-breakdown rule.
+                self._total_effective += float(tokens)
         except Exception:
             logger.warning("Failed to restore budget from DB", exc_info=True)
 
-    def _persist_usage(self, agent_id: str, tokens: int, operation: str) -> None:
-        """Persist a usage record to the database."""
+    def _persist_usage(
+        self,
+        agent_id: str,
+        tokens: int,
+        operation: str,
+        effective: float = 0.0,
+    ) -> None:
+        """Persist a usage record (raw + cost-weighted) to the database."""
         try:
             self._backend.execute(
                 "INSERT INTO budget_session_usage "
-                "(session_id, agent_id, tokens, operation) "
-                "VALUES (?, ?, ?, ?)",
-                (self._session_id, agent_id, tokens, operation),
+                "(session_id, agent_id, tokens, operation, effective_tokens) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (self._session_id, agent_id, tokens, operation, effective),
             )
         except Exception:
             logger.warning("Failed to persist budget usage", exc_info=True)
@@ -228,27 +277,43 @@ class BudgetManager:
         return self._total_effective
 
     @property
+    def effective_ceiling(self) -> float:
+        """The active Effective-Tokens ceiling.
+
+        ``inf`` when enforcement is off. Otherwise the explicit
+        ``effective_token_budget`` if set, else derived from ``total_budget``
+        (the A1 default: the same budget number, enforced on the cost-weighted
+        axis so the worse of raw/ET governs).
+        """
+        if not self.config.enforce_effective_tokens:
+            return float("inf")
+        if self.config.effective_token_budget is not None:
+            return self.config.effective_token_budget
+        return float(self.config.total_budget)
+
+    @property
     def effective_remaining(self) -> float:
         """Remaining Effective-Tokens, or ``inf`` when ET enforcement is off."""
-        if self.config.effective_token_budget is None:
+        ceiling = self.effective_ceiling
+        if ceiling == float("inf"):
             return float("inf")
-        return max(0.0, self.config.effective_token_budget - self._total_effective)
+        return max(0.0, ceiling - self._total_effective)
 
     @property
     def status(self) -> BudgetStatus:
         """Get current budget status.
 
-        Governed by the raw-token budget and, when
-        ``config.effective_token_budget`` is set, also by the cost-weighted
-        Effective-Tokens budget. The more-constrained of the two ratios wins,
-        so an output-heavy or opus-tier run that is cheap in raw tokens but
-        expensive in real cost cannot read OK while overspending.
+        Governed by the raw-token budget AND the cost-weighted Effective-Tokens
+        ceiling (enforced by default; see ``effective_ceiling``). The
+        more-constrained of the two ratios wins, so an output-heavy or
+        opus-tier run that is cheap in raw tokens but expensive in real cost
+        cannot read OK while overspending.
         """
         ratio = self._total_used / self.config.total_budget if self.config.total_budget > 0 else 1.0
 
-        et_budget = self.config.effective_token_budget
-        if et_budget is not None and et_budget > 0:
-            ratio = max(ratio, self._total_effective / et_budget)
+        et_ceiling = self.effective_ceiling
+        if et_ceiling not in (0.0, float("inf")):
+            ratio = max(ratio, self._total_effective / et_ceiling)
 
         if ratio > 1.0:
             return BudgetStatus.EXCEEDED
@@ -349,14 +414,16 @@ class BudgetManager:
             model=model,
         )
 
+        record_effective = effective_tokens(record, self.config.model_multipliers)
+
         self._usage_history.append(record)
         self._total_used += tokens
-        self._total_effective += effective_tokens(record, self.config.model_multipliers)
+        self._total_effective += record_effective
         self._agent_usage[agent_id] = self._agent_usage.get(agent_id, 0) + tokens
 
         # Persist to database if backend is available
         if self._backend and self._session_id:
-            self._persist_usage(agent_id, tokens, operation)
+            self._persist_usage(agent_id, tokens, operation, record_effective)
 
         # Check for status change
         new_status = self.status
