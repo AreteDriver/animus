@@ -31,7 +31,7 @@ honest reads from the whitepaper maturity (68 production / 6 beta / 4 exp / 5 st
 
 | # | Dimension | Now | 10/10 acceptance criteria |
 |---|---|---|---|
-| D1 | **Cost discipline** (keystone) | 9 | Effective-Tokens is the *enforced* unit ✅ (A1, Session 1); a parallel output-heavy opus run already cannot overspend. Remaining for 10: `allocate()` reserves (A2) + one pricing table (A3). |
+| D1 | **Cost discipline** (keystone) | **10** ✅ | ET is the enforced unit (A1); `allocate()` atomically reserves so concurrent steps can't collectively overspend (A2); `estimate_cost` derives from one tier table (A3). Cost is now a hard, thread-safe constraint. |
 | D2 | **Memory** | 7 | Tiered HOT/WARM/COLD with real promotion; incremental BM25; no full second in-RAM copy; LLM-summarized consolidation; sync conflict-surfacing. |
 | D3 | **Security & at-rest** | 7 | Encryption at rest; content-aware egress (not tier-trust); integrity baseline covers all critical-path files + self; per-install salt; signed memory or explicit decision not to. |
 | D4 | **Eval integrity** | 7 | Judges calibrated against a human golden set + drift tracked; judge failure ≠ silent 0.5; content taxonomy wired (done); real code-exec sandbox; power/sample-size advisor on `compare`. |
@@ -67,12 +67,12 @@ before it is sane to run Animus unattended.
 | ID | Item | Source | Current → Target | Acceptance | Effort |
 |---|---|---|---|---|---|
 | **A1 ✅** | **Make Effective-Tokens the enforced budget unit ("the flip")** — DONE Session 1, option (b) | §6 #6, §8.4, cold-read keystone | ET reporting-only → **ET enforced** | Chose (b): raw `total_budget` kept, ET ceiling auto-derived; status takes worse-of-raw/ET; executor halts on EXCEEDED; migration 020 persists ET across restart. Non-breaking (raw-only records neutral) so 0 workflow YAMLs changed. Done-criteria test green; full forge suite 10,210 passed | L |
-| **A2** | `BudgetManager.allocate()` real reservation | §6 #5, appendix | check-only → reserves | Pending allocations tracked; concurrent `can_allocate` cannot collectively overspend; released on record/cancel; test proves it | M |
-| **A3** | Single pricing source | appendix (orchestration) | two tables (stale 2024 + multipliers) → one | `estimate_cost` and ET multipliers read one table; no dashboard/budget mismatch | S |
+| **A2 ✅** | `BudgetManager.allocate()` real reservation — DONE Session 2 | §6 #5, appendix | check-only → reserves | Lock + pending state; `allocate()` atomically check-and-reserves; parallel handler reserves once/sub-step + releases in finally; threaded test proves no collective overspend | M |
+| **A3 ✅** | Single pricing source — DONE Session 2 | appendix (orchestration) | two tables → one | `estimate_cost` derives from `DEFAULT_MODEL_MULTIPLIERS` × base $9/1M; config overrides flow into cost; reproduces old opus/sonnet numbers | S |
 | **A4** | Content-aware egress (stop trusting caller tier) | §8.1, Qwen #1, residual gap | tier-trust only → tier + content scan | Egress gate runs DLP/secret scan on payload before allow; a CONFIDENTIAL body mis-tagged PUBLIC is blocked; test with mis-tag | M |
 | **A5** | Encryption at rest | §7 significant, §8.1, ARCHITECTURE claim | plaintext ext4 → encrypted | gocryptfs vault (PR #67) finished + memory store inside it; documented recovery; CANON/ARCHITECTURE flip from PLANNED→done | M |
 | **A6** | Expand integrity baseline | §6 #8, Qwen #3 | 4 files → all critical-path + self | tier-router, providers, pi_wrap, integrity checker itself hashed; tamper of any trips boot refusal; test each | M |
-| **A7** | Per-install encryption salt | §6 #14 | hardcoded `gorgon-` salt → random per-install | Salt generated + persisted to `~/.config/animus`; legacy constant gone | S |
+| **A7 ✅** | Per-install encryption salt — DONE Session 2 | §6 #14 | hardcoded `gorgon-` salt → random per-install | `get_install_salt` helper; random 16B persisted 0600 to `~/.config/animus`; wired at BOTH sites (field_encryption + settings/manager); env overrides kept. Verified no legacy-encrypted data exists, so zero migration cost | S |
 | **A8** | Durability: rebuild dry-run + `animus export --all` | §7 significant | none → portable archive + tested rebuild | `export --all` produces documented-schema archive; timed cold rebuild restores state; loss-of-machine is survivable | M |
 
 Exit: D1 → 9, D3 → 9, D7 substrate in place. **This is the phase that matters most.**
@@ -147,6 +147,7 @@ Slot in opportunistically; none blocks the above. Includes the Qwen net-new item
 | E12 | **Local-model supply-chain: pin + checksum model blobs** | **Qwen #5 (net-new)** | M |
 | E13 | **TOCTOU on tier labels: immutable tier at read / re-check at use** | **Qwen #6 (net-new)** | M |
 | E14 | Ollama upgrade so the uncensored 35B Qwen3.6-A3B red-team model loads | this session | S |
+| E15 | **Migration-number collision guard** — a test/CI check that fails when two `migrations/*.sql` share a leading number | **Session 1 (the `012` collision that broke the first full run)** | S |
 
 ---
 
@@ -203,12 +204,19 @@ isn't. Breaking change, so it gets its own session.
 - [x] **Done:** parallel opus run trips `EXCEEDED` at 30% raw (test green);
       executor halts on it; **full forge suite 10,210 passed, 0 failed**. D1 → 9.
 
-### Session 2 — Finish the cost cluster + a quick security win (A2, A3, A7)
-- [ ] **A2** `BudgetManager.allocate()` reserves a pending allocation; concurrent
-      `can_allocate` can't collectively overspend (test proves it).
-- [ ] **A3** collapse the two pricing tables into one source.
-- [ ] **A7** random per-install PBKDF2 salt; drop the legacy `gorgon-` constant.
-- **Done when:** budget reservation test passes; one pricing view; salt test. D1 → 10.
+### Session 2 — Finish the cost cluster + a quick security win (A2, A3, A7) ✅ DONE
+- [x] **A2** `BudgetManager.allocate()` reserves under a lock; parallel handler
+      reserves once/sub-step + releases in finally; threaded test proves 20
+      concurrent 200-tok reservations grant exactly 10 against a 2000 budget.
+- [x] **A3** `estimate_cost` derives from the one tier-multiplier table × base
+      $9/1M (config overrides flow through); old opus/sonnet numbers preserved.
+- [x] **A7** `get_install_salt` (random 16B, persisted 0600 to `~/.config/animus`)
+      wired at both salt sites; env overrides kept. Confirmed **no** legacy-
+      encrypted data exists (credentials/api_keys/mcp/settings all 0 rows), so
+      zero migration cost.
+- [x] **Done:** A2 reservation + threaded tests, A3 single-source tests, A7 salt
+      tests all green; affected coverage tests migrated (removed-method gate).
+      Prior full run 10,221 passed / 3 failed-now-fixed; CI confirms. **D1 → 10.**
 
 ### Session 3 — Egress + integrity (A4, A6)
 - [ ] **A4** content-aware egress: DLP/secret scan the payload before allow, not
@@ -276,6 +284,63 @@ on-spec-or-better, every claim enforced and tested. Session 7 hardens the
 security tail. Only *then* do Phases C (daily-tool: RA layer, overnight delegate)
 and D (differentiators: tiered memory, active inference, replay) begin — the
 *build* arc, re-planned into sessions on the now-trustworthy substrate.
+
+### Phase E sessions — scale, hygiene, guards (non-security; continuous)
+
+Phase E is *opportunistic*: none of these gate OPERATIONAL, and any can be
+slotted in when its area is already open. Security-tail E-items (E9–E14) live in
+Session 7. The rest cluster into three optional sessions below. Same rule: a
+"done when" that is a passing test, and a clean PR.
+
+#### Session 8 — Memory scaling & correctness (E1–E4)
+Lifts the memory layer off its scaling ceilings and removes silent data loss.
+Best done when the memory store is otherwise quiet (no concurrent migrations).
+- [ ] **E1** BM25 index updates incrementally on store/delete (no full O(N)
+      re-tokenize per write). *Done when:* a write does not rebuild the whole
+      corpus (assert via a spy/counter); retrieval results unchanged.
+- [ ] **E2** `ChromaMemoryStore` stops holding a full second in-RAM dict; hydrate
+      `Memory` objects on demand, keep only an id→metadata index for BM25.
+      *Done when:* memory footprint scales sub-linearly in a large-corpus test;
+      all store contract tests still pass. (L — the heaviest Phase E item.)
+- [ ] **E3** `consolidate()` summarizes via the cognitive layer instead of
+      first-tag 150-char concat. *Done when:* a consolidated memory is a real
+      summary (LLM in test = mock returning a marker), originals untouched
+      (append-only preserved).
+- [ ] **E4** Cross-device sync surfaces conflicts instead of silent
+      last-write-wins. *Done when:* two divergent edits to the same record
+      produce a recorded conflict (not a dropped loser) in a sync test.
+- **Exit:** D2 (memory) scaling ceilings removed; no silent loss. D2 → 10.
+
+#### Session 9 — Hygiene & dev-tooling guards (E5, E6, E8, E15)
+Cheap correctness + the poka-yoke that would have caught Session 1's own bug.
+- [ ] **E15** Migration-number collision guard (NEW, from Session 1). A test
+      globs `migrations/*.sql`, parses the leading integer, and asserts the set
+      is unique. *Done when:* the test fails on a duplicate number and passes on
+      the current tree. ~20 lines; do this **first** in the session — it is the
+      poka-yoke for the exact failure that broke Session 1's first full run.
+- [ ] **E5** Reconcile the quickstart `gates:` YAML: either parse it in the
+      production `WorkflowConfig` loader (reuse Core's safe gate parser) or
+      remove the example from the README. *Done when:* docs and the loader agree
+      (a test asserts a `gates:` workflow either enforces or is rejected, not
+      silently ignored).
+- [ ] **E6** Finish the Gorgon→Forge rename (`branch_prefix` default, residual
+      identifiers) and gitignore the committed runtime `*.db` files. *Done when:*
+      `grep -ri gorgon src/` is clean of live identifiers; no `*.db` tracked.
+- [ ] **E8** Cost/quality Pareto optimizer over the eval run store: recommend
+      the cheapest (model, prompt_version) holding a target quality band.
+      *Done when:* given seeded run history, it returns the Pareto-optimal config
+      in a test. (Builds on the now-enforced Effective-Tokens from Session 1.)
+- **Exit:** D5/D8 hygiene closed; the migration guard prevents a repeat of the
+  Session 1 collision.
+
+#### Session 10 (optional, large) — Unified secret manager (E7)
+- [ ] **E7** Build the `SECURITY_LAYER.md` secret manager (age/pass backend,
+      `animus secrets` CLI, `secrets://` URI resolution) to replace ad-hoc
+      credential handling. Large and cross-cutting with security; sequence it
+      near Session 7 or whenever credential handling next causes friction.
+      *Done when:* a `secrets://` reference resolves at load; no plaintext
+      secret in config; round-trip test green. Flip the SECURITY_LAYER spec
+      `ASPIRATIONAL-SPEC → CANONICAL` in `CANON.md` when it lands.
 
 ## Working rule
 

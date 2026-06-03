@@ -85,11 +85,11 @@ decisions, not clean fixes:
       auto-derived, status takes worse-of-raw/ET, executor halts on EXCEEDED,
       migration 020 persists ET. Non-breaking (0 workflow YAMLs changed). Full
       forge suite 10,210 passed. See `docs/ROADMAP_TO_10.md` Session 1.
-- [ ] **`BudgetManager.allocate()` real reservation** (whitepaper refinement #5,
-      P1). Currently `allocate()` checks `can_allocate` but records nothing, so
-      parallel auto-steps can each pass and collectively overspend. Track
-      pending allocations; decrement on `record_usage` or explicit release.
-      Pairs naturally with the ET flip since both touch the accounting path.
+- [x] **`BudgetManager.allocate()` real reservation** DONE (Session 2, roadmap
+      A2). Lock + pending state; parallel handler reserves once/sub-step and
+      releases in finally; threaded test proves no collective overspend. Also
+      shipped A3 (single pricing source) + A7 (per-install salt). **D1 → 10.**
+      See `docs/ROADMAP_TO_10.md` Session 2.
 - [ ] Optional: route the 3 MCP egress sites through `MemoryLayer.EGRESS_SCOPE`
       once test mocks are updated (left as literal `{Sensitivity.PUBLIC}` for
       now to keep MagicMock-based tests simple).

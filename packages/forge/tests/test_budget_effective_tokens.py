@@ -236,3 +236,28 @@ class TestSession1DoneCriteria:
         result = ExecutionResult(workflow_name="wf-et")
         assert executor._check_budget_exceeded(step, result) is True
         assert "effective-tokens" in result.error
+
+
+class TestSinglePricingSource:
+    """A3: estimate_cost derives from the canonical tier-multiplier table, not a
+    separate hardcoded price table — one source of truth shared with ET."""
+
+    def test_cost_tracks_tier_multiplier_ratios(self):
+        bm = BudgetManager(BudgetConfig(total_budget=1_000_000))
+        sonnet = bm.estimate_cost(1_000_000, "claude-sonnet-4-6")
+        opus = bm.estimate_cost(1_000_000, "claude-opus-4-7")
+        haiku = bm.estimate_cost(1_000_000, "claude-haiku-4-5")
+        # Ratios match the multiplier table (opus 5x, haiku 0.08x sonnet).
+        assert opus == pytest.approx(sonnet * 5.0)
+        assert haiku == pytest.approx(sonnet * 0.08)
+        # Sonnet base is the single $9/1M rate.
+        assert sonnet == pytest.approx(9.0)
+
+    def test_unknown_model_uses_sonnet_tier(self):
+        bm = BudgetManager(BudgetConfig(total_budget=1_000_000))
+        assert bm.estimate_cost(1_000_000, "some-mystery-model") == pytest.approx(9.0)
+
+    def test_config_multiplier_override_flows_into_cost(self):
+        bm = BudgetManager(BudgetConfig(total_budget=1_000_000, model_multipliers={"sonnet": 2.0}))
+        # Overriding the tier table moves cost too — proves single source.
+        assert bm.estimate_cost(1_000_000, "sonnet") == pytest.approx(18.0)
