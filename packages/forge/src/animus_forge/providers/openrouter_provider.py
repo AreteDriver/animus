@@ -260,6 +260,7 @@ class OpenRouterProvider(Provider):
                 temperature=request.temperature,
                 max_tokens=request.max_tokens,
                 stop=request.stop_sequences,
+                extra_body=self._reasoning_extra_body(request),
             )
         except OpenAIRateLimitError as e:
             raise RateLimitError(str(e))
@@ -290,6 +291,7 @@ class OpenRouterProvider(Provider):
                 temperature=request.temperature,
                 max_tokens=request.max_tokens,
                 stop=request.stop_sequences,
+                extra_body=self._reasoning_extra_body(request),
             )
         except OpenAIRateLimitError as e:
             raise RateLimitError(str(e))
@@ -315,6 +317,25 @@ class OpenRouterProvider(Provider):
             metadata={"id": response.id},
         )
 
+    def _reasoning_extra_body(self, request: CompletionRequest) -> dict[str, Any]:
+        """Translate ``metadata['reasoning_effort']`` into OpenRouter's reasoning param.
+
+        OpenRouter exposes a unified ``reasoning`` control; the OpenAI SDK passes
+        non-standard params through ``extra_body``. Models like DeepSeek V4 Flash
+        collapse in non-think mode on long-context tasks, so callers (e.g. Ogma
+        synthesis) request high reasoning effort via the request metadata. Unknown
+        or empty values are ignored (normal completion). Returns the ``extra_body``
+        dict to merge, or ``{}`` when no valid effort is requested.
+        """
+        valid = {"minimal", "low", "medium", "high", "xhigh"}
+        effort = request.metadata.get("reasoning_effort")
+        if not effort:
+            return {}
+        effort = str(effort).strip().lower()
+        if effort not in valid:
+            return {}
+        return {"reasoning": {"effort": effort}}
+
     def _build_messages(self, request: CompletionRequest) -> list[dict]:
         """Build message list for the API."""
         messages: list[dict] = []
@@ -334,6 +355,7 @@ class OpenRouterProvider(Provider):
         temperature: float,
         max_tokens: int | None,
         stop: list[str] | None,
+        extra_body: dict[str, Any] | None = None,
     ) -> Any:
         """Make API call with retry logic."""
         kwargs: dict[str, Any] = {
@@ -345,6 +367,8 @@ class OpenRouterProvider(Provider):
             kwargs["max_tokens"] = max_tokens
         if stop:
             kwargs["stop"] = stop
+        if extra_body:
+            kwargs["extra_body"] = extra_body
         return self._client.chat.completions.create(**kwargs)
 
     @async_with_retry(max_retries=3, base_delay=1.0, max_delay=30.0)
@@ -355,6 +379,7 @@ class OpenRouterProvider(Provider):
         temperature: float,
         max_tokens: int | None,
         stop: list[str] | None,
+        extra_body: dict[str, Any] | None = None,
     ) -> Any:
         """Make async API call with retry logic."""
         kwargs: dict[str, Any] = {
@@ -366,6 +391,8 @@ class OpenRouterProvider(Provider):
             kwargs["max_tokens"] = max_tokens
         if stop:
             kwargs["stop"] = stop
+        if extra_body:
+            kwargs["extra_body"] = extra_body
         return await self._async_client.chat.completions.create(**kwargs)
 
     def list_models(self) -> list[str]:

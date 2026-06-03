@@ -188,6 +188,62 @@ class TestComplete:
         assert resp.input_tokens == 4
         mock_client.chat.completions.create.assert_called_once()
 
+    def test_reasoning_effort_threaded_to_extra_body(self, monkeypatch):
+        monkeypatch.delenv("ANIMUS_OFFLINE", raising=False)
+        p = _provider()
+        p._initialized = True
+        p._egress_endpoint = OPENROUTER_BASE_URL
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = _fake_response()
+        p._client = mock_client
+
+        req = CompletionRequest(
+            prompt="hello",
+            model="deepseek/deepseek-v4-flash",
+            sensitivity=Sensitivity.PUBLIC,
+            metadata={"reasoning_effort": "high"},
+        )
+        p.complete(req)
+        _, kwargs = mock_client.chat.completions.create.call_args
+        assert kwargs["extra_body"] == {"reasoning": {"effort": "high"}}
+
+    def test_no_reasoning_effort_omits_extra_body(self, monkeypatch):
+        monkeypatch.delenv("ANIMUS_OFFLINE", raising=False)
+        p = _provider()
+        p._initialized = True
+        p._egress_endpoint = OPENROUTER_BASE_URL
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = _fake_response()
+        p._client = mock_client
+
+        req = CompletionRequest(
+            prompt="hello",
+            model="meta-llama/llama-3.1-8b-instruct",
+            sensitivity=Sensitivity.PUBLIC,
+        )
+        p.complete(req)
+        _, kwargs = mock_client.chat.completions.create.call_args
+        assert "extra_body" not in kwargs
+
+    def test_invalid_reasoning_effort_ignored(self, monkeypatch):
+        monkeypatch.delenv("ANIMUS_OFFLINE", raising=False)
+        p = _provider()
+        p._initialized = True
+        p._egress_endpoint = OPENROUTER_BASE_URL
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = _fake_response()
+        p._client = mock_client
+
+        req = CompletionRequest(
+            prompt="hello",
+            model="deepseek/deepseek-v4-flash",
+            sensitivity=Sensitivity.PUBLIC,
+            metadata={"reasoning_effort": "bogus"},
+        )
+        p.complete(req)
+        _, kwargs = mock_client.chat.completions.create.call_args
+        assert "extra_body" not in kwargs
+
     def test_closed_vendor_raises_before_network(self, monkeypatch):
         monkeypatch.delenv("ANIMUS_OFFLINE", raising=False)
         p = _provider()
