@@ -110,6 +110,11 @@ class IterationRecord:
     outcome: str  # "keep" | "discard" | "error"
     rationale: str
     budget_used: int
+    # C11 — whether this iteration ran WITHOUT a real experiment runner, so the
+    # keep/discard verdict is LLM opinion on a non-experiment, not measured
+    # evidence. Persisted to the audit JSONL so a dry run is never mistaken for
+    # evidence after the fact.
+    is_dry_run: bool = False
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
@@ -272,6 +277,7 @@ class EvolutionLoop:
                         outcome="error",
                         rationale="Unhandled exception — see logs",
                         budget_used=0,
+                        is_dry_run=self._is_dry_run,
                     )
                 )
                 self._iteration_count += 1
@@ -326,6 +332,7 @@ class EvolutionLoop:
                             f"violations={drift_result.violations}"
                         ),
                         budget_used=iteration_tokens,
+                        is_dry_run=self._is_dry_run,
                     )
                     self._history.append(record)
                     self._append_audit(record)
@@ -346,6 +353,7 @@ class EvolutionLoop:
                 outcome=eval_data.get("outcome", "discard"),
                 rationale=eval_data.get("rationale", ""),
                 budget_used=iteration_tokens,
+                is_dry_run=self._is_dry_run,
             )
 
             self._history.append(record)
@@ -483,6 +491,7 @@ class EvolutionLoop:
             "outcome": record.outcome,
             "rationale": record.rationale,
             "budget_used": record.budget_used,
+            "is_dry_run": record.is_dry_run,
             "timestamp": record.timestamp,
         }
         with open(path, "a") as f:

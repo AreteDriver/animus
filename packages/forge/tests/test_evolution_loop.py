@@ -278,6 +278,45 @@ class TestSingleIteration:
         assert len(loop.history) == 1
         assert loop.history[0].iteration == 0
 
+    def test_dry_run_stamped_on_record_and_audit(
+        self, mock_provider, mock_budget, tmp_better, tmp_audit
+    ):
+        """C11: no experiment_runner → is_dry_run=True must reach BOTH the
+        returned IterationRecord and the persisted audit JSONL, so a dry run is
+        never mistaken for measured evidence after the fact."""
+        mock_provider.complete.side_effect = [
+            _make_hypothesis_response(),
+            _make_eval_response(),
+        ]
+        loop = _make_loop(mock_provider, mock_budget, tmp_better, tmp_audit)
+        assert loop.is_dry_run is True
+        record = loop.run_one()
+        assert record.is_dry_run is True
+        entry = json.loads(tmp_audit.read_text().strip().splitlines()[0])
+        assert entry["is_dry_run"] is True
+
+    def test_real_runner_not_marked_dry_run(
+        self, mock_provider, mock_budget, tmp_better, tmp_audit
+    ):
+        """C11: with a real experiment_runner injected, is_dry_run=False flows
+        to the record + audit entry."""
+        mock_provider.complete.side_effect = [
+            _make_hypothesis_response(),
+            _make_eval_response(),
+        ]
+        loop = _make_loop(
+            mock_provider,
+            mock_budget,
+            tmp_better,
+            tmp_audit,
+            experiment_runner=lambda hypothesis, plan: "ran a real experiment",
+        )
+        assert loop.is_dry_run is False
+        record = loop.run_one()
+        assert record.is_dry_run is False
+        entry = json.loads(tmp_audit.read_text().strip().splitlines()[0])
+        assert entry["is_dry_run"] is False
+
 
 # ---------------------------------------------------------------------------
 # Tests: Budget enforcement

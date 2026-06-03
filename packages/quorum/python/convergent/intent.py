@@ -225,8 +225,13 @@ class Intent:
         Defaults to :data:`DEFAULT_STABILITY_SCORER` (the historical
         weighted-sum), so existing callers behave identically. Pass a custom
         ``StabilityScorer`` to swap in flood-resistant / Bayesian scoring.
+
+        C13: select on ``is not None`` — a falsy-but-valid scorer (e.g. one
+        whose ``__bool__``/``__len__`` is zero) must NOT be silently dropped
+        for the default, the same falsy-vs-None class as the A1 lesson.
         """
-        return (scorer or DEFAULT_STABILITY_SCORER).score(self.evidence)
+        chosen = scorer if scorer is not None else DEFAULT_STABILITY_SCORER
+        return chosen.score(self.evidence)
 
 
 @dataclass

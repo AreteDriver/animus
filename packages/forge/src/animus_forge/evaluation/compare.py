@@ -90,14 +90,30 @@ class ComparisonReport:
         return (hi - lo) / 2
 
     @property
+    def equivalent(self) -> bool:
+        """True when the WHOLE 95% CI lies within ±MEANINGFUL_EFFECT (C10).
+
+        This is a bounds-based (TOST-style) equivalence test, not a half-width
+        one. Half-width is wrong for an off-center interval: CI [0.01, 0.09]
+        has half-width 0.04 < 0.05 yet fails to rule out a +0.09 effect, so
+        calling it "equivalent" would be false. Equivalence requires both
+        bounds inside the indifference zone.
+        """
+        lo, hi = self.score_ci_95
+        return (
+            (not self.significant) and lo > -self.MEANINGFUL_EFFECT and hi < self.MEANINGFUL_EFFECT
+        )
+
+    @property
     def underpowered(self) -> bool:
         """True when 'not significant' really means 'too few cases to tell'.
 
-        A non-significant result whose 95% CI is wider than ``MEANINGFUL_EFFECT``
-        can't exclude a difference worth caring about — absence of evidence,
-        not evidence of absence (roadmap B6).
+        A non-significant result that is also not equivalent — i.e. the 95% CI
+        extends beyond ±``MEANINGFUL_EFFECT`` on at least one side — can't
+        exclude a difference worth caring about: absence of evidence, not
+        evidence of absence (roadmap B6, corrected bounds-based in C10).
         """
-        return (not self.significant) and self.ci_halfwidth > self.MEANINGFUL_EFFECT
+        return (not self.significant) and not self.equivalent
 
     @property
     def power_note(self) -> str:
@@ -115,10 +131,14 @@ class ComparisonReport:
                 f"evidence of equivalence. ~{suggest} cases would roughly halve "
                 f"the interval."
             )
+        # Equivalent: both bounds inside the indifference zone. Report the
+        # ACTUAL tightest symmetric envelope the CI fits in, derived from the
+        # bounds — not the fixed threshold (C10).
+        envelope = max(abs(lo), abs(hi))
         return (
             f"Not significant and tightly bounded (95% CI [{lo:+.3f}, {hi:+.3f}] "
-            f"within ±{self.MEANINGFUL_EFFECT:.2f}): effectively equivalent on "
-            f"this suite (n={n})."
+            f"within ±{envelope:.3f} ≤ ±{self.MEANINGFUL_EFFECT:.2f}): effectively "
+            f"equivalent on this suite (n={n})."
         )
 
 

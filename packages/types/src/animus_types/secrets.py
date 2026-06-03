@@ -24,6 +24,7 @@ CREDENTIAL_PATTERNS: dict[str, str] = {
     "openai_key": r"sk-(?!ant-)[A-Za-z0-9_\-]{32,}",
     "github_token": r"(?:ghp|gho|ghs|ghu|ghr)_[A-Za-z0-9]{20,}",
     "github_pat": r"github_pat_[A-Za-z0-9_]{20,}",
+    "google_api_key": r"\bAIza[0-9A-Za-z_\-]{35}\b",
     "stripe_key": r"(?:sk|pk)_(?:test|live)_[A-Za-z0-9]{24,}",
     "slack_token": r"xox[bpoaes]-[A-Za-z0-9\-]{10,}",
     "aws_access_key": r"\bAKIA[0-9A-Z]{16}\b",

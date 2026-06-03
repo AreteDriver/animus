@@ -114,7 +114,7 @@ class RegexMatchMetric(EvalMetric):
         expected: str | Any | None,
         case: EvalCase,
     ) -> float:
-        pattern = self._pattern or str(expected) if expected else None
+        pattern = self._pattern or (str(expected) if expected else None)
         if pattern is None:
             return 1.0 if output else 0.0
 
@@ -149,7 +149,7 @@ class RegexAbsenceMetric(EvalMetric):
         expected: str | Any | None,
         case: EvalCase,
     ) -> float:
-        pattern = self._pattern or str(expected) if expected else None
+        pattern = self._pattern or (str(expected) if expected else None)
         if pattern is None:
             return 1.0 if output else 0.0
 

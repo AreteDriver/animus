@@ -862,11 +862,13 @@ class TestRegexMatchMetric:
         # When expected is provided, pattern = self._pattern or str(expected)
         assert m.score("abc", r"^\d+$", _make_case()) == 0.0
 
-    def test_none_expected_uses_none_pattern(self):
-        """Due to operator precedence, expected=None means pattern=None regardless of init."""
+    def test_none_expected_uses_init_pattern(self):
+        """C9: a configured pattern is honored even when expected is None. The
+        old precedence bug (`a or b if c else None`) dropped the init pattern
+        and silently no-op'd to 'output truthy'."""
         m = RegexMatchMetric(pattern=r"\d+")
-        # `(self._pattern or str(expected)) if expected else None` -> None
-        assert m.score("something", None, _make_case()) == 1.0
+        assert m.score("abc123", None, _make_case()) == 1.0  # pattern matches
+        assert m.score("no digits", None, _make_case()) == 0.0  # honored, no match
 
     def test_none_pattern_and_expected_with_output(self):
         m = RegexMatchMetric()
@@ -882,12 +884,10 @@ class TestRegexMatchMetric:
 
     def test_invalid_regex_from_init(self):
         m = RegexMatchMetric(pattern=r"[invalid")
-        # init pattern used when expected is truthy
         assert m.score("test", "something", _make_case()) == 0.0
 
     def test_complex_pattern(self):
         m = RegexMatchMetric(pattern=r"^[A-Z]\w+\s\w+$")
-        # Must pass expected to use the init pattern
         assert m.score("Hello World", "dummy", _make_case()) == 1.0
         assert m.score("hello world", "dummy", _make_case()) == 0.0
 
@@ -915,10 +915,12 @@ class TestRegexAbsenceMetric:
         m = RegexAbsenceMetric(pattern=r"^\d+$")
         assert m.score("abc", r"^\d+$", _make_case()) == 1.0
 
-    def test_none_expected_uses_none_pattern(self):
-        """Mirrors RegexMatchMetric precedence quirk: expected=None means pattern=None."""
+    def test_none_expected_uses_init_pattern(self):
+        """C9: a configured absence pattern is honored when expected is None —
+        the negative invariant must not silently no-op to always-pass."""
         m = RegexAbsenceMetric(pattern=r"recommendations")
-        assert m.score("something", None, _make_case()) == 1.0
+        assert m.score("clean text", None, _make_case()) == 1.0  # absent -> pass
+        assert m.score("has recommendations here", None, _make_case()) == 0.0  # present -> fail
 
     def test_none_pattern_and_expected_with_output(self):
         m = RegexAbsenceMetric()

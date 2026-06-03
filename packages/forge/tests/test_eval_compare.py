@@ -374,5 +374,24 @@ class TestPowerAdvisor:
         # Half-width 0.02 < 0.05 → genuinely equivalent, not underpowered.
         r = _report((-0.02, 0.02), n=500)
         assert r.significant is False
+        assert r.equivalent is True
         assert r.underpowered is False
         assert "equivalent" in r.power_note.lower()
+
+    def test_offcenter_ci_one_side_wide_is_underpowered_not_equivalent(self):
+        # C10: bounds-based vs half-width. CI [-0.005, 0.085] has half-width
+        # 0.045 < 0.05 — the old centered test wrongly called this "equivalent"
+        # — yet the upper bound 0.085 can't rule out a meaningful +effect.
+        r = _report((-0.005, 0.085), n=30)
+        assert r.significant is False
+        assert r.ci_halfwidth < r.MEANINGFUL_EFFECT  # would fool half-width logic
+        assert r.equivalent is False  # bounds-based catches the off-center reach
+        assert r.underpowered is True
+        assert "Underpowered" in r.power_note
+
+    def test_equivalence_note_reports_actual_bound_envelope(self):
+        # C10: the "within ±x" wording is derived from the real CI bounds, not
+        # the fixed threshold. CI [-0.03, 0.02] → envelope max|bound| = 0.030.
+        r = _report((-0.03, 0.02), n=200)
+        assert r.equivalent is True
+        assert "±0.030" in r.power_note

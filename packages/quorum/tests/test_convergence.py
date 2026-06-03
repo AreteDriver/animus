@@ -764,3 +764,23 @@ class TestStabilityScorerProtocol:
 
     def test_default_scorer_satisfies_protocol(self):
         assert isinstance(DefaultStabilityScorer(), StabilityScorer)
+
+    def test_falsy_but_valid_scorer_is_not_dropped(self):
+        """C13: a valid scorer whose __bool__ is False must still be used — the
+        old `scorer or DEFAULT` idiom would silently fall back to the default
+        (falsy-vs-None, same class as the A1 lesson)."""
+
+        class _FalsyScorer:
+            def __bool__(self):
+                return False
+
+            def score(self, evidence):
+                return 0.42
+
+        intent = Intent(
+            agent_id="a",
+            intent="t",
+            evidence=[Evidence.code_committed("x"), Evidence.test_pass("y")],
+        )
+        # If the bug were present, this would return the default (~0.5), not 0.42.
+        assert intent.compute_stability(_FalsyScorer()) == 0.42
