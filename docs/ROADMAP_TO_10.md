@@ -147,6 +147,7 @@ Slot in opportunistically; none blocks the above. Includes the Qwen net-new item
 | E12 | **Local-model supply-chain: pin + checksum model blobs** | **Qwen #5 (net-new)** | M |
 | E13 | **TOCTOU on tier labels: immutable tier at read / re-check at use** | **Qwen #6 (net-new)** | M |
 | E14 | Ollama upgrade so the uncensored 35B Qwen3.6-A3B red-team model loads | this session | S |
+| E15 | **Migration-number collision guard** — a test/CI check that fails when two `migrations/*.sql` share a leading number | **Session 1 (the `012` collision that broke the first full run)** | S |
 
 ---
 
@@ -276,6 +277,63 @@ on-spec-or-better, every claim enforced and tested. Session 7 hardens the
 security tail. Only *then* do Phases C (daily-tool: RA layer, overnight delegate)
 and D (differentiators: tiered memory, active inference, replay) begin — the
 *build* arc, re-planned into sessions on the now-trustworthy substrate.
+
+### Phase E sessions — scale, hygiene, guards (non-security; continuous)
+
+Phase E is *opportunistic*: none of these gate OPERATIONAL, and any can be
+slotted in when its area is already open. Security-tail E-items (E9–E14) live in
+Session 7. The rest cluster into three optional sessions below. Same rule: a
+"done when" that is a passing test, and a clean PR.
+
+#### Session 8 — Memory scaling & correctness (E1–E4)
+Lifts the memory layer off its scaling ceilings and removes silent data loss.
+Best done when the memory store is otherwise quiet (no concurrent migrations).
+- [ ] **E1** BM25 index updates incrementally on store/delete (no full O(N)
+      re-tokenize per write). *Done when:* a write does not rebuild the whole
+      corpus (assert via a spy/counter); retrieval results unchanged.
+- [ ] **E2** `ChromaMemoryStore` stops holding a full second in-RAM dict; hydrate
+      `Memory` objects on demand, keep only an id→metadata index for BM25.
+      *Done when:* memory footprint scales sub-linearly in a large-corpus test;
+      all store contract tests still pass. (L — the heaviest Phase E item.)
+- [ ] **E3** `consolidate()` summarizes via the cognitive layer instead of
+      first-tag 150-char concat. *Done when:* a consolidated memory is a real
+      summary (LLM in test = mock returning a marker), originals untouched
+      (append-only preserved).
+- [ ] **E4** Cross-device sync surfaces conflicts instead of silent
+      last-write-wins. *Done when:* two divergent edits to the same record
+      produce a recorded conflict (not a dropped loser) in a sync test.
+- **Exit:** D2 (memory) scaling ceilings removed; no silent loss. D2 → 10.
+
+#### Session 9 — Hygiene & dev-tooling guards (E5, E6, E8, E15)
+Cheap correctness + the poka-yoke that would have caught Session 1's own bug.
+- [ ] **E15** Migration-number collision guard (NEW, from Session 1). A test
+      globs `migrations/*.sql`, parses the leading integer, and asserts the set
+      is unique. *Done when:* the test fails on a duplicate number and passes on
+      the current tree. ~20 lines; do this **first** in the session — it is the
+      poka-yoke for the exact failure that broke Session 1's first full run.
+- [ ] **E5** Reconcile the quickstart `gates:` YAML: either parse it in the
+      production `WorkflowConfig` loader (reuse Core's safe gate parser) or
+      remove the example from the README. *Done when:* docs and the loader agree
+      (a test asserts a `gates:` workflow either enforces or is rejected, not
+      silently ignored).
+- [ ] **E6** Finish the Gorgon→Forge rename (`branch_prefix` default, residual
+      identifiers) and gitignore the committed runtime `*.db` files. *Done when:*
+      `grep -ri gorgon src/` is clean of live identifiers; no `*.db` tracked.
+- [ ] **E8** Cost/quality Pareto optimizer over the eval run store: recommend
+      the cheapest (model, prompt_version) holding a target quality band.
+      *Done when:* given seeded run history, it returns the Pareto-optimal config
+      in a test. (Builds on the now-enforced Effective-Tokens from Session 1.)
+- **Exit:** D5/D8 hygiene closed; the migration guard prevents a repeat of the
+  Session 1 collision.
+
+#### Session 10 (optional, large) — Unified secret manager (E7)
+- [ ] **E7** Build the `SECURITY_LAYER.md` secret manager (age/pass backend,
+      `animus secrets` CLI, `secrets://` URI resolution) to replace ad-hoc
+      credential handling. Large and cross-cutting with security; sequence it
+      near Session 7 or whenever credential handling next causes friction.
+      *Done when:* a `secrets://` reference resolves at load; no plaintext
+      secret in config; round-trip test green. Flip the SECURITY_LAYER spec
+      `ASPIRATIONAL-SPEC → CANONICAL` in `CANON.md` when it lands.
 
 ## Working rule
 
