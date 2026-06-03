@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import pytest
+from animus_types import Sensitivity
 
 from animus_forge.network import EgressDeniedError
 from animus_forge.providers.base import CompletionRequest, assert_egress_allowed
-from animus_types import Sensitivity
 
 ENDPOINT = "https://api.anthropic.com"
 SECRET = "ship it with sk-ant-abc1234567890ABCDEFGHIJ today"
