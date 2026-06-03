@@ -39,6 +39,8 @@ disagree, this index wins.
 | `ROADMAP_TO_10.md` | **CANONICAL** | The remediation roadmap: closes every audit gap to 10/10, dependency-ordered, with a completeness matrix. Cost-enforcement keystone (A1) first. |
 | `TODO_NEXT.md` | **CANONICAL** | Active next-work tracker; the audit work now lives in `ROADMAP_TO_10.md`. |
 | `reviews/qwen-security-review-2026-06-02.md` | **HISTORICAL** (reference) | Local adversarial security review (qwen2.5-14b fallback; the uncensored 35B would not load). ~70% restated known gaps; 3 net-new items folded into `ROADMAP_TO_10.md` Phase E (E11–E13). Model output, triaged. |
+| `reviews/animus-10-10-review-2026-06-03.md` | **CANONICAL** (verification) | 19-agent adversarial audit of the post-Session-6 stack. Found Sessions 1-6 over-claimed 10/10 on D1/D3/D4/D5; 7 confirmed HIGH issues → `ROADMAP_TO_10.md` Phase C0. The authoritative "is it 10/10" answer: not yet. |
+| `WHITEPAPER_COMPARISON_2026-06.md` | **CANONICAL** | Current code vs the 2026-06 whitepaper gap list — what Sessions 1-6 closed (✅), partially closed (◐), and left open (✗). |
 
 ## Known claims that are NOT backed by code (do not repeat as fact)
 

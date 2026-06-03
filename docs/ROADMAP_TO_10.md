@@ -31,17 +31,74 @@ honest reads from the whitepaper maturity (68 production / 6 beta / 4 exp / 5 st
 
 | # | Dimension | Now | 10/10 acceptance criteria |
 |---|---|---|---|
-| D1 | **Cost discipline** (keystone) | **10** ✅ | ET is the enforced unit (A1); `allocate()` atomically reserves so concurrent steps can't collectively overspend (A2); `estimate_cost` derives from one tier table (A3). Cost is now a hard, thread-safe constraint. |
+| D1 | **Cost discipline** (keystone) | **8** (was claimed 10; [review](reviews/animus-10-10-review-2026-06-03.md) corrected) | Raw-token `allocate()` reservation is atomic + thread-safe ✅ (A2). **Gaps:** ET ceiling is *not* enforced at the admission gate (`can_allocate` ignores the ET axis — a single opus/output-heavy step can overshoot 100x); `estimate_cost` "single source" is a dead method — the live spend path uses a *second*, stale 2024 table in `metrics/cost_tracker.py`. → corrections C1, C8, C12. |
 | D2 | **Memory** | 7 | Tiered HOT/WARM/COLD with real promotion; incremental BM25; no full second in-RAM copy; LLM-summarized consolidation; sync conflict-surfacing. |
-| D3 | **Security & at-rest** | 9 | Content-aware egress ✅ (A4); integrity baseline covers all critical-path files + self-hash + cross-package egress logic ✅ (A6); per-install salt ✅ (A7). Remaining for 10: encryption at rest (A5) + a signed-memory decision. |
-| D4 | **Eval integrity** | **10** ✅ | Judge failure ≠ silent 0.5 ✅ (B1); content taxonomy wired ✅ (PR #80); real code-exec sandbox ✅ (B4); power/sample-size advisor ✅ (B6); judges calibrated vs a human golden set + drift tracked ✅ (B2). |
-| D5 | **Orchestration** | 8 | Budget reservation enforced ✅ (A2); no stale-pricing ✅ (A3); auto-promotion stages a human-gated patch on a significant eval win ✅ (B5); evolution loop has a real injectable experiment runner + dry-run is flagged ✅ (B3). Remaining: gates parsed where docs claim; impact score includes quality regression. |
+| D3 | **Security & at-rest** | **6** (was claimed 9; review corrected) | Content-DLP + integrity *mechanisms* are sound, but **wired incompletely:** Bedrock/Vertex have NO egress gate; Azure streaming bypasses it; `scannable_text()` misses tool defs/results/args; the deployed integrity baseline is STALE (daemon refuses boot now); forge-side enforcement call-sites are untracked. Per-install salt ✅ (A7). → corrections C2–C5, ops re-baseline. Encryption at rest (A5) still outstanding. |
+| D4 | **Eval integrity** | **8** (was claimed 10; review corrected) | Judge-failure handling ✅ (B1), RLIMIT sandbox bounding ✅ (B4), calibration stats ✅ (B2) all genuinely hold. **Gaps:** `CodeExecutionMetric` scores *crashing* code 1.0 when `expected` is None (returncode never checked); regex precedence no-ops a configured pattern; equivalence uses CI half-width not bounds. → corrections C6, C9, C10. |
+| D5 | **Orchestration** | **7** (was claimed 8; review corrected) | Budget reservation ✅ (A2); auto-promotion staging/approval separation is sound ✅ (B5). **Gap:** `eval_experiment_runner` reads a nonexistent `avg_score` on the real `SuiteResult` (field is `total_score`) — the measured signal is silently dropped; the B3 test passed only via MagicMock. Dry-run not stamped on the structured record. → corrections C7, C11. |
 | D6 | **Coordination (Quorum)** | 7 | Pluggable `StabilityScorer` protocol ✅ (B7, prereq for active inference). Remaining: flood-resistant scorer impl, EventLog wiring enforced at the bridge, content-addressed transition log for replay/bisect. |
 | D7 | **Autonomy-readiness** | 5 | Durability/rebuild dry-run + `animus export --all`; encryption at rest; a measured one-week overnight-delegate run. Earn the right to run unattended. |
 | D8 | **Doc coherence** | 8 | CANON kept current (status flips in the same PR as the feature); zero present-tense claims without code; no contradicting roadmaps. (Mostly closed in PR #80.) |
 
 10/10 overall = all eight at criteria, **and** the cost keystone (D1) enforced,
 because every other claim rests on it.
+
+---
+
+## Phase C0 — 10/10 corrections (HIGHEST PRIORITY)
+
+The 2026-06-03 adversarial [review](reviews/animus-10-10-review-2026-06-03.md)
+found that Sessions 1-6 declared several dimensions 10/10 prematurely: real
+cores with bypassable edges, masked by tests that mocked or centered the buggy
+path. These must close before any 10/10 claim. **Each must land with a test
+that actually exercises the failing path (not a mock of it).**
+
+**Must-fix (the 10/10 claim is false until these close):**
+- [ ] **C-ops** Regenerate the deployed integrity baseline from an attested-clean
+      tree (`python -m animus.integrity.cli regenerate`) and wire regeneration
+      into deploy. The live daemon refuses to boot right now (stale 4-key
+      baseline vs the new 10+ tracked set). **Operational emergency.**
+- [ ] **C2** Add `_check_request_egress` + `ANIMUS_OFFLINE` init gate to the
+      Bedrock and Vertex providers (all four entrypoints) — they currently
+      egress with NO tier check and NO DLP.
+- [ ] **C3** Add the egress check to Azure `complete_stream` /
+      `complete_stream_async` (the only gated provider that overrides streaming
+      and so drops the check).
+- [ ] **C4** Extend `scannable_text()` to cover tool definitions, `tool_result`
+      content, and `tool_use` input args — secrets there egress unscanned today.
+- [ ] **C5** Add the forge-side enforcement call-sites (`providers/base`,
+      per-provider `_check_egress`, `network.egress`, `providers/router`) to the
+      integrity tracked set — patching them currently dead-ends enforcement
+      while the baseline stays green.
+- [ ] **C6** `CodeExecutionMetric`: inspect `result.returncode`; score 0.0 on
+      non-zero exit / TIMEOUT (it scores crashing + memory-bombing code 1.0 when
+      `expected` is None).
+- [ ] **C7** `eval_experiment_runner`: read `total_score` (not the nonexistent
+      `avg_score`); rebuild the test on a real `SuiteResult`. The auto-promotion
+      signal is silently dropped today.
+
+**Should-fix:**
+- [ ] **C8** Fold an ET estimate for the pending step into
+      `_can_allocate_unlocked` so the effective-token ceiling is enforced at
+      admission, not only post-hoc on the next step (D1).
+- [ ] **C9** Fix the `RegexMatch`/`RegexAbsence` operator-precedence no-op
+      (`self._pattern or str(expected) if expected`) + correct the two pinning tests.
+- [ ] **C10** Replace `compare`'s half-width equivalence test with bounds-based
+      logic; derive the displayed "within ±x" wording from the actual CI bounds.
+- [ ] **C11** Stamp `is_dry_run` onto `IterationRecord` + the audit JSONL entry.
+- [ ] **C12** Resolve the dead `BudgetManager.estimate_cost` vs the live stale
+      `CostTracker.PRICING` table; one source; remove the false "single source"
+      docstring; add current model ids.
+- [ ] **C13** Lower-severity: external pre-exec integrity self-check (in-process
+      self-hash is defeatable), `.local`/missing credential patterns, the D6
+      falsy-scorer drop + duplicated stability formula.
+
+**What genuinely held up** (survived adversarial probing — the credibility
+floor): raw-token reservation atomicity; the unified credential-pattern source +
+the 4 wired providers failing closed; the integrity *mechanism* (real boot gate,
+tracks the cross-package primitive); judge-failure handling end-to-end; RLIMIT
+sandbox bounding; calibration statistics; auto-promotion staging/approval
+separation; B7 byte-identical protocol extraction.
 
 ---
 
