@@ -1,0 +1,11 @@
+[Unit]
+Description=Animus memory sync every 4h
+
+[Timer]
+OnCalendar=*-*-* 00/4:00:00
+RandomizedDelaySec=120
+Persistent=true
+Unit=animus-sync.service
+
+[Install]
+WantedBy=timers.target
