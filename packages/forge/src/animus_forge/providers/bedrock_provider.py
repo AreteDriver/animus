@@ -117,6 +117,19 @@ class BedrockProvider(Provider):
         region = self.config.metadata.get("region", "us-east-1")
         profile = self.config.metadata.get("profile")
 
+        # Stage 3.C/3.D sibling adopter (C2) — refuse to construct the cloud
+        # client when ANIMUS_OFFLINE=1. Egress to bedrock-runtime is blocked at
+        # the point of first use so callers get a clean error, not a timeout.
+        from animus_forge.network import EgressDeniedError, is_egress_allowed
+
+        endpoint = f"https://bedrock-runtime.{region}.amazonaws.com"
+        if not is_egress_allowed(endpoint):
+            raise EgressDeniedError(
+                f"ANIMUS_OFFLINE=1 — Bedrock provider blocked from {endpoint}. "
+                "Unset the env var or route through a local provider."
+            )
+        self._egress_endpoint = endpoint
+
         try:
             session = boto3.Session(profile_name=profile, region_name=region)
             self._client = session.client("bedrock")
@@ -124,6 +137,18 @@ class BedrockProvider(Provider):
             self._initialized = True
         except Exception as e:
             raise ProviderNotConfiguredError(f"Failed to initialize Bedrock: {e}")
+
+    def _check_request_egress(self, request: CompletionRequest) -> None:
+        """Stage 3.D (C2) — refuse a request whose sensitivity is incompatible
+        with this cloud endpoint, or whose payload carries a credential. Raises
+        ``EgressDeniedError`` before the cloud client is invoked.
+        """
+        from animus_forge.providers.base import assert_egress_allowed
+
+        endpoint = getattr(
+            self, "_egress_endpoint", "https://bedrock-runtime.us-east-1.amazonaws.com"
+        )
+        assert_egress_allowed(endpoint, request)
 
     def _resolve_model_id(self, model: str) -> str:
         """Resolve short model name to full Bedrock model ID."""
@@ -255,6 +280,8 @@ class BedrockProvider(Provider):
         if not self._runtime_client:
             raise ProviderNotConfiguredError("Bedrock client not initialized")
 
+        self._check_request_egress(request)
+
         model = request.model or self.default_model
         model_id = self._resolve_model_id(model)
         body = self._build_request_body(model_id, request)
@@ -312,6 +339,8 @@ class BedrockProvider(Provider):
 
         if not self._runtime_client:
             raise ProviderNotConfiguredError("Bedrock client not initialized")
+
+        self._check_request_egress(request)
 
         model = request.model or self.default_model
         model_id = self._resolve_model_id(model)

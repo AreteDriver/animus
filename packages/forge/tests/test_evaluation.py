@@ -1146,7 +1146,7 @@ class TestCodeExecutionMetric:
         mock_file.name = "/tmp/test.py"
         mock_temp.return_value = mock_file
 
-        mock_run.return_value = MagicMock(stdout="hello\n", stderr="")
+        mock_run.return_value = MagicMock(stdout="hello\n", stderr="", returncode=0)
 
         m = CodeExecutionMetric()
         code = 'print("hello")'
@@ -1161,7 +1161,7 @@ class TestCodeExecutionMetric:
         mock_file.__exit__ = MagicMock(return_value=False)
         mock_file.name = "/tmp/test.py"
         mock_temp.return_value = mock_file
-        mock_run.return_value = MagicMock(stdout="ok\n", stderr="")
+        mock_run.return_value = MagicMock(stdout="ok\n", stderr="", returncode=0)
 
         m = CodeExecutionMetric()
         assert m.score("```python\nprint(1)\n```", None, _make_case()) == 1.0
@@ -1174,7 +1174,7 @@ class TestCodeExecutionMetric:
         mock_file.__exit__ = MagicMock(return_value=False)
         mock_file.name = "/tmp/test.py"
         mock_temp.return_value = mock_file
-        mock_run.return_value = MagicMock(stdout="wrong\n", stderr="")
+        mock_run.return_value = MagicMock(stdout="wrong\n", stderr="", returncode=0)
 
         m = CodeExecutionMetric()
         assert m.score("```python\nprint(1)\n```", "hello", _make_case()) == 0.0
@@ -1205,8 +1205,9 @@ class TestCodeExecutionMetric:
         mock_run.side_effect = subprocess.TimeoutExpired(cmd="python", timeout=10)
 
         m = CodeExecutionMetric()
-        result = m._execute_python("while True: pass")
+        result, ok = m._execute_python("while True: pass")
         assert result == "TIMEOUT"
+        assert ok is False  # C6: timeout is a failed run
 
     def test_expected_output_override(self):
         m = CodeExecutionMetric(expected_output="custom")
@@ -2264,7 +2265,9 @@ class TestCodeExecutionSandbox:
         from animus_forge.evaluation.metrics import CodeExecutionMetric
 
         m = CodeExecutionMetric(timeout=2.0)
-        assert m._execute_python("while True:\n    pass\n") == "TIMEOUT"
+        out, ok = m._execute_python("while True:\n    pass\n")
+        assert out == "TIMEOUT"
+        assert ok is False
 
     def test_memory_bomb_bounded_by_rlimit(self):
         if not self._have_rlimit():
@@ -2274,12 +2277,29 @@ class TestCodeExecutionSandbox:
         m = CodeExecutionMetric(timeout=8.0)
         # 1 GiB allocation exceeds the 512 MiB RLIMIT_AS → MemoryError in child,
         # bounded quickly rather than OOMing the host.
-        out = m._execute_python("x = bytearray(1024 * 1024 * 1024)\nprint('allocated', len(x))\n")
+        out, ok = m._execute_python(
+            "x = bytearray(1024 * 1024 * 1024)\nprint('allocated', len(x))\n"
+        )
         assert "allocated" not in out  # the allocation did not succeed
         assert out != "TIMEOUT"  # bounded by memory, not the wall clock
+        assert ok is False  # C6: the crash is a failed run
 
     def test_normal_code_still_runs(self):
         from animus_forge.evaluation.metrics import CodeExecutionMetric
 
         m = CodeExecutionMetric(timeout=5.0)
-        assert "42" in m._execute_python("print(6 * 7)\n")
+        out, ok = m._execute_python("print(6 * 7)\n")
+        assert "42" in out and ok is True
+
+    def test_crashing_code_scores_zero_when_expected_none(self):
+        # C6: the headline fix — a snippet that raises / exits non-zero must
+        # NOT score 1.0 just because expected is None.
+        from animus_forge.evaluation.metrics import CodeExecutionMetric
+
+        m = CodeExecutionMetric(timeout=5.0)
+        case = _make_case()
+        assert m.score("```python\nraise RuntimeError('boom')\n```", None, case) == 0.0
+        assert m.score("```python\nimport sys; sys.exit(7)\n```", None, case) == 0.0
+        assert m.score("```python\n1 / 0\n```", None, case) == 0.0
+        # Clean code still scores 1.0 on the expected-None path.
+        assert m.score("```python\nprint('hi')\n```", None, case) == 1.0

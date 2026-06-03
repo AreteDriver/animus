@@ -545,14 +545,16 @@ def eval_experiment_runner(runner: Any, suite: Any):
 
     def _run(hypothesis: str, plan: str) -> str:
         result = runner.run(suite)
-        results = getattr(result, "results", []) or []
-        n = len(results)
-        passed = sum(1 for r in results if getattr(r, "passed", False))
-        avg = getattr(result, "avg_score", None)
-        avg_str = f"{avg:.3f}" if isinstance(avg, (int, float)) else "n/a"
+        # SuiteResult exposes these directly. The score field is total_score
+        # (the mean across cases); a prior version read a nonexistent
+        # `avg_score`, silently dropping the measured signal (C7).
+        score = getattr(result, "total_score", getattr(result, "avg_score", None))
+        score_str = f"{score:.3f}" if isinstance(score, (int, float)) else "n/a"
+        passed = getattr(result, "passed", 0)
+        total = getattr(result, "total", len(getattr(result, "results", []) or []))
         return (
-            f"Real experiment: ran eval suite over {n} case(s), "
-            f"{passed}/{n} passed, avg_score={avg_str}. "
+            f"Real experiment: ran eval suite over {total} case(s), "
+            f"{passed}/{total} passed, score={score_str}. "
             f"Hypothesis under test: {hypothesis}"
         )
 

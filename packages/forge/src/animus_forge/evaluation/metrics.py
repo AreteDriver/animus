@@ -327,10 +327,17 @@ class CodeExecutionMetric(EvalMetric):
         expected_output = self._expected_output or expected
 
         try:
-            result = self._execute_python(code)
+            result, ok = self._execute_python(code)
+
+            # C6: a non-zero exit, crash, or timeout is a FAILED run — it must
+            # not score 1.0. The interpreter's own return code is the ground
+            # truth for "did this code run", not merely "did the subprocess
+            # call return without a Python-level exception here".
+            if not ok:
+                return 0.0
 
             if expected_output is None:
-                # Just check that it runs without error
+                # Ran successfully (exit 0) and no expected output to match.
                 return 1.0
 
             # Check if output matches
@@ -376,12 +383,13 @@ class CodeExecutionMetric(EvalMetric):
         resource.setrlimit(resource.RLIMIT_AS, (self._MAX_ADDRESS_SPACE, self._MAX_ADDRESS_SPACE))
         resource.setrlimit(resource.RLIMIT_FSIZE, (self._MAX_FILE_SIZE, self._MAX_FILE_SIZE))
 
-    def _execute_python(self, code: str) -> str:
+    def _execute_python(self, code: str) -> tuple[str, bool]:
         """Execute model-generated Python in a resource-limited sandbox.
 
-        Runs the current interpreter (``sys.executable``, never a bare
-        ``python``) in isolated mode (``-I``: ignores environment variables,
-        user site-packages, ``PYTHONPATH``) with a scrubbed environment, an
+        Returns ``(combined_output, ok)`` where ``ok`` is True only if the
+        interpreter exited 0 (not crashed, not killed by an RLIMIT, not timed
+        out). Runs the current interpreter (``sys.executable``, never a bare
+        ``python``) in isolated mode (``-I -S``) with a scrubbed environment, an
         isolated cwd, a wall-clock timeout, AND (on Unix) kernel resource
         limits on CPU time, memory, and file-write size (see
         ``_sandbox_limits``). A runaway or hostile snippet is bounded rather
@@ -423,9 +431,9 @@ class CodeExecutionMetric(EvalMetric):
                 check=False,
                 preexec_fn=preexec,
             )
-            return result.stdout + result.stderr
+            return result.stdout + result.stderr, result.returncode == 0
         except subprocess.TimeoutExpired:
-            return "TIMEOUT"
+            return "TIMEOUT", False
         finally:
             import shutil
 

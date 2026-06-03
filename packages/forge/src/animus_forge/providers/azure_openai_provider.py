@@ -310,6 +310,8 @@ class AzureOpenAIProvider(Provider):
         if not self._client:
             raise ProviderNotConfiguredError("Azure OpenAI client not initialized")
 
+        self._check_request_egress(request)
+
         model = request.model or self.default_model
         deployment = self._get_deployment(model)
         messages = self._build_messages(request)
@@ -348,6 +350,8 @@ class AzureOpenAIProvider(Provider):
 
         if not self._async_client:
             raise ProviderNotConfiguredError("Azure OpenAI async client not initialized")
+
+        self._check_request_egress(request)
 
         model = request.model or self.default_model
         deployment = self._get_deployment(model)

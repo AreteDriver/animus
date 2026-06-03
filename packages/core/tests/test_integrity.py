@@ -171,6 +171,20 @@ class TestCrossPackageTracking:
         assert "module:animus_types.egress" in keys  # real egress logic
         assert "module:animus_types.secrets" in keys  # credential patterns
 
+    def test_forge_enforcement_modules_tracked_when_installed(self):
+        """C5 — when forge is importable, the modules that actually gate every
+        cloud call (egress engine, content-aware DLP helper, sensitivity router)
+        must be in the baseline. Skip cleanly if forge isn't installed."""
+        import importlib.util
+
+        if importlib.util.find_spec("animus_forge") is None:
+            pytest.skip("animus_forge not installed in this interpreter")
+
+        keys = set(tracked_module_hashes().keys())
+        assert "module:animus_forge.network.egress" in keys
+        assert "module:animus_forge.providers.base" in keys
+        assert "module:animus_forge.providers.router" in keys
+
     def test_module_drift_trips_verify(self, fake_tree, monkeypatch):
         pkg_root, data_dir = fake_tree
         regenerate_baseline(data_dir, root=pkg_root)
