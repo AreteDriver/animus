@@ -258,8 +258,6 @@ class TestSinglePricingSource:
         assert bm.estimate_cost(1_000_000, "some-mystery-model") == pytest.approx(9.0)
 
     def test_config_multiplier_override_flows_into_cost(self):
-        bm = BudgetManager(
-            BudgetConfig(total_budget=1_000_000, model_multipliers={"sonnet": 2.0})
-        )
+        bm = BudgetManager(BudgetConfig(total_budget=1_000_000, model_multipliers={"sonnet": 2.0}))
         # Overriding the tier table moves cost too — proves single source.
         assert bm.estimate_cost(1_000_000, "sonnet") == pytest.approx(18.0)
