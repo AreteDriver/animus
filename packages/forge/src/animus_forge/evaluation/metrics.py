@@ -8,6 +8,17 @@ from typing import Any
 from .base import EvalCase, EvalMetric
 
 
+class JudgeError(RuntimeError):
+    """An LLM judge could not produce a trustworthy score.
+
+    Raised (instead of silently returning a neutral 0.5) when the judge has no
+    provider, the provider call fails, or the response carries no parseable
+    score. The evaluator turns this into an ERROR result, which the failure
+    taxonomy buckets as ``provider_error`` — so a broken judge surfaces loudly
+    rather than masquerading as a mediocre-but-passing run (roadmap B1).
+    """
+
+
 class ExactMatchMetric(EvalMetric):
     """Exact string match metric."""
 
@@ -251,8 +262,7 @@ Respond with ONLY a single number from 0-10."""
         case: EvalCase,
     ) -> float:
         if self._judge_provider is None:
-            # Can't judge without a provider
-            return 0.5
+            raise JudgeError("llm_judge has no judge_provider configured")
 
         prompt = self._prompt_template.format(
             input=case.input,
@@ -270,16 +280,17 @@ Respond with ONLY a single number from 0-10."""
             )
             response = self._judge_provider.complete(request)
             score_text = response.content.strip()
+        except JudgeError:
+            raise
+        except Exception as e:
+            raise JudgeError(f"judge provider call failed: {e}") from e
 
-            # Extract numeric score
-            match = re.search(r"\d+", score_text)
-            if match:
-                score = int(match.group()) / 10.0
-                return min(max(score, 0.0), 1.0)
-            return 0.5
-
-        except Exception:
-            return 0.5
+        # Extract numeric score
+        match = re.search(r"\d+", score_text)
+        if match:
+            score = int(match.group()) / 10.0
+            return min(max(score, 0.0), 1.0)
+        raise JudgeError(f"judge returned no parseable score: {score_text!r}")
 
 
 class CodeExecutionMetric(EvalMetric):
@@ -345,46 +356,85 @@ class CodeExecutionMetric(EvalMetric):
 
         return ""
 
-    def _execute_python(self, code: str) -> str:
-        """Execute model-generated Python in an isolated subprocess.
+    # Sandbox resource ceilings (roadmap B4). Conservative defaults; a runaway
+    # or hostile snippet cannot exhaust the host. Overridable per-instance.
+    _MAX_CPU_SECONDS = 10
+    _MAX_ADDRESS_SPACE = 512 * 1024 * 1024  # 512 MiB
+    _MAX_FILE_SIZE = 16 * 1024 * 1024  # 16 MiB written output
 
-        This runs the current interpreter (``sys.executable``, never a bare
+    def _sandbox_limits(self):
+        """preexec_fn applying OS resource limits in the child before exec.
+
+        Linux/Unix only (RLIMIT via the ``resource`` module). Caps CPU time,
+        address space (memory), and file-write size so an infinite loop, a
+        fork-free memory bomb, or a disk-filler is bounded by the kernel.
+        """
+        import resource
+
+        cpu = int(min(self._timeout + 1, self._MAX_CPU_SECONDS))
+        resource.setrlimit(resource.RLIMIT_CPU, (cpu, cpu))
+        resource.setrlimit(resource.RLIMIT_AS, (self._MAX_ADDRESS_SPACE, self._MAX_ADDRESS_SPACE))
+        resource.setrlimit(resource.RLIMIT_FSIZE, (self._MAX_FILE_SIZE, self._MAX_FILE_SIZE))
+
+    def _execute_python(self, code: str) -> str:
+        """Execute model-generated Python in a resource-limited sandbox.
+
+        Runs the current interpreter (``sys.executable``, never a bare
         ``python``) in isolated mode (``-I``: ignores environment variables,
-        user site-packages, and ``PYTHONPATH``) with a scrubbed environment and
-        a timeout. This bounds, but does not fully sandbox, the execution: it is
-        defense against accidental host coupling, not against deliberately
-        hostile code. Callers must only score code from trusted eval fixtures.
+        user site-packages, ``PYTHONPATH``) with a scrubbed environment, an
+        isolated cwd, a wall-clock timeout, AND (on Unix) kernel resource
+        limits on CPU time, memory, and file-write size (see
+        ``_sandbox_limits``). A runaway or hostile snippet is bounded rather
+        than able to exhaust the host. Still: only score code from trusted
+        eval fixtures — this is not a full syscall sandbox.
         """
         import os
         import subprocess
         import sys
         import tempfile
 
-        tmp_path: str | None = None
+        # Resource limits are POSIX-only; degrade to no preexec on platforms
+        # (or Pythons) without the ``resource`` module.
+        preexec = None
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            import resource  # noqa: F401
+
+            preexec = self._sandbox_limits
+        except ImportError:
+            preexec = None
+
+        tmp_path: str | None = None
+        work_dir = tempfile.mkdtemp(prefix="animus-codeexec-")
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".py", delete=False, dir=work_dir
+            ) as f:
                 f.write(code)
                 f.flush()
                 tmp_path = f.name
 
             result = subprocess.run(
-                [sys.executable, "-I", tmp_path],
+                [sys.executable, "-I", "-S", tmp_path],
                 capture_output=True,
                 text=True,
                 timeout=self._timeout,
                 env={"PATH": os.environ.get("PATH", "")},
-                cwd=tempfile.gettempdir(),
+                cwd=work_dir,
                 check=False,
+                preexec_fn=preexec,
             )
             return result.stdout + result.stderr
         except subprocess.TimeoutExpired:
             return "TIMEOUT"
         finally:
+            import shutil
+
             if tmp_path is not None:
                 try:
                     os.unlink(tmp_path)
                 except OSError:
                     pass
+            shutil.rmtree(work_dir, ignore_errors=True)
 
 
 class FactualityMetric(EvalMetric):

@@ -34,7 +34,7 @@ honest reads from the whitepaper maturity (68 production / 6 beta / 4 exp / 5 st
 | D1 | **Cost discipline** (keystone) | **10** ✅ | ET is the enforced unit (A1); `allocate()` atomically reserves so concurrent steps can't collectively overspend (A2); `estimate_cost` derives from one tier table (A3). Cost is now a hard, thread-safe constraint. |
 | D2 | **Memory** | 7 | Tiered HOT/WARM/COLD with real promotion; incremental BM25; no full second in-RAM copy; LLM-summarized consolidation; sync conflict-surfacing. |
 | D3 | **Security & at-rest** | 9 | Content-aware egress ✅ (A4); integrity baseline covers all critical-path files + self-hash + cross-package egress logic ✅ (A6); per-install salt ✅ (A7). Remaining for 10: encryption at rest (A5) + a signed-memory decision. |
-| D4 | **Eval integrity** | 7 | Judges calibrated against a human golden set + drift tracked; judge failure ≠ silent 0.5; content taxonomy wired (done); real code-exec sandbox; power/sample-size advisor on `compare`. |
+| D4 | **Eval integrity** | 9 | Judge failure ≠ silent 0.5 ✅ (B1); content taxonomy wired ✅ (PR #80); real code-exec sandbox ✅ (B4); power/sample-size advisor on `compare` ✅ (B6). Remaining for 10: judges calibrated against a human golden set + drift tracked (B2, Session 6). |
 | D5 | **Orchestration** | 7 | Budget reservation enforced; gates parsed where docs claim; impact score includes quality regression; no stale-pricing double view. |
 | D6 | **Coordination (Quorum)** | 6 | Pluggable StabilityScorer (flood-resistant); EventLog wiring enforced at the bridge; content-addressed transition log enabling replay/bisect. |
 | D7 | **Autonomy-readiness** | 5 | Durability/rebuild dry-run + `animus export --all`; encryption at rest; a measured one-week overnight-delegate run. Earn the right to run unattended. |
@@ -85,12 +85,12 @@ The self-improvement loop is only trustworthy if the evals it depends on are.
 
 | ID | Item | Source | Acceptance | Effort |
 |---|---|---|---|---|
-| **B1** | Judge-failure visibility | §6 #7, §8.3 | LLM-judge exceptions → ERROR/`judge_error` (not silent 0.5); routed to `provider_error` bucket | S |
+| **B1 ✅** | Judge-failure visibility — DONE Session 5 | §6 #7, §8.3 | judge raises `JudgeError` (no provider / call fails / unparseable) instead of 0.5; evaluator turns it into an ERROR result; classifier buckets `provider_error` | S |
 | **B2** | Judge calibration / meta-eval harness | §7 significant, §8.3 | Periodic scoring of judges vs a human golden set; per-model judge-drift tracked as a first-class metric | M |
 | **B3** | Evolution loop: real experiment runner + CLI | appendix (forge) | Replace dry-run echo with an injected runner; expose via CLI/daemon so autoresearch is operator-accessible | M |
-| **B4** | Real code-exec sandbox | §6 #3 (beyond interim) | `CodeExecutionMetric` runs in the self-improve Sandbox or a restricted namespace, not just `-I` | M |
+| **B4 ✅** | Real code-exec sandbox — DONE Session 5 | §6 #3 (beyond interim) | `-I -S` + scrubbed env + isolated cwd + kernel RLIMITs (CPU/memory/file-size via preexec_fn); infinite loop → TIMEOUT, memory bomb bounded — not just `-I` | M |
 | **B5** | Auto-promotion eval loop | §7 transformative | A statistically-significant `eval compare` win auto-opens a WorkflowEvolution pending patch pinning the prompt version | M |
-| **B6** | `compare` power/sample-size advisor | §7 incremental | "not significant" on a tiny suite reports underpower, not "no difference" | S |
+| **B6 ✅** | `compare` power/sample-size advisor — DONE Session 5 | §7 incremental | `underpowered`/`power_note` on ComparisonReport: a non-significant result with CI wider than ±0.05 is flagged underpowered (vs tight-CI equivalence); surfaced in the `compare` CLI | S |
 | **B7** | StabilityScorer protocol extraction | §6 #10 | `compute_stability()` delegates to an injectable scorer (prereq for D-phase active inference) | M |
 
 Exit: D4 → 9-10, D5 → 9, Kaizen loop genuinely autonomous-within-gates.
@@ -241,13 +241,19 @@ isn't. Breaking change, so it gets its own session.
 - **Done when:** store is encrypted at rest; a from-scratch rebuild passes.
   D3 → 10, D7 substrate in place.
 
-### Session 5 — Eval integrity fixes (B1, B4, B6)
-- [ ] **B1** judge failure → ERROR/`judge_error`, never silent 0.5.
-- [ ] **B4** real code-exec sandbox (self-improve Sandbox / restricted ns), not
-      just `-I`.
-- [ ] **B6** `compare` power/sample-size advisor (underpower ≠ "no difference").
-- **Done when:** broken-judge test surfaces an error; sandbox test isolates;
-  small-suite compare reports underpower. D4 → 9.
+### Session 5 — Eval integrity fixes (B1, B4, B6) ✅ DONE
+- [x] **B1** judge raises `JudgeError` (no provider / call fails / unparseable)
+      → ERROR result → classified `provider_error`, never a silent 0.5.
+- [x] **B4** code-exec sandbox: `-I -S` + scrubbed env + isolated cwd + kernel
+      RLIMITs (CPU/memory/file-size). Infinite loop → TIMEOUT; memory bomb bounded.
+- [x] **B6** `compare` advisor: `underpowered`/`power_note` distinguish a wide-CI
+      underpowered "not significant" from tight-CI equivalence; shown in the CLI.
+- [x] **Done:** broken-judge test surfaces an error + routes provider_error;
+      sandbox bounds a runaway; small-suite compare flags underpower. eval 236,
+      compare 22, sandbox/routing green; whole-tree ruff clean. **D4 → 9.**
+
+> Note: Session 4 (A5 encryption-at-rest + A8 durability) was skipped to here;
+> do it before the autonomy/daily-tool phases (it gates D7 + D3=10).
 
 ### Session 6 — Close the Kaizen loop (B2, B3, B5, B7)
 - [ ] **B2** judge-calibration harness vs a human golden set; track judge drift.
