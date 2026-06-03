@@ -53,29 +53,35 @@ cores with bypassable edges, masked by tests that mocked or centered the buggy
 path. These must close before any 10/10 claim. **Each must land with a test
 that actually exercises the failing path (not a mock of it).**
 
-**Must-fix (the 10/10 claim is false until these close):**
-- [ ] **C-ops** Regenerate the deployed integrity baseline from an attested-clean
-      tree (`python -m animus.integrity.cli regenerate`) and wire regeneration
-      into deploy. The live daemon refuses to boot right now (stale 4-key
-      baseline vs the new 10+ tracked set). **Operational emergency.**
-- [ ] **C2** Add `_check_request_egress` + `ANIMUS_OFFLINE` init gate to the
-      Bedrock and Vertex providers (all four entrypoints) — they currently
-      egress with NO tier check and NO DLP.
-- [ ] **C3** Add the egress check to Azure `complete_stream` /
-      `complete_stream_async` (the only gated provider that overrides streaming
-      and so drops the check).
-- [ ] **C4** Extend `scannable_text()` to cover tool definitions, `tool_result`
-      content, and `tool_use` input args — secrets there egress unscanned today.
-- [ ] **C5** Add the forge-side enforcement call-sites (`providers/base`,
-      per-provider `_check_egress`, `network.egress`, `providers/router`) to the
-      integrity tracked set — patching them currently dead-ends enforcement
-      while the baseline stays green.
-- [ ] **C6** `CodeExecutionMetric`: inspect `result.returncode`; score 0.0 on
-      non-zero exit / TIMEOUT (it scores crashing + memory-bombing code 1.0 when
-      `expected` is None).
-- [ ] **C7** `eval_experiment_runner`: read `total_score` (not the nonexistent
-      `avg_score`); rebuild the test on a real `SuiteResult`. The auto-promotion
-      signal is silently dropped today.
+**Must-fix (the 10/10 claim is false until these close):** — ALL CLOSED, PR #89
+- [x] **C-ops** Regenerated the deployed integrity baseline from a clean tree
+      (`python -m animus.integrity.cli regenerate`; `verify` passes). Baseline
+      lives at `~/.config/animus` (runtime artifact); the committed surface is
+      the expanded tracked-module tuple (C5) + its pinning test. Re-baseline is
+      an operator step after every enforcement-surface change.
+- [x] **C2** Added `_check_request_egress` + `ANIMUS_OFFLINE` init gate to the
+      Bedrock and Vertex providers. Bedrock async/stream-async wrap the sync
+      paths, so gating `complete`/`complete_stream`/`initialize` covers all
+      four; Vertex has native async, so all four entrypoints gate directly.
+      Tests in `test_provider_egress_gates.py` exercise the real
+      `_check_request_egress` (secret-payload + CONFIDENTIAL block, clean PUBLIC
+      pass) and the offline init gate.
+- [x] **C3** Added the egress check to Azure `complete_stream` /
+      `complete_stream_async`; tests drive a secret through both streaming
+      entrypoints and assert `EgressDeniedError` before any client call.
+- [x] **C4** Extended `scannable_text()` to recursively collect tool
+      definitions, `tool_result` content, and `tool_use` input args; 3 new
+      blocking tests (`TestScannableTextToolBlocks`).
+- [x] **C5** Added the forge-side enforcement modules (`network.egress`,
+      `providers.base`, `providers.router`) to `_TRACKED_MODULES_OPTIONAL`;
+      `test_forge_enforcement_modules_tracked_when_installed` pins them.
+- [x] **C6** `CodeExecutionMetric._execute_python` now returns `(output, ok)`;
+      `score()` returns 0.0 on non-zero exit / TIMEOUT. New
+      `test_crashing_code_scores_zero_when_expected_none` (raise / `sys.exit(7)`
+      / exit-1 / exit-0 → 0.0, clean print → 1.0).
+- [x] **C7** `eval_experiment_runner` reads `total_score` (not the nonexistent
+      `avg_score`); test rebuilt on a real `SuiteResult(passed=8, …,
+      total_score=0.873)` asserting the score reaches the report string.
 
 **Should-fix:**
 - [ ] **C8** Fold an ET estimate for the pending step into

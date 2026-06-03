@@ -563,17 +563,22 @@ class TestB3ExperimentRunner:
         assert calls == [("my-hyp", "my-plan")]
 
     def test_eval_experiment_runner_factory(self):
+        # C7: test against a REAL SuiteResult, not a MagicMock — the prior
+        # version passed only because the mock fabricated an `avg_score` the
+        # real type does not have, masking that the measured score was dropped.
         from unittest.mock import MagicMock
 
         from animus_forge.coordination.evolution_loop import eval_experiment_runner
+        from animus_forge.evaluation.runner import SuiteResult
 
-        run_result = MagicMock()
-        run_result.results = [MagicMock(passed=True), MagicMock(passed=False)]
-        run_result.avg_score = 0.5
+        result = SuiteResult(suite=MagicMock(), passed=8, failed=2, total_score=0.873)
         runner = MagicMock()
-        runner.run.return_value = run_result
+        runner.run.return_value = result
 
         real = eval_experiment_runner(runner, suite=MagicMock())
         out = real("hyp", "plan")
         runner.run.assert_called_once()
-        assert "1/2 passed" in out and "0.500" in out and "Real experiment" in out
+        # The measured total_score (0.873) actually reaches the report string.
+        assert "0.873" in out and "score=n/a" not in out
+        assert "8/10 passed" in out  # total = passed+failed = 10
+        assert "Real experiment" in out

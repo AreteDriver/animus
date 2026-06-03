@@ -51,3 +51,51 @@ class TestAssertEgressAllowed:
         req = CompletionRequest(prompt="internal notes", sensitivity=Sensitivity.CONFIDENTIAL)
         with pytest.raises(EgressDeniedError, match="sensitivity"):
             assert_egress_allowed(ENDPOINT, req)
+
+
+_KEY = "sk-ant-abc1234567890ABCDEFGHIJ"
+
+
+class TestScannableTextToolBlocks:
+    """C4: secrets in tool definitions / tool_result / tool_use args must be
+    scanned, not just prompt/system/text blocks."""
+
+    def test_secret_in_tool_definition_detected(self):
+        req = CompletionRequest(
+            prompt="hi",
+            sensitivity=Sensitivity.PUBLIC,
+            tools=[{"name": "deploy", "description": f"uses key {_KEY}"}],
+        )
+        assert _KEY in req.scannable_text()
+        with pytest.raises(EgressDeniedError, match="credential"):
+            assert_egress_allowed(ENDPOINT, req)
+
+    def test_secret_in_tool_result_block_detected(self):
+        req = CompletionRequest(
+            prompt="hi",
+            sensitivity=Sensitivity.PUBLIC,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [{"type": "tool_result", "content": f"out: {_KEY}"}],
+                }
+            ],
+        )
+        assert _KEY in req.scannable_text()
+        with pytest.raises(EgressDeniedError, match="credential"):
+            assert_egress_allowed(ENDPOINT, req)
+
+    def test_secret_in_tool_use_input_args_detected(self):
+        req = CompletionRequest(
+            prompt="hi",
+            sensitivity=Sensitivity.PUBLIC,
+            messages=[
+                {
+                    "role": "assistant",
+                    "content": [{"type": "tool_use", "name": "x", "input": {"token": _KEY}}],
+                }
+            ],
+        )
+        assert _KEY in req.scannable_text()
+        with pytest.raises(EgressDeniedError, match="credential"):
+            assert_egress_allowed(ENDPOINT, req)

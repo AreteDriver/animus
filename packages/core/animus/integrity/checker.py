@@ -56,6 +56,15 @@ _TRACKED_MODULES_REQUIRED: tuple[str, ...] = (
 _TRACKED_MODULES_OPTIONAL: tuple[str, ...] = (
     "animus_forge.providers.openrouter_provider",
     "animus_forge.security.pi_wrap",
+    # C5 — the forge-side egress enforcement surface. A6 hashed the OpenRouter
+    # provider but left the modules that actually gate every cloud call
+    # untracked: the egress allow/deny engine, the content-aware DLP helper +
+    # ``CompletionRequest.scannable_text`` (providers.base), and the
+    # sensitivity-aware model router (providers.router / TierRouter). Tampering
+    # any of these silently disables the boundary, so they must be in baseline.
+    "animus_forge.network.egress",
+    "animus_forge.providers.base",
+    "animus_forge.providers.router",
 )
 
 

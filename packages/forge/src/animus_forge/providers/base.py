@@ -107,22 +107,29 @@ class CompletionRequest:
     sensitivity: Sensitivity = field(default_factory=lambda: Sensitivity.PUBLIC)
 
     def scannable_text(self) -> str:
-        """All outbound text in this request, for content-aware egress DLP.
+        """ALL outbound text in this request, for content-aware egress DLP.
 
-        Concatenates the prompt, system prompt, and any message contents so the
-        egress gate can scan for credentials before the request crosses the
-        wire to a cloud provider.
+        Recursively collects every string value from the prompt, system prompt,
+        messages, AND tool definitions — including tool_result block content,
+        tool_use input args, and tool schemas (C4). A credential anywhere in the
+        payload reaches the wire, so the scanner must see all of it; enumerating
+        specific block types missed exactly the tool-I/O shapes most likely to
+        carry live credentials in agentic loops.
         """
         parts: list[str] = [self.prompt or "", self.system_prompt or ""]
-        for msg in self.messages or []:
-            content = msg.get("content") if isinstance(msg, dict) else None
-            if isinstance(content, str):
-                parts.append(content)
-            elif isinstance(content, list):
-                # Anthropic/OpenAI block format: [{"type":"text","text":...}, ...]
-                for block in content:
-                    if isinstance(block, dict) and isinstance(block.get("text"), str):
-                        parts.append(block["text"])
+
+        def _collect(obj: object) -> None:
+            if isinstance(obj, str):
+                parts.append(obj)
+            elif isinstance(obj, dict):
+                for v in obj.values():
+                    _collect(v)
+            elif isinstance(obj, (list, tuple)):
+                for v in obj:
+                    _collect(v)
+
+        _collect(self.messages or [])
+        _collect(self.tools or [])
         return "\n".join(p for p in parts if p)
 
 
