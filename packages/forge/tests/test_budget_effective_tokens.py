@@ -196,6 +196,59 @@ class TestEffectiveTokenEnforcement:
         assert mgr.effective_used == 0.0
 
 
+class TestEffectiveTokenAdmission:
+    """C8: the ET ceiling is enforced at ALLOCATION admission — a step that is
+    cheap in raw tokens but expensive in cost-weighted ET is refused BEFORE it
+    runs, not only caught post-hoc on the next recorded step."""
+
+    def test_allocate_rejects_when_effective_estimate_exceeds_ceiling(self):
+        cfg = BudgetConfig(total_budget=1_000_000, effective_token_budget=10_000)
+        mgr = BudgetManager(cfg)
+        # Raw fits easily (1k of 1M); ET estimate 20k blows the 10k ceiling.
+        assert mgr.can_allocate(1_000, effective=20_000) is False
+        assert mgr.allocate(1_000, effective=20_000) is False
+        # Within the ET ceiling → admitted.
+        assert mgr.allocate(1_000, effective=5_000) is True
+
+    def test_pending_effective_reservation_blocks_second_alloc(self):
+        cfg = BudgetConfig(total_budget=1_000_000, effective_token_budget=10_000)
+        mgr = BudgetManager(cfg)
+        assert mgr.allocate(1_000, effective=6_000) is True
+        # Second step sees the 6k pending ET reservation: 6k+6k > 10k → refused.
+        assert mgr.allocate(1_000, effective=6_000) is False
+        mgr.release(1_000, effective=6_000)
+        assert mgr.allocate(1_000, effective=6_000) is True  # freed
+
+    def test_default_effective_estimate_is_neutral_tokens(self):
+        # No explicit estimate → est == tokens; with the derived ceiling
+        # (== total_budget) and unit multipliers, ET admission coincides with
+        # the raw check, so legacy callers are unaffected. (reserve_tokens=0 to
+        # isolate the ET path from the raw retry-buffer.)
+        mgr = BudgetManager(BudgetConfig(total_budget=10_000, reserve_tokens=0))
+        assert mgr.allocate(8_000) is True
+        assert mgr.allocate(5_000) is False  # raw+ET both exceeded
+
+    def test_admission_tightens_after_expensive_usage(self):
+        # Once expensive opus usage exhausts the ET ceiling, a raw-cheap step is
+        # refused at admission even though abundant raw headroom remains.
+        cfg = BudgetConfig(total_budget=1_000_000, effective_token_budget=10_000)
+        mgr = BudgetManager(cfg)
+        mgr.record_usage("a", output_tokens=2_000, model="claude-opus-4-8")  # ET=40k
+        assert mgr.effective_used > cfg.effective_token_budget
+        assert mgr.can_allocate(1_000) is False  # raw OK, ET exhausted
+
+    def test_off_switch_skips_admission_check(self):
+        # enforce_effective_tokens=False → ceiling is inf → ET admission never
+        # rejects; only raw governs.
+        cfg = BudgetConfig(
+            total_budget=1_000_000,
+            effective_token_budget=10_000,
+            enforce_effective_tokens=False,
+        )
+        mgr = BudgetManager(cfg)
+        assert mgr.allocate(1_000, effective=10_000_000) is True
+
+
 class TestSession1DoneCriteria:
     """A1 done-criteria: a parallel, output-heavy opus run trips EXCEEDED on the
     cost-weighted axis while raw tokens still read healthy — end to end through

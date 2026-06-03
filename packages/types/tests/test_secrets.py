@@ -15,6 +15,8 @@ class TestScanForSecrets:
             ("token ghp_ABCDEFGHIJ1234567890xyz", ["github_token"]),
             ("AWS AKIAIOSFODNN7EXAMPLE creds", ["aws_access_key"]),
             ("authorization: Bearer abcdefghijklmnopqrstuvwxyz", ["bearer_token"]),
+            # C13: Google API key (Vertex / Google provider surface).
+            ("key AIzaSyD1234567890abcdefghijklmnopqrstuv x", ["google_api_key"]),
         ],
     )
     def test_detects_credentials(self, text, expected):

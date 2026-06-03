@@ -83,21 +83,37 @@ that actually exercises the failing path (not a mock of it).**
       `avg_score`); test rebuilt on a real `SuiteResult(passed=8, …,
       total_score=0.873)` asserting the score reaches the report string.
 
-**Should-fix:**
-- [ ] **C8** Fold an ET estimate for the pending step into
-      `_can_allocate_unlocked` so the effective-token ceiling is enforced at
-      admission, not only post-hoc on the next step (D1).
-- [ ] **C9** Fix the `RegexMatch`/`RegexAbsence` operator-precedence no-op
-      (`self._pattern or str(expected) if expected`) + correct the two pinning tests.
-- [ ] **C10** Replace `compare`'s half-width equivalence test with bounds-based
-      logic; derive the displayed "within ±x" wording from the actual CI bounds.
-- [ ] **C11** Stamp `is_dry_run` onto `IterationRecord` + the audit JSONL entry.
-- [ ] **C12** Resolve the dead `BudgetManager.estimate_cost` vs the live stale
-      `CostTracker.PRICING` table; one source; remove the false "single source"
-      docstring; add current model ids.
-- [ ] **C13** Lower-severity: external pre-exec integrity self-check (in-process
-      self-hash is defeatable), `.local`/missing credential patterns, the D6
-      falsy-scorer drop + duplicated stability formula.
+**Should-fix:** — C8–C13 CLOSED, PR #90 (C13's external pre-exec integrity self-check deferred — see below)
+- [x] **C8** `allocate`/`can_allocate`/`_can_allocate_unlocked` take an optional
+      `effective` ET estimate (defaults to neutral `tokens`); ET ceiling is now
+      checked at admission against `_total_effective + _pending_effective + est`,
+      with a `_pending_effective` reservation mirror released in `release()`.
+      5 admission tests (reject-on-estimate, pending-reservation block, neutral
+      default, tighten-after-expensive-usage, off-switch).
+- [x] **C9** `self._pattern or (str(expected) if expected else None)` on both
+      regex metrics — a configured pattern with falsy `expected` is now honored
+      instead of dropping to the always-pass no-op; the two pinning tests rewritten
+      to assert the corrected behavior.
+- [x] **C10** Added bounds-based `equivalent` (TOST-style: whole CI inside
+      ±MEANINGFUL_EFFECT); `underpowered` = `not significant and not equivalent`.
+      `power_note` derives the "within ±x" envelope from the actual bounds. New
+      test: off-center CI [-0.005, 0.085] (half-width 0.045 < 0.05) is correctly
+      underpowered, not "equivalent".
+- [x] **C11** `is_dry_run` added to the `IterationRecord` dataclass, stamped at
+      all 3 construction sites + the audit JSONL entry; tests assert it reaches
+      both record and JSONL for dry-run and real-runner cases.
+- [x] **C12** Corrected `estimate_cost`'s false "single source of truth"
+      docstring (it's a coarse tier approximation; `CostTracker.calculate_cost`
+      is the authoritative per-model $ source) and refreshed the stale 2024
+      `CostTracker.PRICING` to current Claude 4.x / GPT-4.1 ids. Test pins that
+      `claude-opus-4-8` / `claude-sonnet-4-6` / `gpt-4.1-mini` resolve.
+- [x] **C13** (partial) Added `google_api_key` (`AIza…`) to the canonical
+      credential patterns; fixed the `compute_stability` falsy-scorer drop
+      (`scorer if scorer is not None else DEFAULT`). The "duplicated stability
+      formula" was investigated — only the shared `0.3` base constant, no real
+      duplication. **Deferred:** the external pre-exec integrity self-check
+      (in-process self-hash is defeatable) is a larger design item, not bundled
+      here.
 
 **What genuinely held up** (survived adversarial probing — the credibility
 floor): raw-token reservation atomicity; the unified credential-pattern source +

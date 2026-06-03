@@ -189,6 +189,11 @@ class BudgetManager:
         # same un-incremented total and collectively overspend (whitepaper #5).
         self._pending_total: int = 0
         self._pending_by_agent: dict[str, int] = {}
+        # C8 — cost-weighted reservation mirror of _pending_total, so the
+        # Effective-Tokens ceiling is enforced at ADMISSION (before a step runs)
+        # rather than only post-hoc on the next step. Released alongside the raw
+        # reservation in release().
+        self._pending_effective: float = 0.0
         self._lock = threading.Lock()
         self._last_status: BudgetStatus = BudgetStatus.OK
 
@@ -338,18 +343,37 @@ class BudgetManager:
             return BudgetStatus.WARNING
         return BudgetStatus.OK
 
-    def _can_allocate_unlocked(self, tokens: int, agent_id: str | None) -> bool:
+    def _can_allocate_unlocked(
+        self, tokens: int, agent_id: str | None, effective: float | None = None
+    ) -> bool:
         """Reservation-aware allocation check. Caller must hold ``_lock``.
 
         Counts both recorded usage AND outstanding reservations, so two
         concurrent callers cannot both pass against the same un-incremented
         total.
+
+        When ET enforcement is on (the A1 default), the step's cost-weighted
+        Effective-Tokens estimate is checked against the ET ceiling at
+        admission too (C8) — so an output-heavy / expensive-tier step is
+        refused BEFORE it runs, not only caught post-hoc on the next step.
+        ``effective`` defaults to a neutral ``tokens`` (m=1) when the caller
+        has no model breakdown, which is non-breaking: with the derived
+        ceiling == total_budget and unit multipliers it coincides with the raw
+        check, and only tightens once expensive usage has inflated _total_effective.
         """
         committed = self._total_used + self._pending_total
 
         # Check total budget (used + reserved + this request)
         if committed + tokens > self.config.total_budget:
             return False
+
+        # ET ceiling at admission (C8). Estimate this step's ET conservatively
+        # as the raw tokens when no explicit estimate is supplied.
+        ceiling = self.effective_ceiling
+        if ceiling not in (0.0, float("inf")):
+            est = float(tokens) if effective is None else effective
+            if self._total_effective + self._pending_effective + est > ceiling:
+                return False
 
         # Check available (accounting for reserve buffer + reservations)
         available = max(0, self.config.total_budget - committed - self.config.reserve_tokens)
@@ -372,20 +396,24 @@ class BudgetManager:
 
         return True
 
-    def can_allocate(self, tokens: int, agent_id: str = None) -> bool:
+    def can_allocate(
+        self, tokens: int, agent_id: str = None, effective: float | None = None
+    ) -> bool:
         """Check if tokens can be allocated (reservation- and thread-aware).
 
         Args:
             tokens: Number of tokens to allocate
             agent_id: Optional agent identifier for per-agent limits
+            effective: Optional cost-weighted Effective-Tokens estimate for the
+                step; defaults to ``tokens`` when omitted (C8 admission check).
 
         Returns:
             True if allocation is possible
         """
         with self._lock:
-            return self._can_allocate_unlocked(tokens, agent_id)
+            return self._can_allocate_unlocked(tokens, agent_id, effective)
 
-    def allocate(self, tokens: int, agent_id: str = None) -> bool:
+    def allocate(self, tokens: int, agent_id: str = None, effective: float | None = None) -> bool:
         """Atomically check and RESERVE tokens.
 
         Unlike a bare ``can_allocate`` followed by work, this reserves the
@@ -395,21 +423,31 @@ class BudgetManager:
         :meth:`record_usage`), or it leaks toward the safe direction (over-
         constraining, never overspending).
 
+        ``effective`` reserves cost-weighted ET headroom in lockstep (C8);
+        pass the same value to :meth:`release`. Defaults to ``tokens``.
+
         Returns:
             True if reserved, False if the reservation would exceed a limit.
         """
         with self._lock:
-            if not self._can_allocate_unlocked(tokens, agent_id):
+            if not self._can_allocate_unlocked(tokens, agent_id, effective):
                 return False
             self._pending_total += tokens
+            self._pending_effective += float(tokens) if effective is None else effective
             if agent_id:
                 self._pending_by_agent[agent_id] = self._pending_by_agent.get(agent_id, 0) + tokens
             return True
 
-    def release(self, tokens: int, agent_id: str = None) -> None:
-        """Release a prior :meth:`allocate` reservation (clamped at zero)."""
+    def release(self, tokens: int, agent_id: str = None, effective: float | None = None) -> None:
+        """Release a prior :meth:`allocate` reservation (clamped at zero).
+
+        Pass the same ``effective`` value used at :meth:`allocate` so the ET
+        reservation mirror unwinds symmetrically (defaults to ``tokens``).
+        """
         with self._lock:
             self._pending_total = max(0, self._pending_total - tokens)
+            est = float(tokens) if effective is None else effective
+            self._pending_effective = max(0.0, self._pending_effective - est)
             if agent_id and agent_id in self._pending_by_agent:
                 self._pending_by_agent[agent_id] = max(0, self._pending_by_agent[agent_id] - tokens)
 
@@ -579,12 +617,17 @@ class BudgetManager:
         }
 
     def estimate_cost(self, tokens: int, model: str = "claude-sonnet-4-6") -> float:
-        """Estimate USD cost for token usage.
+        """Rough USD estimate for *undifferentiated* token usage.
 
-        Derived from the single canonical tier table
-        (``DEFAULT_MODEL_MULTIPLIERS``, overridable via config) × the base
-        Sonnet rate, so there is one source of truth shared with the
-        Effective-Tokens cost model. An unknown model resolves to the
+        This is a COARSE budget-headroom approximation: tier multiplier
+        (``DEFAULT_MODEL_MULTIPLIERS``) × a single blended base rate, with no
+        input/output split. It shares the tier table with the Effective-Tokens
+        cost model, but it is NOT the authoritative realized cost (C12 — the
+        old docstring falsely claimed to be the "single source of truth").
+
+        For actual per-model, input/output-aware cost accounting use
+        :meth:`animus_forge.metrics.cost_tracker.CostTracker.calculate_cost`,
+        which is the live $-pricing source. An unknown model resolves to the
         Sonnet-tier multiplier (1.0), consistent with ``effective_tokens``.
 
         Args:
@@ -592,7 +635,7 @@ class BudgetManager:
             model: Model name; resolved through the tier-multiplier table.
 
         Returns:
-            Estimated cost in USD.
+            Estimated cost in USD (coarse).
         """
         multiplier = _resolve_model_multiplier(model, self.config.model_multipliers)
         cost = (tokens / 1_000_000) * BASE_USD_PER_1M_TOKENS * multiplier
@@ -606,6 +649,7 @@ class BudgetManager:
             self._total_used = 0
             self._total_effective = 0.0
             self._pending_total = 0
+            self._pending_effective = 0.0
             self._pending_by_agent = {}
         self._last_status = BudgetStatus.OK
 
