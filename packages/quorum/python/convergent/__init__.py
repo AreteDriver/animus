@@ -77,16 +77,19 @@ from convergent.health import (
     health_report,
 )
 from convergent.intent import (
+    DEFAULT_STABILITY_SCORER,
     Adjustment,
     ConflictReport,
     Constraint,
     ConstraintSeverity,
+    DefaultStabilityScorer,
     Evidence,
     EvidenceKind,
     Intent,
     InterfaceKind,
     InterfaceSpec,
     ResolutionResult,
+    StabilityScorer,
 )
 from convergent.matching import (
     names_overlap,
@@ -168,6 +171,9 @@ __all__ = [
     "Constraint",
     "ConstraintApplicability",
     "ConstraintSeverity",
+    "DEFAULT_STABILITY_SCORER",
+    "DefaultStabilityScorer",
+    "StabilityScorer",
     "Evidence",
     "EvidenceKind",
     "Intent",

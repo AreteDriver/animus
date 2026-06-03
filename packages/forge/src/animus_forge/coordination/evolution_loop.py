@@ -146,6 +146,10 @@ class EvolutionLoop:
         self._config = config or EvolutionConfig()
         self._experiment_runner = experiment_runner
         self._identity_anchor = identity_anchor
+        # B3: without an injected runner the loop only "dry runs" — its
+        # keep/discard verdicts are then LLM opinion on a non-experiment.
+        # Track and surface that so a dry run is never mistaken for evidence.
+        self._is_dry_run = experiment_runner is None
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
@@ -161,6 +165,12 @@ class EvolutionLoop:
     @property
     def is_running(self) -> bool:
         return self._thread is not None and self._thread.is_alive()
+
+    @property
+    def is_dry_run(self) -> bool:
+        """True when no real experiment runner is injected — keep/discard
+        verdicts are then opinion on a non-experiment, not measured evidence."""
+        return self._is_dry_run
 
     @property
     def iteration_count(self) -> int:
@@ -218,6 +228,7 @@ class EvolutionLoop:
             "total_tokens": self._total_tokens,
             "model": self._config.model,
             "has_better_md": bool(self._better_definition),
+            "is_dry_run": self._is_dry_run,
         }
 
     def run_one(self) -> IterationRecord:
@@ -403,9 +414,15 @@ class EvolutionLoop:
             except Exception as e:
                 return f"Experiment runner error: {e}"
 
-        # Default: dry run — return the plan as the result
-        # Real experiment runners are injected for production use
-        return f"[dry run] Plan executed: {plan}"
+        # Default: dry run — no real experiment was executed. Warn loudly so a
+        # downstream keep/discard is never mistaken for measured evidence
+        # (B3). Inject an experiment_runner — e.g. eval_experiment_runner — for
+        # production use.
+        logger.warning(
+            "EvolutionLoop ran in DRY-RUN mode (no experiment_runner injected); "
+            "the keep/discard verdict is LLM opinion on a non-experiment."
+        )
+        return f"[dry run — NOT a real experiment] Plan: {plan}"
 
     def _evaluate(self, hypothesis_data: dict, experiment_result: str) -> dict[str, Any]:
         """LLM call: evaluate experiment result against better.md."""
@@ -515,3 +532,28 @@ class BetterMdMissing(Exception):
 
 class BudgetExhausted(Exception):
     """Raised when evolution cannot proceed due to budget constraints."""
+
+
+def eval_experiment_runner(runner: Any, suite: Any):
+    """Build a REAL experiment runner for :class:`EvolutionLoop` (B3).
+
+    Returns a ``(hypothesis, plan) -> str`` callable that runs an actual eval
+    suite and reports the measured outcome, so the loop's keep/discard verdict
+    is grounded in evidence rather than the dry-run echo. Inject it via
+    ``EvolutionLoop(experiment_runner=eval_experiment_runner(runner, suite))``.
+    """
+
+    def _run(hypothesis: str, plan: str) -> str:
+        result = runner.run(suite)
+        results = getattr(result, "results", []) or []
+        n = len(results)
+        passed = sum(1 for r in results if getattr(r, "passed", False))
+        avg = getattr(result, "avg_score", None)
+        avg_str = f"{avg:.3f}" if isinstance(avg, (int, float)) else "n/a"
+        return (
+            f"Real experiment: ran eval suite over {n} case(s), "
+            f"{passed}/{n} passed, avg_score={avg_str}. "
+            f"Hypothesis under test: {hypothesis}"
+        )
+
+    return _run

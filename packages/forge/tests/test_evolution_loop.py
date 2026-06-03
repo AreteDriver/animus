@@ -353,7 +353,9 @@ class TestExperimentRunner:
         ]
         loop = _make_loop(mock_provider, mock_budget, tmp_better, tmp_audit)
         record = loop.run_one()
-        assert "[dry run]" in record.experiment_summary
+        # B3: the dry-run result is now explicitly labeled "NOT a real experiment".
+        assert "dry run" in record.experiment_summary.lower()
+        assert loop.is_dry_run is True
 
 
 # ---------------------------------------------------------------------------
@@ -522,3 +524,56 @@ class TestIterationRecord:
         assert record.iteration == 0
         assert record.outcome == "keep"
         assert record.timestamp  # auto-generated
+
+
+class TestB3ExperimentRunner:
+    """B3: injected runner drives the result; dry-run is flagged, not silent."""
+
+    def _loop(self, runner=None):
+        from unittest.mock import MagicMock
+
+        from animus_forge.budget.manager import BudgetConfig, BudgetManager
+        from animus_forge.coordination.evolution_loop import EvolutionLoop
+
+        return EvolutionLoop(
+            provider=MagicMock(),
+            budget_manager=BudgetManager(BudgetConfig(total_budget=10_000)),
+            experiment_runner=runner,
+        )
+
+    def test_no_runner_is_dry_run(self):
+        loop = self._loop(runner=None)
+        assert loop.is_dry_run is True
+        assert loop.status()["is_dry_run"] is True
+        # The dry-run result is clearly labeled as NOT a real experiment.
+        out = loop._run_experiment("h", "p")
+        assert "NOT a real experiment" in out
+
+    def test_injected_runner_is_used(self):
+        calls = []
+
+        def runner(hypothesis, plan):
+            calls.append((hypothesis, plan))
+            return "measured: 9/10 passed"
+
+        loop = self._loop(runner=runner)
+        assert loop.is_dry_run is False
+        result = loop._run_experiment("my-hyp", "my-plan")
+        assert result == "measured: 9/10 passed"
+        assert calls == [("my-hyp", "my-plan")]
+
+    def test_eval_experiment_runner_factory(self):
+        from unittest.mock import MagicMock
+
+        from animus_forge.coordination.evolution_loop import eval_experiment_runner
+
+        run_result = MagicMock()
+        run_result.results = [MagicMock(passed=True), MagicMock(passed=False)]
+        run_result.avg_score = 0.5
+        runner = MagicMock()
+        runner.run.return_value = run_result
+
+        real = eval_experiment_runner(runner, suite=MagicMock())
+        out = real("hyp", "plan")
+        runner.run.assert_called_once()
+        assert "1/2 passed" in out and "0.500" in out and "Real experiment" in out
