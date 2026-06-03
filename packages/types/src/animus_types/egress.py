@@ -26,6 +26,7 @@ from __future__ import annotations
 import os
 from urllib.parse import urlparse
 
+from animus_types.secrets import scan_for_secrets
 from animus_types.sensitivity import Sensitivity
 
 _LOOPBACK_HOSTS: frozenset[str] = frozenset({"localhost", "127.0.0.1", "::1", "0.0.0.0"})
@@ -68,6 +69,7 @@ def is_egress_allowed(
     tier: Sensitivity | None = None,
     *,
     sensitivity: Sensitivity | None = None,
+    content: str | None = None,
 ) -> bool:
     """Return True iff outbound traffic to ``destination`` is permitted.
 
@@ -89,16 +91,25 @@ def is_egress_allowed(
             convention). ``None`` is treated as most-permissive.
         sensitivity: Same meaning under Forge's keyword convention. Takes
             precedence over ``tier`` if both are given.
+        content: Optional outbound payload text. Content-aware DLP: even when
+            the declared tier would permit egress, a payload containing a
+            credential (API key, token, private key) is blocked. This is the
+            defense against a sensitive body mis-tagged as PUBLIC — the gate
+            stops trusting the caller's tier alone.
     """
     effective = sensitivity if sensitivity is not None else tier
 
     host = _extract_host(destination)
     if host in _LOOPBACK_HOSTS or host.endswith(".local"):
-        return True
+        return True  # local (e.g. Ollama) is on-box; tier/content don't apply
     if os.environ.get("ANIMUS_OFFLINE") == "1":
         return False
     if effective in (Sensitivity.CONFIDENTIAL, Sensitivity.SECRET):
         return False
     if effective is Sensitivity.PERSONAL and os.environ.get("ANIMUS_LOCAL_ONLY") == "1":
+        return False
+    # Tier permits egress — now inspect content. Never let a credential cross
+    # the wire to a cloud endpoint regardless of how it was tagged.
+    if content and scan_for_secrets(content):
         return False
     return True

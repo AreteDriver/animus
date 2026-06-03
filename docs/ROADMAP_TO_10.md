@@ -33,7 +33,7 @@ honest reads from the whitepaper maturity (68 production / 6 beta / 4 exp / 5 st
 |---|---|---|---|
 | D1 | **Cost discipline** (keystone) | **10** ✅ | ET is the enforced unit (A1); `allocate()` atomically reserves so concurrent steps can't collectively overspend (A2); `estimate_cost` derives from one tier table (A3). Cost is now a hard, thread-safe constraint. |
 | D2 | **Memory** | 7 | Tiered HOT/WARM/COLD with real promotion; incremental BM25; no full second in-RAM copy; LLM-summarized consolidation; sync conflict-surfacing. |
-| D3 | **Security & at-rest** | 7 | Encryption at rest; content-aware egress (not tier-trust); integrity baseline covers all critical-path files + self; per-install salt; signed memory or explicit decision not to. |
+| D3 | **Security & at-rest** | 9 | Content-aware egress ✅ (A4); integrity baseline covers all critical-path files + self-hash + cross-package egress logic ✅ (A6); per-install salt ✅ (A7). Remaining for 10: encryption at rest (A5) + a signed-memory decision. |
 | D4 | **Eval integrity** | 7 | Judges calibrated against a human golden set + drift tracked; judge failure ≠ silent 0.5; content taxonomy wired (done); real code-exec sandbox; power/sample-size advisor on `compare`. |
 | D5 | **Orchestration** | 7 | Budget reservation enforced; gates parsed where docs claim; impact score includes quality regression; no stale-pricing double view. |
 | D6 | **Coordination (Quorum)** | 6 | Pluggable StabilityScorer (flood-resistant); EventLog wiring enforced at the bridge; content-addressed transition log enabling replay/bisect. |
@@ -69,9 +69,9 @@ before it is sane to run Animus unattended.
 | **A1 ✅** | **Make Effective-Tokens the enforced budget unit ("the flip")** — DONE Session 1, option (b) | §6 #6, §8.4, cold-read keystone | ET reporting-only → **ET enforced** | Chose (b): raw `total_budget` kept, ET ceiling auto-derived; status takes worse-of-raw/ET; executor halts on EXCEEDED; migration 020 persists ET across restart. Non-breaking (raw-only records neutral) so 0 workflow YAMLs changed. Done-criteria test green; full forge suite 10,210 passed | L |
 | **A2 ✅** | `BudgetManager.allocate()` real reservation — DONE Session 2 | §6 #5, appendix | check-only → reserves | Lock + pending state; `allocate()` atomically check-and-reserves; parallel handler reserves once/sub-step + releases in finally; threaded test proves no collective overspend | M |
 | **A3 ✅** | Single pricing source — DONE Session 2 | appendix (orchestration) | two tables → one | `estimate_cost` derives from `DEFAULT_MODEL_MULTIPLIERS` × base $9/1M; config overrides flow into cost; reproduces old opus/sonnet numbers | S |
-| **A4** | Content-aware egress (stop trusting caller tier) | §8.1, Qwen #1, residual gap | tier-trust only → tier + content scan | Egress gate runs DLP/secret scan on payload before allow; a CONFIDENTIAL body mis-tagged PUBLIC is blocked; test with mis-tag | M |
+| **A4 ✅** | Content-aware egress — DONE Session 3 | §8.1, Qwen #1, residual gap | tier-trust only → tier + content scan | Canonical credential scanner in `animus_types.secrets` (reused by core redaction — no drift); `is_egress_allowed(content=...)` denies credential-bearing payloads; 4 providers wired via `assert_egress_allowed`; secret mis-tagged PUBLIC is blocked | M |
 | **A5** | Encryption at rest | §7 significant, §8.1, ARCHITECTURE claim | plaintext ext4 → encrypted | gocryptfs vault (PR #67) finished + memory store inside it; documented recovery; CANON/ARCHITECTURE flip from PLANNED→done | M |
-| **A6** | Expand integrity baseline | §6 #8, Qwen #3 | 4 files → all critical-path + self | tier-router, providers, pi_wrap, integrity checker itself hashed; tamper of any trips boot refusal; test each | M |
+| **A6 ✅** | Expand integrity baseline — DONE Session 3 | §6 #8, Qwen #3 | 4 files → all critical-path + self | Self-hashes the checker + guardrails; adds cross-package modules via importlib (`animus_types.egress`/`secrets` required, forge openrouter/pi_wrap optional) — closes the gap where core's egress was a re-export shim; tamper of any trips verify. **Operator must re-baseline** (`python -m animus.integrity.cli regenerate`) after this lands | M |
 | **A7 ✅** | Per-install encryption salt — DONE Session 2 | §6 #14 | hardcoded `gorgon-` salt → random per-install | `get_install_salt` helper; random 16B persisted 0600 to `~/.config/animus`; wired at BOTH sites (field_encryption + settings/manager); env overrides kept. Verified no legacy-encrypted data exists, so zero migration cost | S |
 | **A8** | Durability: rebuild dry-run + `animus export --all` | §7 significant | none → portable archive + tested rebuild | `export --all` produces documented-schema archive; timed cold rebuild restores state; loss-of-machine is survivable | M |
 
@@ -218,14 +218,20 @@ isn't. Breaking change, so it gets its own session.
       tests all green; affected coverage tests migrated (removed-method gate).
       Prior full run 10,221 passed / 3 failed-now-fixed; CI confirms. **D1 → 10.**
 
-### Session 3 — Egress + integrity (A4, A6)
-- [ ] **A4** content-aware egress: DLP/secret scan the payload before allow, not
-      just trust the caller tier. Mis-tagged CONFIDENTIAL body is blocked.
-      (Closes the §8.1 residual + Qwen #1/#2/#3 + TOCTOU surface E13.)
-- [ ] **A6** expand the integrity baseline to all critical-path files + a
-      self-hash (tier-router, providers, pi_wrap, the checker itself).
-- **Done when:** mis-tag egress test blocks; tamper of any tracked file refuses
-  boot. D3 → 9.
+### Session 3 — Egress + integrity (A4, A6) ✅ DONE
+- [x] **A4** content-aware egress: canonical credential scanner in
+      `animus_types.secrets` (core redaction now reuses it — drift removed);
+      `is_egress_allowed(content=...)` denies credential-bearing payloads; the 4
+      cloud providers gate via a shared `assert_egress_allowed`. Closes the
+      §8.1 residual + Qwen #1/#2/#3.
+- [x] **A6** integrity baseline self-hashes the checker + guardrails AND tracks
+      cross-package modules via importlib (`animus_types.egress`/`secrets`
+      required; forge `openrouter`/`pi_wrap` optional) — the core `network/egress.py`
+      was a re-export shim, so the real logic was previously untracked.
+- [x] **Done:** mis-tag egress test blocks; module-drift + tamper trip verify;
+      verify_hardening 24/24; core security slice 92 passed; types 31; forge DLP
+      78. **D3 → 9.** ⚠️ Operator re-baseline required: `python -m
+      animus.integrity.cli regenerate`.
 
 ### Session 4 — At-rest + durability (A5, A8)
 - [ ] **A5** finish the gocryptfs vault (PR #67) with the memory store inside it;
