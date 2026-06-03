@@ -36,7 +36,11 @@ def budget_backend():
         db_path = os.path.join(tmpdir, "integration.db")
         b = SQLiteBackend(db_path=db_path)
         migrations_dir = os.path.join(os.path.dirname(__file__), "..", "migrations")
-        for migration in ("010_task_history.sql", "011_budget_session_usage.sql"):
+        for migration in (
+            "010_task_history.sql",
+            "011_budget_session_usage.sql",
+            "020_budget_effective_tokens.sql",
+        ):
             with open(os.path.join(migrations_dir, migration)) as f:
                 sql = f.read()
             b.executescript(sql)

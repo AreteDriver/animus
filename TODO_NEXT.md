@@ -80,14 +80,11 @@ isolation, ET opt-in ceiling, tier-contract docs + `recall_for_egress`).
 Two items were intentionally deferred because they are breaking design
 decisions, not clean fixes:
 
-- [ ] **Flip Effective-Tokens to the DEFAULT enforced budget unit.** The opt-in
-      ceiling shipped (`BudgetConfig.effective_token_budget`, off by default).
-      Making ET the default redefines what every workflow's `token_budget:`
-      YAML field means (raw tokens → cost-weighted ET) and will touch a large
-      slice of the 9.7k forge tests + 30+ workflow definitions. Decide the
-      semantics first: (a) reinterpret `total_budget` as ET, or (b) keep raw
-      `total_budget` and auto-derive `effective_token_budget` from it. Then
-      migrate workflows + tests in one deliberate pass. **This is the "flip".**
+- [x] **Flip Effective-Tokens to the DEFAULT enforced budget unit.** DONE
+      (Session 1, roadmap A1). Chose (b): raw `total_budget` kept, ET ceiling
+      auto-derived, status takes worse-of-raw/ET, executor halts on EXCEEDED,
+      migration 020 persists ET. Non-breaking (0 workflow YAMLs changed). Full
+      forge suite 10,210 passed. See `docs/ROADMAP_TO_10.md` Session 1.
 - [ ] **`BudgetManager.allocate()` real reservation** (whitepaper refinement #5,
       P1). Currently `allocate()` checks `can_allocate` but records nothing, so
       parallel auto-steps can each pass and collectively overspend. Track
@@ -96,6 +93,6 @@ decisions, not clean fixes:
 - [ ] Optional: route the 3 MCP egress sites through `MemoryLayer.EGRESS_SCOPE`
       once test mocks are updated (left as literal `{Sensitivity.PUBLIC}` for
       now to keep MagicMock-based tests simple).
-- [ ] `_restore_from_db()` does not rebuild `_total_effective` (DB stores raw
-      tokens only); ET under-counts after a session restore. Fine while ET is
-      opt-in; fix when the flip lands.
+- [x] `_restore_from_db()` rebuilds `_total_effective`. DONE (Session 1):
+      migration 020 persists per-record ET; restore sums it (raw-only fallback
+      for un-migrated DBs). Proven by `test_effective_tokens_survive_restore`.

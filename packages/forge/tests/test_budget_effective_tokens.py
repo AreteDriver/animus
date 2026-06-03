@@ -39,9 +39,14 @@ class TestEffectiveTokensFormula:
         assert effective_tokens(cache) == pytest.approx(100.0)
         assert effective_tokens(out) > effective_tokens(inp) > effective_tokens(cache)
 
-    def test_no_breakdown_treats_total_as_output(self):
-        # Conservative fallback for legacy callers — whole tokens count as output (4×).
-        assert effective_tokens(_rec(tokens=100)) == pytest.approx(400.0)
+    def test_no_breakdown_is_model_weighted_not_output_weighted(self):
+        # Post-A1-flip: a raw-only record (no in/out breakdown) is neutral —
+        # model-tier weighted but NOT output-weighted. We don't claim output
+        # cost we never observed, so ET == raw for an unknown model. This is
+        # what keeps ET enforcement non-breaking on the executor's raw path.
+        assert effective_tokens(_rec(tokens=100)) == pytest.approx(100.0)
+        # A known-expensive tier still gets penalized by its multiplier.
+        assert effective_tokens(_rec(tokens=100, model="claude-opus-4-7")) == pytest.approx(500.0)
 
     def test_model_multiplier_haiku_cheaper_than_sonnet(self):
         haiku = _rec(input_tokens=1000, output_tokens=1000, model="claude-haiku-4-5")
@@ -136,15 +141,34 @@ class TestManagerAggregateET:
 
 
 class TestEffectiveTokenEnforcement:
-    """Opt-in ET ceiling: enforcement honors cost-weight, off by default."""
+    """A1 flip: ET is an ENFORCED ceiling by default, derived from
+    total_budget when not set explicitly. The worse of raw/ET governs."""
 
-    def test_off_by_default_preserves_raw_only_behavior(self):
-        # No effective_token_budget → ET never governs status.
+    def test_enforced_by_default_derived_from_total_budget(self):
+        # No explicit effective_token_budget → ceiling derives from
+        # total_budget. An output-heavy opus record is cheap in raw tokens but
+        # expensive in ET, so it trips EXCEEDED by default — this is the flip.
         mgr = BudgetManager(BudgetConfig(total_budget=10_000))
+        assert mgr.effective_ceiling == 10_000  # derived
         mgr.record_usage("a", output_tokens=1_000, model="claude-opus-4-8")
-        # Raw usage is 1000/10000 = 10% → OK, regardless of huge ET.
+        # Raw = 1000/10000 = 10% (OK), but ET = 5.0 * 4 * 1000 = 20000 > 10000.
+        assert mgr.status.value == "exceeded"
+
+    def test_escape_hatch_pure_raw_when_enforcement_off(self):
+        # enforce_effective_tokens=False restores legacy pure-raw behavior.
+        mgr = BudgetManager(BudgetConfig(total_budget=10_000, enforce_effective_tokens=False))
+        mgr.record_usage("a", output_tokens=1_000, model="claude-opus-4-8")
         assert mgr.status.value == "ok"
         assert mgr.effective_remaining == float("inf")
+
+    def test_raw_only_records_stay_non_breaking(self):
+        # The executor records raw-only usage (no model/breakdown). With ET
+        # enforced-by-default, those must behave exactly like raw (ET == raw),
+        # so existing workflows do not trip earlier than before.
+        mgr = BudgetManager(BudgetConfig(total_budget=10_000))
+        mgr.record_usage("step1", 2_000)  # raw-only, no model
+        assert mgr.effective_used == pytest.approx(2_000.0)
+        assert mgr.status.value == "ok"  # 20% on both axes
 
     def test_et_ceiling_trips_when_raw_reads_healthy(self):
         # Output-heavy opus run: cheap in raw tokens, expensive in real cost.
@@ -170,3 +194,45 @@ class TestEffectiveTokenEnforcement:
         assert mgr.effective_used > 0
         mgr.reset()
         assert mgr.effective_used == 0.0
+
+
+class TestSession1DoneCriteria:
+    """A1 done-criteria: a parallel, output-heavy opus run trips EXCEEDED on the
+    cost-weighted axis while raw tokens still read healthy — end to end through
+    the executor's budget gate, not just the manager property."""
+
+    def test_parallel_opus_run_trips_exceeded_while_raw_healthy(self):
+        # Default config: ET ceiling derives from total_budget (the flip).
+        mgr = BudgetManager(BudgetConfig(total_budget=200_000))
+        # Several "parallel" steps, each cheap in raw but opus output-heavy.
+        for i in range(5):
+            mgr.record_usage(f"step{i}", output_tokens=12_000, model="claude-opus-4-8")
+        # Raw used = 60k / 200k = 30% → healthy on the raw axis.
+        assert mgr.used == 60_000
+        assert mgr.used / mgr.total_budget < 0.5
+        # ET = 5 * (5.0 * 4 * 12000) = 1.2M >> 200k ceiling → cost axis governs.
+        assert mgr.effective_used > mgr.effective_ceiling
+        assert mgr.status.value == "exceeded"
+
+    def test_executor_halts_on_effective_token_overspend(self):
+        from animus_forge.workflow.executor import WorkflowExecutor
+        from animus_forge.workflow.executor_results import ExecutionResult
+        from animus_forge.workflow.loader import StepConfig
+
+        mgr = BudgetManager(BudgetConfig(total_budget=200_000))
+        mgr.record_usage("prior", output_tokens=15_000, model="claude-opus-4-8")
+        # Raw is fine (15k/200k); ET (300k) is over the 200k ceiling.
+        assert mgr.used < mgr.total_budget
+        assert mgr.status.value == "exceeded"
+
+        executor = WorkflowExecutor.__new__(WorkflowExecutor)
+        executor.budget_manager = mgr
+        executor.dry_run = False
+        executor.memory_manager = None
+        executor.feedback_engine = None
+        executor.emit_callback = None
+
+        step = StepConfig(id="next", type="claude_code", params={"estimated_tokens": 100})
+        result = ExecutionResult(workflow_name="wf-et")
+        assert executor._check_budget_exceeded(step, result) is True
+        assert "effective-tokens" in result.error

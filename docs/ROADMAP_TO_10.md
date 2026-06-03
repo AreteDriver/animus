@@ -31,7 +31,7 @@ honest reads from the whitepaper maturity (68 production / 6 beta / 4 exp / 5 st
 
 | # | Dimension | Now | 10/10 acceptance criteria |
 |---|---|---|---|
-| D1 | **Cost discipline** (keystone) | 6 | Effective-Tokens is the *enforced* unit; `allocate()` reserves; one pricing table; a parallel output-heavy opus run cannot overspend. The thesis is enforced, not reported. |
+| D1 | **Cost discipline** (keystone) | 9 | Effective-Tokens is the *enforced* unit ✅ (A1, Session 1); a parallel output-heavy opus run already cannot overspend. Remaining for 10: `allocate()` reserves (A2) + one pricing table (A3). |
 | D2 | **Memory** | 7 | Tiered HOT/WARM/COLD with real promotion; incremental BM25; no full second in-RAM copy; LLM-summarized consolidation; sync conflict-surfacing. |
 | D3 | **Security & at-rest** | 7 | Encryption at rest; content-aware egress (not tier-trust); integrity baseline covers all critical-path files + self; per-install salt; signed memory or explicit decision not to. |
 | D4 | **Eval integrity** | 7 | Judges calibrated against a human golden set + drift tracked; judge failure ≠ silent 0.5; content taxonomy wired (done); real code-exec sandbox; power/sample-size advisor on `compare`. |
@@ -66,7 +66,7 @@ before it is sane to run Animus unattended.
 
 | ID | Item | Source | Current → Target | Acceptance | Effort |
 |---|---|---|---|---|---|
-| **A1** | **Make Effective-Tokens the enforced budget unit ("the flip")** | §6 #6, §8.4, cold-read keystone | ET reporting-only → ET enforced | Decide semantics (reinterpret `total_budget` as ET, or auto-derive `effective_token_budget` from it); migrate 30+ workflow YAMLs + the forge suite; a parallel opus output-heavy run trips EXCEEDED in tests | L |
+| **A1 ✅** | **Make Effective-Tokens the enforced budget unit ("the flip")** — DONE Session 1, option (b) | §6 #6, §8.4, cold-read keystone | ET reporting-only → **ET enforced** | Chose (b): raw `total_budget` kept, ET ceiling auto-derived; status takes worse-of-raw/ET; executor halts on EXCEEDED; migration 020 persists ET across restart. Non-breaking (raw-only records neutral) so 0 workflow YAMLs changed. Done-criteria test green; full forge suite 10,210 passed | L |
 | **A2** | `BudgetManager.allocate()` real reservation | §6 #5, appendix | check-only → reserves | Pending allocations tracked; concurrent `can_allocate` cannot collectively overspend; released on record/cancel; test proves it | M |
 | **A3** | Single pricing source | appendix (orchestration) | two tables (stale 2024 + multipliers) → one | `estimate_cost` and ET multipliers read one table; no dashboard/budget mismatch | S |
 | **A4** | Content-aware egress (stop trusting caller tier) | §8.1, Qwen #1, residual gap | tier-trust only → tier + content scan | Egress gate runs DLP/secret scan on payload before allow; a CONFIDENTIAL body mis-tagged PUBLIC is blocked; test with mis-tag | M |
@@ -187,18 +187,21 @@ test or check**, and a clean PR. Pace is yours; a "session" is a focused block,
 not a fixed number of hours. Don't start the next until the prior exits green.
 Sessions can merge if a block runs short; split if it runs long.
 
-### Session 1 — The keystone: enforce cost (roadmap A1)
+### Session 1 — The keystone: enforce cost (roadmap A1) ✅ DONE
 **Why first:** every other claim rests on cost being a hard constraint; today it
 isn't. Breaking change, so it gets its own session.
-- [ ] **Decision gate (yours):** A1 semantics — (a) reinterpret `total_budget`
-      as ET, or (b) keep raw `total_budget` and auto-derive
-      `effective_token_budget`. Lean: **(b)** — migratory, doesn't silently
-      change the meaning of every existing workflow number. Decide before coding.
-- [ ] Route `_check_budget_exceeded` / `record_usage` through Effective-Tokens.
-- [ ] Fix `_restore_from_db()` to rebuild `_total_effective` (or persist it).
-- [ ] Migrate the 30+ workflow YAMLs + budget tests to the chosen semantics.
-- **Done when:** a parallel, output-heavy opus run trips `EXCEEDED` in a test
-  while raw tokens read healthy; full forge suite green. D1 → 9.
+- [x] **Decision gate:** chose **(b)** — keep raw `total_budget`, auto-derive the
+      ET ceiling. Non-breaking.
+- [x] Route the executor's `_check_budget_exceeded` + `record_usage` through the
+      ET-aware `status` (worse-of-raw/ET governs; `effective_ceiling` derives
+      from `total_budget`; `enforce_effective_tokens=False` is the escape hatch).
+- [x] `_restore_from_db()` rebuilds `_total_effective` via migration 020 (persists
+      per-record ET), with a raw-only fallback for un-migrated DBs.
+- [x] Workflow YAMLs: **0 changed** — every production `record_usage` is raw-only,
+      so ET == raw there (neutral). Migrated the 5 budget tests that encoded the
+      old opt-in behavior + 3 migration-fixture lists.
+- [x] **Done:** parallel opus run trips `EXCEEDED` at 30% raw (test green);
+      executor halts on it; **full forge suite 10,210 passed, 0 failed**. D1 → 9.
 
 ### Session 2 — Finish the cost cluster + a quick security win (A2, A3, A7)
 - [ ] **A2** `BudgetManager.allocate()` reserves a pending allocation; concurrent

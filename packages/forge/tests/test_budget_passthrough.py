@@ -35,7 +35,11 @@ def backend():
         db_path = os.path.join(tmpdir, "test.db")
         b = SQLiteBackend(db_path=db_path)
         migrations_dir = os.path.join(os.path.dirname(__file__), "..", "migrations")
-        for migration in ("010_task_history.sql", "011_budget_session_usage.sql"):
+        for migration in (
+            "010_task_history.sql",
+            "011_budget_session_usage.sql",
+            "020_budget_effective_tokens.sql",
+        ):
             with open(os.path.join(migrations_dir, migration)) as f:
                 sql = f.read()
             b.executescript(sql)
@@ -402,6 +406,26 @@ class TestPersistentBudget:
         assert bm2.used == 8000
         assert bm2.get_agent_usage("builder") == 5000
         assert bm2.get_agent_usage("tester") == 3000
+
+    def test_effective_tokens_survive_restore(self, backend):
+        """Cost-weighted ET (not just raw) is persisted and restored, so a
+        daemon restart does not under-count the enforced ET ceiling (A1)."""
+        bm1 = BudgetManager(
+            config=BudgetConfig(total_budget=1_000_000),
+            backend=backend,
+            session_id="sess-et",
+        )
+        # Opus output-heavy: ET = 5.0 * 4 * 2000 = 40000, far above raw 2000.
+        bm1.record_usage("a", output_tokens=2_000, model="claude-opus-4-8")
+        assert bm1.effective_used == pytest.approx(40_000.0)
+
+        bm2 = BudgetManager(
+            config=BudgetConfig(total_budget=1_000_000),
+            backend=backend,
+            session_id="sess-et",
+        )
+        # ET restored from DB, not recomputed-as-raw.
+        assert bm2.effective_used == pytest.approx(40_000.0)
 
     def test_persist_on_record_usage(self, backend):
         """record_usage inserts a row into budget_session_usage."""
