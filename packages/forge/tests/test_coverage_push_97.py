@@ -3013,26 +3013,11 @@ class TestSkillEvolverWriterPaths:
 class TestExecutorPatternsBatchTwo:
     """Cover executor_patterns.py budget/metrics/retry paths."""
 
-    def test_check_sub_step_budget_no_manager(self):
-        from animus_forge.workflow.executor_patterns import DistributionPatternsMixin
-
-        mixin = DistributionPatternsMixin.__new__(DistributionPatternsMixin)
-        mixin.budget_manager = None
-        step = MagicMock()
-        # Should return None (no-op) when budget_manager is None
-        mixin._check_sub_step_budget(step, "stage1")
-
-    def test_check_sub_step_budget_exceeded(self):
-        from animus_forge.workflow.executor_patterns import DistributionPatternsMixin
-
-        mixin = DistributionPatternsMixin.__new__(DistributionPatternsMixin)
-        mixin.budget_manager = MagicMock()
-        mixin.budget_manager.can_allocate.return_value = False
-        step = MagicMock()
-        step.id = "s1"
-        step.params = {"estimated_tokens": 5000}
-        with pytest.raises(RuntimeError, match="Budget exceeded"):
-            mixin._check_sub_step_budget(step, "stage1")
+    # NOTE: `_check_sub_step_budget` was removed in roadmap A2. The per-attempt
+    # `can_allocate` gate was racy (concurrent sub-steps could collectively
+    # overspend); the gate is now an atomic `allocate()`/`release()` reservation
+    # in the parallel handler. The reservation contract (incl. per-agent limits
+    # and thread-safety) is covered by tests/test_budget_reservation.py.
 
     def test_record_sub_step_metrics_with_budget(self):
         from animus_forge.workflow.executor_patterns import DistributionPatternsMixin

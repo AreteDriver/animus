@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -52,6 +53,13 @@ class UsageRecord:
 ET_INPUT_WEIGHT = 1.0
 ET_CACHE_READ_WEIGHT = 0.1
 ET_OUTPUT_WEIGHT = 4.0
+
+# Single base $/1M-token rate at the Sonnet tier (m=1.0), blended input+output.
+# Every model's dollar estimate derives from this × its tier multiplier, so
+# cost estimation and the ET multipliers share ONE source of truth instead of
+# two drifting tables. (Reproduces the prior table: opus m=5 → $45/1M, sonnet
+# → $9/1M, haiku m=0.08 → ~$0.72/1M.)
+BASE_USD_PER_1M_TOKENS = 9.0
 
 
 # Default model-tier multipliers (m), normalised so Sonnet = 1.0. Reflect
@@ -175,6 +183,13 @@ class BudgetManager:
         # Cost-weighted accumulator, maintained in lockstep with _total_used.
         # Governs enforcement via effective_ceiling (on by default post-flip).
         self._total_effective: float = 0.0
+        # Pending reservations from allocate() not yet recorded as used. The
+        # parallel executor runs sub-steps on a thread pool, so check-and-reserve
+        # must be atomic or concurrent steps each pass can_allocate against the
+        # same un-incremented total and collectively overspend (whitepaper #5).
+        self._pending_total: int = 0
+        self._pending_by_agent: dict[str, int] = {}
+        self._lock = threading.Lock()
         self._last_status: BudgetStatus = BudgetStatus.OK
 
         if self._backend and self._session_id:
@@ -323,27 +338,31 @@ class BudgetManager:
             return BudgetStatus.WARNING
         return BudgetStatus.OK
 
-    def can_allocate(self, tokens: int, agent_id: str = None) -> bool:
-        """Check if tokens can be allocated.
+    def _can_allocate_unlocked(self, tokens: int, agent_id: str | None) -> bool:
+        """Reservation-aware allocation check. Caller must hold ``_lock``.
 
-        Args:
-            tokens: Number of tokens to allocate
-            agent_id: Optional agent identifier for per-agent limits
-
-        Returns:
-            True if allocation is possible
+        Counts both recorded usage AND outstanding reservations, so two
+        concurrent callers cannot both pass against the same un-incremented
+        total.
         """
-        # Check total budget
-        if self._total_used + tokens > self.config.total_budget:
+        committed = self._total_used + self._pending_total
+
+        # Check total budget (used + reserved + this request)
+        if committed + tokens > self.config.total_budget:
             return False
 
-        # Check available (accounting for reserve)
-        if tokens > self.available:
+        # Check available (accounting for reserve buffer + reservations)
+        available = max(0, self.config.total_budget - committed - self.config.reserve_tokens)
+        if tokens > available:
             return False
 
-        # Check per-agent limit
+        # Check per-agent limit (usage + that agent's reservations)
         if agent_id and self.config.per_agent_limit:
-            agent_total = self._agent_usage.get(agent_id, 0) + tokens
+            agent_total = (
+                self._agent_usage.get(agent_id, 0)
+                + self._pending_by_agent.get(agent_id, 0)
+                + tokens
+            )
             if agent_total > self.config.per_agent_limit:
                 return False
 
@@ -353,21 +372,51 @@ class BudgetManager:
 
         return True
 
-    def allocate(self, tokens: int, agent_id: str = None) -> bool:
-        """Attempt to allocate tokens.
+    def can_allocate(self, tokens: int, agent_id: str = None) -> bool:
+        """Check if tokens can be allocated (reservation- and thread-aware).
 
         Args:
             tokens: Number of tokens to allocate
-            agent_id: Optional agent identifier
+            agent_id: Optional agent identifier for per-agent limits
 
         Returns:
-            True if allocation succeeded
+            True if allocation is possible
         """
-        if not self.can_allocate(tokens, agent_id):
-            return False
+        with self._lock:
+            return self._can_allocate_unlocked(tokens, agent_id)
 
-        # Record pending allocation (not yet recorded as used)
-        return True
+    def allocate(self, tokens: int, agent_id: str = None) -> bool:
+        """Atomically check and RESERVE tokens.
+
+        Unlike a bare ``can_allocate`` followed by work, this reserves the
+        tokens under the lock so concurrent callers see each other's pending
+        reservations and cannot collectively overspend. The reservation is
+        freed by :meth:`release` (typically after the matching
+        :meth:`record_usage`), or it leaks toward the safe direction (over-
+        constraining, never overspending).
+
+        Returns:
+            True if reserved, False if the reservation would exceed a limit.
+        """
+        with self._lock:
+            if not self._can_allocate_unlocked(tokens, agent_id):
+                return False
+            self._pending_total += tokens
+            if agent_id:
+                self._pending_by_agent[agent_id] = self._pending_by_agent.get(agent_id, 0) + tokens
+            return True
+
+    def release(self, tokens: int, agent_id: str = None) -> None:
+        """Release a prior :meth:`allocate` reservation (clamped at zero)."""
+        with self._lock:
+            self._pending_total = max(0, self._pending_total - tokens)
+            if agent_id and agent_id in self._pending_by_agent:
+                self._pending_by_agent[agent_id] = max(0, self._pending_by_agent[agent_id] - tokens)
+
+    @property
+    def pending(self) -> int:
+        """Total tokens currently reserved but not yet recorded as used."""
+        return self._pending_total
 
     def record_usage(
         self,
@@ -416,10 +465,11 @@ class BudgetManager:
 
         record_effective = effective_tokens(record, self.config.model_multipliers)
 
-        self._usage_history.append(record)
-        self._total_used += tokens
-        self._total_effective += record_effective
-        self._agent_usage[agent_id] = self._agent_usage.get(agent_id, 0) + tokens
+        with self._lock:
+            self._usage_history.append(record)
+            self._total_used += tokens
+            self._total_effective += record_effective
+            self._agent_usage[agent_id] = self._agent_usage.get(agent_id, 0) + tokens
 
         # Persist to database if backend is available
         if self._backend and self._session_id:
@@ -528,42 +578,35 @@ class BudgetManager:
             },
         }
 
-    def estimate_cost(self, tokens: int, model: str = "claude-3-opus") -> float:
-        """Estimate cost for token usage.
+    def estimate_cost(self, tokens: int, model: str = "claude-sonnet-4-6") -> float:
+        """Estimate USD cost for token usage.
+
+        Derived from the single canonical tier table
+        (``DEFAULT_MODEL_MULTIPLIERS``, overridable via config) × the base
+        Sonnet rate, so there is one source of truth shared with the
+        Effective-Tokens cost model. An unknown model resolves to the
+        Sonnet-tier multiplier (1.0), consistent with ``effective_tokens``.
 
         Args:
-            tokens: Number of tokens
-            model: Model name for pricing
+            tokens: Number of tokens.
+            model: Model name; resolved through the tier-multiplier table.
 
         Returns:
-            Estimated cost in USD
+            Estimated cost in USD.
         """
-        # Approximate pricing per 1M tokens (as of late 2024)
-        pricing = {
-            "claude-3-opus": {"input": 15.0, "output": 75.0},
-            "claude-3-sonnet": {"input": 3.0, "output": 15.0},
-            "claude-3-haiku": {"input": 0.25, "output": 1.25},
-            "gpt-4": {"input": 30.0, "output": 60.0},
-            "gpt-4-turbo": {"input": 10.0, "output": 30.0},
-            "gpt-3.5-turbo": {"input": 0.5, "output": 1.5},
-        }
-
-        if model not in pricing:
-            model = "claude-3-opus"  # Default to opus pricing
-
-        # Assume 50/50 input/output split for estimation
-        prices = pricing[model]
-        avg_price = (prices["input"] + prices["output"]) / 2
-        cost = (tokens / 1_000_000) * avg_price
-
+        multiplier = _resolve_model_multiplier(model, self.config.model_multipliers)
+        cost = (tokens / 1_000_000) * BASE_USD_PER_1M_TOKENS * multiplier
         return round(cost, 4)
 
     def reset(self) -> None:
         """Reset budget tracking."""
-        self._usage_history = []
-        self._agent_usage = {}
-        self._total_used = 0
-        self._total_effective = 0.0
+        with self._lock:
+            self._usage_history = []
+            self._agent_usage = {}
+            self._total_used = 0
+            self._total_effective = 0.0
+            self._pending_total = 0
+            self._pending_by_agent = {}
         self._last_status = BudgetStatus.OK
 
         if self._backend and self._session_id:

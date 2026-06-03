@@ -31,7 +31,7 @@ honest reads from the whitepaper maturity (68 production / 6 beta / 4 exp / 5 st
 
 | # | Dimension | Now | 10/10 acceptance criteria |
 |---|---|---|---|
-| D1 | **Cost discipline** (keystone) | 9 | Effective-Tokens is the *enforced* unit ✅ (A1, Session 1); a parallel output-heavy opus run already cannot overspend. Remaining for 10: `allocate()` reserves (A2) + one pricing table (A3). |
+| D1 | **Cost discipline** (keystone) | **10** ✅ | ET is the enforced unit (A1); `allocate()` atomically reserves so concurrent steps can't collectively overspend (A2); `estimate_cost` derives from one tier table (A3). Cost is now a hard, thread-safe constraint. |
 | D2 | **Memory** | 7 | Tiered HOT/WARM/COLD with real promotion; incremental BM25; no full second in-RAM copy; LLM-summarized consolidation; sync conflict-surfacing. |
 | D3 | **Security & at-rest** | 7 | Encryption at rest; content-aware egress (not tier-trust); integrity baseline covers all critical-path files + self; per-install salt; signed memory or explicit decision not to. |
 | D4 | **Eval integrity** | 7 | Judges calibrated against a human golden set + drift tracked; judge failure ≠ silent 0.5; content taxonomy wired (done); real code-exec sandbox; power/sample-size advisor on `compare`. |
@@ -67,12 +67,12 @@ before it is sane to run Animus unattended.
 | ID | Item | Source | Current → Target | Acceptance | Effort |
 |---|---|---|---|---|---|
 | **A1 ✅** | **Make Effective-Tokens the enforced budget unit ("the flip")** — DONE Session 1, option (b) | §6 #6, §8.4, cold-read keystone | ET reporting-only → **ET enforced** | Chose (b): raw `total_budget` kept, ET ceiling auto-derived; status takes worse-of-raw/ET; executor halts on EXCEEDED; migration 020 persists ET across restart. Non-breaking (raw-only records neutral) so 0 workflow YAMLs changed. Done-criteria test green; full forge suite 10,210 passed | L |
-| **A2** | `BudgetManager.allocate()` real reservation | §6 #5, appendix | check-only → reserves | Pending allocations tracked; concurrent `can_allocate` cannot collectively overspend; released on record/cancel; test proves it | M |
-| **A3** | Single pricing source | appendix (orchestration) | two tables (stale 2024 + multipliers) → one | `estimate_cost` and ET multipliers read one table; no dashboard/budget mismatch | S |
+| **A2 ✅** | `BudgetManager.allocate()` real reservation — DONE Session 2 | §6 #5, appendix | check-only → reserves | Lock + pending state; `allocate()` atomically check-and-reserves; parallel handler reserves once/sub-step + releases in finally; threaded test proves no collective overspend | M |
+| **A3 ✅** | Single pricing source — DONE Session 2 | appendix (orchestration) | two tables → one | `estimate_cost` derives from `DEFAULT_MODEL_MULTIPLIERS` × base $9/1M; config overrides flow into cost; reproduces old opus/sonnet numbers | S |
 | **A4** | Content-aware egress (stop trusting caller tier) | §8.1, Qwen #1, residual gap | tier-trust only → tier + content scan | Egress gate runs DLP/secret scan on payload before allow; a CONFIDENTIAL body mis-tagged PUBLIC is blocked; test with mis-tag | M |
 | **A5** | Encryption at rest | §7 significant, §8.1, ARCHITECTURE claim | plaintext ext4 → encrypted | gocryptfs vault (PR #67) finished + memory store inside it; documented recovery; CANON/ARCHITECTURE flip from PLANNED→done | M |
 | **A6** | Expand integrity baseline | §6 #8, Qwen #3 | 4 files → all critical-path + self | tier-router, providers, pi_wrap, integrity checker itself hashed; tamper of any trips boot refusal; test each | M |
-| **A7** | Per-install encryption salt | §6 #14 | hardcoded `gorgon-` salt → random per-install | Salt generated + persisted to `~/.config/animus`; legacy constant gone | S |
+| **A7 ✅** | Per-install encryption salt — DONE Session 2 | §6 #14 | hardcoded `gorgon-` salt → random per-install | `get_install_salt` helper; random 16B persisted 0600 to `~/.config/animus`; wired at BOTH sites (field_encryption + settings/manager); env overrides kept. Verified no legacy-encrypted data exists, so zero migration cost | S |
 | **A8** | Durability: rebuild dry-run + `animus export --all` | §7 significant | none → portable archive + tested rebuild | `export --all` produces documented-schema archive; timed cold rebuild restores state; loss-of-machine is survivable | M |
 
 Exit: D1 → 9, D3 → 9, D7 substrate in place. **This is the phase that matters most.**
@@ -204,12 +204,19 @@ isn't. Breaking change, so it gets its own session.
 - [x] **Done:** parallel opus run trips `EXCEEDED` at 30% raw (test green);
       executor halts on it; **full forge suite 10,210 passed, 0 failed**. D1 → 9.
 
-### Session 2 — Finish the cost cluster + a quick security win (A2, A3, A7)
-- [ ] **A2** `BudgetManager.allocate()` reserves a pending allocation; concurrent
-      `can_allocate` can't collectively overspend (test proves it).
-- [ ] **A3** collapse the two pricing tables into one source.
-- [ ] **A7** random per-install PBKDF2 salt; drop the legacy `gorgon-` constant.
-- **Done when:** budget reservation test passes; one pricing view; salt test. D1 → 10.
+### Session 2 — Finish the cost cluster + a quick security win (A2, A3, A7) ✅ DONE
+- [x] **A2** `BudgetManager.allocate()` reserves under a lock; parallel handler
+      reserves once/sub-step + releases in finally; threaded test proves 20
+      concurrent 200-tok reservations grant exactly 10 against a 2000 budget.
+- [x] **A3** `estimate_cost` derives from the one tier-multiplier table × base
+      $9/1M (config overrides flow through); old opus/sonnet numbers preserved.
+- [x] **A7** `get_install_salt` (random 16B, persisted 0600 to `~/.config/animus`)
+      wired at both salt sites; env overrides kept. Confirmed **no** legacy-
+      encrypted data exists (credentials/api_keys/mcp/settings all 0 rows), so
+      zero migration cost.
+- [x] **Done:** A2 reservation + threaded tests, A3 single-source tests, A7 salt
+      tests all green; affected coverage tests migrated (removed-method gate).
+      Prior full run 10,221 passed / 3 failed-now-fixed; CI confirms. **D1 → 10.**
 
 ### Session 3 — Egress + integrity (A4, A6)
 - [ ] **A4** content-aware egress: DLP/secret scan the payload before allow, not
