@@ -12,11 +12,14 @@ These tests verify that:
 import pytest
 from convergent.agent import AgentAction, SimulatedAgent, SimulationRunner
 from convergent.intent import (
+    DEFAULT_STABILITY_SCORER,
     Constraint,
+    DefaultStabilityScorer,
     Evidence,
     Intent,
     InterfaceKind,
     InterfaceSpec,
+    StabilityScorer,
 )
 from convergent.matching import (
     names_overlap,
@@ -736,3 +739,28 @@ class TestSemanticMatching:
         c1 = Constraint(target="User Model", requirement="must have email: str")
         c2 = Constraint(target="user_model", requirement="must have username: str")
         assert c1.conflicts_with(c2)
+
+
+class TestStabilityScorerProtocol:
+    """B7: compute_stability delegates to an injectable StabilityScorer."""
+
+    def test_default_scorer_matches_method(self):
+        intent = Intent(
+            agent_id="a",
+            intent="t",
+            evidence=[Evidence.code_committed("x"), Evidence.test_pass("y")],
+        )
+        assert intent.compute_stability() == DEFAULT_STABILITY_SCORER.score(intent.evidence)
+
+    def test_custom_scorer_is_honored(self):
+        class _Always:
+            def score(self, evidence):
+                return 0.99
+
+        intent = Intent(agent_id="a", intent="t")
+        assert intent.compute_stability(_Always()) == 0.99
+        # Default path is unchanged (base 0.3).
+        assert abs(intent.compute_stability() - 0.3) < 1e-9
+
+    def test_default_scorer_satisfies_protocol(self):
+        assert isinstance(DefaultStabilityScorer(), StabilityScorer)

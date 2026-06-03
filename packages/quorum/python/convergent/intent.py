@@ -9,6 +9,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Protocol, runtime_checkable
 
 from convergent.matching import (
     names_overlap,
@@ -137,6 +138,55 @@ class Evidence:
         }
 
 
+@runtime_checkable
+class StabilityScorer(Protocol):
+    """Computes a 0..1 stability score from an intent's evidence.
+
+    Extracted (roadmap B7) so the historical weighted-sum can be swapped for
+    a flood-resistant / Bayesian scorer (the active-inference work) by
+    injection, without touching every call site.
+    """
+
+    def score(self, evidence: list[Evidence]) -> float: ...
+
+
+class DefaultStabilityScorer:
+    """The historical weighted-sum scorer. Behavior is unchanged.
+
+    Known limitation it preserves: saturating and flood-vulnerable (100
+    confirmations of a contested thing score like 100 of an obvious one).
+    Replacing this is the point of the protocol — see B7's follow-on work.
+    """
+
+    def score(self, evidence: list[Evidence]) -> float:
+        score = 0.3  # base
+
+        test_passes = sum(1 for e in evidence if e.kind == EvidenceKind.TEST_PASS)
+        score += min(test_passes * 0.05, 0.3)
+
+        if any(e.kind == EvidenceKind.CODE_COMMITTED for e in evidence):
+            score += 0.2
+
+        dependents = sum(1 for e in evidence if e.kind == EvidenceKind.CONSUMED_BY_OTHER)
+        score += min(dependents * 0.1, 0.2)
+
+        conflicts = sum(1 for e in evidence if e.kind == EvidenceKind.CONFLICT)
+        score -= conflicts * 0.15
+
+        test_fails = sum(1 for e in evidence if e.kind == EvidenceKind.TEST_FAIL)
+        score -= test_fails * 0.15
+
+        if any(e.kind == EvidenceKind.MANUAL_APPROVAL for e in evidence):
+            score += 0.3
+
+        return max(0.0, min(1.0, score))
+
+
+#: Process-wide default. Swap or pass a custom ``StabilityScorer`` to
+#: ``IntentNode.compute_stability`` to change scoring behavior.
+DEFAULT_STABILITY_SCORER: StabilityScorer = DefaultStabilityScorer()
+
+
 @dataclass
 class Intent:
     """A single unit of semantic intent in the shared graph."""
@@ -169,29 +219,14 @@ class Intent:
     def add_evidence(self, evidence: Evidence) -> None:
         self.evidence.append(evidence)
 
-    def compute_stability(self) -> float:
-        """Compute stability from evidence. Mirrors Rust StabilityScorer."""
-        score = 0.3  # base
+    def compute_stability(self, scorer: StabilityScorer | None = None) -> float:
+        """Compute stability from evidence via an injectable scorer.
 
-        test_passes = sum(1 for e in self.evidence if e.kind == EvidenceKind.TEST_PASS)
-        score += min(test_passes * 0.05, 0.3)
-
-        if any(e.kind == EvidenceKind.CODE_COMMITTED for e in self.evidence):
-            score += 0.2
-
-        dependents = sum(1 for e in self.evidence if e.kind == EvidenceKind.CONSUMED_BY_OTHER)
-        score += min(dependents * 0.1, 0.2)
-
-        conflicts = sum(1 for e in self.evidence if e.kind == EvidenceKind.CONFLICT)
-        score -= conflicts * 0.15
-
-        test_fails = sum(1 for e in self.evidence if e.kind == EvidenceKind.TEST_FAIL)
-        score -= test_fails * 0.15
-
-        if any(e.kind == EvidenceKind.MANUAL_APPROVAL for e in self.evidence):
-            score += 0.3
-
-        return max(0.0, min(1.0, score))
+        Defaults to :data:`DEFAULT_STABILITY_SCORER` (the historical
+        weighted-sum), so existing callers behave identically. Pass a custom
+        ``StabilityScorer`` to swap in flood-resistant / Bayesian scoring.
+        """
+        return (scorer or DEFAULT_STABILITY_SCORER).score(self.evidence)
 
 
 @dataclass

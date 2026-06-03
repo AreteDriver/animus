@@ -34,9 +34,9 @@ honest reads from the whitepaper maturity (68 production / 6 beta / 4 exp / 5 st
 | D1 | **Cost discipline** (keystone) | **10** ✅ | ET is the enforced unit (A1); `allocate()` atomically reserves so concurrent steps can't collectively overspend (A2); `estimate_cost` derives from one tier table (A3). Cost is now a hard, thread-safe constraint. |
 | D2 | **Memory** | 7 | Tiered HOT/WARM/COLD with real promotion; incremental BM25; no full second in-RAM copy; LLM-summarized consolidation; sync conflict-surfacing. |
 | D3 | **Security & at-rest** | 9 | Content-aware egress ✅ (A4); integrity baseline covers all critical-path files + self-hash + cross-package egress logic ✅ (A6); per-install salt ✅ (A7). Remaining for 10: encryption at rest (A5) + a signed-memory decision. |
-| D4 | **Eval integrity** | 9 | Judge failure ≠ silent 0.5 ✅ (B1); content taxonomy wired ✅ (PR #80); real code-exec sandbox ✅ (B4); power/sample-size advisor on `compare` ✅ (B6). Remaining for 10: judges calibrated against a human golden set + drift tracked (B2, Session 6). |
-| D5 | **Orchestration** | 7 | Budget reservation enforced; gates parsed where docs claim; impact score includes quality regression; no stale-pricing double view. |
-| D6 | **Coordination (Quorum)** | 6 | Pluggable StabilityScorer (flood-resistant); EventLog wiring enforced at the bridge; content-addressed transition log enabling replay/bisect. |
+| D4 | **Eval integrity** | **10** ✅ | Judge failure ≠ silent 0.5 ✅ (B1); content taxonomy wired ✅ (PR #80); real code-exec sandbox ✅ (B4); power/sample-size advisor ✅ (B6); judges calibrated vs a human golden set + drift tracked ✅ (B2). |
+| D5 | **Orchestration** | 8 | Budget reservation enforced ✅ (A2); no stale-pricing ✅ (A3); auto-promotion stages a human-gated patch on a significant eval win ✅ (B5); evolution loop has a real injectable experiment runner + dry-run is flagged ✅ (B3). Remaining: gates parsed where docs claim; impact score includes quality regression. |
+| D6 | **Coordination (Quorum)** | 7 | Pluggable `StabilityScorer` protocol ✅ (B7, prereq for active inference). Remaining: flood-resistant scorer impl, EventLog wiring enforced at the bridge, content-addressed transition log for replay/bisect. |
 | D7 | **Autonomy-readiness** | 5 | Durability/rebuild dry-run + `animus export --all`; encryption at rest; a measured one-week overnight-delegate run. Earn the right to run unattended. |
 | D8 | **Doc coherence** | 8 | CANON kept current (status flips in the same PR as the feature); zero present-tense claims without code; no contradicting roadmaps. (Mostly closed in PR #80.) |
 
@@ -86,12 +86,12 @@ The self-improvement loop is only trustworthy if the evals it depends on are.
 | ID | Item | Source | Acceptance | Effort |
 |---|---|---|---|---|
 | **B1 ✅** | Judge-failure visibility — DONE Session 5 | §6 #7, §8.3 | judge raises `JudgeError` (no provider / call fails / unparseable) instead of 0.5; evaluator turns it into an ERROR result; classifier buckets `provider_error` | S |
-| **B2** | Judge calibration / meta-eval harness | §7 significant, §8.3 | Periodic scoring of judges vs a human golden set; per-model judge-drift tracked as a first-class metric | M |
-| **B3** | Evolution loop: real experiment runner + CLI | appendix (forge) | Replace dry-run echo with an injected runner; expose via CLI/daemon so autoresearch is operator-accessible | M |
+| **B2 ✅** | Judge calibration / meta-eval harness — DONE Session 6 | §7 significant, §8.3 | `calibrate_judge` scores a judge vs a human golden set (MAE/agreement/correlation; a raising judge counts as error, not silent agreement); `judge_drift` tracks per-model drift | M |
+| **B3 ✅** | Evolution loop: real experiment runner — DONE Session 6 | appendix (forge) | `eval_experiment_runner` factory (real measured runner); injection mechanism proven; dry-run now flagged loudly (`is_dry_run` + warning + status) so it's never mistaken for evidence | M |
 | **B4 ✅** | Real code-exec sandbox — DONE Session 5 | §6 #3 (beyond interim) | `-I -S` + scrubbed env + isolated cwd + kernel RLIMITs (CPU/memory/file-size via preexec_fn); infinite loop → TIMEOUT, memory bomb bounded — not just `-I` | M |
-| **B5** | Auto-promotion eval loop | §7 transformative | A statistically-significant `eval compare` win auto-opens a WorkflowEvolution pending patch pinning the prompt version | M |
+| **B5 ✅** | Auto-promotion eval loop — DONE Session 6 | §7 transformative | `auto_promote_on_improvement`: a significant `eval compare` win stages a human-gated WorkflowEvolution pending patch pinning the version; rejects not-significant / regression / underpowered; never auto-applies | M |
 | **B6 ✅** | `compare` power/sample-size advisor — DONE Session 5 | §7 incremental | `underpowered`/`power_note` on ComparisonReport: a non-significant result with CI wider than ±0.05 is flagged underpowered (vs tight-CI equivalence); surfaced in the `compare` CLI | S |
-| **B7** | StabilityScorer protocol extraction | §6 #10 | `compute_stability()` delegates to an injectable scorer (prereq for D-phase active inference) | M |
+| **B7 ✅** | StabilityScorer protocol extraction — DONE Session 6 | §6 #10 | `StabilityScorer` Protocol + `DefaultStabilityScorer` (current logic unchanged); `compute_stability(scorer=None)` delegates; default behavior identical, custom scorer injectable — the seam for active inference | M |
 
 Exit: D4 → 9-10, D5 → 9, Kaizen loop genuinely autonomous-within-gates.
 
@@ -255,15 +255,20 @@ isn't. Breaking change, so it gets its own session.
 > Note: Session 4 (A5 encryption-at-rest + A8 durability) was skipped to here;
 > do it before the autonomy/daily-tool phases (it gates D7 + D3=10).
 
-### Session 6 — Close the Kaizen loop (B2, B3, B5, B7)
-- [ ] **B2** judge-calibration harness vs a human golden set; track judge drift.
-- [ ] **B3** evolution loop: inject a real experiment runner + expose via CLI.
-- [ ] **B5** auto-promotion: a significant `eval compare` win opens a
-      WorkflowEvolution pending patch.
-- [ ] **B7** extract the `StabilityScorer` protocol (prereq for D-phase active
-      inference).
-- **Done when:** calibration metric exists; evolution loop runs a real
-  experiment from the CLI; auto-promotion opens a patch in a test. D4 → 10, D5 → 9.
+### Session 6 — Close the Kaizen loop (B2, B3, B5, B7) ✅ DONE
+- [x] **B2** `calibrate_judge` (MAE/agreement/correlation vs a golden set; a
+      raising judge = error, not silent agreement) + `judge_drift`.
+- [x] **B3** `eval_experiment_runner` real runner + injection proven; dry-run
+      flagged (`is_dry_run` + loud warning + status) so it's never mistaken for
+      evidence. *(CLI/daemon exposure of the loop: follow-up — the seam + status
+      field are in place.)*
+- [x] **B5** `auto_promote_on_improvement`: significant win → human-gated pending
+      patch; rejects not-significant / regression / underpowered; never applies.
+- [x] **B7** `StabilityScorer` Protocol + `DefaultStabilityScorer`;
+      `compute_stability(scorer=None)` delegates; default unchanged (131 quorum
+      tests green), custom scorer injectable.
+- [x] **Done:** B2/B3/B5/B7 tests green; quorum 966; whole-tree ruff clean.
+      **D4 → 10, D5 → 8, D6 → 7.**
 
 ### Session 7 — Security residual hardening (Qwen review + §8.1 leftovers)
 Does NOT gate "operational" — run it parallel to Phase C/D or right after S6.
