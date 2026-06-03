@@ -409,6 +409,11 @@ def _render_comparison(report) -> None:  # noqa: ANN001 — Rich console renderi
         f"[{sig_color}][{ci_lo:+.3f}, {ci_hi:+.3f}][/{sig_color}] "
         f"({report.bootstrap_n} resamples, {sig_label})"
     )
+    # B6 — power/sample-size advisory so "not significant" on a small suite
+    # isn't misread as "no difference".
+    if report.power_note:
+        color = "yellow" if report.underpowered else "dim"
+        console.print(f"[{color}]{report.power_note}[/{color}]")
 
     # Failure buckets (technical taxonomy)
     if report.failure_delta:

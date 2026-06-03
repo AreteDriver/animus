@@ -323,3 +323,56 @@ def test_comparison_report_significant_property():
         failure_delta={},
     )
     assert not_sig.significant is False
+
+
+def _report(ci, n=10, delta=0.0):
+    s = RunSummary(
+        run_id="x",
+        suite_name="s",
+        model=None,
+        rubric_name=None,
+        rubric_version=None,
+        prompt_version=None,
+        avg_score=0.5,
+        pass_rate=0.5,
+        total_cost_usd=0.0,
+        duration_ms=0.0,
+        total_cases=n,
+        case_scores=[],
+        failure_buckets={},
+    )
+    return ComparisonReport(
+        baseline=s,
+        candidate=s,
+        score_delta=delta,
+        score_ci_95=ci,
+        pass_rate_delta=0.0,
+        cost_delta_usd=0.0,
+        latency_delta_ms=0.0,
+        failure_delta={},
+    )
+
+
+class TestPowerAdvisor:
+    """B6: 'not significant' on a small suite must not read as 'no difference'."""
+
+    def test_significant_has_no_power_note(self):
+        r = _report((0.02, 0.18), n=200, delta=0.1)
+        assert r.significant is True
+        assert r.underpowered is False
+        assert r.power_note == ""
+
+    def test_not_significant_wide_ci_is_underpowered(self):
+        # Half-width 0.11 > 0.05 meaningful effect → underpowered.
+        r = _report((-0.10, 0.12), n=8)
+        assert r.significant is False
+        assert r.underpowered is True
+        assert "Underpowered" in r.power_note
+        assert "n=8" in r.power_note
+
+    def test_not_significant_tight_ci_is_equivalence(self):
+        # Half-width 0.02 < 0.05 → genuinely equivalent, not underpowered.
+        r = _report((-0.02, 0.02), n=500)
+        assert r.significant is False
+        assert r.underpowered is False
+        assert "equivalent" in r.power_note.lower()
