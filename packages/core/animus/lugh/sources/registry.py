@@ -31,6 +31,7 @@ from animus.lugh.sources.hn import HackerNewsSource
 from animus.lugh.sources.hn import default_sources as _default_hn
 from animus.lugh.sources.mer import MERSource
 from animus.lugh.sources.podcasts import PodcastSource
+from animus.lugh.sources.search import WebSearchSource
 from animus.lugh.sources.youtube import DEFAULT_CHANNELS, YouTubeSource
 
 logger = logging.getLogger(__name__)
@@ -134,6 +135,18 @@ def instantiate(entries: list[dict]) -> list[Source]:
                         tags=_as_tag_list(raw.get("tags")),
                     )
                 )
+            elif kind == "search":
+                out.append(
+                    WebSearchSource(
+                        query_id=raw["query_id"],
+                        query=raw["query"],
+                        categories=raw.get("categories", ""),
+                        time_range=raw.get("time_range", ""),
+                        language=raw.get("language", "en"),
+                        max_results=int(raw.get("max_results", 20)),
+                        tags=_as_tag_list(raw.get("tags")),
+                    )
+                )
             elif kind == "mer":
                 out.append(
                     MERSource(
@@ -196,6 +209,36 @@ def add_youtube(
     return True
 
 
+def add_search(
+    query_id: str,
+    query: str,
+    categories: str = "",
+    time_range: str = "",
+    tags: list[str] | None = None,
+    path: Path | None = None,
+) -> bool:
+    """Append a web-search entry. Returns False if query_id already exists.
+
+    Requires an ANIMUS_SEARCH_URL (SearXNG) endpoint at fetch time; the
+    source fails open if unset.
+    """
+    entries = load_registry(path=path)
+    if any(e.get("kind") == "search" and e.get("query_id") == query_id for e in entries):
+        return False
+    entries.append(
+        {
+            "kind": "search",
+            "query_id": query_id,
+            "query": query,
+            "categories": categories,
+            "time_range": time_range,
+            "tags": list(tags) if tags else [],
+        }
+    )
+    save_registry(entries, path=path)
+    return True
+
+
 def remove_source(source_id: str, path: Path | None = None) -> bool:
     """Remove an entry by its fully-qualified source_id. Returns False if absent."""
     entries = load_registry(path=path)
@@ -221,6 +264,8 @@ def _entry_source_id(entry: dict) -> str:
         return f"podcast:{entry.get('show_id', '')}"
     if kind == "youtube":
         return f"youtube:{entry.get('channel', '')}"
+    if kind == "search":
+        return f"search:{entry.get('query_id', '')}"
     if kind == "mer":
         return "mer"
     return ""

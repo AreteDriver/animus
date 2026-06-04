@@ -31,6 +31,7 @@ from .manager import (
 )
 from .ollama_provider import OllamaProvider
 from .openai_provider import OpenAIProvider
+from .openrouter_provider import OpenRouterProvider, OpenWeightViolationError
 from .router import RoutingConfig, RoutingDecision, RoutingMode, TierRouter
 from .vertex_provider import VertexProvider
 
@@ -54,6 +55,8 @@ __all__ = [
     "VertexProvider",
     "OllamaProvider",
     "LlamaCppProvider",
+    "OpenRouterProvider",
+    "OpenWeightViolationError",
     # Manager
     "ProviderManager",
     "get_provider",

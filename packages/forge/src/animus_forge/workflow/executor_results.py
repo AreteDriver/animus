@@ -32,6 +32,12 @@ class StepResult:
     duration_ms: int = 0
     tokens_used: int = 0
     retries: int = 0
+    # C1-1 — cost-weighting inputs threaded from the provider's CompletionResponse
+    # so record_usage() computes real Effective-Tokens instead of collapsing to
+    # raw (m=1.0) for lack of a model id / input-output split.
+    model: str | None = None
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 @dataclass

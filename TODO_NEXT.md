@@ -65,3 +65,34 @@ Unify entry points, expose Animus as an MCP server, stabilize all packages.
 - Bootstrap: 1739 tests (in venv), 97% coverage
 - Chat Agent TODO complete (5/5 phases)
 - Ollama live smoke test passing (deepseek-coder-v2 tool use works)
+
+## Phase N: Whitepaper-audit follow-ups (2026-06-02)
+
+> **Full remediation plan: [`docs/ROADMAP_TO_10.md`](docs/ROADMAP_TO_10.md)**
+> — dependency-ordered, 8-dimension 10/10 scorecard, completeness matrix.
+> The two items below are roadmap A1 + A2 (the deferred breaking changes);
+> everything else is tracked in the roadmap. Working rule: when an item lands,
+> flip its `CANON.md` status, tick the roadmap, and delete it here — same PR.
+
+Context: branch `fix/p0-whitepaper-refinements` landed 5 P0 fixes from the
+2026-06 whitepaper audit (egress unify, content-taxonomy wiring, eval exec
+isolation, ET opt-in ceiling, tier-contract docs + `recall_for_egress`).
+Two items were intentionally deferred because they are breaking design
+decisions, not clean fixes:
+
+- [x] **Flip Effective-Tokens to the DEFAULT enforced budget unit.** DONE
+      (Session 1, roadmap A1). Chose (b): raw `total_budget` kept, ET ceiling
+      auto-derived, status takes worse-of-raw/ET, executor halts on EXCEEDED,
+      migration 020 persists ET. Non-breaking (0 workflow YAMLs changed). Full
+      forge suite 10,210 passed. See `docs/ROADMAP_TO_10.md` Session 1.
+- [x] **`BudgetManager.allocate()` real reservation** DONE (Session 2, roadmap
+      A2). Lock + pending state; parallel handler reserves once/sub-step and
+      releases in finally; threaded test proves no collective overspend. Also
+      shipped A3 (single pricing source) + A7 (per-install salt). **D1 → 10.**
+      See `docs/ROADMAP_TO_10.md` Session 2.
+- [ ] Optional: route the 3 MCP egress sites through `MemoryLayer.EGRESS_SCOPE`
+      once test mocks are updated (left as literal `{Sensitivity.PUBLIC}` for
+      now to keep MagicMock-based tests simple).
+- [x] `_restore_from_db()` rebuilds `_total_effective`. DONE (Session 1):
+      migration 020 persists per-record ET; restore sums it (raw-only fallback
+      for un-migrated DBs). Proven by `test_effective_tokens_survive_restore`.

@@ -86,6 +86,20 @@ class LlamaCppProvider(OpenAIProvider):
         if not self.config.base_url:
             raise ProviderNotConfiguredError("llama.cpp base_url not configured")
 
+        # C1-4 — llama.cpp is usually local, but base_url can point at ANY host,
+        # so it needs the same egress gate the cloud providers got (C2/C3). The
+        # egress helper exempts loopback, so a local server passes freely while a
+        # remote base_url is gated. Refuse to construct under ANIMUS_OFFLINE for a
+        # non-loopback endpoint.
+        from animus_forge.network import EgressDeniedError, is_egress_allowed
+
+        if not is_egress_allowed(self.config.base_url):
+            raise EgressDeniedError(
+                f"ANIMUS_OFFLINE=1 — llama.cpp provider blocked from "
+                f"{self.config.base_url}. Use a local server or unset the env var."
+            )
+        self._egress_endpoint = self.config.base_url
+
         self._client = OpenAI(
             api_key=self.config.api_key or "sk-no-key-required",
             base_url=self.config.base_url,
@@ -98,6 +112,16 @@ class LlamaCppProvider(OpenAIProvider):
                 timeout=self.config.timeout,
             )
         self._initialized = True
+
+    def _check_request_egress(self, request: CompletionRequest) -> None:
+        """C1-4 — gate per request: refuse a sensitivity-incompatible or
+        credential-bearing payload before it leaves for a (possibly remote)
+        llama.cpp endpoint. Loopback endpoints pass unconditionally.
+        """
+        from animus_forge.providers.base import assert_egress_allowed
+
+        endpoint = getattr(self, "_egress_endpoint", self.config.base_url or "")
+        assert_egress_allowed(endpoint, request)
 
     def list_models(self) -> list[str]:
         return self.MODELS.copy()
@@ -175,6 +199,8 @@ class LlamaCppProvider(OpenAIProvider):
         if not self._client:
             raise ProviderNotConfiguredError("llama.cpp client not initialized")
 
+        self._check_request_egress(request)
+
         model = request.model or self.default_model
         messages = self._build_messages(request)
         extras = self._build_call_kwargs(request)
@@ -213,6 +239,8 @@ class LlamaCppProvider(OpenAIProvider):
             self.initialize()
         if not self._async_client:
             raise ProviderNotConfiguredError("llama.cpp async client not initialized")
+
+        self._check_request_egress(request)
 
         model = request.model or self.default_model
         messages = self._build_messages(request)
