@@ -44,7 +44,13 @@ class TestSensitivityEnum:
                 del sys.modules[mod_name]
 
         importlib.import_module("animus_types")
-        # animus_types should not have pulled in any non-stdlib deps
-        non_stdlib = [m for m in sys.modules if m.startswith("animus_types") and "." in m]
-        # Module + sensitivity submodule = 2 max; anything beyond would be a smell
-        assert len(non_stdlib) <= 2
+        # animus_types must not pull in any non-stdlib THIRD-PARTY deps. Its own
+        # submodules are fine: __init__ re-exports sensitivity + egress, and
+        # egress imports secrets (the credential scanner) — three first-party,
+        # zero-dependency submodules. Assert no external packages crept in.
+        submods = {m for m in sys.modules if m.startswith("animus_types") and "." in m}
+        assert submods <= {
+            "animus_types.sensitivity",
+            "animus_types.egress",
+            "animus_types.secrets",
+        }, f"unexpected animus_types submodule import: {submods}"

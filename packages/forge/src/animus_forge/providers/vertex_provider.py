@@ -129,11 +129,36 @@ class VertexProvider(Provider):
         if not project:
             raise ProviderNotConfiguredError("GCP project not configured")
 
+        # Stage 3.C/3.D sibling adopter (C2) — refuse to construct the cloud
+        # client when ANIMUS_OFFLINE=1. Egress to *-aiplatform.googleapis.com is
+        # blocked at first use so callers get a clean error, not a timeout.
+        from animus_forge.network import EgressDeniedError, is_egress_allowed
+
+        endpoint = f"https://{location}-aiplatform.googleapis.com"
+        if not is_egress_allowed(endpoint):
+            raise EgressDeniedError(
+                f"ANIMUS_OFFLINE=1 — Vertex provider blocked from {endpoint}. "
+                "Unset the env var or route through a local provider."
+            )
+        self._egress_endpoint = endpoint
+
         try:
             vertexai.init(project=project, location=location)
             self._initialized = True
         except Exception as e:
             raise ProviderNotConfiguredError(f"Failed to initialize Vertex AI: {e}")
+
+    def _check_request_egress(self, request: CompletionRequest) -> None:
+        """Stage 3.D (C2) — refuse a request whose sensitivity is incompatible
+        with this cloud endpoint, or whose payload carries a credential. Raises
+        ``EgressDeniedError`` before the cloud client is invoked.
+        """
+        from animus_forge.providers.base import assert_egress_allowed
+
+        endpoint = getattr(
+            self, "_egress_endpoint", "https://us-central1-aiplatform.googleapis.com"
+        )
+        assert_egress_allowed(endpoint, request)
 
     def _get_model(self, model_name: str) -> Any:
         """Get or create a model instance."""
@@ -156,6 +181,8 @@ class VertexProvider(Provider):
         """Generate completion using Vertex AI."""
         if not self._initialized:
             self.initialize()
+
+        self._check_request_egress(request)
 
         model_name = request.model or self.default_model
         model = self._get_model(model_name)
@@ -218,6 +245,8 @@ class VertexProvider(Provider):
         """Generate completion asynchronously."""
         if not self._initialized:
             self.initialize()
+
+        self._check_request_egress(request)
 
         model_name = request.model or self.default_model
         model = self._get_model(model_name)
@@ -282,6 +311,8 @@ class VertexProvider(Provider):
         if not self._initialized:
             self.initialize()
 
+        self._check_request_egress(request)
+
         model_name = request.model or self.default_model
         model = self._get_model(model_name)
 
@@ -335,6 +366,8 @@ class VertexProvider(Provider):
         """Generate an async streaming completion."""
         if not self._initialized:
             self.initialize()
+
+        self._check_request_egress(request)
 
         model_name = request.model or self.default_model
         model = self._get_model(model_name)

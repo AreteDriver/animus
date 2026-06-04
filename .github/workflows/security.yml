@@ -51,4 +51,13 @@ jobs:
       - name: Run pip-audit
         # CVE-2026-3219 has no fix version available in pip itself.
         # Re-evaluate when upstream ships a fix.
-        run: pip-audit --ignore-vuln CVE-2026-3219
+        #
+        # CVE-2026-45829 ("ChromaToast") — pre-auth RCE in ChromaDB's exposed
+        # FastAPI server (auth-before-config-parsing + HuggingFace model load).
+        # No patched version exists (affects 1.0.0–1.5.8; 1.5.9 unconfirmed).
+        # Not exploitable here: Animus uses chromadb ONLY as an embedded
+        # PersistentClient (core/animus/memory/stores/chroma.py) — it never
+        # runs the ChromaDB network server, so the vulnerable path is never
+        # instantiated. Re-evaluate when upstream ships a fix; if Animus ever
+        # exposes a ChromaDB HttpClient/server, REMOVE this ignore.
+        run: pip-audit --ignore-vuln CVE-2026-3219 --ignore-vuln CVE-2026-45829

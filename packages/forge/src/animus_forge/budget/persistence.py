@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from animus_forge.state.backends import DatabaseBackend
 
@@ -208,24 +208,26 @@ class PersistentBudgetManager:
         Returns:
             Updated Budget or None if not found
         """
-        existing = self.get_budget(budget_id)
-        if not existing:
-            return None
-
-        new_used = existing.used_amount + amount
-
+        # C1-10: increment IN the UPDATE (used_amount = used_amount + ?) so two
+        # concurrent add_usage calls accumulate instead of racing — the old
+        # read-modify-write (read used_amount in Python, write used+amount) lost
+        # one update when interleaved. A WHERE-EXISTS guard preserves the
+        # "None if not found" contract without a separate read-then-check.
         with self.backend.transaction():
             self.backend.execute(
                 """
                 UPDATE budgets
-                SET used_amount = ?, updated_at = ?
+                SET used_amount = used_amount + ?, updated_at = ?
                 WHERE id = ?
                 """,
-                (new_used, datetime.now().isoformat(), budget_id),
+                (amount, datetime.now(UTC).isoformat(), budget_id),
             )
 
+        updated = self.get_budget(budget_id)
+        if updated is None:
+            return None
         logger.info(f"Added ${amount:.2f} usage to budget {budget_id}")
-        return self.get_budget(budget_id)
+        return updated
 
     def reset_usage(self, budget_id: str) -> Budget | None:
         """Reset usage for a budget.

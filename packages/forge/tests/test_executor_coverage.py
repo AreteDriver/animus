@@ -2,7 +2,7 @@
 
 Targets:
   - executor_core.py: __init__, _emit_log, _emit_progress, _validate_workflow_inputs, _check_budget_exceeded
-  - executor_patterns.py: _check_sub_step_budget, _record_sub_step_metrics, _execute_sub_step_attempt, _execute_with_retries
+  - executor_patterns.py: _record_sub_step_metrics, _execute_sub_step_attempt, _execute_with_retries
   - executor_integrations.py: _execute_shell, _execute_checkpoint, _execute_github
 """
 
@@ -403,30 +403,11 @@ class TestExecuteShell:
 # ===================================================================
 
 
-class TestCheckSubStepBudget:
-    """_check_sub_step_budget: budget gate for parallel sub-steps."""
-
-    def test_no_manager_passes(self):
-        exe = _bare_executor(budget_manager=None)
-        step = _make_step()
-        # Should not raise
-        exe._check_sub_step_budget(step, "stage1")
-
-    def test_budget_available_passes(self):
-        bm = MagicMock()
-        bm.can_allocate.return_value = True
-        exe = _bare_executor(budget_manager=bm)
-        step = _make_step(params={"estimated_tokens": 200})
-        exe._check_sub_step_budget(step, "stage1")
-        bm.can_allocate.assert_called_once_with(200, agent_id="stage1")
-
-    def test_budget_exceeded_raises(self):
-        bm = MagicMock()
-        bm.can_allocate.return_value = False
-        exe = _bare_executor(budget_manager=bm)
-        step = _make_step(step_id="sub1", params={"estimated_tokens": 9000})
-        with pytest.raises(RuntimeError, match="Budget exceeded for sub-step 'sub1'"):
-            exe._check_sub_step_budget(step, "stage1")
+# NOTE: `_check_sub_step_budget` was removed in roadmap A2. The per-attempt
+# `can_allocate` gate was racy (concurrent sub-steps could collectively
+# overspend); the gate is now an atomic `allocate()`/`release()` reservation in
+# the parallel handler. The reservation contract (incl. per-agent limits and
+# thread-safety) is covered by tests/test_budget_reservation.py.
 
 
 # ===================================================================

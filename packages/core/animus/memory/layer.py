@@ -7,7 +7,7 @@ import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from animus.logging import get_logger
 from animus.memory.redaction import redact
@@ -237,10 +237,18 @@ class MemoryLayer:
             limit: Maximum results
             allowed_tiers: Disclosure tiers permitted for this caller. When
                 provided, results are filtered to memories whose
-                ``sensitivity`` is in the set. MCP-egress callers should pass
-                ``{Sensitivity.PUBLIC}``; local-CLI callers typically pass
-                ``{PUBLIC, PERSONAL, CONFIDENTIAL}``. ``None`` (default) skips
-                the filter — backward-compat for pre-Stage-2.B callers.
+                ``sensitivity`` is in the set.
+
+                Security contract: ``None`` (the default) returns ALL tiers
+                and is correct ONLY for in-process, local-owner reads (CLI,
+                learning loop, the owner's own API) where the caller already
+                has full access to the underlying store. Any surface that can
+                egress data (MCP tools, automation, anything a non-owner can
+                reach) MUST pass an explicit tier set and must never rely on
+                this default. Egress callers should use
+                :meth:`recall_for_egress`, which pins ``{Sensitivity.PUBLIC}``
+                in one place so a new egress site cannot accidentally widen the
+                scope.
 
         Returns:
             List of relevant memories
@@ -272,6 +280,48 @@ class MemoryLayer:
         if allowed_tiers is not None:
             matching = [m for m in matching if m.sensitivity in allowed_tiers]
         return matching[:limit]
+
+    # ------------------------------------------------------------------
+    # Egress-safe reads. These pin the disclosure scope to PUBLIC in ONE
+    # place so any surface that can leave the box (MCP tools, automation)
+    # cannot fat-finger a wider tier set at a new call site. Egress code
+    # must call these rather than passing ``allowed_tiers`` by hand.
+    # ------------------------------------------------------------------
+
+    #: The only disclosure scope permitted to cross an egress boundary.
+    EGRESS_SCOPE: ClassVar[set[Sensitivity]] = {Sensitivity.PUBLIC}
+
+    def recall_for_egress(
+        self,
+        query: str,
+        memory_type: MemoryType | None = None,
+        tags: list[str] | None = None,
+        source: str | None = None,
+        min_confidence: float = 0.0,
+        limit: int = 10,
+    ) -> list[Memory]:
+        """Egress-safe :meth:`recall` pinned to ``{Sensitivity.PUBLIC}``."""
+        return self.recall(
+            query,
+            memory_type=memory_type,
+            tags=tags,
+            source=source,
+            min_confidence=min_confidence,
+            limit=limit,
+            allowed_tiers=set(self.EGRESS_SCOPE),
+        )
+
+    def recall_by_tags_for_egress(
+        self,
+        tags: list[str],
+        limit: int = 10,
+    ) -> list[Memory]:
+        """Egress-safe :meth:`recall_by_tags` pinned to ``{Sensitivity.PUBLIC}``."""
+        return self.recall_by_tags(
+            tags,
+            limit=limit,
+            allowed_tiers=set(self.EGRESS_SCOPE),
+        )
 
     def get_memory(self, memory_id: str) -> Memory | None:
         """Get a specific memory by ID or partial ID."""

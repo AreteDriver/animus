@@ -138,3 +138,25 @@ def test_tag_results_mutates_and_returns_counts():
     assert results[0].failure_mode is None
     assert results[1].failure_mode == "timeout"
     assert results[2].failure_mode == "refused"
+
+
+class TestJudgeErrorRouting:
+    """B1: a judge failure becomes an ERROR result that buckets as
+    provider_error — not a silent passing 0.5."""
+
+    def test_judge_error_result_classified_provider_error(self):
+        from animus_forge.evaluation.base import EvalCase, EvalResult, EvalStatus
+        from animus_forge.evaluation.failure_taxonomy import (
+            FailureClassifier,
+            FailureMode,
+        )
+
+        result = EvalResult(
+            case=EvalCase(input="x"),
+            status=EvalStatus.ERROR,
+            score=0.0,
+            output="",
+            metrics={"llm_judge": 0.0},
+            error="Metric llm_judge failed: judge provider call failed: 503",
+        )
+        assert FailureClassifier().classify(result) == FailureMode.PROVIDER_ERROR
