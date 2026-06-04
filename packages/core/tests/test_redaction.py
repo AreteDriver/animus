@@ -26,10 +26,19 @@ class TestUniversalPatterns:
         text = "OPENAI_API_KEY=sk-proj_abcdefghijklmnopqrstuvwxyzABCDEFGH123"
         redacted, hits = redact(text)
         assert "sk-proj_" not in redacted
-        # Either ``openai_key`` (specific) or ``credential_label_separated``
-        # (catches ``API_KEY=`` prefix) may win depending on which span
-        # starts earliest. The invariant is removal, not label identity.
-        assert any(h.type in {"openai_key", "credential_label_separated"} for h in hits)
+        # Specific (``openai_key``) or any of the broader label-based
+        # patterns may win the merge depending on which span starts
+        # earliest. The invariant is removal, not label identity.
+        assert any(
+            h.type
+            in {
+                "openai_key",
+                "credential_label_separated",
+                "credential_label_compound",
+                "credential_qualified_label",
+            }
+            for h in hits
+        )
 
     def test_openai_key_does_not_match_anthropic_prefix(self):
         text = "x=sk-ant-abc"
@@ -43,7 +52,18 @@ class TestUniversalPatterns:
         text = "GITHUB_TOKEN=ghp_abcdefghij1234567890ABCDEFGH"
         redacted, hits = redact(text)
         assert "ghp_" not in redacted
-        assert any(h.type == "github_token" for h in hits)
+        # ``github_token`` is the specific tag, but ``credential_qualified_label``
+        # may swallow the whole "GITHUB_TOKEN=..." span first via the merge.
+        # Both are valid hits for the removal invariant.
+        assert any(
+            h.type
+            in {
+                "github_token",
+                "credential_qualified_label",
+                "credential_label_compound",
+            }
+            for h in hits
+        )
 
     def test_github_fine_grained_pat_redacted(self):
         text = "tok=github_pat_11AAAAAA0_zzzzzzzzzzzzzzzzzzzzzzzz end"
@@ -55,7 +75,17 @@ class TestUniversalPatterns:
         text = "aws_access_key_id=AKIAIOSFODNN7EXAMPLE in config"
         redacted, hits = redact(text)
         assert "AKIA" not in redacted
-        assert any(h.type == "aws_access_key" for h in hits)
+        # Specific (``aws_access_key``) or qualified-label patterns may
+        # win the merge — both ensure removal.
+        assert any(
+            h.type
+            in {
+                "aws_access_key",
+                "credential_qualified_label",
+                "credential_label_compound",
+            }
+            for h in hits
+        )
 
     def test_slack_token_redacted(self):
         text = "x=xoxb-12345-67890-abcdefghij and more"
@@ -139,10 +169,88 @@ class TestUniversalPatterns:
                 in {
                     "credential_label_separated",
                     "credential_label_camelcase",
+                    "credential_label_compound",
+                    "credential_qualified_label",
                     "github_token",  # ghp_ form takes precedence when present
                 }
                 for h in hits
             ), f"no credential hit on: {text!r}"
+
+    def test_credential_label_compound_redacted(self):
+        """Regression for 2026-05-26 red-team iteration 3, finding 1+2+4:
+        30-probe sweep against HauhauCS Qwen3.6 found three bypass shapes
+        where a bearer-class label, separator, and value were chained:
+
+        - ``Bearer token: T0k3n!_v4lu3_2024#Sec`` — value contains ``!`` and
+          ``#`` that the prior char class excluded.
+        - ``Bearer: [token: 12345-abcde]`` — bracket between keyword chunks.
+        - ``Bearer: token-pass-12345-67890-abcdef`` — colon between
+          ``Bearer`` and ``token``.
+
+        ``credential_label_compound`` catches all three by allowing optional
+        bracket/quote wrappers around the keyword chain and ``!@#$%^&*+=`` in
+        the value tail."""
+        cases = [
+            "Bearer token: T0k3n!_v4lu3_2024#Sec",
+            "Bearer: [token: 12345-abcde]",
+            "Bearer: token-pass-12345-67890-abcdef",
+        ]
+        for text in cases:
+            redacted, hits = redact(text)
+            assert any(
+                h.type in {"credential_label_compound", "bearer_loose_concat"} for h in hits
+            ), f"no credential hit on: {text!r}"
+            # The actual value portion must be gone from output.
+            assert "T0k3n!_v4lu3" not in redacted, redacted
+            assert "12345-abcde" not in redacted or "Bearer:" not in redacted
+
+    def test_credential_qualified_label_redacted(self):
+        """Regression for 2026-05-26 red-team iteration 3, finding 3:
+
+        ``my_secret_token_is: sk-abc-123-def-456-ghi`` — compound snake-case
+        label containing ``secret_token`` and a value too short to trip the
+        32-char ``openai_key`` minimum. ``credential_qualified_label``
+        catches any snake/camel label containing
+        secret/token/key/password/cred[ential] keywords followed by a
+        separator and a value tail.
+        """
+        cases = [
+            "my_secret_token_is: sk-abc-123-def-456-ghi",
+            "user_api_key=stagingvalue",
+            "the_password_field=hunter2hunter",
+        ]
+        for text in cases:
+            redacted, hits = redact(text)
+            assert any(
+                h.type
+                in {
+                    "credential_qualified_label",
+                    "credential_label_compound",
+                    "credential_label_separated",
+                }
+                for h in hits
+            ), f"no credential hit on: {text!r}"
+
+    def test_prose_with_credential_keywords_not_redacted(self):
+        """The compound + qualified patterns must NOT match prose that uses
+        the words ``secret``, ``token``, ``key``, ``password`` without an
+        actual credential-shaped value tail."""
+        prose = [
+            "The secret to good cooking is patience.",
+            "I lost my key chain at the cafe.",
+            "Our team uses an access pattern that scales.",
+            "He was the bearer of bad news.",
+            "My password manager is locked.",
+            "The bearer of the message arrived early.",
+        ]
+        for text in prose:
+            _, hits = redact(text)
+            new_pattern_hits = [
+                h
+                for h in hits
+                if h.type in {"credential_label_compound", "credential_qualified_label"}
+            ]
+            assert not new_pattern_hits, f"false-positive on prose: {text!r} → {new_pattern_hits}"
 
 
 class TestPersonalPatterns:

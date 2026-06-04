@@ -41,6 +41,24 @@ CREDENTIAL_PATTERNS: dict[str, str] = {
         r"(?<![A-Za-z])(?:Bearer|Access|Auth|Api)(?:Token|Key)[A-Za-z0-9._\-]{6,}(?![A-Za-z])"
     ),
     "bearer_loose_concat": r"(?i)\bbearer[A-Za-z0-9._\-!@#$%^&*+=:?]{8,}",
+    # Red-team sweep (HauhauCS Qwen3.6, 2026-05-26 iter 3, via #62) found 4 more
+    # dlp_bypass shapes: special-char value tails, bracket separators, compound
+    # labels (``my_secret_token_is:``), and colon-between-keyword forms. These
+    # two close the cluster — both require a label keyword + separator + 6+
+    # token-shaped chars, so bare prose ("secret"/"key") still won't match.
+    "credential_label_compound": (
+        r"(?i)\b(?:bearer|access|auth|api)\s*[:_\-\s]*[\[\(\"']?\s*"
+        r"(?:token|key|secret|cred(?:ential)?)s?"
+        r"[\s_\-:=]+[\[\(\"']?\s*"
+        r"[A-Za-z0-9._\-!@#$%^&*+=]{6,}"
+    ),
+    "credential_qualified_label": (
+        r"(?i)\b[a-z][a-z_]*"
+        r"(?:secret|token|key|password|cred(?:ential)?)"
+        r"[a-z_]*"
+        r"[\s_\-:=]+[\[\(\"']?\s*"
+        r"[A-Za-z0-9._\-!@#$%^&*+=]{6,}"
+    ),
 }
 
 _COMPILED: list[tuple[str, Pattern[str]]] = [
