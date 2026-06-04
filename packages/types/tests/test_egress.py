@@ -82,6 +82,12 @@ class TestSharedErrorClass:
         assert issubclass(EgressDeniedError, RuntimeError)
 
     def test_class_identity_across_packages(self):
+        # Cross-package: only meaningful when the sibling packages are installed
+        # (full monorepo dev env / forge+core CI). In the isolated Test Types
+        # job only animus_types is present, so skip rather than fail — the
+        # identity guarantee is re-exercised wherever forge/core ARE installed.
+        pytest.importorskip("animus.network")
+        pytest.importorskip("animus_forge.network")
         from animus.network import EgressDeniedError as CoreErr
         from animus_forge.network import EgressDeniedError as ForgeErr
 
