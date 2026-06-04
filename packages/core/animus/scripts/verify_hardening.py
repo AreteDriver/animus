@@ -477,8 +477,6 @@ def scenario_stage3d_rag_assembled_propagates_max_tier(data_dir: Path) -> str:
     from datetime import datetime, timezone
     from unittest.mock import MagicMock
 
-    UTC = timezone.utc
-
     from animus_forge.intelligence.cross_workflow_memory import (
         AssembledContext,
         CrossWorkflowMemory,
