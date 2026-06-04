@@ -11,7 +11,7 @@ First wired model: `hf.co/HauhauCS/Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressiv
 | Callable from any Forge step | ✅ | `provider: ollama, model: hf.co/HauhauCS/...:Q6_K_P` — works via existing `OllamaProvider` once `ollama pull` completes |
 | Red-team / adversarial judge | ✅ | Pass `--model hf.co/HauhauCS/...:Q6_K_P` to `animus-forge eval run` — judge is per-run, not baked into rubric |
 | Local fallback below cloud | ✅ (config) | Configure `TierRouter` with `fallback_chain=["anthropic", "openai", "ollama"]`. HYBRID mode already routes REASONING→cloud; this adds explicit local fallback on failure |
-| A/B eval suite | ✅ | `eval_suites/sovereignty-stack-v0.yaml` — 5 cases across factual / reasoning / format / domain / adversarial dims |
+| A/B eval suite | ✅ | `eval_suites/sovereignty-stack-v1.yaml` — 11 cases (v0's 5 capability-gap cases + 6 deeper v1 probes) |
 
 All four roles use the existing `OllamaProvider` and `TierRouter` — no new code paths added to Forge. The only code change is a one-line addition to `OllamaProvider.MODELS` for discoverability (after pull confirms the exact tag format).
 
@@ -55,9 +55,9 @@ Behavior:
 
 | # | Question | Suite to measure with | Status |
 |---|---|---|---|
-| 1 | What's the capability gap between Qwen3.6-local and Claude Sonnet on representative tasks? | sovereignty-stack-v0 | scaffolded |
-| 2 | For tasks Qwen3.6 handles well, how much cloud spend per month does local serving eliminate? | sovereignty-stack-v0 + budget telemetry | v1 |
-| 3 | Where does the local model fail in ways that matter? (refusal? hallucination? format drift? long-context degradation?) | sovereignty-stack-v0 + content_failure_modes taxonomy | v1 |
+| 1 | What's the capability gap between Qwen3.6-local and Claude Sonnet on representative tasks? | sovereignty-stack-v1 | scaffolded |
+| 2 | For tasks Qwen3.6 handles well, how much cloud spend per month does local serving eliminate? | sovereignty-stack-v1 + budget telemetry | v1 |
+| 3 | Where does the local model fail in ways that matter? (refusal? hallucination? format drift? long-context degradation?) | sovereignty-stack-v1 + content_failure_modes taxonomy | v1 |
 | 4 | Can an uncensored local judge score adversarial cases that censored cloud judges refuse to evaluate? | red-team subset of v0 + judge-as-A/B variable | v1 |
 | 5 | Sovereignty audit: which workflows now run end-to-end without a single cloud call? | telemetry rollup | v2 |
 
@@ -93,7 +93,7 @@ Behavior:
 ```bash
 MODEL_UNDER_TEST=hauhaucs \
   ANIMUS_SOVEREIGNTY_BASE_URL=http://127.0.0.1:8081 \
-  animus-forge eval run sovereignty-stack-v0 \
+  animus-forge eval run sovereignty-stack-v1 \
     --adapter eval_suites.adapters.sovereignty_stack_v0:run_query \
     --suites-dir eval_suites \
     --prompt-version v0-smoke
@@ -108,7 +108,7 @@ MODEL_UNDER_TEST=hauhaucs \
 ```bash
 # Cloud baseline UUT (Claude Sonnet), cloud judge (Haiku)
 MODEL_UNDER_TEST=claude-sonnet-4-6 \
-  animus-forge eval run sovereignty-stack-v0 \
+  animus-forge eval run sovereignty-stack-v1 \
     --adapter eval_suites.adapters.sovereignty_stack_v0:run_query \
     --rubric personal-quality \
     --model claude-haiku-4-5 \
@@ -117,14 +117,14 @@ MODEL_UNDER_TEST=claude-sonnet-4-6 \
 # Local UUT (Qwen3.6 via llama-server), cloud judge (Haiku)
 MODEL_UNDER_TEST=hauhaucs \
   ANIMUS_SOVEREIGNTY_BASE_URL=http://127.0.0.1:8081 \
-  animus-forge eval run sovereignty-stack-v0 \
+  animus-forge eval run sovereignty-stack-v1 \
     --adapter eval_suites.adapters.sovereignty_stack_v0:run_query \
     --rubric personal-quality \
     --model claude-haiku-4-5 \
     --prompt-version v0-local-uut
 
 # A/B compare
-animus-forge eval compare v0-cloud-baseline v0-local-uut --suite sovereignty-stack-v0
+animus-forge eval compare v0-cloud-baseline v0-local-uut --suite sovereignty-stack-v1
 ```
 
 **Sovereign A/B — first run, 2026-05-26** (UUT = HauhauCS Qwen3.6 via llama-server, judge = same instance, personal-quality rubric):
@@ -132,7 +132,7 @@ animus-forge eval compare v0-cloud-baseline v0-local-uut --suite sovereignty-sta
 ```bash
 MODEL_UNDER_TEST=hauhaucs \
   ANIMUS_SOVEREIGNTY_BASE_URL=http://127.0.0.1:8081 \
-  animus-forge eval run sovereignty-stack-v0 \
+  animus-forge eval run sovereignty-stack-v1 \
     --adapter eval_suites.adapters.sovereignty_stack_v0:run_query \
     --rubric personal-quality \
     --model hauhaucs \
