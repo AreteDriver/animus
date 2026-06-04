@@ -43,9 +43,10 @@ Run::
     python -m animus.redteam.standing --n-per-category 5
     python -m animus.redteam.standing --alert-on medium
 
-Exit code is non-zero if any new finding at or above ``--alert-on``
-severity lands, so it pairs cleanly with a systemd ``OnFailure=`` or
-a cron mail rule.
+Exit code is non-zero if any finding — novel OR repeat — at or above
+``--alert-on`` severity lands, so it pairs cleanly with a systemd
+``OnFailure=`` or a cron mail rule. Repeats count too: a known attack
+class still reaching a gate is a regression, not noise.
 """
 
 from __future__ import annotations
@@ -337,6 +338,19 @@ def _severity_meets(level: Severity | str, threshold: str) -> bool:
     return rank.get(lvl, 0) >= rank.get(threshold, 3)
 
 
+def gate_fires(result: StandingSweepResult, alert_on: str) -> bool:
+    """Return True if the sweep should exit non-zero.
+
+    Fires on ANY finding — novel OR repeat — at or above ``alert_on``
+    severity. A *repeat* HIGH means a known attack class is STILL
+    reaching a gate: the fix regressed or never landed. That is a
+    regression and must break the build exactly like a novel HIGH. The
+    dashboard keeps the novel-vs-repeat distinction for triage; the
+    gate deliberately does not.
+    """
+    return any(_severity_meets(f["severity"], alert_on) for f in result.findings_detail)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -387,7 +401,7 @@ def main() -> int:
         "--alert-on",
         choices=["high", "medium", "low"],
         default="high",
-        help="Exit non-zero if any NEW finding meets this severity.",
+        help="Exit non-zero if any finding (novel OR repeat) meets this severity.",
     )
     parser.add_argument(
         "--audit-dir",
@@ -425,17 +439,13 @@ def main() -> int:
     print(f"  Ledger: {ledger_path}")
     print(f"  Dashboard: {dashboard_path}")
 
-    # Exit code on NEW findings meeting --alert-on threshold. Novel
-    # repeats of severities-we've-already-handled don't trigger alerts;
-    # only new things at the threshold severity do.
-    if args.alert_on == "high" and result.new_high > 0:
-        return 1
-    if args.alert_on == "medium" and (result.new_high + result.new_medium) > 0:
-        return 1
-    # 'low' threshold: any finding at all
-    if args.alert_on == "low" and len(result.findings_detail) > 0:
-        return 1
-    return 0
+    # Exit non-zero on ANY finding — novel OR repeat — at or above the
+    # --alert-on threshold. A repeat HIGH is a known attack class still
+    # reaching a gate (the fix regressed or never landed), so it must
+    # break the build just like a novel one.
+    fired = gate_fires(result, args.alert_on)
+    print(f"  Gate (--alert-on {args.alert_on}): {'FAIL (exit 1)' if fired else 'pass'}")
+    return 1 if fired else 0
 
 
 if __name__ == "__main__":

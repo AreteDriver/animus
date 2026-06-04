@@ -24,6 +24,7 @@ from animus.redteam.standing import (
     StandingSweepResult,
     append_dashboard,
     attack_hash,
+    gate_fires,
     normalize_attack,
     render_dashboard_section,
     run_standing_sweep,
@@ -306,3 +307,60 @@ class TestDashboardRendering:
         md = render_dashboard_section(result)
         assert "🆕" in md
         assert "🔁" in md
+
+
+class TestGate:
+    """Exit-gate semantics: fire on ANY finding (novel OR repeat) at or
+    above ``--alert-on`` severity. The key behavior is that a *repeat*
+    HIGH still breaks the build — a known attack class reaching a gate is
+    a regression, not noise.
+    """
+
+    @staticmethod
+    def _result(*findings: tuple[str, bool]) -> StandingSweepResult:
+        """Build a result whose findings_detail carries (severity, is_novel)."""
+        return StandingSweepResult(
+            sweep_id="gate",
+            ts="2026-05-27T00:00:00Z",
+            model="x",
+            total_probes=len(findings),
+            findings_detail=[
+                {
+                    "category": "dlp_bypass",
+                    "severity": sev,
+                    "is_novel": novel,
+                    "attack_input": "x",
+                    "observed": "missed",
+                }
+                for sev, novel in findings
+            ],
+        )
+
+    def test_repeat_high_fires_gate_at_high(self):
+        # The whole point of this change: a known (repeat) HIGH must fail.
+        result = self._result(("high", False))
+        assert result.novel_findings == 0  # not novel...
+        assert gate_fires(result, "high") is True  # ...but still fires
+
+    def test_novel_high_still_fires_gate_at_high(self):
+        assert gate_fires(self._result(("high", True)), "high") is True
+
+    def test_medium_does_not_fire_at_high_threshold(self):
+        assert gate_fires(self._result(("medium", True)), "high") is False
+        assert gate_fires(self._result(("medium", False)), "high") is False
+
+    def test_repeat_medium_fires_at_medium_threshold(self):
+        assert gate_fires(self._result(("medium", False)), "medium") is True
+
+    def test_high_fires_at_medium_threshold(self):
+        assert gate_fires(self._result(("high", False)), "medium") is True
+
+    def test_no_findings_never_fires(self):
+        empty = self._result()
+        assert gate_fires(empty, "high") is False
+        assert gate_fires(empty, "medium") is False
+        assert gate_fires(empty, "low") is False
+
+    def test_low_threshold_fires_on_any_finding(self):
+        assert gate_fires(self._result(("medium", False)), "low") is True
+        assert gate_fires(self._result(("high", True)), "low") is True
