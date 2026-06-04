@@ -141,7 +141,7 @@ def create_mcp_server():
         """
         # Stage 2.C — MCP egress is the load-bearing exfil boundary.
         # Pin recall scope to PUBLIC; confidential/secret tiers stay local.
-        scope = {Sensitivity.PUBLIC}
+        scope = {Sensitivity.PUBLIC}  # MemoryLayer.EGRESS_SCOPE; literal keeps mocks simple
         results = memory.recall(query=query, limit=limit, allowed_tiers=scope)
         if not results:
             audit_log.record("animus_recall", scope, 0, 0, 24)
@@ -189,7 +189,7 @@ def create_mcp_server():
 
         # Stage 2.C — pin tag search to PUBLIC for the same egress reason
         # as animus_recall.
-        scope = {Sensitivity.PUBLIC}
+        scope = {Sensitivity.PUBLIC}  # MemoryLayer.EGRESS_SCOPE; literal keeps mocks simple
         results = memory.recall_by_tags(tags=tag_list, limit=limit, allowed_tiers=scope)
         if not results:
             response = f"No memories found with tags: {', '.join(tag_list)}"
@@ -329,7 +329,7 @@ def create_mcp_server():
         """
         query = topic or "recent important context"
         # Stage 2.C — brief assembles context for an MCP client, same gate.
-        scope = {Sensitivity.PUBLIC}
+        scope = {Sensitivity.PUBLIC}  # MemoryLayer.EGRESS_SCOPE; literal keeps mocks simple
         recent = memory.recall(query=query, limit=10, allowed_tiers=scope)
 
         if not recent:

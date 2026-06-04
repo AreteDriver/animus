@@ -45,6 +45,7 @@ class ProviderType(Enum):
     VERTEX = "vertex"
     OLLAMA = "ollama"
     LLAMACPP = "llamacpp"
+    OPENROUTER = "openrouter"
 
 
 class ModelTier(Enum):
@@ -105,6 +106,59 @@ class CompletionRequest:
     # behave identically.
     sensitivity: Sensitivity = field(default_factory=lambda: Sensitivity.PUBLIC)
 
+    def scannable_text(self) -> str:
+        """ALL outbound text in this request, for content-aware egress DLP.
+
+        Recursively collects every string value from the prompt, system prompt,
+        messages, AND tool definitions — including tool_result block content,
+        tool_use input args, and tool schemas (C4). A credential anywhere in the
+        payload reaches the wire, so the scanner must see all of it; enumerating
+        specific block types missed exactly the tool-I/O shapes most likely to
+        carry live credentials in agentic loops.
+        """
+        parts: list[str] = [self.prompt or "", self.system_prompt or ""]
+
+        def _collect(obj: object) -> None:
+            if isinstance(obj, str):
+                parts.append(obj)
+            elif isinstance(obj, dict):
+                for v in obj.values():
+                    _collect(v)
+            elif isinstance(obj, (list, tuple)):
+                for v in obj:
+                    _collect(v)
+
+        _collect(self.messages or [])
+        _collect(self.tools or [])
+        return "\n".join(p for p in parts if p)
+
+
+def assert_egress_allowed(endpoint: str, request: CompletionRequest) -> None:
+    """Raise ``EgressDeniedError`` if this request may not leave for ``endpoint``.
+
+    Checks the declared sensitivity tier AND scans the outbound payload for
+    credentials (content-aware DLP), so a secret-bearing body mis-tagged as
+    PUBLIC is blocked rather than trusted on its tag alone (roadmap A4).
+    """
+    from animus_types.secrets import scan_for_secrets
+
+    from animus_forge.network import EgressDeniedError, is_egress_allowed
+
+    content = request.scannable_text()
+    if is_egress_allowed(endpoint, sensitivity=request.sensitivity, content=content):
+        return
+    hits = scan_for_secrets(content)
+    if hits:
+        raise EgressDeniedError(
+            f"Request blocked from {endpoint}: outbound payload contains "
+            f"credential(s) ({', '.join(sorted(set(hits)))}). Remove the secret "
+            f"or route through a local provider."
+        )
+    raise EgressDeniedError(
+        f"Request with sensitivity={request.sensitivity.value} blocked from "
+        f"{endpoint}. Route this through a local provider."
+    )
+
 
 @dataclass
 class ToolCall:
@@ -162,16 +216,17 @@ class StreamChunk:
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
+        # C1-11: only reference fields that exist on StreamChunk. The previous
+        # version referenced tokens_used / latency_ms / timestamp (copied from
+        # CompletionResponse) which StreamChunk does not define → AttributeError.
         return {
             "content": self.content,
             "model": self.model,
             "provider": self.provider,
-            "tokens_used": self.tokens_used,
+            "finish_reason": self.finish_reason,
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
-            "finish_reason": self.finish_reason,
-            "latency_ms": self.latency_ms,
-            "timestamp": self.timestamp.isoformat(),
+            "is_final": self.is_final,
             "metadata": self.metadata,
         }
 

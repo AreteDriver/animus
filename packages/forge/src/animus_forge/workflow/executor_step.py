@@ -113,6 +113,10 @@ class StepExecutionMixin:
                 result.status = StepStatus.SUCCESS
                 result.output = output
                 result.tokens_used = output.get("tokens_used", 0)
+                # C1-1 — carry the cost-weighting breakdown to record_usage().
+                result.model = output.get("model")
+                result.input_tokens = output.get("input_tokens", 0)
+                result.output_tokens = output.get("output_tokens", 0)
                 break
 
             except CircuitBreakerError as e:
@@ -168,6 +172,10 @@ class StepExecutionMixin:
                 result.status = StepStatus.SUCCESS
                 result.output = output
                 result.tokens_used = output.get("tokens_used", 0)
+                # C1-1 — carry the cost-weighting breakdown to record_usage().
+                result.model = output.get("model")
+                result.input_tokens = output.get("input_tokens", 0)
+                result.output_tokens = output.get("output_tokens", 0)
                 break
 
             except CircuitBreakerError as e:

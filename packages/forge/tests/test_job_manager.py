@@ -159,15 +159,26 @@ class TestJobManager:
         assert len(jobs) == 5
 
     def test_cancel_pending_job(self, manager):
-        """cancel() cancels a pending job."""
-        job = manager.submit("test-workflow")
+        """cancel() cancels a pending job.
 
-        result = manager.cancel(job.id)
-        assert result is True
+        Determinism: ``submit()`` schedules ``_execute_workflow`` on the
+        thread pool immediately, so with the instant mock engine the job can
+        race to COMPLETED before/around ``cancel()`` runs (historically flaky:
+        ``assert CANCELLED == COMPLETED``). Stub execution to a no-op so the
+        job stays genuinely pending — the only status writer is ``cancel()``,
+        making the transition PENDING -> CANCELLED order-independent.
+        """
+        with patch.object(manager, "_execute_workflow", return_value=None):
+            job = manager.submit("test-workflow")
+            # No worker ever mutates status, so the job is reliably pending.
+            assert manager.get_job(job.id).status == JobStatus.PENDING
 
-        updated = manager.get_job(job.id)
-        assert updated.status == JobStatus.CANCELLED
-        assert updated.error == "Cancelled by user"
+            result = manager.cancel(job.id)
+            assert result is True
+
+            updated = manager.get_job(job.id)
+            assert updated.status == JobStatus.CANCELLED
+            assert updated.error == "Cancelled by user"
 
     def test_cancel_nonexistent_job(self, manager):
         """cancel() returns False for nonexistent job."""

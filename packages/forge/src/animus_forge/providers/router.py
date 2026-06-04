@@ -10,7 +10,7 @@ import logging
 import os
 import time
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 
 from animus_types import Sensitivity
@@ -127,19 +127,11 @@ class TierRouter:
         # Resolve tier to concrete model for Ollama providers
         resolved_model = self._resolve_tier_to_model(request, decision.provider_name)
         if resolved_model:
-            request = CompletionRequest(
-                prompt=request.prompt,
-                system_prompt=request.system_prompt,
-                model=resolved_model,
-                temperature=request.temperature,
-                max_tokens=request.max_tokens,
-                stop_sequences=request.stop_sequences,
-                metadata=request.metadata,
-                messages=request.messages,
-                model_tier=request.model_tier,
-                agent_id=request.agent_id,
-                workflow_id=request.workflow_id,
-            )
+            # C1-3: rebuild via dataclasses.replace so EVERY field is preserved.
+            # The old explicit-constructor rebuild silently dropped sensitivity
+            # (→ PUBLIC downgrade past the egress tier gate) and tools/tool_choice
+            # (→ broken agentic tool-use) when routing to an Ollama model.
+            request = replace(request, model=resolved_model)
             decision.model = resolved_model
 
         try:
@@ -177,19 +169,11 @@ class TierRouter:
 
         resolved_model = self._resolve_tier_to_model(request, decision.provider_name)
         if resolved_model:
-            request = CompletionRequest(
-                prompt=request.prompt,
-                system_prompt=request.system_prompt,
-                model=resolved_model,
-                temperature=request.temperature,
-                max_tokens=request.max_tokens,
-                stop_sequences=request.stop_sequences,
-                metadata=request.metadata,
-                messages=request.messages,
-                model_tier=request.model_tier,
-                agent_id=request.agent_id,
-                workflow_id=request.workflow_id,
-            )
+            # C1-3: rebuild via dataclasses.replace so EVERY field is preserved.
+            # The old explicit-constructor rebuild silently dropped sensitivity
+            # (→ PUBLIC downgrade past the egress tier gate) and tools/tool_choice
+            # (→ broken agentic tool-use) when routing to an Ollama model.
+            request = replace(request, model=resolved_model)
             decision.model = resolved_model
 
         try:

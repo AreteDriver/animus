@@ -7,16 +7,20 @@ tokens, PII) using a key derived from Settings.secret_key via PBKDF2.
 import base64
 import functools
 import logging
-import os
 
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
+from animus_forge.security.install_salt import get_install_salt
+
 logger = logging.getLogger(__name__)
 
 _ENCRYPTED_PREFIX = "enc:"
-_PBKDF2_SALT = os.environ.get("ENCRYPTION_SALT", "gorgon-field-encryption-v1").encode()
+# Per-install random salt (persisted), not a shared hardcoded constant. The
+# ENCRYPTION_SALT env var still overrides — set it to the legacy
+# "gorgon-field-encryption-v1" to decrypt data encrypted before this change.
+_PBKDF2_SALT = get_install_salt("field_encryption", env_var="ENCRYPTION_SALT")
 _PBKDF2_ITERATIONS = 480_000
 
 

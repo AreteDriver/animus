@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -53,6 +54,13 @@ ET_INPUT_WEIGHT = 1.0
 ET_CACHE_READ_WEIGHT = 0.1
 ET_OUTPUT_WEIGHT = 4.0
 
+# Single base $/1M-token rate at the Sonnet tier (m=1.0), blended input+output.
+# Every model's dollar estimate derives from this × its tier multiplier, so
+# cost estimation and the ET multipliers share ONE source of truth instead of
+# two drifting tables. (Reproduces the prior table: opus m=5 → $45/1M, sonnet
+# → $9/1M, haiku m=0.08 → ~$0.72/1M.)
+BASE_USD_PER_1M_TOKENS = 9.0
+
 
 # Default model-tier multipliers (m), normalised so Sonnet = 1.0. Reflect
 # Anthropic's published price ratios — Haiku is the cheap tier, Opus the
@@ -99,10 +107,12 @@ def effective_tokens(
 ) -> float:
     """The cost-weighted Effective-Tokens value for one usage record.
 
-    ``ET = m × (1.0·I + 0.1·C + 4.0·O)``. When the record carries no
-    breakdown (legacy callers that only pass ``tokens``), we conservatively
-    treat the whole total as output-equivalent so a budget tracked in
-    raw-token terms doesn't undercount the most expensive part of the call.
+    ``ET = m × (1.0·I + 0.1·C + 4.0·O)`` when an input/output breakdown is
+    present. When the record carries no breakdown (callers that only pass
+    ``tokens``), the output weight cannot be applied to cost we never
+    observed, so ET is model-weighted only (``m × tokens``) — neutral for an
+    unknown model. This keeps ET enforcement non-breaking on the executor's
+    raw-only record path while still penalizing a known-expensive tier.
     """
     m = _resolve_model_multiplier(record.model, model_multipliers)
     if record.input_tokens or record.output_tokens or record.cache_read_tokens:
@@ -111,8 +121,12 @@ def effective_tokens(
             + ET_CACHE_READ_WEIGHT * record.cache_read_tokens
             + ET_OUTPUT_WEIGHT * record.output_tokens
         )
-    # No breakdown — treat the rolled-up total as output (worst case).
-    return m * ET_OUTPUT_WEIGHT * record.tokens
+    # No in/out breakdown: apply the model-tier multiplier but NOT the output
+    # weight. We can't claim output cost we didn't observe, so a raw-only
+    # record stays neutral (ET == raw for an unknown model), which keeps ET
+    # enforcement non-breaking on the executor's raw-only record path while
+    # still penalizing a known-expensive tier (e.g. opus, m=5).
+    return m * record.tokens
 
 
 @dataclass
@@ -127,6 +141,15 @@ class BudgetConfig:
     reserve_tokens: int = 5000  # Reserved for retries/overhead
     daily_token_limit: int = 0  # 0 = disabled
     model_multipliers: dict[str, float] | None = None  # None → DEFAULT_MODEL_MULTIPLIERS
+    # Effective-Tokens enforcement. As of the A1 "flip", ET is an ENFORCED
+    # ceiling by default (not reporting-only). ``effective_token_budget``:
+    #   - None  → derive the ceiling from ``total_budget`` (same number, but
+    #             measured in cost-weighted ET; the worse of raw/ET governs)
+    #   - float → explicit ET ceiling
+    # Set ``enforce_effective_tokens=False`` to opt out and get pure raw-token
+    # behavior (escape hatch; the default is enforce).
+    effective_token_budget: float | None = None
+    enforce_effective_tokens: bool = True
 
 
 class BudgetManager:
@@ -157,13 +180,64 @@ class BudgetManager:
         self._usage_history: list[UsageRecord] = []
         self._agent_usage: dict[str, int] = {}
         self._total_used: int = 0
+        # Cost-weighted accumulator, maintained in lockstep with _total_used.
+        # Governs enforcement via effective_ceiling (on by default post-flip).
+        self._total_effective: float = 0.0
+        # Pending reservations from allocate() not yet recorded as used. The
+        # parallel executor runs sub-steps on a thread pool, so check-and-reserve
+        # must be atomic or concurrent steps each pass can_allocate against the
+        # same un-incremented total and collectively overspend (whitepaper #5).
+        self._pending_total: int = 0
+        self._pending_by_agent: dict[str, int] = {}
+        # C8 — cost-weighted reservation mirror of _pending_total, so the
+        # Effective-Tokens ceiling is enforced at ADMISSION (before a step runs)
+        # rather than only post-hoc on the next step. Released alongside the raw
+        # reservation in release().
+        self._pending_effective: float = 0.0
+        self._lock = threading.Lock()
         self._last_status: BudgetStatus = BudgetStatus.OK
 
         if self._backend and self._session_id:
             self._restore_from_db()
 
     def _restore_from_db(self) -> None:
-        """Restore usage state from the database."""
+        """Restore usage state from the database.
+
+        Restores both raw ``_total_used`` and the cost-weighted
+        ``_total_effective`` (migration 020). Falls back to a raw-only restore
+        if the ``effective_tokens`` column is absent (un-migrated DB), so an
+        old database still restores raw usage rather than failing outright.
+        """
+        try:
+            rows = self._backend.fetchall(
+                "SELECT agent_id, SUM(tokens) as total, "
+                "SUM(effective_tokens) as eff "
+                "FROM budget_session_usage WHERE session_id = ? "
+                "GROUP BY agent_id",
+                (self._session_id,),
+            )
+            for row in rows:
+                agent_id = row["agent_id"]
+                tokens = int(row["total"])
+                self._agent_usage[agent_id] = tokens
+                self._total_used += tokens
+                self._total_effective += float(row["eff"] or 0.0)
+        except Exception as e:
+            # C1-13: fall back ONLY for benign "schema not ready" cases — an
+            # un-migrated DB missing the effective_tokens column, or a fresh DB
+            # with no usage table yet. Both delegate to the (also-graceful)
+            # raw-only restore. Any OTHER error (connection, corruption,
+            # programming bug) must propagate, not be masked: a silently-zeroed
+            # restore under-counts prior spend and invites overspend.
+            msg = str(e).lower()
+            if "no such column" in msg or "effective_tokens" in msg or "no such table" in msg:
+                logger.warning("budget restore: schema not ready, raw-only fallback", exc_info=True)
+                self._restore_from_db_raw_only()
+            else:
+                raise
+
+    def _restore_from_db_raw_only(self) -> None:
+        """Fallback restore for databases without the effective_tokens column."""
         try:
             rows = self._backend.fetchall(
                 "SELECT agent_id, SUM(tokens) as total "
@@ -176,17 +250,26 @@ class BudgetManager:
                 tokens = int(row["total"])
                 self._agent_usage[agent_id] = tokens
                 self._total_used += tokens
+                # No persisted ET: neutral fallback (ET == raw), consistent
+                # with the no-breakdown rule.
+                self._total_effective += float(tokens)
         except Exception:
             logger.warning("Failed to restore budget from DB", exc_info=True)
 
-    def _persist_usage(self, agent_id: str, tokens: int, operation: str) -> None:
-        """Persist a usage record to the database."""
+    def _persist_usage(
+        self,
+        agent_id: str,
+        tokens: int,
+        operation: str,
+        effective: float = 0.0,
+    ) -> None:
+        """Persist a usage record (raw + cost-weighted) to the database."""
         try:
             self._backend.execute(
                 "INSERT INTO budget_session_usage "
-                "(session_id, agent_id, tokens, operation) "
-                "VALUES (?, ?, ?, ?)",
-                (self._session_id, agent_id, tokens, operation),
+                "(session_id, agent_id, tokens, operation, effective_tokens) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (self._session_id, agent_id, tokens, operation, effective),
             )
         except Exception:
             logger.warning("Failed to persist budget usage", exc_info=True)
@@ -219,9 +302,48 @@ class BudgetManager:
         return (self._total_used / self.config.total_budget) * 100
 
     @property
+    def effective_used(self) -> float:
+        """Cumulative cost-weighted Effective-Tokens consumed so far."""
+        return self._total_effective
+
+    @property
+    def effective_ceiling(self) -> float:
+        """The active Effective-Tokens ceiling.
+
+        ``inf`` when enforcement is off. Otherwise the explicit
+        ``effective_token_budget`` if set, else derived from ``total_budget``
+        (the A1 default: the same budget number, enforced on the cost-weighted
+        axis so the worse of raw/ET governs).
+        """
+        if not self.config.enforce_effective_tokens:
+            return float("inf")
+        if self.config.effective_token_budget is not None:
+            return self.config.effective_token_budget
+        return float(self.config.total_budget)
+
+    @property
+    def effective_remaining(self) -> float:
+        """Remaining Effective-Tokens, or ``inf`` when ET enforcement is off."""
+        ceiling = self.effective_ceiling
+        if ceiling == float("inf"):
+            return float("inf")
+        return max(0.0, ceiling - self._total_effective)
+
+    @property
     def status(self) -> BudgetStatus:
-        """Get current budget status."""
+        """Get current budget status.
+
+        Governed by the raw-token budget AND the cost-weighted Effective-Tokens
+        ceiling (enforced by default; see ``effective_ceiling``). The
+        more-constrained of the two ratios wins, so an output-heavy or
+        opus-tier run that is cheap in raw tokens but expensive in real cost
+        cannot read OK while overspending.
+        """
         ratio = self._total_used / self.config.total_budget if self.config.total_budget > 0 else 1.0
+
+        et_ceiling = self.effective_ceiling
+        if et_ceiling not in (0.0, float("inf")):
+            ratio = max(ratio, self._total_effective / et_ceiling)
 
         if ratio > 1.0:
             return BudgetStatus.EXCEEDED
@@ -231,27 +353,50 @@ class BudgetManager:
             return BudgetStatus.WARNING
         return BudgetStatus.OK
 
-    def can_allocate(self, tokens: int, agent_id: str = None) -> bool:
-        """Check if tokens can be allocated.
+    def _can_allocate_unlocked(
+        self, tokens: int, agent_id: str | None, effective: float | None = None
+    ) -> bool:
+        """Reservation-aware allocation check. Caller must hold ``_lock``.
 
-        Args:
-            tokens: Number of tokens to allocate
-            agent_id: Optional agent identifier for per-agent limits
+        Counts both recorded usage AND outstanding reservations, so two
+        concurrent callers cannot both pass against the same un-incremented
+        total.
 
-        Returns:
-            True if allocation is possible
+        When ET enforcement is on (the A1 default), the step's cost-weighted
+        Effective-Tokens estimate is checked against the ET ceiling at
+        admission too (C8) — so an output-heavy / expensive-tier step is
+        refused BEFORE it runs, not only caught post-hoc on the next step.
+        ``effective`` defaults to a neutral ``tokens`` (m=1) when the caller
+        has no model breakdown, which is non-breaking: with the derived
+        ceiling == total_budget and unit multipliers it coincides with the raw
+        check, and only tightens once expensive usage has inflated _total_effective.
         """
-        # Check total budget
-        if self._total_used + tokens > self.config.total_budget:
+        committed = self._total_used + self._pending_total
+
+        # Check total budget (used + reserved + this request)
+        if committed + tokens > self.config.total_budget:
             return False
 
-        # Check available (accounting for reserve)
-        if tokens > self.available:
+        # ET ceiling at admission (C8). Estimate this step's ET conservatively
+        # as the raw tokens when no explicit estimate is supplied.
+        ceiling = self.effective_ceiling
+        if ceiling not in (0.0, float("inf")):
+            est = float(tokens) if effective is None else effective
+            if self._total_effective + self._pending_effective + est > ceiling:
+                return False
+
+        # Check available (accounting for reserve buffer + reservations)
+        available = max(0, self.config.total_budget - committed - self.config.reserve_tokens)
+        if tokens > available:
             return False
 
-        # Check per-agent limit
+        # Check per-agent limit (usage + that agent's reservations)
         if agent_id and self.config.per_agent_limit:
-            agent_total = self._agent_usage.get(agent_id, 0) + tokens
+            agent_total = (
+                self._agent_usage.get(agent_id, 0)
+                + self._pending_by_agent.get(agent_id, 0)
+                + tokens
+            )
             if agent_total > self.config.per_agent_limit:
                 return False
 
@@ -261,21 +406,65 @@ class BudgetManager:
 
         return True
 
-    def allocate(self, tokens: int, agent_id: str = None) -> bool:
-        """Attempt to allocate tokens.
+    def can_allocate(
+        self, tokens: int, agent_id: str = None, effective: float | None = None
+    ) -> bool:
+        """Check if tokens can be allocated (reservation- and thread-aware).
 
         Args:
             tokens: Number of tokens to allocate
-            agent_id: Optional agent identifier
+            agent_id: Optional agent identifier for per-agent limits
+            effective: Optional cost-weighted Effective-Tokens estimate for the
+                step; defaults to ``tokens`` when omitted (C8 admission check).
 
         Returns:
-            True if allocation succeeded
+            True if allocation is possible
         """
-        if not self.can_allocate(tokens, agent_id):
-            return False
+        with self._lock:
+            return self._can_allocate_unlocked(tokens, agent_id, effective)
 
-        # Record pending allocation (not yet recorded as used)
-        return True
+    def allocate(self, tokens: int, agent_id: str = None, effective: float | None = None) -> bool:
+        """Atomically check and RESERVE tokens.
+
+        Unlike a bare ``can_allocate`` followed by work, this reserves the
+        tokens under the lock so concurrent callers see each other's pending
+        reservations and cannot collectively overspend. The reservation is
+        freed by :meth:`release` (typically after the matching
+        :meth:`record_usage`), or it leaks toward the safe direction (over-
+        constraining, never overspending).
+
+        ``effective`` reserves cost-weighted ET headroom in lockstep (C8);
+        pass the same value to :meth:`release`. Defaults to ``tokens``.
+
+        Returns:
+            True if reserved, False if the reservation would exceed a limit.
+        """
+        with self._lock:
+            if not self._can_allocate_unlocked(tokens, agent_id, effective):
+                return False
+            self._pending_total += tokens
+            self._pending_effective += float(tokens) if effective is None else effective
+            if agent_id:
+                self._pending_by_agent[agent_id] = self._pending_by_agent.get(agent_id, 0) + tokens
+            return True
+
+    def release(self, tokens: int, agent_id: str = None, effective: float | None = None) -> None:
+        """Release a prior :meth:`allocate` reservation (clamped at zero).
+
+        Pass the same ``effective`` value used at :meth:`allocate` so the ET
+        reservation mirror unwinds symmetrically (defaults to ``tokens``).
+        """
+        with self._lock:
+            self._pending_total = max(0, self._pending_total - tokens)
+            est = float(tokens) if effective is None else effective
+            self._pending_effective = max(0.0, self._pending_effective - est)
+            if agent_id and agent_id in self._pending_by_agent:
+                self._pending_by_agent[agent_id] = max(0, self._pending_by_agent[agent_id] - tokens)
+
+    @property
+    def pending(self) -> int:
+        """Total tokens currently reserved but not yet recorded as used."""
+        return self._pending_total
 
     def record_usage(
         self,
@@ -322,13 +511,17 @@ class BudgetManager:
             model=model,
         )
 
-        self._usage_history.append(record)
-        self._total_used += tokens
-        self._agent_usage[agent_id] = self._agent_usage.get(agent_id, 0) + tokens
+        record_effective = effective_tokens(record, self.config.model_multipliers)
+
+        with self._lock:
+            self._usage_history.append(record)
+            self._total_used += tokens
+            self._total_effective += record_effective
+            self._agent_usage[agent_id] = self._agent_usage.get(agent_id, 0) + tokens
 
         # Persist to database if backend is available
         if self._backend and self._session_id:
-            self._persist_usage(agent_id, tokens, operation)
+            self._persist_usage(agent_id, tokens, operation, record_effective)
 
         # Check for status change
         new_status = self.status
@@ -433,41 +626,41 @@ class BudgetManager:
             },
         }
 
-    def estimate_cost(self, tokens: int, model: str = "claude-3-opus") -> float:
-        """Estimate cost for token usage.
+    def estimate_cost(self, tokens: int, model: str = "claude-sonnet-4-6") -> float:
+        """Rough USD estimate for *undifferentiated* token usage.
+
+        This is a COARSE budget-headroom approximation: tier multiplier
+        (``DEFAULT_MODEL_MULTIPLIERS``) × a single blended base rate, with no
+        input/output split. It shares the tier table with the Effective-Tokens
+        cost model, but it is NOT the authoritative realized cost (C12 — the
+        old docstring falsely claimed to be the "single source of truth").
+
+        For actual per-model, input/output-aware cost accounting use
+        :meth:`animus_forge.metrics.cost_tracker.CostTracker.calculate_cost`,
+        which is the live $-pricing source. An unknown model resolves to the
+        Sonnet-tier multiplier (1.0), consistent with ``effective_tokens``.
 
         Args:
-            tokens: Number of tokens
-            model: Model name for pricing
+            tokens: Number of tokens.
+            model: Model name; resolved through the tier-multiplier table.
 
         Returns:
-            Estimated cost in USD
+            Estimated cost in USD (coarse).
         """
-        # Approximate pricing per 1M tokens (as of late 2024)
-        pricing = {
-            "claude-3-opus": {"input": 15.0, "output": 75.0},
-            "claude-3-sonnet": {"input": 3.0, "output": 15.0},
-            "claude-3-haiku": {"input": 0.25, "output": 1.25},
-            "gpt-4": {"input": 30.0, "output": 60.0},
-            "gpt-4-turbo": {"input": 10.0, "output": 30.0},
-            "gpt-3.5-turbo": {"input": 0.5, "output": 1.5},
-        }
-
-        if model not in pricing:
-            model = "claude-3-opus"  # Default to opus pricing
-
-        # Assume 50/50 input/output split for estimation
-        prices = pricing[model]
-        avg_price = (prices["input"] + prices["output"]) / 2
-        cost = (tokens / 1_000_000) * avg_price
-
+        multiplier = _resolve_model_multiplier(model, self.config.model_multipliers)
+        cost = (tokens / 1_000_000) * BASE_USD_PER_1M_TOKENS * multiplier
         return round(cost, 4)
 
     def reset(self) -> None:
         """Reset budget tracking."""
-        self._usage_history = []
-        self._agent_usage = {}
-        self._total_used = 0
+        with self._lock:
+            self._usage_history = []
+            self._agent_usage = {}
+            self._total_used = 0
+            self._total_effective = 0.0
+            self._pending_total = 0
+            self._pending_effective = 0.0
+            self._pending_by_agent = {}
         self._last_status = BudgetStatus.OK
 
         if self._backend and self._session_id:

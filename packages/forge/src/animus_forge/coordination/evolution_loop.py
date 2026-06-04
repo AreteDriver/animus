@@ -110,6 +110,11 @@ class IterationRecord:
     outcome: str  # "keep" | "discard" | "error"
     rationale: str
     budget_used: int
+    # C11 — whether this iteration ran WITHOUT a real experiment runner, so the
+    # keep/discard verdict is LLM opinion on a non-experiment, not measured
+    # evidence. Persisted to the audit JSONL so a dry run is never mistaken for
+    # evidence after the fact.
+    is_dry_run: bool = False
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
@@ -146,6 +151,10 @@ class EvolutionLoop:
         self._config = config or EvolutionConfig()
         self._experiment_runner = experiment_runner
         self._identity_anchor = identity_anchor
+        # B3: without an injected runner the loop only "dry runs" — its
+        # keep/discard verdicts are then LLM opinion on a non-experiment.
+        # Track and surface that so a dry run is never mistaken for evidence.
+        self._is_dry_run = experiment_runner is None
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
@@ -161,6 +170,12 @@ class EvolutionLoop:
     @property
     def is_running(self) -> bool:
         return self._thread is not None and self._thread.is_alive()
+
+    @property
+    def is_dry_run(self) -> bool:
+        """True when no real experiment runner is injected — keep/discard
+        verdicts are then opinion on a non-experiment, not measured evidence."""
+        return self._is_dry_run
 
     @property
     def iteration_count(self) -> int:
@@ -218,6 +233,7 @@ class EvolutionLoop:
             "total_tokens": self._total_tokens,
             "model": self._config.model,
             "has_better_md": bool(self._better_definition),
+            "is_dry_run": self._is_dry_run,
         }
 
     def run_one(self) -> IterationRecord:
@@ -261,6 +277,7 @@ class EvolutionLoop:
                         outcome="error",
                         rationale="Unhandled exception — see logs",
                         budget_used=0,
+                        is_dry_run=self._is_dry_run,
                     )
                 )
                 self._iteration_count += 1
@@ -276,7 +293,10 @@ class EvolutionLoop:
         """Check budget and threshold conditions."""
         if self._budget.status == BudgetStatus.EXCEEDED:
             return False
-        if self._budget.usage_percent >= self._config.budget_pause_threshold:
+        # C1-9: usage_percent is 0-100; budget_pause_threshold is a 0-1 fraction
+        # (default 0.80 = "pause at 80%"). The old direct comparison paused the
+        # loop at 0.8% usage. Compare on the same 0-1 scale.
+        if self._budget.usage_percent / 100.0 >= self._config.budget_pause_threshold:
             return False
         if not self._budget.can_allocate(self._config.estimated_tokens_per_iteration):
             return False
@@ -315,6 +335,7 @@ class EvolutionLoop:
                             f"violations={drift_result.violations}"
                         ),
                         budget_used=iteration_tokens,
+                        is_dry_run=self._is_dry_run,
                     )
                     self._history.append(record)
                     self._append_audit(record)
@@ -335,6 +356,7 @@ class EvolutionLoop:
                 outcome=eval_data.get("outcome", "discard"),
                 rationale=eval_data.get("rationale", ""),
                 budget_used=iteration_tokens,
+                is_dry_run=self._is_dry_run,
             )
 
             self._history.append(record)
@@ -403,9 +425,15 @@ class EvolutionLoop:
             except Exception as e:
                 return f"Experiment runner error: {e}"
 
-        # Default: dry run — return the plan as the result
-        # Real experiment runners are injected for production use
-        return f"[dry run] Plan executed: {plan}"
+        # Default: dry run — no real experiment was executed. Warn loudly so a
+        # downstream keep/discard is never mistaken for measured evidence
+        # (B3). Inject an experiment_runner — e.g. eval_experiment_runner — for
+        # production use.
+        logger.warning(
+            "EvolutionLoop ran in DRY-RUN mode (no experiment_runner injected); "
+            "the keep/discard verdict is LLM opinion on a non-experiment."
+        )
+        return f"[dry run — NOT a real experiment] Plan: {plan}"
 
     def _evaluate(self, hypothesis_data: dict, experiment_result: str) -> dict[str, Any]:
         """LLM call: evaluate experiment result against better.md."""
@@ -466,6 +494,7 @@ class EvolutionLoop:
             "outcome": record.outcome,
             "rationale": record.rationale,
             "budget_used": record.budget_used,
+            "is_dry_run": record.is_dry_run,
             "timestamp": record.timestamp,
         }
         with open(path, "a") as f:
@@ -515,3 +544,30 @@ class BetterMdMissing(Exception):
 
 class BudgetExhausted(Exception):
     """Raised when evolution cannot proceed due to budget constraints."""
+
+
+def eval_experiment_runner(runner: Any, suite: Any):
+    """Build a REAL experiment runner for :class:`EvolutionLoop` (B3).
+
+    Returns a ``(hypothesis, plan) -> str`` callable that runs an actual eval
+    suite and reports the measured outcome, so the loop's keep/discard verdict
+    is grounded in evidence rather than the dry-run echo. Inject it via
+    ``EvolutionLoop(experiment_runner=eval_experiment_runner(runner, suite))``.
+    """
+
+    def _run(hypothesis: str, plan: str) -> str:
+        result = runner.run(suite)
+        # SuiteResult exposes these directly. The score field is total_score
+        # (the mean across cases); a prior version read a nonexistent
+        # `avg_score`, silently dropping the measured signal (C7).
+        score = getattr(result, "total_score", getattr(result, "avg_score", None))
+        score_str = f"{score:.3f}" if isinstance(score, (int, float)) else "n/a"
+        passed = getattr(result, "passed", 0)
+        total = getattr(result, "total", len(getattr(result, "results", []) or []))
+        return (
+            f"Real experiment: ran eval suite over {total} case(s), "
+            f"{passed}/{total} passed, score={score_str}. "
+            f"Hypothesis under test: {hypothesis}"
+        )
+
+    return _run

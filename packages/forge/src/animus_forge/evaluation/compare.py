@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from .store import EvalStore
@@ -66,6 +66,11 @@ class ComparisonReport:
     regression_flags: list[str] = field(default_factory=list)
     bootstrap_n: int = 1000
 
+    #: Smallest score delta (on the 0-1 scale) considered worth caring about.
+    #: A "not significant" verdict whose CI is wider than this can't rule out a
+    #: meaningful effect — it is underpowered, not evidence of equivalence.
+    MEANINGFUL_EFFECT: ClassVar[float] = 0.05
+
     @property
     def significant(self) -> bool:
         lo, hi = self.score_ci_95
@@ -78,6 +83,63 @@ class ComparisonReport:
         if self.score_delta < 0:
             return "regression"
         return "no-change"
+
+    @property
+    def ci_halfwidth(self) -> float:
+        lo, hi = self.score_ci_95
+        return (hi - lo) / 2
+
+    @property
+    def equivalent(self) -> bool:
+        """True when the WHOLE 95% CI lies within ±MEANINGFUL_EFFECT (C10).
+
+        This is a bounds-based (TOST-style) equivalence test, not a half-width
+        one. Half-width is wrong for an off-center interval: CI [0.01, 0.09]
+        has half-width 0.04 < 0.05 yet fails to rule out a +0.09 effect, so
+        calling it "equivalent" would be false. Equivalence requires both
+        bounds inside the indifference zone.
+        """
+        lo, hi = self.score_ci_95
+        return (
+            (not self.significant) and lo > -self.MEANINGFUL_EFFECT and hi < self.MEANINGFUL_EFFECT
+        )
+
+    @property
+    def underpowered(self) -> bool:
+        """True when 'not significant' really means 'too few cases to tell'.
+
+        A non-significant result that is also not equivalent — i.e. the 95% CI
+        extends beyond ±``MEANINGFUL_EFFECT`` on at least one side — can't
+        exclude a difference worth caring about: absence of evidence, not
+        evidence of absence (roadmap B6, corrected bounds-based in C10).
+        """
+        return (not self.significant) and not self.equivalent
+
+    @property
+    def power_note(self) -> str:
+        """Human-readable power/sample-size advisory; empty when significant."""
+        if self.significant:
+            return ""
+        lo, hi = self.score_ci_95
+        n = min(self.baseline.total_cases, self.candidate.total_cases)
+        if self.underpowered:
+            suggest = max(n * 4, 4)
+            return (
+                f"Underpowered: the 95% CI [{lo:+.3f}, {hi:+.3f}] is wider than "
+                f"±{self.MEANINGFUL_EFFECT:.2f}, so n={n} cases is too few to "
+                f"rule out a meaningful difference — absence of evidence, not "
+                f"evidence of equivalence. ~{suggest} cases would roughly halve "
+                f"the interval."
+            )
+        # Equivalent: both bounds inside the indifference zone. Report the
+        # ACTUAL tightest symmetric envelope the CI fits in, derived from the
+        # bounds — not the fixed threshold (C10).
+        envelope = max(abs(lo), abs(hi))
+        return (
+            f"Not significant and tightly bounded (95% CI [{lo:+.3f}, {hi:+.3f}] "
+            f"within ±{envelope:.3f} ≤ ±{self.MEANINGFUL_EFFECT:.2f}): effectively "
+            f"equivalent on this suite (n={n})."
+        )
 
 
 # =========================================================================
