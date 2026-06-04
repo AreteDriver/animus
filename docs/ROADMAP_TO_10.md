@@ -169,7 +169,7 @@ production**. The primitives are right; the wiring isn't. (29 findings confirmed
       enforced — every new/edited provider is additive risk. **Fix:** funnel all
       providers through one `Provider.complete` wrapper that calls the gate, OR a
       registry-level check at `manager.py:239-259`.
-- [ ] **C1-8** External (non-in-process) integrity check — the deferred half of
+- [x] **C1-8** External (non-in-process) integrity check — the deferred half of
       C13; the self-hash + `ANIMUS_INTEGRITY_OVERRIDE=1` are both bypassable by an
       adversary with env/process control. Larger design item.
 
@@ -389,9 +389,9 @@ isn't. Breaking change, so it gets its own session.
       animus.integrity.cli regenerate`.
 
 ### Session 4 — At-rest + durability (A5, A8)
-- [ ] **A5** finish the gocryptfs vault (PR #67) with the memory store inside it;
+- [x] **A5** finish the gocryptfs vault (PR #67) with the memory store inside it;
       documented recovery; flip ARCHITECTURE/CANON from PLANNED → done.
-- [ ] **A8** `animus export --all` (documented schema) + a timed cold-rebuild
+- [x] **A8** `animus export --all` (documented schema) + a timed cold-rebuild
       that restores state.
 - **Done when:** store is encrypted at rest; a from-scratch rebuild passes.
   D3 → 10, D7 substrate in place.
