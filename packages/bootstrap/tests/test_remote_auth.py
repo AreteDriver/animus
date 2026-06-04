@@ -127,11 +127,35 @@ class TestHttpAuthMiddleware:
         client = TestClient(app, client=("127.0.0.1", 12345))
         assert client.get("/api/health").status_code == 200
 
-    def test_htmx_page_never_blocked(self, restore_config: None) -> None:
+    def test_htmx_page_blocked_for_remote_without_token(self, restore_config: None) -> None:
+        # C92: the HTMX dashboard (bare paths) must NOT be reachable by a remote
+        # client without the token — the old model allowed it, exposing the
+        # config/memory/self-mod pages to the whole tailnet.
         app.state.config = _config(host="0.0.0.0", required="always", token="t0ken")
         client = TestClient(app)  # non-local, no token
-        # Home page is an HTMX route (not /api) — must remain reachable.
-        assert client.get("/").status_code == 200
+        assert client.get("/").status_code == 401
+
+    def test_htmx_page_reachable_locally_and_with_token(self, restore_config: None) -> None:
+        app.state.config = _config(host="0.0.0.0", required="always", token="t0ken")
+        local = TestClient(app, client=("127.0.0.1", 12345))
+        assert local.get("/").status_code == 200
+        remote = TestClient(app)
+        assert remote.get("/", headers={"Authorization": "Bearer t0ken"}).status_code == 200
+
+    def test_bare_sensitive_route_requires_token_for_remote(self, restore_config: None) -> None:
+        # C92 critical #1: dangerous BARE-path routes (no /api prefix) were
+        # unauthenticated for remote clients. They must now require the token.
+        app.state.config = _config(host="0.0.0.0", required="always", token="t0ken")
+        remote = TestClient(app)  # non-local, no token
+        for path in ("/memory/export", "/config", "/tools", "/self-mod"):
+            assert remote.get(path).status_code == 401, f"{path} reachable without token"
+
+    def test_public_paths_reachable_without_token(self, restore_config: None) -> None:
+        # The minimal allowlist — bare liveness probe stays public so monitors
+        # work; everything sensitive is gated above.
+        app.state.config = _config(host="0.0.0.0", required="always", token="t0ken")
+        remote = TestClient(app)  # non-local, no token
+        assert remote.get("/health").status_code == 200
 
 
 # ------------------------------------------------------------------
@@ -165,6 +189,43 @@ class TestWebSocketAuth:
 # ------------------------------------------------------------------
 # Config round-trip
 # ------------------------------------------------------------------
+
+
+class TestMemoryExportRedaction:
+    """C92 critical #2: /memory/export must never serialize secrets."""
+
+    def test_redact_secrets_masks_keys_and_tokens(self) -> None:
+        from animus_bootstrap.dashboard.routers.memory import _redact_secrets
+
+        dumped = {
+            "api": {"anthropic_key": "sk-secret", "openai_key": "sk-other"},
+            "forge": {"api_key": "forge-secret"},
+            "services": {
+                "auth_token": "the-token",
+                "tls_key": "/k.pem",
+                "vapid_private_key": "PEMDATA",
+                "vapid_public_key": "PUBLIC-OK",  # shared with browser — keep
+                "max_response_tokens": 4096,  # int budget — keep
+                "host": "0.0.0.0",
+            },
+        }
+        out = _redact_secrets(dumped)
+        assert out["api"]["anthropic_key"] == "***redacted***"
+        assert out["api"]["openai_key"] == "***redacted***"
+        assert out["forge"]["api_key"] == "***redacted***"
+        assert out["services"]["auth_token"] == "***redacted***"
+        assert out["services"]["tls_key"] == "***redacted***"
+        assert out["services"]["vapid_private_key"] == "***redacted***"
+        # Non-secrets preserved.
+        assert out["services"]["vapid_public_key"] == "PUBLIC-OK"
+        assert out["services"]["max_response_tokens"] == 4096
+        assert out["services"]["host"] == "0.0.0.0"
+        # No secret value survives anywhere in the structure.
+        import json
+
+        blob = json.dumps(out)
+        for secret in ("sk-secret", "sk-other", "forge-secret", "the-token", "PEMDATA"):
+            assert secret not in blob
 
 
 class TestServicesConfigRoundTrip:
