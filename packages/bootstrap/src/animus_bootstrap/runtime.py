@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -55,6 +56,8 @@ class AnimusRuntime:
         self.context_adapter: ContextAdapter | None = None
         self._mcp_bridge: MCPBridge | None = None
         self._channels: dict[str, Any] = {}
+        self.push_store: Any = None
+        self._message_logger: Any = None
 
     @property
     def config(self) -> AnimusConfig:
@@ -93,6 +96,13 @@ class AnimusRuntime:
         session_db = data_dir / "sessions.db"
         self.session_manager = SessionManager(session_db)
         logger.info("Session manager initialized: %s", session_db)
+
+        # Web Push subscription store (subscriptions persist across restarts;
+        # actual delivery is best-effort and gated on configured VAPID keys).
+        from animus_bootstrap.intelligence.push_store import PushSubscriptionStore
+
+        self.push_store = PushSubscriptionStore(data_dir / "push.db")
+        logger.info("Push subscription store initialized")
 
         # 2. Cognitive backend
         self.cognitive_backend = self._create_cognitive_backend()
@@ -350,6 +360,27 @@ class AnimusRuntime:
             self.router._system_prompt = new_config.gateway.system_prompt
             logger.info("Router system prompt updated")
 
+    async def _maybe_push(self, text: str) -> None:
+        """Best-effort Web Push of a proactive nudge to subscribed devices.
+
+        No-ops unless a subscription store, VAPID keys, and at least one
+        subscription are present. Delivery runs in a thread since pywebpush
+        is synchronous.
+        """
+        store = self.push_store
+        svc = self._config.services
+        if store is None or not svc.vapid_private_key:
+            return
+        try:
+            if store.count() == 0:
+                return
+            from animus_bootstrap.intelligence.push_sender import PushSender
+
+            sender = PushSender(store, svc.vapid_private_key, svc.vapid_subject)
+            await asyncio.to_thread(sender.send, "Animus", text)
+        except Exception:
+            logger.warning("Push notification delivery failed", exc_info=True)
+
     async def stop(self) -> None:
         """Gracefully shut down all components."""
         if not self._started:
@@ -423,6 +454,16 @@ class AnimusRuntime:
         if self.session_manager is not None:
             self.session_manager.close()
             logger.info("Session manager closed")
+
+        if getattr(self, "push_store", None) is not None:
+            self.push_store.close()
+            self.push_store = None
+            logger.info("Push subscription store closed")
+
+        if getattr(self, "_message_logger", None) is not None:
+            self._message_logger.close()
+            self._message_logger = None
+            logger.info("Gateway message logger closed")
 
         self._started = False
         logger.info("Animus runtime stopped")
@@ -640,8 +681,44 @@ class AnimusRuntime:
         if total:
             logger.info("Imported %d tools from %d MCP servers", total, len(server_names))
 
+    def _create_gateway_middleware(self) -> dict[str, Any]:
+        """Build optional gateway middleware from config (open/off by default)."""
+        from animus_bootstrap.gateway.middleware.auth import GatewayAuthMiddleware
+        from animus_bootstrap.gateway.middleware.logging import MessageLogger
+        from animus_bootstrap.gateway.middleware.ratelimit import RateLimiter
+
+        cfg = self._config.gateway
+
+        auth: GatewayAuthMiddleware | None = None
+        if cfg.allowlist:
+            auth = GatewayAuthMiddleware()
+            for entry in cfg.allowlist:
+                channel, _, sender_id = entry.partition(":")
+                if channel and sender_id:
+                    auth.add_allowed(channel, sender_id)
+
+        rate_limiter: RateLimiter | None = None
+        if cfg.rate_limit_max_tokens > 0:
+            rate_limiter = RateLimiter(
+                max_tokens=cfg.rate_limit_max_tokens,
+                refill_rate=cfg.rate_limit_refill_rate,
+            )
+
+        message_logger: MessageLogger | None = None
+        if cfg.message_log:
+            self._message_logger = MessageLogger(self._config.get_data_path() / "gateway_log.db")
+            message_logger = self._message_logger
+
+        return {
+            "auth": auth,
+            "rate_limiter": rate_limiter,
+            "message_logger": message_logger,
+        }
+
     def _create_router(self) -> Any:
         """Create message router -- intelligent if components are available."""
+        middleware = self._create_gateway_middleware()
+
         if (
             self.memory_manager
             or self.tool_executor
@@ -660,6 +737,7 @@ class AnimusRuntime:
                 persona_engine=self.persona_engine,
                 context_adapter=self.context_adapter,
                 identity_manager=self.identity_manager,
+                **middleware,
             )
 
         from animus_bootstrap.gateway.router import MessageRouter
@@ -667,6 +745,7 @@ class AnimusRuntime:
         return MessageRouter(
             cognitive=self.cognitive_backend,
             session_manager=self.session_manager,
+            **middleware,
         )
 
     def _create_persona_engine(self) -> Any:
@@ -795,6 +874,7 @@ class AnimusRuntime:
         async def send_nudge(text: str, channels: list[str]) -> None:
             if self.router:
                 await self.router.broadcast(text, channels)
+            await self._maybe_push(text)
 
         self._outcome_store = OutcomeStore(outcomes_db)
         logger.info("Proactive outcome store initialized: %s", outcomes_db)

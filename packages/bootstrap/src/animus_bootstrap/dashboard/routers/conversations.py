@@ -49,3 +49,36 @@ async def get_messages(limit: int = 50) -> JSONResponse:
     messages = get_message_store()
     recent = list(reversed(messages[-limit:]))
     return JSONResponse(content=recent)
+
+
+@router.get("/api/conversations/history")
+async def get_history(request: Request, limit: int = 50) -> JSONResponse:
+    """Return persisted conversation history for the PWA.
+
+    Reads from the runtime's :class:`SessionManager` (the durable
+    ``gateway_messages`` table) and returns items in chronological order
+    shaped to match the PWA's ``WSMessage`` type. Falls back to an empty
+    list when the runtime/session manager is unavailable.
+    """
+    runtime = getattr(request.app.state, "runtime", None)
+    session_manager = getattr(runtime, "session_manager", None) if runtime else None
+    if session_manager is None:
+        return JSONResponse(content=[])
+
+    limit = max(1, min(limit, 200))
+    messages = await session_manager.get_recent_messages(limit)
+
+    # get_recent_messages returns newest-first; reverse for display order.
+    items = [
+        {
+            "id": msg.id,
+            "channel": msg.channel,
+            "text": msg.text,
+            "timestamp": msg.timestamp.isoformat(),
+            "sender": "animus" if msg.role == "assistant" else msg.sender_name,
+            "role": msg.role,
+            "metadata": msg.metadata,
+        }
+        for msg in reversed(messages)
+    ]
+    return JSONResponse(content=items)
