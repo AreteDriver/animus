@@ -331,9 +331,22 @@ class TestBudgetEnforcement:
             loop.run_one()
 
     def test_budget_threshold_halts_loop(self, mock_provider, mock_budget, tmp_better, tmp_audit):
-        mock_budget.usage_percent = 0.85  # above 0.80 threshold
+        # C1-9: usage_percent is 0-100; the 0.80 threshold is a fraction. 85%
+        # usage → halt. (The old test set 0.85, i.e. 0.85%, and only "passed"
+        # because the buggy comparison fired far too early.)
+        mock_budget.usage_percent = 85.0  # 85% > 80% threshold
         loop = _make_loop(mock_provider, mock_budget, tmp_better, tmp_audit)
         assert loop._can_continue() is False
+
+    def test_budget_below_threshold_continues(
+        self, mock_provider, mock_budget, tmp_better, tmp_audit
+    ):
+        # C1-9 regression: 50% usage must NOT halt (the old unit bug paused at
+        # 0.8% usage, i.e. almost immediately).
+        mock_budget.usage_percent = 50.0  # 50% < 80% threshold
+        mock_budget.can_allocate.return_value = True
+        loop = _make_loop(mock_provider, mock_budget, tmp_better, tmp_audit)
+        assert loop._can_continue() is True
 
     def test_budget_exceeded_halts_loop(self, mock_provider, mock_budget, tmp_better, tmp_audit):
         from animus_forge.budget.manager import BudgetStatus

@@ -14,7 +14,9 @@ legitimate prose sent to an LLM.
 
 from __future__ import annotations
 
+import math
 import re
+from collections import Counter
 from re import Pattern
 
 # Red-team-hardened (2026-05-26) credential patterns. Names are stable; callers
@@ -46,12 +48,62 @@ _COMPILED: list[tuple[str, Pattern[str]]] = [
 ]
 
 
-def scan_for_secrets(text: str) -> list[str]:
+# C1-6 — prefixless-secret heuristic. Every pattern above is prefix-anchored
+# (sk-ant-, AKIA, AIza, ghp_…), so a high-entropy key with NO recognizable
+# prefix (a raw 40-char API token, a base64 secret) slips through. The entropy
+# detector below catches those. The bar is deliberately conservative to avoid
+# false-positive egress blocks on legitimate content:
+#   - length >= 32 (short tokens are too ambiguous)
+#   - Shannon entropy >= 4.0 bits/char (excludes repetitive / low-variety runs)
+#   - >= 3 character classes present (lower AND upper AND digit)
+# The 3-class rule exempts the common benign high-entropy tokens that would
+# otherwise false-positive: hex SHAs / git hashes (lower+digit only), UUIDs
+# (hyphen-split, lower+digit), all-upper or all-lower IDs.
+# RESIDUAL LIMIT: a base64 blob of binary (mixed case+digit) IS flagged — that
+# is intentional (treat an unexplained high-entropy blob bound for a cloud LLM
+# as possible exfil), but callers sending legitimate base64 should tag the
+# request's sensitivity rather than rely on PUBLIC + content scan.
+_HE_TOKEN = re.compile(r"[A-Za-z0-9+/=_\-]{32,}")
+_HE_MIN_ENTROPY = 4.0
+
+
+def _shannon_entropy(s: str) -> float:
+    if not s:
+        return 0.0
+    n = len(s)
+    return -sum((c / n) * math.log2(c / n) for c in Counter(s).values())
+
+
+def find_high_entropy_tokens(text: str) -> list[str]:
+    """Return tokens that look like prefixless secrets (see bar above)."""
+    hits: list[str] = []
+    for tok in _HE_TOKEN.findall(text):
+        if _shannon_entropy(tok) < _HE_MIN_ENTROPY:
+            continue
+        classes = (
+            any(c.islower() for c in tok)
+            + any(c.isupper() for c in tok)
+            + any(c.isdigit() for c in tok)
+        )
+        if classes >= 3:
+            hits.append(tok)
+    return hits
+
+
+def scan_for_secrets(text: str, *, include_high_entropy: bool = True) -> list[str]:
     """Return the names of any credential patterns found in ``text``.
 
     Empty list means no credential was detected. Names (not values) are
     returned so a caller can log/deny without echoing the secret.
+
+    ``include_high_entropy`` (C1-6, default on) also flags prefixless
+    high-entropy tokens as ``"high_entropy_token"`` — set False for callers
+    that legitimately carry high-entropy data and gate on the sensitivity tier
+    instead.
     """
     if not text:
         return []
-    return [name for name, rx in _COMPILED if rx.search(text)]
+    names = [name for name, rx in _COMPILED if rx.search(text)]
+    if include_high_entropy and find_high_entropy_tokens(text):
+        names.append("high_entropy_token")
+    return names

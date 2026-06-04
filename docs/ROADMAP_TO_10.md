@@ -156,16 +156,16 @@ production**. The primitives are right; the wiring isn't. (29 findings confirmed
       **Fix:** add the same gate the other cloud providers got in C2/C3.
 
 **Security residue (review + qwen agree):**
-- [ ] **C1-5** The 5 concrete cloud-provider modules (anthropic/openai/azure/
+- [x] **C1-5** The 5 concrete cloud-provider modules (anthropic/openai/azure/
       bedrock/vertex `_provider.py`) are NOT in the integrity tracked-set — only
       `providers.base`/`router` are (C5 residual). Tampering a provider's own
       `_check_request_egress` passes boot detection. **Fix:** add them to
       `_TRACKED_MODULES_OPTIONAL`.
-- [ ] **C1-6** Credential DLP is all prefix-anchored (`sk-ant-`, `AKIA`, `AIza`…)
+- [x] **C1-6** Credential DLP is all prefix-anchored (`sk-ant-`, `AKIA`, `AIza`…)
       so prefixless/high-entropy secrets pass the content scan — content-DLP is
       defense-in-depth behind the tier tag, but the gap is real. **Fix:** add a
       shannon-entropy heuristic for long tokens; document residual limits.
-- [ ] **C1-7** Egress enforcement is per-provider convention, not structurally
+- [x] **C1-7** Egress enforcement is per-provider convention, not structurally
       enforced — every new/edited provider is additive risk. **Fix:** funnel all
       providers through one `Provider.complete` wrapper that calls the gate, OR a
       registry-level check at `manager.py:239-259`.
@@ -174,23 +174,23 @@ production**. The primitives are right; the wiring isn't. (29 findings confirmed
       adversary with env/process control. Larger design item.
 
 **Correctness / quality (lower severity, real):**
-- [ ] **C1-9** `evolution_loop.py:296` compares a 0-100 percent against a 0.80
+- [x] **C1-9** `evolution_loop.py:296` compares a 0-100 percent against a 0.80
       fraction (budget-pause threshold unit mismatch).
-- [ ] **C1-10** `PersistentBudgetManager.add_usage` (persistence.py:201-228) is a
+- [x] **C1-10** `PersistentBudgetManager.add_usage` (persistence.py:201-228) is a
       non-atomic read-modify-write — concurrent spend updates are lost.
-- [ ] **C1-11** `StreamChunk.to_dict()` (base.py:217-230) references non-existent
+- [x] **C1-11** `StreamChunk.to_dict()` (base.py:217-230) references non-existent
       attributes → `AttributeError` if ever called.
-- [ ] **C1-12** `cost_audit.py:170-177` empty-history path uses naive `datetime`
+- [x] **C1-12** `cost_audit.py:170-177` empty-history path uses naive `datetime`
       → `TypeError` against tz-aware `UsageRecord` timestamps. Persisted budget
       timestamps are also naive local (persistence.py:105,170,224,250).
-- [ ] **C1-13** `BudgetManager._restore_from_db` (manager.py:225) catches all
+- [x] **C1-13** `BudgetManager._restore_from_db` (manager.py:225) catches all
       exceptions and silently retries raw-only — masks real schema/backend bugs.
 
 **E2E coverage gaps (the review's e2e dimension):**
 - [x] **C1-14** No e2e proving a sensitive payload is *blocked at egress during a
       real workflow run* (only unit-level egress tests exist). With C1-1/C1-2
       fixed, add it — it's the test that would have caught this whole cluster.
-- [ ] **C1-15** Budget-EXCEEDED halting a *real* workflow is never tested (only
+- [x] **C1-15** Budget-EXCEEDED halting a *real* workflow is never tested (only
       the dry-run estimate gate); checkpoint/resume e2e doesn't cover
       resume-after-real-crash with partial AI work.
 

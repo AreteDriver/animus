@@ -184,6 +184,17 @@ class TestCrossPackageTracking:
         assert "module:animus_forge.network.egress" in keys
         assert "module:animus_forge.providers.base" in keys
         assert "module:animus_forge.providers.router" in keys
+        # C1-5 — each concrete cloud provider carries its OWN _check_request_egress;
+        # all must be hashed so tampering one provider's gate is detected at boot.
+        for prov in (
+            "anthropic_provider",
+            "openai_provider",
+            "azure_openai_provider",
+            "bedrock_provider",
+            "vertex_provider",
+            "llamacpp_provider",
+        ):
+            assert f"module:animus_forge.providers.{prov}" in keys
 
     def test_module_drift_trips_verify(self, fake_tree, monkeypatch):
         pkg_root, data_dir = fake_tree

@@ -65,6 +65,16 @@ _TRACKED_MODULES_OPTIONAL: tuple[str, ...] = (
     "animus_forge.network.egress",
     "animus_forge.providers.base",
     "animus_forge.providers.router",
+    # C1-5 — the concrete cloud providers each carry their OWN
+    # ``_check_request_egress`` + call sites; C5 tracked only base/router, so
+    # tampering a single provider's gate (e.g. making it a no-op) still passed
+    # boot detection. Track all five so any provider's egress logic is hashed.
+    "animus_forge.providers.anthropic_provider",
+    "animus_forge.providers.openai_provider",
+    "animus_forge.providers.azure_openai_provider",
+    "animus_forge.providers.bedrock_provider",
+    "animus_forge.providers.vertex_provider",
+    "animus_forge.providers.llamacpp_provider",
 )
 
 
