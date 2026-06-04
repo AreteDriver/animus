@@ -70,7 +70,10 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-core-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: pip install -e "packages/core/[dev,api]"
+        # animus-types is a sibling pip-installable package and is not
+        # published to PyPI — pip resolves it from the local path when
+        # both -e targets are part of the same install transaction.
+        run: pip install -e packages/types/ -e "packages/core/[dev,api]"
 
       - name: Test with coverage
         run: pytest packages/core/tests/ -v --tb=short --cov=animus --cov-report=term-missing
@@ -101,6 +104,30 @@ jobs:
       - name: Test with coverage
         run: PYTHONPATH=packages/quorum/python pytest packages/quorum/tests/ -v --tb=short
 
+  test-types:
+    name: Test Types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-types-${{ hashFiles('packages/types/pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-types-
+
+      - name: Install dependencies
+        run: pip install -e "packages/types/[dev]"
+
+      - name: Test with coverage
+        run: pytest packages/types/tests/ -v --tb=short --cov=animus_types --cov-report=term-missing
+
   test-forge:
     name: Test Forge
     runs-on: ubuntu-latest
@@ -120,7 +147,10 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-forge-
 
       - name: Install dependencies
-        run: pip install -e "packages/forge/[dev]"
+        # animus-types is a sibling pip-installable package and is not
+        # published to PyPI — pip resolves it from the local path when
+        # both -e targets are part of the same install transaction.
+        run: pip install -e packages/types/ -e "packages/forge/[dev]"
 
       - name: Test with coverage
         working-directory: packages/forge
@@ -178,7 +208,7 @@ jobs:
           fetch-depth: 0
 
       - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -186,7 +216,7 @@ jobs:
     name: Benchmarks
     runs-on: ubuntu-latest
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
-    needs: [test-core, test-quorum, test-forge, test-bootstrap, security]
+    needs: [test-core, test-quorum, test-types, test-forge, test-bootstrap, security]
     permissions:
       contents: write
     steps:
@@ -206,6 +236,7 @@ jobs:
 
       - name: Install all packages
         run: |
+          pip install -e packages/types/
           pip install -e "packages/quorum/[dev]"
           pip install -e "packages/forge/[dev]"
           pip install -e "packages/core/[dev,api]"

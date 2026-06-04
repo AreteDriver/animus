@@ -132,7 +132,20 @@ class TestRecallScrubsOnEgress:
         result = _run(srv.call_tool("animus_search_tags", {"tags": "secrets"}))
         text = result[0][0].text
         assert "ghp_" not in text
-        assert "REDACTED:github_token" in text
+        # PR #61 added ``credential_label_separated`` (catches ``api
+        # token ghp_…`` from position 0) which wins the span merge over
+        # ``github_token`` for label-prefixed test strings. Removal of
+        # the secret is the invariant; the classifier label that wins
+        # the merge is bookkeeping.
+        assert "REDACTED:" in text
+        assert any(
+            f"REDACTED:{label}" in text
+            for label in (
+                "github_token",
+                "credential_label_separated",
+                "credential_label_camelcase",
+            )
+        )
 
     def test_brief_scrubs_legacy_secret(self, server):
         srv, mock_memory = server

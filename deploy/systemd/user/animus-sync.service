@@ -1,0 +1,14 @@
+[Unit]
+Description=Animus memory sync — push Claude Code context to ChromaDB
+Wants=network-online.target
+After=network-online.target
+OnFailure=animus-sync-fail.service
+
+[Service]
+Type=oneshot
+Nice=10
+ExecStart=%h/projects/animus/packages/core/.venv/bin/python %h/projects/animus/tools/animus_sync.py --quiet
+# Clear the failure marker on a successful run (ExecStartPost runs only if ExecStart succeeded)
+ExecStartPost=-/usr/bin/rm -f %h/.animus/sync.FAILED
+StandardOutput=journal
+StandardError=journal

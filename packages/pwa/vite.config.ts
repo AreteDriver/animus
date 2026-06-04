@@ -7,6 +7,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      // Custom service worker (src/sw.ts) so we can handle Web Push while
+      // keeping Workbox precaching for offline support.
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
       includeAssets: ["favicon.svg"],
       manifest: {
         name: "Animus",
@@ -18,6 +23,13 @@ export default defineConfig({
         orientation: "portrait",
         scope: "/",
         start_url: "/",
+        // OS share sheet → opens the app at start_url with the shared text as
+        // query params; App.tsx routes that into the Capture view.
+        share_target: {
+          action: "/",
+          method: "GET",
+          params: { title: "title", text: "text", url: "url" },
+        },
         icons: [
           {
             src: "icon-192.png",
@@ -31,18 +43,8 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,svg,png}"],
-        runtimeCaching: [
-          {
-            urlPattern: /^https?:\/\/localhost:7700\/api\/.*/i,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "api-cache",
-              expiration: { maxEntries: 50, maxAgeSeconds: 300 },
-            },
-          },
-        ],
       },
     }),
   ],

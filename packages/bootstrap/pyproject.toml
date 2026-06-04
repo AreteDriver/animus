@@ -58,6 +58,7 @@ discord = ["discord.py>=2.3"]
 slack = ["slack-bolt>=1.18"]
 matrix = ["matrix-nio>=0.24"]
 email = ["aiosmtplib>=3.0"]
+push = ["pywebpush>=2.0"]
 all-channels = [
     "python-telegram-bot>=22.0",
     "discord.py>=2.3",

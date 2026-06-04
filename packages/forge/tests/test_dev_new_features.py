@@ -6,7 +6,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from click.exceptions import Exit
+from typer import Exit
 
 
 class TestDoTaskStreamingProgress:
@@ -97,7 +97,7 @@ class TestDoTaskStreamingProgress:
 
     def test_dry_run_exits(self):
         """--dry-run shows plan and exits."""
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.commands.dev import do_task
 

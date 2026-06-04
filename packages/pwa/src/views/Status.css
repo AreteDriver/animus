@@ -77,3 +77,25 @@
   font-size: 13px;
   line-height: 1.5;
 }
+
+.status-toggle {
+  padding: 6px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--bg-input);
+  background: var(--bg-input);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.status-toggle--on {
+  background: var(--success);
+  color: var(--bg);
+  border-color: var(--success);
+}
+
+.status-toggle:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
+
+import pytest
 
 from animus.redteam.driver import (
     CATEGORIES,
@@ -17,6 +20,17 @@ from animus.redteam.driver import (
     _probe_pi,
     _probe_tier_escape,
     write_report,
+)
+
+# ``_probe_forge_sandbox`` does a lazy ``from animus_forge.self_improve.safety
+# import …`` — fine when forge is installed alongside core, but in CI's Test
+# Core matrix forge is *not* installed (each package job installs only its
+# own deps to keep core installable standalone). Gate the two tests that hit
+# that codepath on the import being resolvable.
+_FORGE_AVAILABLE = importlib.util.find_spec("animus_forge") is not None
+_skip_if_no_forge = pytest.mark.skipif(
+    not _FORGE_AVAILABLE,
+    reason="animus_forge not installed — cross-package probe test skipped",
 )
 
 
@@ -62,6 +76,7 @@ class TestProbeEgressSmuggle:
         assert "blocked=True" in observed
 
 
+@_skip_if_no_forge
 class TestProbeForgeSandbox:
     def test_unsafe_path_flagged(self):
         blocked, observed = _probe_forge_sandbox("/etc/shadow")

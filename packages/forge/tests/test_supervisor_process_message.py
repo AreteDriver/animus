@@ -231,7 +231,7 @@ class TestGetSupervisor:
     )
     def test_exits_on_provider_failure(self, mock_create):
         """get_supervisor exits cleanly if provider creation fails."""
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.helpers import get_supervisor
 

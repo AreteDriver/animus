@@ -1,6 +1,14 @@
+> ⚠️ **SUPERSEDED (2026-06-02).** Retained for history only. This v2.0 paper
+> describes a "production deployment" (the ~480-videos/month Media Engine and a
+> 5-platform Marketing Engine) that has **no implementing code in this repository**,
+> and security guarantees (Ed25519-signed memory, AES-256 at rest) that are **not
+> implemented**. Do not cite it. The current, code-grounded paper is
+> [`whitepapers/ANIMUS_WHITEPAPER_2026-06.md`](whitepapers/ANIMUS_WHITEPAPER_2026-06.md).
+> See [`CANON.md`](CANON.md) for document status.
+
 # Animus: A Three-Layer Architecture for Personal AI Sovereignty
 
-**Whitepaper v2.0 — February 2026**
+**Whitepaper v2.0 — February 2026 — SUPERSEDED, see banner above**
 **Author: ARETE (AreteDriver)**
 
 ---

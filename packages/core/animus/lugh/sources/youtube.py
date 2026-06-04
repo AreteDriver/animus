@@ -24,6 +24,7 @@ import shutil
 import subprocess
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 
 from animus.lugh.sources.base import SourceItem
@@ -131,35 +132,46 @@ class YouTubeSource:
             )
             return
         n = limit if limit is not None else self.list_limit
-        for video_id, title in self._list_videos(n):
-            item = self._to_item(video_id, title)
+        for video_id, title, published in self._list_videos(n):
+            item = self._to_item(video_id, title, published)
             if item is not None:
                 yield item
 
     # -- internals -----------------------------------------------------------
 
-    def _list_videos(self, limit: int) -> list[tuple[str, str]]:
-        """Return ``(video_id, title)`` for the channel's most recent videos."""
+    def _list_videos(self, limit: int) -> list[tuple[str, str, datetime | None]]:
+        """Return ``(video_id, title, published)`` for the most recent videos.
+
+        Resolves each video's metadata (not ``--flat-playlist``) so we can
+        emit ``upload_date`` alongside id/title. yt-dlp prints
+        ``%(upload_date)s`` as ``YYYYMMDD`` for normal uploads and ``NA`` for
+        videos without a fixed upload timestamp (live, premiere, members-only).
+        """
         url = f"https://www.youtube.com/{self.channel}/videos"
         cmd = [
             YT_DLP_BIN,
-            "--flat-playlist",
             "--playlist-end",
             str(max(1, limit)),
+            "--skip-download",
             "--print",
-            "%(id)s\t%(title)s",
+            "%(id)s\t%(title)s\t%(upload_date)s",
             url,
         ]
         out = _run(cmd, timeout=LIST_TIMEOUT_SECONDS)
-        rows: list[tuple[str, str]] = []
+        rows: list[tuple[str, str, datetime | None]] = []
         for line in (out or "").splitlines():
-            vid, _, title = line.partition("\t")
-            vid = vid.strip()
-            if vid:
-                rows.append((vid, title.strip()))
+            parts = line.split("\t")
+            if len(parts) < 2:
+                continue
+            vid = parts[0].strip()
+            if not vid:
+                continue
+            title = parts[1].strip()
+            published = _parse_upload_date(parts[2]) if len(parts) > 2 else None
+            rows.append((vid, title, published))
         return rows
 
-    def _to_item(self, video_id: str, title: str) -> SourceItem | None:
+    def _to_item(self, video_id: str, title: str, published: datetime | None) -> SourceItem | None:
         if not video_id:
             return None
         watch_url = f"https://www.youtube.com/watch?v={video_id}"
@@ -171,7 +183,7 @@ class YouTubeSource:
             item_id=video_id,
             title=title or video_id,
             url=watch_url,
-            published=None,  # --flat-playlist does not surface upload_date
+            published=published,
             summary=_truncate(body_for_summary, SUMMARY_CHARS),
             author=self.show_name or None,
             tags=list(self.tags),
@@ -246,7 +258,7 @@ def probe_channel(channel: str) -> dict:
     return {
         "ok": bool(rows),
         "video_count": len(rows),
-        "sample_titles": [t for _, t in rows],
+        "sample_titles": [t for _, t, _ in rows],
         "error": "" if rows else "channel not found or has no videos tab",
     }
 
@@ -287,3 +299,14 @@ def _truncate(text: str, limit: int) -> str:
     if len(text) <= limit:
         return text
     return text[:limit].rsplit(" ", 1)[0] + "…"
+
+
+def _parse_upload_date(raw: str) -> datetime | None:
+    """Parse yt-dlp's ``%(upload_date)s`` (``YYYYMMDD`` or ``NA``) to UTC datetime."""
+    s = (raw or "").strip()
+    if not s or s == "NA":
+        return None
+    try:
+        return datetime.strptime(s, "%Y%m%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None

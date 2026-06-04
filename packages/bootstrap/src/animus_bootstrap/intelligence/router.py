@@ -8,6 +8,9 @@ from datetime import UTC, datetime
 from typing import Any
 
 from animus_bootstrap.gateway.cognitive import CognitiveBackend
+from animus_bootstrap.gateway.middleware.auth import GatewayAuthMiddleware
+from animus_bootstrap.gateway.middleware.logging import MessageLogger
+from animus_bootstrap.gateway.middleware.ratelimit import RateLimiter
 from animus_bootstrap.gateway.models import GatewayMessage, GatewayResponse
 from animus_bootstrap.gateway.router import MessageRouter
 from animus_bootstrap.gateway.session import SessionManager
@@ -47,8 +50,17 @@ class IntelligentRouter(MessageRouter):
         persona_engine: PersonaEngine | None = None,
         context_adapter: ContextAdapter | None = None,
         identity_manager: Any | None = None,
+        auth: GatewayAuthMiddleware | None = None,
+        rate_limiter: RateLimiter | None = None,
+        message_logger: MessageLogger | None = None,
     ) -> None:
-        super().__init__(cognitive, session_manager)
+        super().__init__(
+            cognitive,
+            session_manager,
+            auth=auth,
+            rate_limiter=rate_limiter,
+            message_logger=message_logger,
+        )
         self._memory = memory
         self._tools = tools
         self._automations = automations
@@ -61,6 +73,11 @@ class IntelligentRouter(MessageRouter):
 
     async def handle_message(self, message: GatewayMessage) -> GatewayResponse:
         """Enhanced message handling with memory + tools + automations."""
+        # 0. Inbound middleware — log, authorize, rate-limit (may short-circuit)
+        blocked = self._check_inbound(message)
+        if blocked is not None:
+            return blocked
+
         self._interaction_count += 1
 
         # 1. Check automations first (may short-circuit)
@@ -130,7 +147,9 @@ class IntelligentRouter(MessageRouter):
             except Exception:
                 logger.exception("Memory store failed")
 
-        return GatewayResponse(text=response_text, channel=message.channel)
+        response = GatewayResponse(text=response_text, channel=message.channel)
+        self._log_outbound(response, message.channel)
+        return response
 
     def _build_system_prompt(
         self,

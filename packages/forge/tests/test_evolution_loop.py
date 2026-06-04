@@ -278,6 +278,45 @@ class TestSingleIteration:
         assert len(loop.history) == 1
         assert loop.history[0].iteration == 0
 
+    def test_dry_run_stamped_on_record_and_audit(
+        self, mock_provider, mock_budget, tmp_better, tmp_audit
+    ):
+        """C11: no experiment_runner → is_dry_run=True must reach BOTH the
+        returned IterationRecord and the persisted audit JSONL, so a dry run is
+        never mistaken for measured evidence after the fact."""
+        mock_provider.complete.side_effect = [
+            _make_hypothesis_response(),
+            _make_eval_response(),
+        ]
+        loop = _make_loop(mock_provider, mock_budget, tmp_better, tmp_audit)
+        assert loop.is_dry_run is True
+        record = loop.run_one()
+        assert record.is_dry_run is True
+        entry = json.loads(tmp_audit.read_text().strip().splitlines()[0])
+        assert entry["is_dry_run"] is True
+
+    def test_real_runner_not_marked_dry_run(
+        self, mock_provider, mock_budget, tmp_better, tmp_audit
+    ):
+        """C11: with a real experiment_runner injected, is_dry_run=False flows
+        to the record + audit entry."""
+        mock_provider.complete.side_effect = [
+            _make_hypothesis_response(),
+            _make_eval_response(),
+        ]
+        loop = _make_loop(
+            mock_provider,
+            mock_budget,
+            tmp_better,
+            tmp_audit,
+            experiment_runner=lambda hypothesis, plan: "ran a real experiment",
+        )
+        assert loop.is_dry_run is False
+        record = loop.run_one()
+        assert record.is_dry_run is False
+        entry = json.loads(tmp_audit.read_text().strip().splitlines()[0])
+        assert entry["is_dry_run"] is False
+
 
 # ---------------------------------------------------------------------------
 # Tests: Budget enforcement
@@ -292,9 +331,22 @@ class TestBudgetEnforcement:
             loop.run_one()
 
     def test_budget_threshold_halts_loop(self, mock_provider, mock_budget, tmp_better, tmp_audit):
-        mock_budget.usage_percent = 0.85  # above 0.80 threshold
+        # C1-9: usage_percent is 0-100; the 0.80 threshold is a fraction. 85%
+        # usage → halt. (The old test set 0.85, i.e. 0.85%, and only "passed"
+        # because the buggy comparison fired far too early.)
+        mock_budget.usage_percent = 85.0  # 85% > 80% threshold
         loop = _make_loop(mock_provider, mock_budget, tmp_better, tmp_audit)
         assert loop._can_continue() is False
+
+    def test_budget_below_threshold_continues(
+        self, mock_provider, mock_budget, tmp_better, tmp_audit
+    ):
+        # C1-9 regression: 50% usage must NOT halt (the old unit bug paused at
+        # 0.8% usage, i.e. almost immediately).
+        mock_budget.usage_percent = 50.0  # 50% < 80% threshold
+        mock_budget.can_allocate.return_value = True
+        loop = _make_loop(mock_provider, mock_budget, tmp_better, tmp_audit)
+        assert loop._can_continue() is True
 
     def test_budget_exceeded_halts_loop(self, mock_provider, mock_budget, tmp_better, tmp_audit):
         from animus_forge.budget.manager import BudgetStatus
@@ -353,7 +405,9 @@ class TestExperimentRunner:
         ]
         loop = _make_loop(mock_provider, mock_budget, tmp_better, tmp_audit)
         record = loop.run_one()
-        assert "[dry run]" in record.experiment_summary
+        # B3: the dry-run result is now explicitly labeled "NOT a real experiment".
+        assert "dry run" in record.experiment_summary.lower()
+        assert loop.is_dry_run is True
 
 
 # ---------------------------------------------------------------------------
@@ -522,3 +576,61 @@ class TestIterationRecord:
         assert record.iteration == 0
         assert record.outcome == "keep"
         assert record.timestamp  # auto-generated
+
+
+class TestB3ExperimentRunner:
+    """B3: injected runner drives the result; dry-run is flagged, not silent."""
+
+    def _loop(self, runner=None):
+        from unittest.mock import MagicMock
+
+        from animus_forge.budget.manager import BudgetConfig, BudgetManager
+        from animus_forge.coordination.evolution_loop import EvolutionLoop
+
+        return EvolutionLoop(
+            provider=MagicMock(),
+            budget_manager=BudgetManager(BudgetConfig(total_budget=10_000)),
+            experiment_runner=runner,
+        )
+
+    def test_no_runner_is_dry_run(self):
+        loop = self._loop(runner=None)
+        assert loop.is_dry_run is True
+        assert loop.status()["is_dry_run"] is True
+        # The dry-run result is clearly labeled as NOT a real experiment.
+        out = loop._run_experiment("h", "p")
+        assert "NOT a real experiment" in out
+
+    def test_injected_runner_is_used(self):
+        calls = []
+
+        def runner(hypothesis, plan):
+            calls.append((hypothesis, plan))
+            return "measured: 9/10 passed"
+
+        loop = self._loop(runner=runner)
+        assert loop.is_dry_run is False
+        result = loop._run_experiment("my-hyp", "my-plan")
+        assert result == "measured: 9/10 passed"
+        assert calls == [("my-hyp", "my-plan")]
+
+    def test_eval_experiment_runner_factory(self):
+        # C7: test against a REAL SuiteResult, not a MagicMock — the prior
+        # version passed only because the mock fabricated an `avg_score` the
+        # real type does not have, masking that the measured score was dropped.
+        from unittest.mock import MagicMock
+
+        from animus_forge.coordination.evolution_loop import eval_experiment_runner
+        from animus_forge.evaluation.runner import SuiteResult
+
+        result = SuiteResult(suite=MagicMock(), passed=8, failed=2, total_score=0.873)
+        runner = MagicMock()
+        runner.run.return_value = result
+
+        real = eval_experiment_runner(runner, suite=MagicMock())
+        out = real("hyp", "plan")
+        runner.run.assert_called_once()
+        # The measured total_score (0.873) actually reaches the report string.
+        assert "0.873" in out and "score=n/a" not in out
+        assert "8/10 passed" in out  # total = passed+failed = 10
+        assert "Real experiment" in out

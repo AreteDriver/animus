@@ -52,6 +52,14 @@ dependencies = [
     "cryptography>=46.0.5,<47",
     "textual>=8.0.0,<9",
     "convergentai>=1.1.0,<2",
+    # Shared types — sibling package in the monorepo. Editable-installed
+    # from ``packages/types/`` during development; satisfied by pip's
+    # local resolution when ``packages/types/`` is part of the same
+    # ``pip install -e ...`` invocation. Hard requirement: every
+    # ``from animus_types import Sensitivity`` site in forge (router,
+    # providers/base, network/egress, intelligence/cross_workflow_memory)
+    # would crash without it.
+    "animus-types>=0.1.0,<1",
 ]
 
 [project.optional-dependencies]
@@ -93,6 +101,16 @@ ignore = ["E501", "UP042", "UP046", "UP047"]  # UP042: StrEnum, UP046/UP047: PEP
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+filterwarnings = [
+    # The Settings security validator correctly warns at runtime when
+    # SECRET_KEY / DATABASE_URL use dev defaults. That is intended app
+    # behavior; in the test env it is just noise. Message-matched (not a
+    # blanket UserWarning ignore) so genuinely new UserWarnings still surface.
+    # NOTE: pytest splits filter specs on ':', so the message regex must not
+    # contain a literal colon. The '.' after "Security" matches the real ": ".
+    "ignore:Security. SECRET_KEY is using insecure default:UserWarning",
+    "ignore:Security. DATABASE_URL is using default SQLite path:UserWarning",
+]
 
 [tool.coverage.run]
 source = ["src/animus_forge"]

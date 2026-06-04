@@ -1,12 +1,23 @@
 /** API client for Animus Bootstrap dashboard backend. */
 
+import { AuthError, clearToken, getToken } from "./auth";
+
 const BASE = "/api";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...((options?.headers as Record<string, string>) ?? {}),
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  if (res.status === 401) {
+    clearToken();
+    window.dispatchEvent(new Event("animus:unauthorized"));
+    throw new AuthError();
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(`${res.status}: ${text}`);
@@ -45,6 +56,7 @@ export type WSMessage = {
   text: string;
   timestamp: string;
   sender: string;
+  role?: string;
   metadata: Record<string, unknown>;
 };
 
@@ -57,7 +69,9 @@ export function connectChat(onMessage: OnWSMessage): {
   getPendingCount: () => number;
 } {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
-  const ws = new WebSocket(`${proto}//${location.host}/ws/chat`);
+  const token = getToken();
+  const query = token ? `?token=${encodeURIComponent(token)}` : "";
+  const ws = new WebSocket(`${proto}//${location.host}/ws/chat${query}`);
   const pending: string[] = [];
 
   ws.onopen = () => {
@@ -88,6 +102,11 @@ export function connectChat(onMessage: OnWSMessage): {
     getState: () => ws.readyState,
     getPendingCount: () => pending.length,
   };
+}
+
+// Conversation history (persisted server-side)
+export async function getHistory(limit = 50): Promise<WSMessage[]> {
+  return request(`/conversations/history?limit=${limit}`);
 }
 
 // Personas
@@ -121,5 +140,33 @@ export async function submitFeedback(rating: number, messageText: string): Promi
   await request("/feedback", {
     method: "POST",
     body: JSON.stringify({ rating, message_text: messageText }),
+  });
+}
+
+// Quick capture
+export async function captureNote(text: string): Promise<{ ok: boolean; message: string }> {
+  return request("/capture", {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
+}
+
+// Web Push
+export async function getVapidPublicKey(): Promise<string> {
+  const res = await request<{ publicKey: string }>("/push/vapid-public-key");
+  return res.publicKey;
+}
+
+export async function subscribePush(subscription: PushSubscriptionJSON): Promise<void> {
+  await request("/push/subscribe", {
+    method: "POST",
+    body: JSON.stringify({ subscription }),
+  });
+}
+
+export async function unsubscribePush(endpoint: string): Promise<void> {
+  await request("/push/unsubscribe", {
+    method: "POST",
+    body: JSON.stringify({ endpoint }),
   });
 }

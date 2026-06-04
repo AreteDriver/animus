@@ -8,6 +8,8 @@ Examples:
     python -m animus.lugh.sources.cli recent --source hn:front_page --limit 10
     python -m animus.lugh.sources.cli add-podcast all-in https://... --name "All-In"
     python -m animus.lugh.sources.cli add-youtube @AIDailyBrief --name "The AI Daily Brief"
+    python -m animus.lugh.sources.cli add-search agent_infra '"agent runtime" OR "MCP server"' \
+        --categories news --time-range week --tags ai-infra,core
     python -m animus.lugh.sources.cli probe-youtube @LatentSpacePod
     python -m animus.lugh.sources.cli remove podcast:all-in
     python -m animus.lugh.sources.cli explain <source_id> <item_id>
@@ -24,6 +26,7 @@ from animus.lugh.sources.base import SourceCache
 from animus.lugh.sources.podcasts import probe_feed
 from animus.lugh.sources.registry import (
     add_podcast,
+    add_search,
     add_youtube,
     instantiate,
     load_registry,
@@ -158,6 +161,23 @@ def cmd_add_youtube(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_add_search(args: argparse.Namespace) -> int:
+    tags = [t.strip() for t in (args.tags or "").split(",") if t.strip()]
+    ok = add_search(
+        query_id=args.query_id,
+        query=args.query,
+        categories=args.categories or "",
+        time_range=args.time_range or "",
+        tags=tags,
+        path=args.registry,
+    )
+    if not ok:
+        print(f"search:{args.query_id} already exists", file=sys.stderr)
+        return 1
+    print(f"added search:{args.query_id} -> {args.query!r}")
+    return 0
+
+
 def cmd_probe_youtube(args: argparse.Namespace) -> int:
     result = probe_channel(args.channel)
     print(json.dumps(result, indent=2))
@@ -251,6 +271,23 @@ def main(argv: list[str] | None = None) -> int:
         help="List videos only; don't download auto-captions",
     )
     sub_add_yt.set_defaults(func=cmd_add_youtube)
+
+    sub_add_search = sub.add_parser(
+        "add-search", help="Register a standing web-search query (SearXNG)"
+    )
+    sub_add_search.add_argument("query_id", help="Unique key, e.g. agent_infra")
+    sub_add_search.add_argument("query", help='Search string, e.g. \'"agent runtime" OR "MCP"\'')
+    sub_add_search.add_argument(
+        "--categories", default=None, help="SearXNG categories, e.g. news,science"
+    )
+    sub_add_search.add_argument(
+        "--time-range",
+        default=None,
+        dest="time_range",
+        help="Recency filter: day, week, month, year",
+    )
+    sub_add_search.add_argument("--tags", default=None, help="Comma-separated tags")
+    sub_add_search.set_defaults(func=cmd_add_search)
 
     sub_probe_yt = sub.add_parser("probe-youtube", help="Validate a YouTube channel handle")
     sub_probe_yt.add_argument("channel")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import typer
@@ -10,6 +11,71 @@ from rich.table import Table
 from ..helpers import console
 
 eval_app = typer.Typer(help="Agent evaluation and benchmarking")
+
+
+def _ensure_provider_for_model(model: str | None) -> None:
+    """Idempotently register a provider from env when one is missing.
+
+    The provider stack only auto-populates if something explicitly calls
+    ``manager.register()``. ``eval run`` historically only worked in
+    ``--mock`` mode because of this. When the user passes ``--model`` and
+    a matching ``*_API_KEY`` is present in the environment, register the
+    appropriate provider and set it as default. Safe to call repeatedly
+    — bails out if a default is already configured.
+    """
+    from animus_forge.providers import get_manager
+    from animus_forge.providers.base import ProviderConfig, ProviderType
+
+    manager = get_manager()
+    if manager.get_default() is not None:
+        return
+
+    # Highest precedence: ANIMUS_SOVEREIGNTY_BASE_URL points at a
+    # llama-server instance (built from llama.cpp source). When set,
+    # both UUT (via adapter) and rubric judge route through the local
+    # endpoint — no cloud dependency. This is the path that loads
+    # qwen35moe models ollama's vendored llama.cpp can't handle (ollama
+    # issue #15898).
+    sovereignty_url = os.environ.get("ANIMUS_SOVEREIGNTY_BASE_URL")
+    if sovereignty_url:
+        base = sovereignty_url.rstrip("/")
+        if not base.endswith("/v1"):
+            base = base + "/v1"
+        manager.register(
+            name="llamacpp",
+            config=ProviderConfig(
+                provider_type=ProviderType.LLAMACPP,
+                base_url=base,
+                api_key="sk-no-key-required",
+                default_model=model or "qwen3.6-research",
+            ),
+            set_default=True,
+        )
+        return
+
+    candidates: list[tuple[str, ProviderType, str]] = []
+    name = (model or "").lower()
+    if "claude" in name or "anthropic" in name:
+        candidates = [("anthropic", ProviderType.ANTHROPIC, "ANTHROPIC_API_KEY")]
+    elif "gpt" in name or "openai" in name or name.startswith("o1") or name.startswith("o3"):
+        candidates = [("openai", ProviderType.OPENAI, "OPENAI_API_KEY")]
+    else:
+        # No model hint — try Anthropic first (project's primary), then OpenAI.
+        candidates = [
+            ("anthropic", ProviderType.ANTHROPIC, "ANTHROPIC_API_KEY"),
+            ("openai", ProviderType.OPENAI, "OPENAI_API_KEY"),
+        ]
+
+    for provider_name, ptype, key_env in candidates:
+        api_key = os.environ.get(key_env)
+        if api_key:
+            manager.register(
+                name=provider_name,
+                provider_type=ptype,
+                api_key=api_key,
+                set_default=True,
+            )
+            return
 
 
 @eval_app.command("run")
@@ -39,6 +105,13 @@ def eval_run(
 ) -> None:
     """Run an evaluation suite against an agent."""
     from animus_forge.evaluation.loader import SuiteLoader
+
+    # Bootstrap the provider stack from env once. Both the adapter (for
+    # UUT calls) and the rubric judge (for LLMJudgeMetric) read from the
+    # same singleton, so a single registration here serves both. Skipped
+    # for --mock since mock mode never touches the provider stack.
+    if not mock:
+        _ensure_provider_for_model(model)
 
     # Load suite
     loader = SuiteLoader(Path(suites_dir) if suites_dir else None)
@@ -155,6 +228,26 @@ def eval_run(
     # Swap suite metrics for rubric-built metrics if rubric is in use
     if rubric is not None:
         provider_for_metrics = None if mock else getattr(evaluator, "provider", None)
+        # Adapter-mode evaluators don't carry a .provider attr — without one,
+        # LLMJudgeMetric scores 0.5 on every dim. Stand up a separate judge
+        # provider from --model when the caller explicitly opted into a
+        # rubric (i.e. they want real scoring).
+        if provider_for_metrics is None and adapter and not mock:
+            try:
+                from animus_forge.providers import get_provider
+
+                judge_provider = get_provider()
+                if model:
+                    judge_provider.config.default_model = model
+                provider_for_metrics = judge_provider
+                console.print(
+                    f"[dim]Judge provider: {model or judge_provider.config.default_model}[/dim]"
+                )
+            except Exception as e:
+                console.print(
+                    f"[yellow]Warning:[/yellow] judge provider unavailable ({e}); "
+                    "rubric will score 0.5 on every dim."
+                )
         eval_suite.metrics = rubric.build_metrics(provider_for_metrics)
         console.print(
             f"[dim]Applying rubric: {rubric.name}@{rubric.version} ({len(rubric.dims)} dims)[/dim]"
@@ -174,12 +267,23 @@ def eval_run(
             case_result.rubric_band = rubric.band_for(composite)
 
     from animus_forge.evaluation.failure_taxonomy import tag_results
+    from animus_forge.evaluation.failure_taxonomy_content import (
+        tag_content_failures,
+    )
 
     bucket_counts = tag_results(result.results)
     non_pass_buckets = {k: v for k, v in bucket_counts.items() if k != "passed"}
     if non_pass_buckets:
         summary = ", ".join(f"{k}:{v}" for k, v in sorted(non_pass_buckets.items()))
         console.print(f"[dim]Failure buckets: {summary}[/dim]")
+
+    # Content failure taxonomy (F1-F8). Populates
+    # result.metadata["content_failure_modes"] so `eval compare`'s
+    # content-delta tables have data instead of always reading empty.
+    content_counts = tag_content_failures(result.results)
+    if content_counts:
+        content_summary = ", ".join(f"{k}:{v}" for k, v in sorted(content_counts.items()))
+        console.print(f"[dim]Content failures: {content_summary}[/dim]")
 
     # Report
     from animus_forge.evaluation.reporters import ConsoleReporter
@@ -398,6 +502,11 @@ def _render_comparison(report) -> None:  # noqa: ANN001 — Rich console renderi
         f"[{sig_color}][{ci_lo:+.3f}, {ci_hi:+.3f}][/{sig_color}] "
         f"({report.bootstrap_n} resamples, {sig_label})"
     )
+    # B6 — power/sample-size advisory so "not significant" on a small suite
+    # isn't misread as "no difference".
+    if report.power_note:
+        color = "yellow" if report.underpowered else "dim"
+        console.print(f"[{color}]{report.power_note}[/{color}]")
 
     # Failure buckets (technical taxonomy)
     if report.failure_delta:

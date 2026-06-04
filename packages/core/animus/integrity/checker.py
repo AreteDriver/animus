@@ -38,7 +38,72 @@ _TRACKED_RELATIVE_PATHS: tuple[str, ...] = (
     "network/egress.py",
     "mcp_server.py",
     "audit/egress_log.py",
+    # A6 — the checker must hash itself (tampering it would otherwise defeat
+    # detection) and the immutable learning guardrails.
+    "integrity/checker.py",
+    "learning/guardrails.py",
 )
+
+# A6 — cross-package critical-path modules. Core's ``network/egress.py`` is now
+# a re-export shim; the REAL egress + DLP logic lives in ``animus_types``, so
+# hashing the shim alone is useless. Resolved via importlib (they live outside
+# the core package). REQUIRED ones must be present; OPTIONAL forge adopters are
+# hashed only when forge is installed in the running interpreter.
+_TRACKED_MODULES_REQUIRED: tuple[str, ...] = (
+    "animus_types.egress",
+    "animus_types.secrets",
+)
+_TRACKED_MODULES_OPTIONAL: tuple[str, ...] = (
+    "animus_forge.providers.openrouter_provider",
+    "animus_forge.security.pi_wrap",
+    # C5 — the forge-side egress enforcement surface. A6 hashed the OpenRouter
+    # provider but left the modules that actually gate every cloud call
+    # untracked: the egress allow/deny engine, the content-aware DLP helper +
+    # ``CompletionRequest.scannable_text`` (providers.base), and the
+    # sensitivity-aware model router (providers.router / TierRouter). Tampering
+    # any of these silently disables the boundary, so they must be in baseline.
+    "animus_forge.network.egress",
+    "animus_forge.providers.base",
+    "animus_forge.providers.router",
+    # C1-5 — the concrete cloud providers each carry their OWN
+    # ``_check_request_egress`` + call sites; C5 tracked only base/router, so
+    # tampering a single provider's gate (e.g. making it a no-op) still passed
+    # boot detection. Track all five so any provider's egress logic is hashed.
+    "animus_forge.providers.anthropic_provider",
+    "animus_forge.providers.openai_provider",
+    "animus_forge.providers.azure_openai_provider",
+    "animus_forge.providers.bedrock_provider",
+    "animus_forge.providers.vertex_provider",
+    "animus_forge.providers.llamacpp_provider",
+)
+
+
+def _module_file(mod: str) -> Path | None:
+    """Resolve an importable module to its source file, or None if absent."""
+    import importlib.util
+
+    try:
+        spec = importlib.util.find_spec(mod)
+    except (ImportError, ValueError):
+        return None
+    if spec is None or not spec.origin or spec.origin == "built-in":
+        return None
+    return Path(spec.origin)
+
+
+def tracked_module_hashes() -> dict[str, str]:
+    """Hash the cross-package tracked modules. Required-missing raises."""
+    out: dict[str, str] = {}
+    for mod in _TRACKED_MODULES_REQUIRED:
+        path = _module_file(mod)
+        if path is None or not path.is_file():
+            raise FileNotFoundError(f"Tracked module missing: {mod}")
+        out[f"module:{mod}"] = _hash_file(path)
+    for mod in _TRACKED_MODULES_OPTIONAL:
+        path = _module_file(mod)
+        if path is not None and path.is_file():
+            out[f"module:{mod}"] = _hash_file(path)
+    return out
 
 
 def _animus_pkg_root() -> Path:
@@ -49,9 +114,14 @@ def _animus_pkg_root() -> Path:
 
 
 def tracked_files(root: Path | None = None) -> list[Path]:
-    """Return the absolute paths of every tracked file."""
+    """Return the absolute paths of every tracked file (relative + modules)."""
     base = root or _animus_pkg_root()
-    return [base / rel for rel in _TRACKED_RELATIVE_PATHS]
+    paths = [base / rel for rel in _TRACKED_RELATIVE_PATHS]
+    for mod in (*_TRACKED_MODULES_REQUIRED, *_TRACKED_MODULES_OPTIONAL):
+        mod_path = _module_file(mod)
+        if mod_path is not None:
+            paths.append(mod_path)
+    return paths
 
 
 def _hash_file(path: Path) -> str:
@@ -75,6 +145,8 @@ def compute_current(root: Path | None = None) -> dict[str, str]:
         if not path.is_file():
             raise FileNotFoundError(f"Tracked file missing: {path}")
         out[rel] = _hash_file(path)
+    # Cross-package modules resolve via importlib (independent of ``root``).
+    out.update(tracked_module_hashes())
     return out
 
 
@@ -115,7 +187,8 @@ def regenerate_baseline(
         "schema_version": 1,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "note": note,
-        "tracked_files": _TRACKED_RELATIVE_PATHS,
+        # Every tracked key (relative paths + ``module:*`` entries).
+        "tracked_files": sorted(current.keys()),
         "hashes": current,
     }
     path = baseline_path(baseline_dir)

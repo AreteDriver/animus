@@ -1,0 +1,6 @@
+[Unit]
+Description=Animus sync failure handler — surface the failure (marker + notify)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/animus-sync-notify.sh

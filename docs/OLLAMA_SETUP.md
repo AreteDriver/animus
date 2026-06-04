@@ -87,9 +87,12 @@ Three-layer architecture:
 - **Forge**: Multi-agent orchestration engine. YAML-defined workflows, token budgets, quality gates, SQLite checkpoint/resume. Provider-agnostic.
 - **Swarm**: Stigmergic coordination protocol. Agents read shared intent graph and self-adjust. No supervisor bottleneck. O(n) reads vs O(n²) messages.
 
-Active workload: Media Engine — 3 YouTube channels (Story Fire folklore, New Eden Whispers EVE lore, Holmes Wisdom), 8 languages each, ~480 videos/month autonomous production.
-
-Marketing Engine: Autonomous content posting to Twitter/X, LinkedIn, Reddit, YouTube, TikTok with weekly batch approval. Includes Internet Archive public domain film repurposing and AI video generation (Kling/Sora).
+Planned workload (design target, NOT a current deployment): a Media Engine
+(3 YouTube channels, 8 languages, ~480 videos/month) and a Marketing Engine
+were the motivating examples in early design docs. Neither has implementing
+code in this repo. The actually-exercised local-inference workloads today are
+developer and fleet-ops oriented (code-review, fleet-incident-triage,
+security-audit, red-team generation). See [`CANON.md`](CANON.md).
 
 ### BenchGoblins (Fantasy Sports Decision Engine)
 Pricing: Free / Pro $6-9/mo or $39/season / League $59-99/season (league-centric model).

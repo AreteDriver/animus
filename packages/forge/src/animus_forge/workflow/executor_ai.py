@@ -13,6 +13,26 @@ from .loader import StepConfig
 logger = logging.getLogger(__name__)
 
 
+def _resolve_sensitivity(value: object):
+    """C1-2 — coerce a step's ``sensitivity`` param to a Sensitivity enum.
+
+    Accepts a Sensitivity, a tier name ("confidential", "secret", "personal",
+    "public", case-insensitive), or None → PUBLIC default. An unrecognized
+    string fails CLOSED to SECRET so a typo can never silently widen egress.
+    """
+    from animus_types import Sensitivity
+
+    if isinstance(value, Sensitivity):
+        return value
+    if value is None:
+        return Sensitivity.PUBLIC
+    try:
+        return Sensitivity[str(value).strip().upper()]
+    except KeyError:
+        logger.warning("Unknown sensitivity %r — failing closed to SECRET", value)
+        return Sensitivity.SECRET
+
+
 class AIHandlersMixin:
     """Mixin providing AI provider step handlers.
 
@@ -261,12 +281,19 @@ class AIHandlersMixin:
 
         from animus_forge.providers.base import CompletionRequest
 
+        # C1-2 — carry the step's declared sensitivity so the egress tier gate
+        # actually sees it. Without this every executor-issued request defaulted
+        # to PUBLIC, making the CONFIDENTIAL/SECRET tier gate inert on the
+        # workflow path. Accepts a Sensitivity enum or a tier-name string.
+        sensitivity = _resolve_sensitivity(step.params.get("sensitivity"))
+
         request = CompletionRequest(
             prompt=prompt,
             system_prompt=system_prompt or "You are a helpful assistant.",
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
+            sensitivity=sensitivity,
         )
 
         try:
@@ -280,11 +307,15 @@ class AIHandlersMixin:
         response_text = response.content
         estimated_tokens = response.tokens_used or (len(response_text) // 4 + len(prompt) // 4)
 
+        # C1-1 — surface the real model + input/output split so record_usage()
+        # computes cost-weighted Effective-Tokens instead of collapsing to raw.
         output = {
             "model": response.model or model or "ollama",
             "prompt": prompt,
             "response": response_text,
             "tokens_used": estimated_tokens,
+            "input_tokens": response.input_tokens,
+            "output_tokens": response.output_tokens,
         }
 
         # Store output in memory
