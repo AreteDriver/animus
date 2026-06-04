@@ -30,6 +30,10 @@ dependencies = [
     "pydantic>=2.6.0,<3",
     "rich>=13.7.0,<15",
     "prompt-toolkit>=3.0.43,<4",
+    # ed25519 signing/verification for the integrity baseline (C1-8). Used by
+    # animus.integrity.checker to sign the baseline at regenerate time and
+    # verify the detached signature before trusting it at daemon boot.
+    "cryptography>=42.0,<46",
     # Shared types — sibling package in the monorepo. Editable-installed
     # from ``packages/types/`` during development; satisfied by pip's
     # local resolution when ``packages/types/`` is part of the same

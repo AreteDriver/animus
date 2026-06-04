@@ -30,6 +30,16 @@ class IntegrityNotInitializedError(RuntimeError):
     """Raised when the baseline file is missing and override isn't set."""
 
 
+class IntegritySignatureError(RuntimeError):
+    """Raised when the baseline's detached signature is missing or invalid.
+
+    C1-8: the baseline is signed with an ed25519 key at regenerate time and the
+    signature is verified before the manifest is trusted. A present-but-invalid
+    or missing-yet-expected signature means the baseline was tampered with (or
+    forged by someone without the private key) — fail closed.
+    """
+
+
 # Critical-path files — relative to the animus package root.
 # Each path is resolved against ``Path(animus.__file__).parent`` at runtime
 # so tests can target a synthetic tree without hardcoded absolute paths.
@@ -170,13 +180,146 @@ def baseline_path(baseline_dir: Path) -> Path:
     return Path(baseline_dir) / "integrity-baseline.json"
 
 
+# ---------------------------------------------------------------------------
+# C1-8 — ed25519 detached signature over the baseline manifest.
+#
+# The in-process hash self-check is defeatable by anyone who can also rewrite
+# the manifest (regenerate a self-consistent baseline). Signing the manifest
+# with an ed25519 private key the operator holds OFFLINE closes that: a tamper
+# requires re-signing, which needs the private key. Verification uses only the
+# public key, which can stay on the box.
+#
+# Key files live in the baseline dir:
+#   integrity-signing.key  — PRIVATE (0600). Generated once; the operator is
+#                            warned to back it up and move it OFF the box for
+#                            full protection (on-box it still raises the bar
+#                            vs. no signature, but an attacker with full box
+#                            access could re-sign).
+#   integrity-signing.pub  — PUBLIC. Used to verify; safe to keep on-box.
+#   integrity-baseline.json.sig — detached signature over the manifest bytes.
+# ---------------------------------------------------------------------------
+
+
+def signing_key_path(baseline_dir: Path) -> Path:
+    return Path(baseline_dir) / "integrity-signing.key"
+
+
+def public_key_path(baseline_dir: Path) -> Path:
+    return Path(baseline_dir) / "integrity-signing.pub"
+
+
+def signature_path(baseline_dir: Path) -> Path:
+    return Path(baseline_dir) / "integrity-baseline.json.sig"
+
+
+def _load_ed25519():
+    try:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+            Ed25519PrivateKey,
+            Ed25519PublicKey,
+        )
+    except ImportError as e:  # pragma: no cover - dep is declared in core
+        raise IntegritySignatureError(
+            "The `cryptography` package is required for signed integrity "
+            "baselines (C1-8). Install animus-core with its dependencies."
+        ) from e
+    return serialization, Ed25519PrivateKey, Ed25519PublicKey
+
+
+def _ensure_signing_key(baseline_dir: Path):
+    """Return the ed25519 private key, generating + persisting it on first use.
+
+    The private key is written 0600 and the operator is loudly warned to move
+    it off the box. The public key is written alongside for verification.
+    """
+    serialization, Ed25519PrivateKey, _ = _load_ed25519()  # noqa: N806 — class, not a var
+    priv_path = signing_key_path(baseline_dir)
+    pub_path = public_key_path(baseline_dir)
+    if priv_path.is_file():
+        priv = serialization.load_pem_private_key(priv_path.read_bytes(), password=None)
+    else:
+        priv = Ed25519PrivateKey.generate()
+        priv_path.parent.mkdir(parents=True, exist_ok=True)
+        priv_path.write_bytes(
+            priv.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+        )
+        priv_path.chmod(0o600)
+        logger.warning(
+            "Generated a new integrity signing key at %s. BACK IT UP OFFLINE "
+            "and remove it from this box for full tamper-evidence — on-box, an "
+            "attacker with file access could re-sign a tampered baseline.",
+            priv_path,
+        )
+    # (Re)write the public key so it always matches the private key.
+    pub = priv.public_key()
+    pub_path.write_bytes(
+        pub.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+    )
+    return priv
+
+
+def _sign_manifest_bytes(baseline_dir: Path, manifest_bytes: bytes) -> None:
+    """Sign the exact manifest bytes and write the detached signature."""
+    priv = _ensure_signing_key(baseline_dir)
+    sig = priv.sign(manifest_bytes)
+    signature_path(baseline_dir).write_bytes(sig)
+
+
+def _verify_manifest_signature(baseline_dir: Path, manifest_bytes: bytes) -> None:
+    """Verify the detached signature over ``manifest_bytes``.
+
+    Policy (fail-closed when a key is present):
+      - public key + valid signature → OK.
+      - public key present, signature missing/invalid → IntegritySignatureError.
+      - no public key on disk → un-migrated baseline; warn and allow (the next
+        ``regenerate`` creates the keypair and starts signing). This keeps
+        pre-C1-8 installs bootable while making signing the default going forward.
+    """
+    serialization, _, _ = _load_ed25519()
+    from cryptography.exceptions import InvalidSignature
+
+    pub_path = public_key_path(baseline_dir)
+    sig_path = signature_path(baseline_dir)
+    if not pub_path.is_file():
+        logger.warning(
+            "Integrity baseline is UNSIGNED (no %s). Run "
+            "`python -m animus.integrity.cli regenerate` to start signing it.",
+            pub_path.name,
+        )
+        return
+    if not sig_path.is_file():
+        raise IntegritySignatureError(
+            f"Integrity baseline has a public key but no signature ({sig_path}). "
+            "The baseline may have been tampered with. Regenerate it from an "
+            "attested-clean tree, or investigate."
+        )
+    pub = serialization.load_pem_public_key(pub_path.read_bytes())
+    try:
+        pub.verify(sig_path.read_bytes(), manifest_bytes)
+    except InvalidSignature as e:
+        raise IntegritySignatureError(
+            "Integrity baseline signature is INVALID — the manifest does not "
+            "match its signature. Tampering or key mismatch. Refusing to trust "
+            "the baseline."
+        ) from e
+
+
 def regenerate_baseline(
     baseline_dir: Path,
     root: Path | None = None,
     *,
     note: str = "",
 ) -> dict[str, Any]:
-    """Write a fresh baseline manifest. Returns the manifest contents.
+    """Write a fresh baseline manifest (and its ed25519 signature). Returns the
+    manifest contents.
 
     Call this only after intentional, attested updates to a tracked
     file. The note field is for human auditability — e.g.
@@ -193,9 +336,12 @@ def regenerate_baseline(
     }
     path = baseline_path(baseline_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(manifest, indent=2) + "\n")
+    manifest_bytes = (json.dumps(manifest, indent=2) + "\n").encode()
+    path.write_bytes(manifest_bytes)
+    # C1-8: sign the exact bytes just written.
+    _sign_manifest_bytes(baseline_dir, manifest_bytes)
     logger.info(
-        "Regenerated integrity baseline at %s (%d files tracked)",
+        "Regenerated + signed integrity baseline at %s (%d files tracked)",
         path,
         len(_TRACKED_RELATIVE_PATHS),
     )
@@ -219,23 +365,51 @@ def verify_or_raise(baseline_dir: Path, root: Path | None = None) -> None:
     """Check tracked files against the on-disk baseline.
 
     Behavior:
+      - Signature invalid/missing-when-expected → ``IntegritySignatureError``.
       - Hashes match → return silently.
       - Mismatch → raise ``IntegrityMismatchError`` listing drifted files.
       - Baseline missing → raise ``IntegrityNotInitializedError``.
-      - ``ANIMUS_INTEGRITY_OVERRIDE=1`` env → log warning, skip check.
+      - Override → requires BOTH ``ANIMUS_INTEGRITY_OVERRIDE=1`` AND an
+        operator-created sentinel file (C1-8 hardening); audit-logged.
 
     This is the daemon-startup hook. Refusing to boot on drift forces
     the operator to either confirm the legitimate update (by
     regenerating the baseline) or investigate the unexpected change.
     """
+    # C1-8: the env var alone is too easy for an attacker to inject. Require a
+    # deliberate, operator-created sentinel file alongside it, and audit-log the
+    # bypass loudly so it can never be a silent skip.
     if os.environ.get("ANIMUS_INTEGRITY_OVERRIDE") == "1":
-        logger.warning(
-            "ANIMUS_INTEGRITY_OVERRIDE=1 — tampering check bypassed. "
-            "This should only be used during a legitimate update window."
+        sentinel = Path(baseline_dir) / ".integrity-override"
+        if not sentinel.is_file():
+            raise IntegrityMismatchError(
+                "ANIMUS_INTEGRITY_OVERRIDE=1 is set but the confirmation "
+                f"sentinel {sentinel} is absent. Create it deliberately to "
+                "confirm a legitimate update window, then remove it after. "
+                "(C1-8: the env var alone no longer bypasses the gate.)"
+            )
+        logger.error(
+            "INTEGRITY CHECK BYPASSED — ANIMUS_INTEGRITY_OVERRIDE=1 + sentinel "
+            "%s present. The tamper gate is OFF for this boot. Remove the "
+            "sentinel once the update window closes.",
+            sentinel,
         )
         return
 
-    manifest = load_baseline(baseline_dir)
+    # C1-8: verify the ed25519 signature over the exact on-disk manifest bytes
+    # BEFORE parsing/trusting it. A tampered baseline (or one forged without the
+    # private key) fails here.
+    path = baseline_path(baseline_dir)
+    if not path.is_file():
+        raise IntegrityNotInitializedError(
+            f"No integrity baseline at {path}. Run "
+            "`python -m animus.integrity.cli regenerate` after the next "
+            "intentional update to tracked files."
+        )
+    manifest_bytes = path.read_bytes()
+    _verify_manifest_signature(baseline_dir, manifest_bytes)
+
+    manifest = json.loads(manifest_bytes)
     expected = manifest.get("hashes", {})
     actual = compute_current(root)
 
