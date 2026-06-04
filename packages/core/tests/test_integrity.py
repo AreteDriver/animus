@@ -11,9 +11,13 @@ from animus.integrity.checker import (
     _TRACKED_RELATIVE_PATHS,
     IntegrityMismatchError,
     IntegrityNotInitializedError,
+    IntegritySignatureError,
     baseline_path,
     compute_current,
+    public_key_path,
     regenerate_baseline,
+    signature_path,
+    signing_key_path,
     tracked_files,
     tracked_module_hashes,
     verify_or_raise,
@@ -108,14 +112,24 @@ class TestVerifyOrRaise:
         with pytest.raises(IntegrityNotInitializedError):
             verify_or_raise(data_dir, root=pkg_root)
 
-    def test_override_env_bypasses_check(self, fake_tree, monkeypatch, caplog):
+    def test_override_env_alone_does_not_bypass(self, fake_tree, monkeypatch):
+        # C1-8: the env var by itself must NOT bypass — it needs the operator
+        # sentinel too. An attacker who can set an env var can't skip the gate.
         pkg_root, data_dir = fake_tree
-        # Don't even regenerate — override should skip the missing-baseline
-        # raise entirely.
         monkeypatch.setenv("ANIMUS_INTEGRITY_OVERRIDE", "1")
-        with caplog.at_level("WARNING"):
+        with pytest.raises(IntegrityMismatchError, match="sentinel"):
+            verify_or_raise(data_dir, root=pkg_root)
+
+    def test_override_env_plus_sentinel_bypasses(self, fake_tree, monkeypatch, caplog):
+        # C1-8: env var + the deliberately-created sentinel file bypasses, and
+        # the bypass is audit-logged at ERROR (never a silent skip).
+        pkg_root, data_dir = fake_tree
+        data_dir.mkdir(parents=True, exist_ok=True)
+        (data_dir / ".integrity-override").write_text("update window 2026-06-04\n")
+        monkeypatch.setenv("ANIMUS_INTEGRITY_OVERRIDE", "1")
+        with caplog.at_level("ERROR"):
             verify_or_raise(data_dir, root=pkg_root)  # no raise
-        assert any("ANIMUS_INTEGRITY_OVERRIDE=1" in record.message for record in caplog.records)
+        assert any("INTEGRITY CHECK BYPASSED" in r.message for r in caplog.records)
 
     def test_extra_files_in_actual_flagged_as_drift(self, fake_tree, monkeypatch):
         """If the tracked-files set is extended without regenerating the
@@ -212,4 +226,61 @@ class TestCrossPackageTracking:
 
         monkeypatch.setattr(checker, "tracked_module_hashes", tampered)
         with pytest.raises(IntegrityMismatchError):
+            verify_or_raise(data_dir, root=pkg_root)
+
+
+class TestSignedBaseline:
+    """C1-8 — the baseline is ed25519-signed; verify checks the signature
+    before trusting the manifest."""
+
+    def test_regenerate_writes_keypair_and_signature(self, fake_tree):
+        pkg_root, data_dir = fake_tree
+        regenerate_baseline(data_dir, root=pkg_root)
+        assert signing_key_path(data_dir).is_file()
+        assert public_key_path(data_dir).is_file()
+        assert signature_path(data_dir).is_file()
+        # Private key is 0600.
+        assert (signing_key_path(data_dir).stat().st_mode & 0o777) == 0o600
+
+    def test_signed_baseline_verifies(self, fake_tree):
+        pkg_root, data_dir = fake_tree
+        regenerate_baseline(data_dir, root=pkg_root)
+        verify_or_raise(data_dir, root=pkg_root)  # no raise
+
+    def test_tampered_manifest_fails_signature(self, fake_tree):
+        # Edit the manifest after signing → signature no longer matches.
+        pkg_root, data_dir = fake_tree
+        regenerate_baseline(data_dir, root=pkg_root)
+        path = baseline_path(data_dir)
+        manifest = json.loads(path.read_text())
+        manifest["note"] = "attacker rewrote this"
+        path.write_text(json.dumps(manifest, indent=2) + "\n")
+        with pytest.raises(IntegritySignatureError, match="INVALID"):
+            verify_or_raise(data_dir, root=pkg_root)
+
+    def test_missing_signature_when_pubkey_present_fails(self, fake_tree):
+        pkg_root, data_dir = fake_tree
+        regenerate_baseline(data_dir, root=pkg_root)
+        signature_path(data_dir).unlink()  # delete the sig, keep the pubkey
+        with pytest.raises(IntegritySignatureError, match="no signature"):
+            verify_or_raise(data_dir, root=pkg_root)
+
+    def test_forged_baseline_without_key_is_rejected(self, fake_tree):
+        # Attacker regenerates a self-consistent manifest but lacks the signing
+        # key → re-signs with a DIFFERENT key whose pubkey doesn't match... the
+        # realistic attack is editing the manifest without re-signing, covered
+        # above. Here: swap in a different keypair's pubkey → sig mismatch.
+        pkg_root, data_dir = fake_tree
+        regenerate_baseline(data_dir, root=pkg_root)
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+        attacker_pub = Ed25519PrivateKey.generate().public_key()
+        public_key_path(data_dir).write_bytes(
+            attacker_pub.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+        )
+        with pytest.raises(IntegritySignatureError):
             verify_or_raise(data_dir, root=pkg_root)

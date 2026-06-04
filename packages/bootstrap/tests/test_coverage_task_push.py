@@ -88,7 +88,13 @@ class TestDualOllamaBackend:
 
 class TestDaemonMain:
     def test_main_calls_serve(self):
-        with patch("animus_bootstrap.dashboard.app.serve") as mock_serve:
+        # Mock the integrity gate so this unit test isn't coupled to the real
+        # deployed baseline's state (C1-8 added signature verification; the gate
+        # is exercised in test_integrity, not here).
+        with (
+            patch("animus_bootstrap.daemon.__main__._verify_integrity_or_exit"),
+            patch("animus_bootstrap.dashboard.app.serve") as mock_serve,
+        ):
             from animus_bootstrap.daemon.__main__ import main
 
             main()

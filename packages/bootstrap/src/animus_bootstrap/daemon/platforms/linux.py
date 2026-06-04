@@ -28,6 +28,14 @@ class LinuxService:
         Returns:
             Unit file content as a string.
         """
+        # C1-8: verify the integrity baseline in a SEPARATE process before the
+        # daemon starts (ExecStartPre). This runs the canonical CLI from the
+        # installed package, so a tampered in-daemon code path can't skip the
+        # gate — a failing pre-exec aborts the start. The signature check inside
+        # it (ed25519) makes the baseline itself tamper-evident. ``-`` is NOT
+        # prefixed, so a non-zero exit fails the unit. If core isn't installed
+        # the CLI is absent; operators on the bootstrap-only path can drop this
+        # line, but the default wires the external gate.
         unit = textwrap.dedent(f"""\
             [Unit]
             Description=Animus AI Exocortex Daemon
@@ -36,6 +44,7 @@ class LinuxService:
 
             [Service]
             Type=simple
+            ExecStartPre={python_path} -m animus.integrity.cli verify
             ExecStart={python_path} -m {module}
             Restart=on-failure
             RestartSec=5
