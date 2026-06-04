@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { connectChat, type WSMessage } from "../api";
+import { connectChat, getHistory, type WSMessage } from "../api";
+import { useSpeechRecognition } from "../useSpeechRecognition";
 import "./Chat.css";
 
 interface Message {
@@ -19,9 +20,19 @@ export function ChatView() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<ReturnType<typeof connectChat> | null>(null);
 
+  const {
+    supported: voiceSupported,
+    listening,
+    toggle: toggleVoice,
+  } = useSpeechRecognition((text) =>
+    setInput((prev) => (prev ? `${prev} ${text}` : text)),
+  );
+
   const handleIncoming = useCallback((msg: WSMessage) => {
     setSending(false);
     setMessages((prev) => {
+      // Skip messages we already have (e.g. from loaded history).
+      if (prev.some((m) => m.id === msg.id)) return prev;
       // Clear pending flags on all user messages (they've been flushed)
       const cleared = prev.map((m) =>
         m.pending ? { ...m, pending: false } : m,
@@ -37,6 +48,33 @@ export function ChatView() {
       ];
     });
     setPendingCount(0);
+  }, []);
+
+  // Load persisted history once on mount.
+  useEffect(() => {
+    let cancelled = false;
+    getHistory()
+      .then((history) => {
+        if (cancelled) return;
+        setMessages((prev) => {
+          const seen = new Set(prev.map((m) => m.id));
+          const loaded = history
+            .filter((h) => !seen.has(h.id))
+            .map((h) => ({
+              id: h.id,
+              role: h.role === "assistant" ? ("assistant" as const) : ("user" as const),
+              text: h.text,
+              timestamp: new Date(h.timestamp),
+            }));
+          return [...loaded, ...prev];
+        });
+      })
+      .catch(() => {
+        // No history / unauthorized — start with an empty conversation.
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -132,6 +170,16 @@ export function ChatView() {
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           disabled={sending}
         />
+        {voiceSupported && (
+          <button
+            className={`chat-mic ${listening ? "chat-mic--active" : ""}`}
+            onClick={toggleVoice}
+            aria-label={listening ? "Stop voice input" : "Start voice input"}
+            title="Voice input"
+          >
+            🎤
+          </button>
+        )}
         <button
           className="chat-send"
           onClick={handleSend}

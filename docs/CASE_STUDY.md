@@ -2,6 +2,13 @@
 
 *Personal AI Framework for Cognitive Sovereignty*
 
+> ℹ️ **Point-in-time snapshot (early 2026).** The metrics below (18K LOC, 333
+> tests, 5 packages) reflect an early build and are **not current** — the
+> monorepo has since grown to four shipped packages with ~14K+ tests. See the
+> repo `README.md` for live counts and [`CANON.md`](CANON.md) for which
+> documents are authoritative. The "AES-256 at rest" line is a design target,
+> **not implemented** (stores persist plaintext).
+
 ---
 
 ## Executive Summary
@@ -220,7 +227,8 @@ learning.rollback.restore(checkpoint_id)
 - Comprehensive test suite (pytest)
 - Consistent formatting (ruff)
 - Protocol-based extensibility
-- Security-first design (AES-256, audit logging)
+- Security-first design (tier-scoped egress, DLP redaction, audit logging;
+  AES-256 at rest is a design target, not yet implemented)
 
 ---
 

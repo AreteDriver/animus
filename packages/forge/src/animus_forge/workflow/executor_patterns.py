@@ -32,18 +32,6 @@ class DistributionPatternsMixin:
     - fallback_callbacks: dict
     """
 
-    def _check_sub_step_budget(self, sub_step: StepConfig, stage_name: str) -> None:
-        """Check budget allocation for a sub-step.
-
-        Raises:
-            RuntimeError: If budget is exceeded
-        """
-        if not self.budget_manager:
-            return
-        estimated_tokens = sub_step.params.get("estimated_tokens", 1000)
-        if not self.budget_manager.can_allocate(estimated_tokens, agent_id=stage_name):
-            raise RuntimeError(f"Budget exceeded for sub-step '{sub_step.id}'")
-
     def _record_sub_step_metrics(
         self,
         stage_name: str,
@@ -93,8 +81,8 @@ class DistributionPatternsMixin:
         Returns:
             Tuple of (output dict, tokens_used)
         """
-        self._check_sub_step_budget(sub_step, stage_name)
-
+        # Budget is reserved once per sub-step in the parallel handler (atomic
+        # allocate/release), not per retry attempt — see make_handler.
         step_context = context.copy()
         step_context.update(context_updates)
 
@@ -219,8 +207,18 @@ class DistributionPatternsMixin:
                 start_time = time.time()
                 stage_name = f"{parent_step_id}.{sub_step.id}"
                 output, tokens_used, error_msg, retries_used = None, 0, None, 0
+                est = sub_step.params.get("estimated_tokens", 1000)
+                reserved = False
 
                 try:
+                    # Atomically RESERVE the estimate up front so concurrent
+                    # sub-steps on the thread pool see each other's pending
+                    # reservations and cannot collectively overspend. Released in
+                    # the finally once actual usage is recorded.
+                    if self.budget_manager:
+                        reserved = self.budget_manager.allocate(est, agent_id=stage_name)
+                        if not reserved:
+                            raise RuntimeError(f"Budget exceeded for sub-step '{sub_step.id}'")
                     output, tokens_used, error_msg, retries_used = self._execute_with_retries(
                         sub_step, stage_name, context, context_updates
                     )
@@ -242,6 +240,9 @@ class DistributionPatternsMixin:
                         output,
                         error_msg,
                     )
+                    # Free the reservation; actual use is now recorded above.
+                    if reserved:
+                        self.budget_manager.release(est, agent_id=stage_name)
 
             return handler
 

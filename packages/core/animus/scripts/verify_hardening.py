@@ -471,7 +471,10 @@ def scenario_stage3d_tier_router_raises_when_no_local(data_dir: Path) -> str:
 def scenario_stage3d_rag_assembled_propagates_max_tier(data_dir: Path) -> str:
     """``build_context_for_agent_assembled`` returns the max tier of the
     chunks included so callers can populate CompletionRequest.sensitivity."""
-    from datetime import UTC, datetime
+    # ``datetime.UTC`` is Python 3.11+. Use ``timezone.utc`` so this scenario
+    # runs cleanly on Python 3.10 (still supported by Core's
+    # ``requires-python = ">=3.10"``).
+    from datetime import datetime, timezone
     from unittest.mock import MagicMock
 
     from animus_forge.intelligence.cross_workflow_memory import (
@@ -486,7 +489,7 @@ def scenario_stage3d_rag_assembled_propagates_max_tier(data_dir: Path) -> str:
         m.id = f"mem-{sens}"
         m.content = f"chunk-{sens}"
         m.importance = 0.5
-        m.created_at = datetime.now(UTC)
+        m.created_at = datetime.now(timezone.utc)
         m.metadata = {"tags": [], "sensitivity": sens}
         mems.append(m)
     agent_memory.recall.return_value = mems

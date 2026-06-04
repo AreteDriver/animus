@@ -14,9 +14,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 import animus_bootstrap
+from animus_bootstrap.config import ConfigManager
+from animus_bootstrap.dashboard.auth import auth_required_for, verify_ws_token
+from animus_bootstrap.dashboard.middleware_http import AuthMiddleware
 from animus_bootstrap.dashboard.routers import (
     activity,
     automations,
+    capture,
     channels_page,
     config,
     conversations,
@@ -28,6 +32,7 @@ from animus_bootstrap.dashboard.routers import (
     memory,
     personas_page,
     proposals,
+    push,
     routing_page,
     self_mod,
     tasks_page,
@@ -60,6 +65,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         from animus_bootstrap.dashboard.routers.tools import dashboard_approval_callback
 
         runtime.tool_executor.set_approval_callback(dashboard_approval_callback)
+
+    # Expose the push subscription store to the push router.
+    app.state.push_store = getattr(runtime, "push_store", None)
 
     # Wire the WebChat adapter to the router so messages get processed
     webchat: WebChatAdapter = app.state.webchat
@@ -119,6 +127,14 @@ def _wire_webchat(webchat: WebChatAdapter, runtime: AnimusRuntime) -> None:
 
 app = FastAPI(title="Animus Dashboard", version=animus_bootstrap.__version__, lifespan=lifespan)
 
+# Load config once for middleware/WS auth. Stored on app.state so serve()
+# can refresh it after generating the remote-access token. With the default
+# localhost binding, auth is a no-op (see auth_required_for).
+app.state.config = ConfigManager().load()
+
+# Bearer-token auth for the PWA API surface (no-op for local HTMX dashboard).
+app.add_middleware(AuthMiddleware)
+
 # Static files
 app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
@@ -151,43 +167,89 @@ app.include_router(timers_page.router)
 app.include_router(feedback.router)
 app.include_router(identity_page.router)
 app.include_router(proposals.router)
+app.include_router(capture.router)
+app.include_router(push.router)
+
+
+def _health_payload(request: Request) -> dict[str, object]:
+    """Build the health status dict for the runtime and its components."""
+    runtime: AnimusRuntime | None = getattr(request.app.state, "runtime", None)
+    return {
+        "status": "ok" if runtime and runtime.started else "degraded",
+        "version": animus_bootstrap.__version__,
+        "components": {
+            "memory": runtime.memory_manager is not None if runtime else False,
+            "tools": runtime.tool_executor is not None if runtime else False,
+            "proactive": runtime.proactive_engine is not None if runtime else False,
+            "automations": runtime.automation_engine is not None if runtime else False,
+        },
+    }
 
 
 @app.get("/health")
 async def health(request: Request) -> JSONResponse:
-    """Return JSON health status of the runtime and its components."""
-    runtime: AnimusRuntime | None = getattr(request.app.state, "runtime", None)
-    return JSONResponse(
-        {
-            "status": "ok" if runtime and runtime.started else "degraded",
-            "version": animus_bootstrap.__version__,
-            "components": {
-                "memory": runtime.memory_manager is not None if runtime else False,
-                "tools": runtime.tool_executor is not None if runtime else False,
-                "proactive": runtime.proactive_engine is not None if runtime else False,
-                "automations": runtime.automation_engine is not None if runtime else False,
-            },
-        }
-    )
+    """Return JSON health status (unauthenticated, for local probes/daemon)."""
+    return JSONResponse(_health_payload(request))
+
+
+@app.get("/api/health")
+async def api_health(request: Request) -> JSONResponse:
+    """Health for the PWA — same payload, behind the bearer-auth surface.
+
+    The PWA also uses this endpoint to validate a token at login time.
+    """
+    return JSONResponse(_health_payload(request))
 
 
 @app.websocket("/ws/chat")
 async def websocket_chat(websocket: WebSocket) -> None:
-    """WebSocket endpoint for the browser-based WebChat channel."""
+    """WebSocket endpoint for the browser-based WebChat channel.
+
+    When remote auth is active, a valid ``?token=`` query param is required
+    from non-local clients; the handshake is rejected before acceptance.
+    """
+    config = getattr(websocket.app.state, "config", None)
+    if config is not None and auth_required_for(config):
+        client = websocket.client
+        is_local = client is not None and client.host in ("127.0.0.1", "localhost", "::1")
+        if not is_local:
+            token = websocket.query_params.get("token")
+            if not verify_ws_token(token, config.services.auth_token):
+                await websocket.close(code=1008)
+                return
     await app.state.webchat.handle_websocket(websocket)
 
 
 def serve() -> None:
     """Launch the dashboard server."""
-    from animus_bootstrap.config import ConfigManager
+    from animus_bootstrap.dashboard.auth import ensure_auth_token
 
-    cfg = ConfigManager().load()
-    port = cfg.services.port
+    manager = ConfigManager()
+    cfg = manager.load()
+
+    # Generate + persist a remote-access token when auth will be enforced, so
+    # the operator can copy it to the phone. Refresh app.state so the running
+    # app's middleware/WS auth see the token.
+    if auth_required_for(cfg):
+        ensure_auth_token(cfg, manager)
+    app.state.config = cfg
+
+    # Optional direct TLS termination (e.g. a `tailscale cert` keypair). Both
+    # files must be present; otherwise serve plain HTTP.
+    tls: dict[str, str] = {}
+    if cfg.services.tls_cert and cfg.services.tls_key:
+        tls = {
+            "ssl_certfile": cfg.services.tls_cert,
+            "ssl_keyfile": cfg.services.tls_key,
+        }
+
     uvicorn.run(
         "animus_bootstrap.dashboard.app:app",
-        host="127.0.0.1",
-        port=port,
+        host=cfg.services.host,
+        port=cfg.services.port,
+        log_level=cfg.services.log_level,
         reload=False,
+        **tls,
     )
 
 

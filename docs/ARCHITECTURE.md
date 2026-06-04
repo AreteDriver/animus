@@ -43,11 +43,12 @@ The foundation. Defines *who* this Animus belongs to and what it cannot do.
 - Priorities and values
 - Interaction patterns
 
-**Security**
-- Encryption at rest (AES-256 minimum)
+**Security** (target posture; see status notes)
+- Encryption at rest (AES-256) — *PLANNED, not yet implemented: both memory
+  stores currently persist plaintext on disk. Tracked as future work.*
 - Access control and authentication
-- Secure key storage
-- Audit logging
+- Secure key storage — *PLANNED (unified secret manager is specced, not built)*
+- Audit logging — implemented (metadata-only egress audit log)
 
 **Guardrails**
 - User-defined constraints on behavior

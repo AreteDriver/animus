@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { getHealth, type HealthResponse } from "../api";
+import { disablePush, enablePush, isPushEnabled, pushSupported } from "../push";
 import "./Status.css";
 
 const REFRESH_INTERVAL_MS = 10_000;
@@ -15,6 +16,9 @@ export function StatusView() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const [pushOn, setPushOn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     getHealth()
@@ -35,6 +39,28 @@ export function StatusView() {
     const id = setInterval(refresh, REFRESH_INTERVAL_MS);
     return () => clearInterval(id);
   }, [refresh]);
+
+  useEffect(() => {
+    isPushEnabled().then(setPushOn).catch(() => setPushOn(false));
+  }, []);
+
+  const togglePush = useCallback(async () => {
+    setPushBusy(true);
+    setPushError(null);
+    try {
+      if (pushOn) {
+        await disablePush();
+        setPushOn(false);
+      } else {
+        await enablePush();
+        setPushOn(true);
+      }
+    } catch (err: unknown) {
+      setPushError(err instanceof Error ? err.message : "Push toggle failed");
+    } finally {
+      setPushBusy(false);
+    }
+  }, [pushOn]);
 
   return (
     <div className="status">
@@ -98,6 +124,22 @@ export function StatusView() {
               </span>
             </div>
           ))}
+        </div>
+      )}
+
+      {pushSupported() && (
+        <div className="status-card">
+          <div className="status-row">
+            <span className="status-label">Push Notifications</span>
+            <button
+              className={`status-toggle ${pushOn ? "status-toggle--on" : ""}`}
+              onClick={togglePush}
+              disabled={pushBusy}
+            >
+              {pushBusy ? "..." : pushOn ? "On" : "Off"}
+            </button>
+          </div>
+          {pushError && <p className="status-error">{pushError}</p>}
         </div>
       )}
 

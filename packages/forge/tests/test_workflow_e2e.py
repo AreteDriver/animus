@@ -541,6 +541,60 @@ class TestTokenBudgetEnforcement:
         assert result.status == "failed"
         assert "budget" in result.error.lower()
 
+    def test_budget_exceeded_halts_real_run(self):
+        """C1-15 — the dry-run test above only exercises the estimate gate. This
+        runs a REAL (non-dry-run) workflow where step 1 actually records usage
+        that exhausts the budget, and asserts step 2 is halted by the live
+        budget check — the path that matters in production."""
+        budget = BudgetManager(config=BudgetConfig(total_budget=100, reserve_tokens=0))
+
+        def _big_spender(step: StepConfig, context: dict) -> dict:
+            # A real step result: records 5000 tokens against a 100 budget.
+            return {
+                "role": step.params.get("role", "builder"),
+                "prompt": step.params.get("prompt", ""),
+                "response": "did expensive work",
+                "tokens_used": 5000,
+                "model": "claude-opus-4-8",
+                "input_tokens": 1000,
+                "output_tokens": 4000,
+            }
+
+        workflow = WorkflowConfig(
+            name="budget-real-run",
+            version="1.0",
+            description="Real-run budget halt",
+            token_budget=100,
+            steps=[
+                StepConfig(
+                    id="first",
+                    type="claude_code",
+                    params={"prompt": "burn the budget", "estimated_tokens": 10},
+                    outputs=["a"],
+                ),
+                StepConfig(
+                    id="second",
+                    type="claude_code",
+                    params={"prompt": "should never run", "estimated_tokens": 10},
+                    outputs=["b"],
+                ),
+            ],
+        )
+
+        with patch.object(WorkflowExecutor, "_execute_claude_code", side_effect=_big_spender):
+            executor = WorkflowExecutor(budget_manager=budget)  # NOT dry_run
+            result = executor.execute(workflow)
+
+        # Step 1 really ran and recorded usage; the budget is now exhausted.
+        assert budget.usage_percent >= 100
+        # Cost-weighting reached the manager (C1-1): opus output-heavy ET >> raw.
+        assert budget.effective_used > 5000
+        # The workflow halted on budget, and step 2 did not succeed.
+        assert result.status == "failed"
+        assert "budget" in (result.error or "").lower()
+        second = next((s for s in result.steps if s.step_id == "second"), None)
+        assert second is None or second.status.value != "success"
+
 
 # ---------------------------------------------------------------------------
 # 9. Condition Operators

@@ -11,7 +11,7 @@
 | **Multi-channel chat** | ✅ WhatsApp/Telegram/Discord/Slack | ❌ CLI only planned | Medium priority |
 | **Persistent memory** | ✅ Markdown conversation files | 🟡 Designed but not implemented | **Core Phase 1b blocker** |
 | **Skills marketplace** | ✅ 565+ community skills | ❌ | Not needed — ours are bespoke |
-| **Multi-model routing** | ✅ Claude/GPT/Ollama hot-swap | 🟡 Designed for Ollama + Claude | Small gap |
+| **Multi-model routing** | ✅ Claude/GPT/Ollama hot-swap | ✅ 6 providers + OpenRouter open-weights gateway | Closed |
 | **Multi-agent orchestration** | 🟡 Basic swarms | ✅ Forge + Quorum (designed) | **Our advantage** |
 | **Intent-based coordination** | ❌ No intent graph | ✅ Quorum consensus model | **Our differentiator** |
 | **Self-improvement loop** | ❌ | 🟡 Phase 1b spec exists | Unique to Animus |
@@ -39,6 +39,17 @@ Those aren't features — they're architectural commitments that are hard to bol
 - **The 400K-line codebase sprawl** — complexity for complexity's sake
 - **Permissionless execution** — their biggest security liability
 - **Community-first development** — we're building a sovereign system, not a platform
+
+## Hermes Agent — the local-default inversion
+
+Nous Research's Hermes Agent (#1 on OpenRouter's global token rankings, May 2026) is the other agent worth measuring against. Its headline features — persistent memory, a self-improving skill loop, subagents, model-agnostic routing via OpenRouter — are ~70% overlap with what Animus already ships. The one piece Animus lacked, a single open gateway to the broad model market, is now closed by the OpenRouter provider (`providers/openrouter_provider.py`).
+
+The difference that matters is **posture, not features**:
+
+- **Hermes is cloud-default.** Prompts route to a broker (OpenRouter) that fans out to 200+ models, closed and open alike, by default.
+- **Animus is local-default, cloud-on-consent.** Ollama is the default and the only path for anything classified above PUBLIC. The OpenRouter provider enforces **PUBLIC-only egress** (PERSONAL/CONFIDENTIAL/SECRET fail closed at the provider) and **open-weights only** (closed-vendor slugs rejected before the wire). Cloud reach never costs you sovereignty over personal data.
+
+Hermes can't claim that — the broker sees everything by design. The inversion is the differentiator: same model breadth, opposite default. See `docs/specs/openrouter-provider.md`.
 
 ## Strategic Takeaway
 
