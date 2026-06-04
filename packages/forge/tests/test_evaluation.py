@@ -9,6 +9,8 @@ import json
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
+import pytest
+
 from animus_forge.evaluation.base import (
     AgentEvaluator,
     EvalCase,
@@ -860,11 +862,13 @@ class TestRegexMatchMetric:
         # When expected is provided, pattern = self._pattern or str(expected)
         assert m.score("abc", r"^\d+$", _make_case()) == 0.0
 
-    def test_none_expected_uses_none_pattern(self):
-        """Due to operator precedence, expected=None means pattern=None regardless of init."""
+    def test_none_expected_uses_init_pattern(self):
+        """C9: a configured pattern is honored even when expected is None. The
+        old precedence bug (`a or b if c else None`) dropped the init pattern
+        and silently no-op'd to 'output truthy'."""
         m = RegexMatchMetric(pattern=r"\d+")
-        # `(self._pattern or str(expected)) if expected else None` -> None
-        assert m.score("something", None, _make_case()) == 1.0
+        assert m.score("abc123", None, _make_case()) == 1.0  # pattern matches
+        assert m.score("no digits", None, _make_case()) == 0.0  # honored, no match
 
     def test_none_pattern_and_expected_with_output(self):
         m = RegexMatchMetric()
@@ -880,12 +884,10 @@ class TestRegexMatchMetric:
 
     def test_invalid_regex_from_init(self):
         m = RegexMatchMetric(pattern=r"[invalid")
-        # init pattern used when expected is truthy
         assert m.score("test", "something", _make_case()) == 0.0
 
     def test_complex_pattern(self):
         m = RegexMatchMetric(pattern=r"^[A-Z]\w+\s\w+$")
-        # Must pass expected to use the init pattern
         assert m.score("Hello World", "dummy", _make_case()) == 1.0
         assert m.score("hello world", "dummy", _make_case()) == 0.0
 
@@ -913,10 +915,12 @@ class TestRegexAbsenceMetric:
         m = RegexAbsenceMetric(pattern=r"^\d+$")
         assert m.score("abc", r"^\d+$", _make_case()) == 1.0
 
-    def test_none_expected_uses_none_pattern(self):
-        """Mirrors RegexMatchMetric precedence quirk: expected=None means pattern=None."""
+    def test_none_expected_uses_init_pattern(self):
+        """C9: a configured absence pattern is honored when expected is None —
+        the negative invariant must not silently no-op to always-pass."""
         m = RegexAbsenceMetric(pattern=r"recommendations")
-        assert m.score("something", None, _make_case()) == 1.0
+        assert m.score("clean text", None, _make_case()) == 1.0  # absent -> pass
+        assert m.score("has recommendations here", None, _make_case()) == 0.0  # present -> fail
 
     def test_none_pattern_and_expected_with_output(self):
         m = RegexAbsenceMetric()
@@ -1023,9 +1027,13 @@ class TestLLMJudgeMetric:
     def test_name(self):
         assert LLMJudgeMetric().name == "llm_judge"
 
-    def test_no_provider_returns_half(self):
+    def test_no_provider_raises(self):
+        # B1: a judge that can't judge must NOT silently return 0.5.
+        from animus_forge.evaluation.metrics import JudgeError
+
         m = LLMJudgeMetric()
-        assert m.score("output", "expected", _make_case()) == 0.5
+        with pytest.raises(JudgeError):
+            m.score("output", "expected", _make_case())
 
     def test_with_provider_numeric_response(self):
         provider = MagicMock()
@@ -1047,23 +1055,29 @@ class TestLLMJudgeMetric:
             score = m.score("out", "exp", _make_case())
         assert score == 1.0
 
-    def test_with_provider_no_numeric(self):
+    def test_with_provider_no_numeric_raises(self):
+        # B1: an unparseable judge response is a judge failure, not a 0.5.
+        from animus_forge.evaluation.metrics import JudgeError
+
         provider = MagicMock()
         response = MagicMock()
         response.content = "good"
         provider.complete.return_value = response
         m = LLMJudgeMetric(judge_provider=provider)
         with patch("animus_forge.providers.CompletionRequest", return_value=MagicMock()):
-            score = m.score("out", "exp", _make_case())
-        assert score == 0.5
+            with pytest.raises(JudgeError):
+                m.score("out", "exp", _make_case())
 
-    def test_with_provider_exception(self):
+    def test_with_provider_exception_raises(self):
+        # B1: a provider outage surfaces as a judge failure, not a 0.5.
+        from animus_forge.evaluation.metrics import JudgeError
+
         provider = MagicMock()
         provider.complete.side_effect = RuntimeError("fail")
         m = LLMJudgeMetric(judge_provider=provider)
         with patch("animus_forge.providers.CompletionRequest", return_value=MagicMock()):
-            score = m.score("out", "exp", _make_case())
-        assert score == 0.5
+            with pytest.raises(JudgeError):
+                m.score("out", "exp", _make_case())
 
     def test_custom_prompt(self):
         provider = MagicMock()
@@ -1134,7 +1148,7 @@ class TestCodeExecutionMetric:
         mock_file.name = "/tmp/test.py"
         mock_temp.return_value = mock_file
 
-        mock_run.return_value = MagicMock(stdout="hello\n", stderr="")
+        mock_run.return_value = MagicMock(stdout="hello\n", stderr="", returncode=0)
 
         m = CodeExecutionMetric()
         code = 'print("hello")'
@@ -1149,7 +1163,7 @@ class TestCodeExecutionMetric:
         mock_file.__exit__ = MagicMock(return_value=False)
         mock_file.name = "/tmp/test.py"
         mock_temp.return_value = mock_file
-        mock_run.return_value = MagicMock(stdout="ok\n", stderr="")
+        mock_run.return_value = MagicMock(stdout="ok\n", stderr="", returncode=0)
 
         m = CodeExecutionMetric()
         assert m.score("```python\nprint(1)\n```", None, _make_case()) == 1.0
@@ -1162,7 +1176,7 @@ class TestCodeExecutionMetric:
         mock_file.__exit__ = MagicMock(return_value=False)
         mock_file.name = "/tmp/test.py"
         mock_temp.return_value = mock_file
-        mock_run.return_value = MagicMock(stdout="wrong\n", stderr="")
+        mock_run.return_value = MagicMock(stdout="wrong\n", stderr="", returncode=0)
 
         m = CodeExecutionMetric()
         assert m.score("```python\nprint(1)\n```", "hello", _make_case()) == 0.0
@@ -1193,8 +1207,9 @@ class TestCodeExecutionMetric:
         mock_run.side_effect = subprocess.TimeoutExpired(cmd="python", timeout=10)
 
         m = CodeExecutionMetric()
-        result = m._execute_python("while True: pass")
+        result, ok = m._execute_python("while True: pass")
         assert result == "TIMEOUT"
+        assert ok is False  # C6: timeout is a failed run
 
     def test_expected_output_override(self):
         m = CodeExecutionMetric(expected_output="custom")
@@ -2234,3 +2249,59 @@ class TestEndToEnd:
         )
         assert result.passed == 2
         assert result.pass_rate == 1.0
+
+
+class TestCodeExecutionSandbox:
+    """B4: model-generated code runs under kernel resource limits, so a
+    runaway snippet is bounded rather than able to exhaust the host."""
+
+    def _have_rlimit(self):
+        try:
+            import resource  # noqa: F401
+
+            return True
+        except ImportError:
+            return False
+
+    def test_infinite_loop_bounded_by_timeout(self):
+        from animus_forge.evaluation.metrics import CodeExecutionMetric
+
+        m = CodeExecutionMetric(timeout=2.0)
+        out, ok = m._execute_python("while True:\n    pass\n")
+        assert out == "TIMEOUT"
+        assert ok is False
+
+    def test_memory_bomb_bounded_by_rlimit(self):
+        if not self._have_rlimit():
+            pytest.skip("resource module unavailable (non-POSIX)")
+        from animus_forge.evaluation.metrics import CodeExecutionMetric
+
+        m = CodeExecutionMetric(timeout=8.0)
+        # 1 GiB allocation exceeds the 512 MiB RLIMIT_AS → MemoryError in child,
+        # bounded quickly rather than OOMing the host.
+        out, ok = m._execute_python(
+            "x = bytearray(1024 * 1024 * 1024)\nprint('allocated', len(x))\n"
+        )
+        assert "allocated" not in out  # the allocation did not succeed
+        assert out != "TIMEOUT"  # bounded by memory, not the wall clock
+        assert ok is False  # C6: the crash is a failed run
+
+    def test_normal_code_still_runs(self):
+        from animus_forge.evaluation.metrics import CodeExecutionMetric
+
+        m = CodeExecutionMetric(timeout=5.0)
+        out, ok = m._execute_python("print(6 * 7)\n")
+        assert "42" in out and ok is True
+
+    def test_crashing_code_scores_zero_when_expected_none(self):
+        # C6: the headline fix — a snippet that raises / exits non-zero must
+        # NOT score 1.0 just because expected is None.
+        from animus_forge.evaluation.metrics import CodeExecutionMetric
+
+        m = CodeExecutionMetric(timeout=5.0)
+        case = _make_case()
+        assert m.score("```python\nraise RuntimeError('boom')\n```", None, case) == 0.0
+        assert m.score("```python\nimport sys; sys.exit(7)\n```", None, case) == 0.0
+        assert m.score("```python\n1 / 0\n```", None, case) == 0.0
+        # Clean code still scores 1.0 on the expected-None path.
+        assert m.score("```python\nprint('hi')\n```", None, case) == 1.0

@@ -115,15 +115,12 @@ class OpenAIProvider(Provider):
         self._initialized = True
 
     def _check_request_egress(self, request: CompletionRequest) -> None:
-        """Stage 3.D — refuse requests with sensitivity incompatible with cloud."""
-        from animus_forge.network import EgressDeniedError, is_egress_allowed
+        """Stage 3.D + A4 — refuse on incompatible tier OR credential-bearing
+        payload (content-aware DLP) before the cloud client is invoked."""
+        from animus_forge.providers.base import assert_egress_allowed
 
         endpoint = getattr(self, "_egress_endpoint", "https://api.openai.com")
-        if not is_egress_allowed(endpoint, sensitivity=request.sensitivity):
-            raise EgressDeniedError(
-                f"Request with sensitivity={request.sensitivity.value} blocked from "
-                f"{endpoint}. Route this through a local provider."
-            )
+        assert_egress_allowed(endpoint, request)
 
     def complete(self, request: CompletionRequest) -> CompletionResponse:
         """Generate completion using OpenAI API."""

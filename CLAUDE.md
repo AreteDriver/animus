@@ -60,11 +60,18 @@ animus/
 Each package can be installed and used separately:
 
 ```bash
+# Sibling shared-types package — install FIRST so forge/core can resolve
+# the ``animus-types`` dep from local source (not PyPI; not published).
+pip install -e packages/types/
+
 pip install -e packages/quorum/                # Just coordination protocol
-pip install -e packages/forge/                 # Just orchestration engine
-pip install -e packages/core/                  # Just exocortex
+pip install -e packages/types/ -e packages/forge/                # Forge (needs animus-types)
+pip install -e packages/types/ -e packages/core/                 # Core (needs animus-types)
 pip install -e "packages/bootstrap/[dev]"      # Just bootstrap (daemon + wizard + dashboard)
-pip install -e "packages/quorum/[dev]" -e "packages/forge/[dev]" -e "packages/core/[dev]" -e "packages/bootstrap/[dev]"  # Everything
+# Everything — order doesn't matter inside a single pip invocation;
+# pip's resolver finds animus-types locally as long as packages/types/
+# is one of the -e targets.
+pip install -e packages/types/ -e "packages/quorum/[dev]" -e "packages/forge/[dev]" -e "packages/core/[dev]" -e "packages/bootstrap/[dev]"
 ```
 
 ## Testing
@@ -158,8 +165,14 @@ cd packages/bootstrap && pytest tests/ -v
 # Lint + format (always run BOTH)
 ruff check packages/ && ruff format --check packages/
 
-# Install everything for development
-pip install -e "packages/quorum/[dev]" -e "packages/forge/[dev]" -e "packages/core/[dev]" -e "packages/bootstrap/[dev]"
+# Install everything for development (drift-proof: discovers ALL packages/*,
+# installs them editable in one invocation so local-only deps like animus-types
+# always resolve from source). Use this for any venv rebuild.
+bash scripts/setup-venv.sh            # full rebuild
+bash scripts/setup-venv.sh --dry-run  # list discovered packages, install nothing
+
+# Manual equivalent (must include packages/types/ — it is NOT on PyPI):
+pip install -e "packages/types/[dev]" -e "packages/quorum/[dev]" -e "packages/forge/[dev]" -e "packages/core/[dev]" -e "packages/bootstrap/[dev]"
 ```
 
 ## Coding Standards

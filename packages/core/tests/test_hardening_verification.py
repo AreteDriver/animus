@@ -13,7 +13,14 @@ from pathlib import Path
 
 import pytest
 
-from animus.scripts.verify_hardening import (
+# Stage 4 + 3.D scenarios call into ``animus_forge`` (self_improve / intelligence)
+# and ``anthropic`` for cross-package integration assertions. When either
+# package isn't installed (test-core CI matrix is core-only), the suite
+# can't run — skip the whole file cleanly rather than raise at collection.
+pytest.importorskip("animus_forge", reason="cross-package integration tests")
+pytest.importorskip("anthropic", reason="anthropic client used in stage 3 + 4 scenarios")
+
+from animus.scripts.verify_hardening import (  # noqa: E402
     SCENARIOS,
     run_scenarios,
     write_report,

@@ -89,6 +89,21 @@ class TestCostCalculation:
         # Should match claude-3-sonnet pricing
         assert cost > 0
 
+    def test_current_model_ids_resolve(self):
+        """C12: the refreshed PRICING table prices today's Claude 4.x and
+        GPT-4.1 model ids (the old 2024 table would have fallen through to the
+        generic fallback for all of them)."""
+        tracker = CostTracker()
+        tokens = TokenUsage(input_tokens=1_000_000, output_tokens=1_000_000)
+        # claude-opus-4-8 → claude-opus-4 prefix → 15 + 75 = 90
+        assert tracker.calculate_cost("claude-opus-4-8", tokens) == pytest.approx(90.0, abs=0.01)
+        # claude-sonnet-4-6 → claude-sonnet-4 → 3 + 15 = 18
+        assert tracker.calculate_cost("claude-sonnet-4-6", tokens) == pytest.approx(18.0, abs=0.01)
+        # claude-haiku-4-5 → claude-haiku-4 → 1 + 5 = 6
+        assert tracker.calculate_cost("claude-haiku-4-5", tokens) == pytest.approx(6.0, abs=0.01)
+        # gpt-4.1-mini → 0.40 + 1.60 = 2.00 (must not fall through to gpt-4)
+        assert tracker.calculate_cost("gpt-4.1-mini", tokens) == pytest.approx(2.0, abs=0.01)
+
     def test_unknown_model_fallback(self):
         tracker = CostTracker()
         tokens = TokenUsage(input_tokens=1_000_000, output_tokens=1_000_000)

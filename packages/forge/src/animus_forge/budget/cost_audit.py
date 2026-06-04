@@ -19,7 +19,7 @@ from __future__ import annotations
 import math
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -168,7 +168,9 @@ def audit_cost(
         CostAuditReport. Empty history → empty report (no error).
     """
     if not history:
-        anchor = now or datetime.now(tz=None)
+        # C1-12: tz-aware to match UsageRecord.timestamp (datetime.now(UTC));
+        # a naive anchor would TypeError if later compared to record timestamps.
+        anchor = now or datetime.now(UTC)
         return CostAuditReport(
             window_start=anchor - timedelta(hours=window_hours),
             window_end=anchor,

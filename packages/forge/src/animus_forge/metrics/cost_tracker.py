@@ -96,21 +96,30 @@ class CostTracker:
     - Cost reporting and export
     """
 
-    # Pricing per 1M tokens (as of 2024)
+    # Pricing per 1M tokens, USD (verified 2026-06; C12 — refreshed from the
+    # stale 2024 table). Authoritative source for realized per-model cost; the
+    # longest-prefix match in calculate_cost() lets e.g. "claude-opus-4-8"
+    # resolve via the "claude-opus-4" key. Keep newest families first.
     PRICING = {
         # OpenAI
+        "gpt-4.1": {"input": 2.00, "output": 8.00},
+        "gpt-4.1-mini": {"input": 0.40, "output": 1.60},
         "gpt-4o": {"input": 2.50, "output": 10.00},
         "gpt-4o-mini": {"input": 0.15, "output": 0.60},
         "gpt-4-turbo": {"input": 10.00, "output": 30.00},
         "gpt-4": {"input": 30.00, "output": 60.00},
         "gpt-3.5-turbo": {"input": 0.50, "output": 1.50},
-        # Anthropic
-        "claude-3-opus": {"input": 15.00, "output": 75.00},
-        "claude-3-sonnet": {"input": 3.00, "output": 15.00},
-        "claude-sonnet-4-20250514": {"input": 3.00, "output": 15.00},
-        "claude-3-haiku": {"input": 0.25, "output": 1.25},
+        # Anthropic — current (Claude 4.x) families
+        "claude-opus-4": {"input": 15.00, "output": 75.00},
+        "claude-sonnet-4": {"input": 3.00, "output": 15.00},
+        "claude-haiku-4": {"input": 1.00, "output": 5.00},
+        "claude-3-7-sonnet": {"input": 3.00, "output": 15.00},
         "claude-3-5-sonnet": {"input": 3.00, "output": 15.00},
         "claude-3-5-haiku": {"input": 0.80, "output": 4.00},
+        # Anthropic — legacy Claude 3
+        "claude-3-opus": {"input": 15.00, "output": 75.00},
+        "claude-3-sonnet": {"input": 3.00, "output": 15.00},
+        "claude-3-haiku": {"input": 0.25, "output": 1.25},
     }
 
     def __init__(
