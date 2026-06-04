@@ -23,6 +23,26 @@ from animus_bootstrap.personas.engine import PersonaEngine, PersonaProfile
 logger = logging.getLogger(__name__)
 
 
+# Appended to the system prompt whenever ToolExecutor is wired.
+# Without this nudge, Anthropic models will frequently produce
+# instructional walkthroughs ("here's how you would do this...")
+# instead of actually invoking the tools we passed them. The
+# four 2026-05-10 webchat samples that motivated routing fix A
+# all exhibited this — see commit 122de53 + Task #13 diagnosis.
+#
+# Keep this short. Long nudges crowd the turn boundary and dilute
+# user-facing instructions. If models still equivocate after this,
+# the next lever is per-tool description sharpening, not a longer
+# nudge.
+_TOOL_USE_NUDGE = (
+    "\n## Tool Use\n"
+    "You have tools available — invoke them to actually do what "
+    "the user asks rather than describing how it would be done. "
+    "If a needed tool is missing, say so plainly instead of "
+    "inventing a plan that depends on capabilities you do not have."
+)
+
+
 class IntelligentRouter(MessageRouter):
     """Extends MessageRouter with memory, tools, and automation support.
 
@@ -235,6 +255,14 @@ class IntelligentRouter(MessageRouter):
                     mem_parts.append(entry)
                     mem_len += len(entry)
             parts.extend(mem_parts)
+
+        # Tool-use nudge — appended last so it sits closest to the
+        # turn boundary and doesn't get crowded out by identity /
+        # persona / memory blocks. Only emitted when tools are
+        # actually wired; if the model has no tools to call,
+        # encouraging tool use just confuses it.
+        if self._tools:
+            parts.append(_TOOL_USE_NUDGE)
 
         return "\n".join(parts) if parts else ""
 

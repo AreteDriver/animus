@@ -310,6 +310,82 @@ class TestNestedSections:
 
 
 # ------------------------------------------------------------------
+# ApiSection key resolution: env > secrets file > config.toml
+# ------------------------------------------------------------------
+
+
+class TestApiSectionResolution:
+    """Verify env var > secrets.env > config field precedence."""
+
+    def test_env_var_overrides_config(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "from-env")
+        monkeypatch.setenv("ANIMUS_SECRETS_FILE", str(tmp_path / "missing.env"))
+        s = ApiSection(anthropic_key="from-config")
+        assert s.anthropic_key == "from-env"
+
+    def test_secrets_file_overrides_config(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        secrets = tmp_path / "secrets.env"
+        secrets.write_text("ANTHROPIC_API_KEY=from-secrets\n")
+        monkeypatch.setenv("ANIMUS_SECRETS_FILE", str(secrets))
+        s = ApiSection(anthropic_key="from-config")
+        assert s.anthropic_key == "from-secrets"
+
+    def test_env_var_beats_secrets_file(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        secrets = tmp_path / "secrets.env"
+        secrets.write_text("ANTHROPIC_API_KEY=from-secrets\n")
+        monkeypatch.setenv("ANIMUS_SECRETS_FILE", str(secrets))
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "from-env")
+        s = ApiSection()
+        assert s.anthropic_key == "from-env"
+
+    def test_config_field_used_when_no_env_no_secrets(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.setenv("ANIMUS_SECRETS_FILE", str(tmp_path / "missing.env"))
+        s = ApiSection(anthropic_key="from-config")
+        assert s.anthropic_key == "from-config"
+
+    def test_secrets_file_handles_quotes_and_comments(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        secrets = tmp_path / "secrets.env"
+        secrets.write_text(
+            "# comment\n\nANTHROPIC_API_KEY=\"quoted-value\"\nOPENAI_API_KEY='single-quoted'\n"
+        )
+        monkeypatch.setenv("ANIMUS_SECRETS_FILE", str(secrets))
+        s = ApiSection()
+        assert s.anthropic_key == "quoted-value"
+        assert s.openai_key == "single-quoted"
+
+    def test_missing_secrets_file_is_silent(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.setenv("ANIMUS_SECRETS_FILE", str(tmp_path / "nope.env"))
+        # Must not raise
+        s = ApiSection()
+        assert s.anthropic_key == ""
+
+    def test_malformed_lines_skipped(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        secrets = tmp_path / "secrets.env"
+        secrets.write_text("no-equals-sign\nANTHROPIC_API_KEY=ok\n=value-with-empty-key\n")
+        monkeypatch.setenv("ANIMUS_SECRETS_FILE", str(secrets))
+        s = ApiSection()
+        assert s.anthropic_key == "ok"
+
+
+# ------------------------------------------------------------------
 # Deep merge helper
 # ------------------------------------------------------------------
 

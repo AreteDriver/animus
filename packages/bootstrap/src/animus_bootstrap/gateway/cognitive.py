@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Protocol
 
 import httpx
@@ -410,6 +411,70 @@ class HybridBackend:
         }
     )
 
+    # Agentic verbs — queries containing these typically need
+    # tool execution (file edits, git, web fetch, etc.). Route to
+    # the tool-capable backend (Anthropic) regardless of "complexity".
+    # Without this, "update the project" classifies as simple and
+    # falls through to Ollama, whose generate_structured silently
+    # ignores the tools= parameter.
+    _AGENTIC_KEYWORDS = frozenset(
+        {
+            "update",
+            "create",
+            "fetch",
+            "extract",
+            "download",
+            "upload",
+            "scrape",
+            "build",
+            "install",
+            "deploy",
+            "run",
+            "execute",
+            "commit",
+            "push",
+            "pull",
+            "clone",
+            "merge",
+            "apply",
+            "implement",
+            "add",
+            "remove",
+            "delete",
+            "edit",
+            "modify",
+            "patch",
+            "save",
+            "store",
+            "remember",
+            "search",
+            "lookup",
+            "check",
+            "verify",
+            "test",
+            "schedule",
+            "send",
+            "reply",
+            "post",
+            "make",
+            "generate",
+            "write",
+            "transcribe",
+            "translate",
+        }
+    )
+
+    # Detect URLs and file paths — these almost always require
+    # tool access (web fetch, file read, git clone). Cheap regex
+    # is enough; a full URL parser would be overkill.
+    _URL_OR_PATH = re.compile(
+        r"https?://|"  # any URL
+        r"\.com/|\.org/|\.io/|"  # bare domain references
+        r"github\.com|youtube\.com|youtu\.be|"  # common platforms
+        r"\.(py|md|txt|json|yaml|yml|toml|sh|js|ts|html|css|sql)\b|"
+        r"~/|\.\./|/home/|/etc/|/var/|/tmp/"  # common path prefixes
+    )
+
     def __init__(
         self,
         anthropic_backend: AnthropicBackend | None,
@@ -420,10 +485,43 @@ class HybridBackend:
         if anthropic_backend is None:
             logger.warning("HybridBackend: no Anthropic key, all queries route to ollama")
 
+    @staticmethod
+    def _is_fatal(exc: BaseException) -> bool:
+        """Return True for errors that should NOT trigger fallback.
+
+        401/403 mean "this key is bad / this account lacks access"
+        — falling back to a stub backend (Ollama's generate_structured
+        ignores tools) just hides the auth failure and produces
+        fabricated walkthroughs instead of real tool execution.
+        Surface the auth error to the user instead.
+
+        429 (rate limit) and 5xx (server-side) are transient;
+        fallback is appropriate. Network errors (ConnectError,
+        TimeoutException, RemoteProtocolError) are also transient.
+        """
+        if isinstance(exc, httpx.HTTPStatusError):
+            return exc.response.status_code in (401, 403)
+        return False
+
     def _classify_query(
         self, messages: list[dict]
     ) -> tuple[AnthropicBackend | OllamaBackend | DualOllamaBackend, str]:
-        """Classify query complexity and pick the appropriate backend."""
+        """Classify query and pick the appropriate backend.
+
+        Routes to Anthropic (which has working tool_use) when:
+            - The query contains an agentic verb (update, fetch,
+              create, …) — likely needs tool execution
+            - The query references a URL or file path — needs
+              web/file tools
+            - The query contains a "complexity" keyword (analyze,
+              architect, …) — needs deep reasoning
+            - The query is a long question (>40 words with "?")
+
+        Falls through to Ollama for casual chat with none of the
+        above signals. Until OllamaBackend.generate_structured
+        gains real tool-calling support, this is the safest default
+        for "anything that needs to actually do something."
+        """
         if self._anthropic is None:
             return self._ollama, "anthropic_unavailable"
 
@@ -434,6 +532,20 @@ class HybridBackend:
                 break
 
         words = set(last_user.split())
+
+        # Agentic verbs — first check, highest leverage
+        agentic = words & self._AGENTIC_KEYWORDS
+        if agentic:
+            return (
+                self._anthropic,
+                f"agentic verbs: {', '.join(sorted(agentic))}",
+            )
+
+        # URLs / paths — tool execution territory
+        if self._URL_OR_PATH.search(last_user):
+            return self._anthropic, "url or file path detected"
+
+        # Complex reasoning keywords
         matched = words & self._COMPLEX_KEYWORDS
         if matched:
             return (
@@ -464,7 +576,16 @@ class HybridBackend:
                     system_prompt=system_prompt,
                     max_tokens=max_tokens,
                 )
-            except Exception:
+            except Exception as exc:
+                if self._is_fatal(exc):
+                    logger.error(
+                        "HybridBackend: Anthropic auth failed (%s). "
+                        "Check ANTHROPIC_API_KEY in "
+                        "~/.local/share/animus/secrets.env. "
+                        "Not falling back to ollama — fix the key.",
+                        exc,
+                    )
+                    raise
                 logger.warning(
                     "HybridBackend: anthropic failed, falling back to ollama",
                     exc_info=True,
@@ -502,7 +623,16 @@ class HybridBackend:
                     max_tokens=max_tokens,
                     tools=tools,
                 )
-            except Exception:
+            except Exception as exc:
+                if self._is_fatal(exc):
+                    logger.error(
+                        "HybridBackend: Anthropic auth failed (%s). "
+                        "Check ANTHROPIC_API_KEY in "
+                        "~/.local/share/animus/secrets.env. "
+                        "Not falling back to ollama — fix the key.",
+                        exc,
+                    )
+                    raise
                 logger.warning(
                     "HybridBackend: anthropic structured failed, falling back to ollama",
                     exc_info=True,

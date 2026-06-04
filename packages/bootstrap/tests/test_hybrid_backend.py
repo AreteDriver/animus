@@ -5,6 +5,9 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
+import pytest
+
 from animus_bootstrap.gateway.cognitive import HybridBackend
 from animus_bootstrap.gateway.cognitive_types import CognitiveResponse
 
@@ -97,6 +100,99 @@ class TestHybridClassification:
         assert backend is anthropic
 
 
+class TestAgenticAndUrlRouting:
+    """Agentic verbs + URLs route to Anthropic so the tool_use
+    loop fires (Ollama's generate_structured currently ignores
+    tools=). Regression coverage for the four 2026-05-10 webchat
+    samples where animus produced instructional walkthroughs
+    instead of executing tools."""
+
+    def test_update_project_routes_to_anthropic(self) -> None:
+        # Sample 1: "i need you to update the aurora project..."
+        anthropic = MagicMock()
+        ollama = MagicMock()
+        hybrid = HybridBackend(anthropic, ollama)
+        backend, reason = hybrid._classify_query(
+            _make_messages("i need you to update the aurora project with eve news")
+        )
+        assert backend is anthropic
+        assert "agentic" in reason
+        assert "update" in reason
+
+    def test_extract_transcript_routes_to_anthropic(self) -> None:
+        anthropic = MagicMock()
+        ollama = MagicMock()
+        hybrid = HybridBackend(anthropic, ollama)
+        backend, reason = hybrid._classify_query(
+            _make_messages("extract the transcript from the video")
+        )
+        assert backend is anthropic
+        assert "extract" in reason
+
+    def test_bare_url_routes_to_anthropic(self) -> None:
+        # Sample 3: "https://github.com/AreteDriver/ai-skills"
+        anthropic = MagicMock()
+        ollama = MagicMock()
+        hybrid = HybridBackend(anthropic, ollama)
+        backend, reason = hybrid._classify_query(
+            _make_messages("https://github.com/AreteDriver/ai-skills")
+        )
+        assert backend is anthropic
+        assert "url" in reason
+
+    def test_clone_repo_routes_to_anthropic(self) -> None:
+        # Sample 4: "apply the skills from my github repo to yourself"
+        anthropic = MagicMock()
+        ollama = MagicMock()
+        hybrid = HybridBackend(anthropic, ollama)
+        backend, reason = hybrid._classify_query(
+            _make_messages("apply the skills from my github repo to yourself")
+        )
+        assert backend is anthropic
+        # Either "apply" agentic OR "github" URL pattern triggers
+        assert "agentic" in reason or "url" in reason
+
+    def test_file_path_routes_to_anthropic(self) -> None:
+        anthropic = MagicMock()
+        ollama = MagicMock()
+        hybrid = HybridBackend(anthropic, ollama)
+        backend, reason = hybrid._classify_query(
+            _make_messages("can you read ~/projects/notes/ideas.md")
+        )
+        assert backend is anthropic
+        assert "url" in reason
+
+    def test_python_file_extension_routes_to_anthropic(self) -> None:
+        anthropic = MagicMock()
+        ollama = MagicMock()
+        hybrid = HybridBackend(anthropic, ollama)
+        backend, reason = hybrid._classify_query(
+            _make_messages("look at the function in cognitive.py")
+        )
+        assert backend is anthropic
+        assert "url" in reason
+
+    def test_casual_chat_still_routes_to_ollama(self) -> None:
+        # Regression: don't over-route. "what's the weather like"
+        # contains no agentic verb, no URL, no complexity keyword.
+        anthropic = MagicMock()
+        ollama = MagicMock()
+        hybrid = HybridBackend(anthropic, ollama)
+        backend, reason = hybrid._classify_query(_make_messages("hey there how's it going today"))
+        assert backend is ollama
+        assert "no complexity" in reason
+
+    def test_agentic_takes_precedence_over_complexity(self) -> None:
+        # If both agentic AND complex keywords match, agentic wins
+        # (logged reason should mention agentic, not just complexity)
+        anthropic = MagicMock()
+        ollama = MagicMock()
+        hybrid = HybridBackend(anthropic, ollama)
+        backend, reason = hybrid._classify_query(_make_messages("update the architecture analysis"))
+        assert backend is anthropic
+        assert "agentic" in reason  # not "matched keywords"
+
+
 class TestHybridGenerateResponse:
     """Test generate_response routing and fallback."""
 
@@ -178,6 +274,94 @@ class TestHybridGenerateStructured:
 
         assert result.text == "ollama fallback"
         ollama.generate_structured.assert_awaited_once()
+
+
+class TestHybridFailLoudOnAuth:
+    """401/403 from Anthropic should raise instead of falling back
+    to Ollama. The fallback path uses Ollama's generate_structured
+    which is a stub that ignores tools and produces fabricated
+    walkthroughs — masking auth failures with bad output is worse
+    than failing.
+
+    Regression for the 2026-05-10 webchat 401: secrets.env held a
+    revoked key, HybridBackend silently fell back to Ollama, user
+    saw four instructional walkthroughs in a row before we caught
+    the underlying 401 in journalctl.
+    """
+
+    @staticmethod
+    def _http_status_error(code: int) -> httpx.HTTPStatusError:
+        request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+        response = httpx.Response(status_code=code, request=request)
+        return httpx.HTTPStatusError(f"HTTP {code}", request=request, response=response)
+
+    def test_401_in_generate_response_raises(self) -> None:
+        anthropic = MagicMock()
+        anthropic.generate_response = AsyncMock(side_effect=self._http_status_error(401))
+        ollama = MagicMock()
+        ollama.generate_response = AsyncMock(return_value="should not be called")
+
+        hybrid = HybridBackend(anthropic_backend=anthropic, ollama_backend=ollama)
+        with pytest.raises(httpx.HTTPStatusError):
+            _run(hybrid.generate_response(_make_messages("update the project")))
+        ollama.generate_response.assert_not_awaited()
+
+    def test_403_in_generate_response_raises(self) -> None:
+        anthropic = MagicMock()
+        anthropic.generate_response = AsyncMock(side_effect=self._http_status_error(403))
+        ollama = MagicMock()
+        ollama.generate_response = AsyncMock(return_value="should not be called")
+
+        hybrid = HybridBackend(anthropic_backend=anthropic, ollama_backend=ollama)
+        with pytest.raises(httpx.HTTPStatusError):
+            _run(hybrid.generate_response(_make_messages("update the project")))
+        ollama.generate_response.assert_not_awaited()
+
+    def test_401_in_generate_structured_raises(self) -> None:
+        anthropic = MagicMock()
+        anthropic.generate_structured = AsyncMock(side_effect=self._http_status_error(401))
+        ollama = MagicMock()
+        ollama.generate_structured = AsyncMock(return_value=CognitiveResponse(text="stub"))
+
+        hybrid = HybridBackend(anthropic_backend=anthropic, ollama_backend=ollama)
+        with pytest.raises(httpx.HTTPStatusError):
+            _run(hybrid.generate_structured(_make_messages("update the project")))
+        ollama.generate_structured.assert_not_awaited()
+
+    def test_429_still_falls_back(self) -> None:
+        # Rate limits ARE transient — fallback is still the right move
+        fallback = CognitiveResponse(text="ollama fallback")
+        anthropic = MagicMock()
+        anthropic.generate_structured = AsyncMock(side_effect=self._http_status_error(429))
+        ollama = MagicMock()
+        ollama.generate_structured = AsyncMock(return_value=fallback)
+
+        hybrid = HybridBackend(anthropic_backend=anthropic, ollama_backend=ollama)
+        result = _run(hybrid.generate_structured(_make_messages("update the project")))
+        assert result.text == "ollama fallback"
+
+    def test_500_still_falls_back(self) -> None:
+        fallback = CognitiveResponse(text="ollama fallback")
+        anthropic = MagicMock()
+        anthropic.generate_structured = AsyncMock(side_effect=self._http_status_error(500))
+        ollama = MagicMock()
+        ollama.generate_structured = AsyncMock(return_value=fallback)
+
+        hybrid = HybridBackend(anthropic_backend=anthropic, ollama_backend=ollama)
+        result = _run(hybrid.generate_structured(_make_messages("update the project")))
+        assert result.text == "ollama fallback"
+
+    def test_generic_runtime_error_still_falls_back(self) -> None:
+        # Network glitches, parsing bugs, etc. — fallback is correct
+        fallback = CognitiveResponse(text="ollama fallback")
+        anthropic = MagicMock()
+        anthropic.generate_structured = AsyncMock(side_effect=RuntimeError("network glitch"))
+        ollama = MagicMock()
+        ollama.generate_structured = AsyncMock(return_value=fallback)
+
+        hybrid = HybridBackend(anthropic_backend=anthropic, ollama_backend=ollama)
+        result = _run(hybrid.generate_structured(_make_messages("update the project")))
+        assert result.text == "ollama fallback"
 
 
 class TestRuntimeHybridWiring:
