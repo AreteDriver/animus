@@ -323,3 +323,75 @@ def test_comparison_report_significant_property():
         failure_delta={},
     )
     assert not_sig.significant is False
+
+
+def _report(ci, n=10, delta=0.0):
+    s = RunSummary(
+        run_id="x",
+        suite_name="s",
+        model=None,
+        rubric_name=None,
+        rubric_version=None,
+        prompt_version=None,
+        avg_score=0.5,
+        pass_rate=0.5,
+        total_cost_usd=0.0,
+        duration_ms=0.0,
+        total_cases=n,
+        case_scores=[],
+        failure_buckets={},
+    )
+    return ComparisonReport(
+        baseline=s,
+        candidate=s,
+        score_delta=delta,
+        score_ci_95=ci,
+        pass_rate_delta=0.0,
+        cost_delta_usd=0.0,
+        latency_delta_ms=0.0,
+        failure_delta={},
+    )
+
+
+class TestPowerAdvisor:
+    """B6: 'not significant' on a small suite must not read as 'no difference'."""
+
+    def test_significant_has_no_power_note(self):
+        r = _report((0.02, 0.18), n=200, delta=0.1)
+        assert r.significant is True
+        assert r.underpowered is False
+        assert r.power_note == ""
+
+    def test_not_significant_wide_ci_is_underpowered(self):
+        # Half-width 0.11 > 0.05 meaningful effect → underpowered.
+        r = _report((-0.10, 0.12), n=8)
+        assert r.significant is False
+        assert r.underpowered is True
+        assert "Underpowered" in r.power_note
+        assert "n=8" in r.power_note
+
+    def test_not_significant_tight_ci_is_equivalence(self):
+        # Half-width 0.02 < 0.05 → genuinely equivalent, not underpowered.
+        r = _report((-0.02, 0.02), n=500)
+        assert r.significant is False
+        assert r.equivalent is True
+        assert r.underpowered is False
+        assert "equivalent" in r.power_note.lower()
+
+    def test_offcenter_ci_one_side_wide_is_underpowered_not_equivalent(self):
+        # C10: bounds-based vs half-width. CI [-0.005, 0.085] has half-width
+        # 0.045 < 0.05 — the old centered test wrongly called this "equivalent"
+        # — yet the upper bound 0.085 can't rule out a meaningful +effect.
+        r = _report((-0.005, 0.085), n=30)
+        assert r.significant is False
+        assert r.ci_halfwidth < r.MEANINGFUL_EFFECT  # would fool half-width logic
+        assert r.equivalent is False  # bounds-based catches the off-center reach
+        assert r.underpowered is True
+        assert "Underpowered" in r.power_note
+
+    def test_equivalence_note_reports_actual_bound_envelope(self):
+        # C10: the "within ±x" wording is derived from the real CI bounds, not
+        # the fixed threshold. CI [-0.03, 0.02] → envelope max|bound| = 0.030.
+        r = _report((-0.03, 0.02), n=200)
+        assert r.equivalent is True
+        assert "±0.030" in r.power_note

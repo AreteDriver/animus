@@ -378,7 +378,7 @@ class TestCLIHelpers:
         assert result == {"key": "value", "foo": "bar=baz"}
 
     def test_parse_cli_variables_invalid(self):
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.helpers import _parse_cli_variables
 
@@ -392,7 +392,7 @@ class TestCLIHelpers:
         assert result == {}
 
     def test_get_workflow_engine_import_error(self):
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.helpers import get_workflow_engine
 
@@ -401,7 +401,7 @@ class TestCLIHelpers:
                 get_workflow_engine()
 
     def test_get_claude_client_import_error(self):
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.helpers import get_claude_client
 
@@ -410,7 +410,7 @@ class TestCLIHelpers:
                 get_claude_client()
 
     def test_get_workflow_executor_import_error(self):
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.helpers import get_workflow_executor
 
@@ -433,7 +433,7 @@ class TestCLIHelpers:
             assert result is None
 
     def test_get_claude_client_not_configured(self):
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.helpers import get_claude_client
 
@@ -3609,7 +3609,7 @@ class TestGraphCommands:
         return graph_app
 
     def test_load_graph_file_not_found(self):
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.commands.graph import _load_graph_file
 
@@ -3625,7 +3625,7 @@ class TestGraphCommands:
         assert result == {"nodes": [], "edges": []}
 
     def test_load_graph_file_json_error(self, tmp_path):
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.commands.graph import _load_graph_file
 
@@ -3643,7 +3643,7 @@ class TestGraphCommands:
         assert "nodes" in result
 
     def test_load_graph_file_yaml_no_pyyaml(self, tmp_path):
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.commands.graph import _load_graph_file
 
@@ -3825,7 +3825,7 @@ class TestCLIHelpersAdditional:
             assert result is mock_adapter
 
     def test_get_workflow_engine_import_error(self):
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.helpers import get_workflow_engine
 
@@ -3837,7 +3837,7 @@ class TestCLIHelpersAdditional:
                 get_workflow_engine()
 
     def test_get_claude_client_not_configured(self):
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.helpers import get_claude_client
 
@@ -3851,7 +3851,7 @@ class TestCLIHelpersAdditional:
                 get_claude_client()
 
     def test_get_claude_client_import_error(self):
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.helpers import get_claude_client
 
@@ -3875,7 +3875,7 @@ class TestCLIHelpersAdditional:
             assert result is mock_exec
 
     def test_get_workflow_executor_import_error(self):
-        from click.exceptions import Exit
+        from typer import Exit
 
         from animus_forge.cli.helpers import get_workflow_executor
 

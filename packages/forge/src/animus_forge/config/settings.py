@@ -53,11 +53,13 @@ class Settings(BaseSettings):
     Priority chain: init kwargs > env vars > .env file > gorgon.yaml > defaults
     """
 
+    # NOTE: the YAML source is wired manually in settings_customise_sources
+    # via _find_yaml_config(), so yaml_file / yaml_file_encoding are NOT set
+    # here. Declaring them in model_config without a default YamlConfigSettings
+    # source makes pydantic-settings emit an "unused config key" UserWarning.
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        yaml_file="gorgon.yaml",
-        yaml_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
     )
@@ -117,6 +119,9 @@ class Settings(BaseSettings):
 
     # API Keys
     openai_api_key: str = Field(default="", description="OpenAI API key")
+    openrouter_api_key: str | None = Field(
+        None, description="OpenRouter API key (open-weights gateway, PUBLIC-only egress)"
+    )
     github_token: str | None = Field(None, description="GitHub personal access token")
     notion_token: str | None = Field(None, description="Notion integration token")
     gmail_credentials_path: str | None = Field(None, description="Path to Gmail OAuth credentials")

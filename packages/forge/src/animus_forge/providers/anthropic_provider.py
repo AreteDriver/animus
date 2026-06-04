@@ -122,14 +122,10 @@ class AnthropicProvider(Provider):
         with this cloud endpoint. Raises ``EgressDeniedError`` before the
         cloud client is invoked, so the request never crosses the wire.
         """
-        from animus_forge.network import EgressDeniedError, is_egress_allowed
+        from animus_forge.providers.base import assert_egress_allowed
 
         endpoint = getattr(self, "_egress_endpoint", "https://api.anthropic.com")
-        if not is_egress_allowed(endpoint, sensitivity=request.sensitivity):
-            raise EgressDeniedError(
-                f"Request with sensitivity={request.sensitivity.value} blocked from "
-                f"{endpoint}. Route this through a local provider."
-            )
+        assert_egress_allowed(endpoint, request)
 
     def complete(self, request: CompletionRequest) -> CompletionResponse:
         """Generate completion using Anthropic API."""

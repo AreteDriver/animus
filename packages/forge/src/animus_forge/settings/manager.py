@@ -8,6 +8,7 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
+from animus_forge.security.install_salt import get_install_salt
 from animus_forge.state.backends import DatabaseBackend
 
 from .models import (
@@ -55,7 +56,10 @@ class SettingsManager:
 
         # Fall back to deriving from JWT_SECRET or a default
         secret = settings.jwt_secret or "gorgon-default-secret-change-me"
-        salt = b"gorgon-settings-salt"
+        # Per-install random salt (persisted), not a shared hardcoded constant.
+        # SETTINGS_ENCRYPTION_SALT overrides — pin the legacy
+        # "gorgon-settings-salt" to decrypt settings encrypted before this change.
+        salt = get_install_salt("settings", env_var="SETTINGS_ENCRYPTION_SALT")
 
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
