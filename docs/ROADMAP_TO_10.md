@@ -133,8 +133,8 @@ request path drops the data they depend on, so two of them are **inert in
 production**. The primitives are right; the wiring isn't. (29 findings confirmed,
 6 false-positives filtered.)
 
-**The keystone cluster — enforcement built but not fed (all self-verified):**
-- [ ] **C1-1** ET enforcement is a no-op on the live path. `executor_core.py:265`
+**The keystone cluster — enforcement built but not fed (all self-verified):** — CLOSED, PR #92
+- [x] **C1-1** ET enforcement is a no-op on the live path. `executor_core.py:265`
       calls `record_usage(step.id, step_result.tokens_used)` and `StepResult`
       (executor_results.py:33) carries only `tokens_used: int` — no model, no I/O
       split. `effective_tokens()` takes the `m × tokens` branch with m=1.0, so
@@ -143,15 +143,15 @@ production**. The primitives are right; the wiring isn't. (29 findings confirmed
       `model`/`input_tokens`/`output_tokens` (already populated, base.py:177)
       through `StepResult` into `record_usage(model=…, input_tokens=…,
       output_tokens=…)` and pass `effective=` to `allocate`/`can_allocate`.
-- [ ] **C1-2** Workflow AI requests never set `sensitivity` — `executor_ai.py:264`
+- [x] **C1-2** Workflow AI requests never set `sensitivity` — `executor_ai.py:264`
       builds `CompletionRequest(...)` with no `sensitivity`, so every
       executor-issued request is PUBLIC and the egress *tier* gate is inert from
       the workflow path. **Fix:** plumb step/workflow sensitivity into the request.
-- [ ] **C1-3** `TierRouter` rebuild (router.py:130-142) drops `sensitivity`,
+- [x] **C1-3** `TierRouter` rebuild (router.py:130-142) drops `sensitivity`,
       `tools`, `tool_choice` — silent PUBLIC downgrade + broken agentic tool-use
       when routing to an Ollama model. **Fix:** copy all fields (or use
       `dataclasses.replace`).
-- [ ] **C1-4** `LlamaCppProvider` has NO egress gate (no `_check_request_egress`,
+- [x] **C1-4** `LlamaCppProvider` has NO egress gate (no `_check_request_egress`,
       no `ANIMUS_OFFLINE`) yet `base_url` can be any remote host — a C2-class miss.
       **Fix:** add the same gate the other cloud providers got in C2/C3.
 
@@ -187,7 +187,7 @@ production**. The primitives are right; the wiring isn't. (29 findings confirmed
       exceptions and silently retries raw-only — masks real schema/backend bugs.
 
 **E2E coverage gaps (the review's e2e dimension):**
-- [ ] **C1-14** No e2e proving a sensitive payload is *blocked at egress during a
+- [x] **C1-14** No e2e proving a sensitive payload is *blocked at egress during a
       real workflow run* (only unit-level egress tests exist). With C1-1/C1-2
       fixed, add it — it's the test that would have caught this whole cluster.
 - [ ] **C1-15** Budget-EXCEEDED halting a *real* workflow is never tested (only
