@@ -1,0 +1,35 @@
+[Unit]
+Description=Animus Bootstrap -- Dashboard + Intelligence
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+# CHANGE THESE if your repo lives elsewhere or you use a system venv:
+WorkingDirectory=%h/projects/animus
+Environment="PATH=%h/projects/animus/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+
+# Runtime config (Ollama host/model, ANIMUS_DATA_DIR, etc.). The
+# repo's .gitignore already excludes .env from git.
+EnvironmentFile=%h/projects/animus/.env
+
+# Secrets file — chmod 400, lives outside repo, single source of
+# truth for ANTHROPIC_API_KEY / OPENAI_API_KEY. Created by the
+# bootstrap setup wizard or migrated via:
+#   migrate-secrets.sh  (see neighboring script)
+# Leading "-" means systemd starts the service even if the file
+# is missing (useful for Ollama-only installs with no API keys).
+EnvironmentFile=-%h/.local/share/animus/secrets.env
+
+ExecStart=%h/projects/animus/.venv/bin/python -m animus_bootstrap.daemon
+Restart=on-failure
+RestartSec=5
+
+# Hardening — restrict the daemon to its known data dirs.
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=%h/.local/share/animus %h/.config/animus %h/projects/animus/logs
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

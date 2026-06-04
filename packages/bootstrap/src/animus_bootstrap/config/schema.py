@@ -25,23 +25,73 @@ class AnimusSection(BaseModel):
 class ApiSection(BaseModel):
     """API key configuration.
 
-    Keys are resolved in order: env var > config file > empty default.
-    Env vars: ANTHROPIC_API_KEY, OPENAI_API_KEY.
+    Keys are resolved in this order (first non-empty wins):
+        1. Environment variables (``ANTHROPIC_API_KEY``,
+           ``OPENAI_API_KEY``)
+        2. Secrets file at
+           ``$ANIMUS_SECRETS_FILE`` (default
+           ``~/.local/share/animus/secrets.env``) — KEY=VAL lines,
+           chmod 400 recommended
+        3. The corresponding field in ``config.toml`` (legacy /
+           plaintext path, still supported but discouraged)
+        4. Empty string default
+
+    The secrets-file layer exists so operators can keep
+    ``config.toml`` plaintext-free without committing to systemd
+    EnvironmentFile or external secret managers. ``config.toml``
+    gets backed up by tools like restic / rsync; the secrets file
+    can be excluded from those backup targets independently.
     """
 
     anthropic_key: str = ""
     openai_key: str = ""
 
+    @staticmethod
+    def _load_secrets_env() -> dict[str, str]:
+        """Parse KEY=VAL lines from the secrets file, if present.
+
+        Tolerant of missing file, comments, blank lines, and
+        single/double-quoted values. Errors during read are
+        swallowed — secrets are best-effort, not load-bearing.
+        """
+        import os
+        from pathlib import Path
+
+        path = Path(
+            os.environ.get(
+                "ANIMUS_SECRETS_FILE",
+                os.path.expanduser("~/.local/share/animus/secrets.env"),
+            )
+        )
+        if not path.is_file():
+            return {}
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            return {}
+        pairs: dict[str, str] = {}
+        for line in text.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            value = value.strip().strip('"').strip("'")
+            pairs[key.strip()] = value
+        return pairs
+
     def model_post_init(self, __context: object) -> None:
-        """Override with environment variables when present."""
+        """Apply env var > secrets file > config.toml precedence."""
         import os
 
-        env_anthropic = os.environ.get("ANTHROPIC_API_KEY", "")
-        if env_anthropic:
-            self.anthropic_key = env_anthropic
-        env_openai = os.environ.get("OPENAI_API_KEY", "")
-        if env_openai:
-            self.openai_key = env_openai
+        secrets = self._load_secrets_env()
+        anthropic = os.environ.get("ANTHROPIC_API_KEY") or secrets.get("ANTHROPIC_API_KEY") or ""
+        if anthropic:
+            self.anthropic_key = anthropic
+        openai = os.environ.get("OPENAI_API_KEY") or secrets.get("OPENAI_API_KEY") or ""
+        if openai:
+            self.openai_key = openai
 
 
 class ForgeSection(BaseModel):

@@ -20,3 +20,20 @@ def _force_gc():
     """Force garbage collection after every test to prevent memory accumulation."""
     yield
     gc.collect()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_animus_secrets(monkeypatch, tmp_path_factory):
+    """Point ANIMUS_SECRETS_FILE at a non-existent path so
+    ApiSection's secrets-file fallback cannot leak the developer's
+    real ~/.local/share/animus/secrets.env into tests that
+    construct ApiSection() without explicit isolation.
+
+    Tests that exercise the secrets-file path explicitly set
+    ANIMUS_SECRETS_FILE themselves and override this fixture's
+    value via the monkeypatch context they create.
+    """
+    isolated = tmp_path_factory.mktemp("isolated") / "no-secrets.env"
+    monkeypatch.setenv("ANIMUS_SECRETS_FILE", str(isolated))
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)

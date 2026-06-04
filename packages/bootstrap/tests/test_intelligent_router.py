@@ -646,6 +646,56 @@ class TestBuildSystemPrompt:
         result = router._build_system_prompt(ctx)
         assert result == ""
 
+    def test_tool_use_nudge_appended_when_tools_wired(
+        self, cognitive: AsyncMock, session_mgr: SessionManager
+    ) -> None:
+        """When ToolExecutor is provided, system prompt gains a nudge
+        instructing the model to actually invoke tools rather than
+        describe how to use them. Without tools wired, no nudge."""
+        from unittest.mock import MagicMock
+
+        tools = MagicMock(spec=["get_schemas", "execute"])
+        router = IntelligentRouter(
+            cognitive=cognitive,
+            session_manager=session_mgr,
+            tools=tools,
+            system_prompt="You are Animus.",
+        )
+        result = router._build_system_prompt(None)
+        assert "## Tool Use" in result
+        assert "invoke them" in result.lower()
+        # Base prompt preserved
+        assert "You are Animus." in result
+
+    def test_no_tool_nudge_when_tools_not_wired(
+        self, cognitive: AsyncMock, session_mgr: SessionManager
+    ) -> None:
+        router = IntelligentRouter(
+            cognitive=cognitive,
+            session_manager=session_mgr,
+            system_prompt="You are Animus.",
+        )
+        result = router._build_system_prompt(None)
+        assert "## Tool Use" not in result
+        assert result == "You are Animus."
+
+    def test_tool_nudge_appended_after_memory(
+        self, cognitive: AsyncMock, session_mgr: SessionManager
+    ) -> None:
+        """Nudge sits closest to the turn boundary, after memory."""
+        from unittest.mock import MagicMock
+
+        tools = MagicMock(spec=["get_schemas", "execute"])
+        router = IntelligentRouter(
+            cognitive=cognitive,
+            session_manager=session_mgr,
+            tools=tools,
+        )
+        ctx = MemoryContext(semantic=["Alice is a developer"])
+        result = router._build_system_prompt(ctx)
+        # Memory appears before nudge
+        assert result.index("## Known Facts") < result.index("## Tool Use")
+
     def test_empty_memory_context_with_system_prompt(
         self, cognitive: AsyncMock, session_mgr: SessionManager
     ) -> None:

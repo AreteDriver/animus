@@ -1,0 +1,23 @@
+[Unit]
+Description=Animus Forge -- Orchestration API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/projects/animus/packages/forge
+Environment="PATH=%h/projects/animus/packages/forge/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+
+EnvironmentFile=%h/projects/animus/.env
+EnvironmentFile=-%h/.local/share/animus/secrets.env
+
+ExecStart=%h/projects/animus/packages/forge/.venv/bin/uvicorn animus_forge.api:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=%h/.local/share/animus %h/.config/animus %h/projects/animus/logs %h/projects/animus/packages/forge
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target
