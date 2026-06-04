@@ -1,0 +1,55 @@
+.capture {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  height: 100%;
+}
+
+.capture-title {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.capture-hint {
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.capture-input {
+  flex: 1;
+  min-height: 160px;
+  padding: 12px 14px;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--bg-input);
+  border-radius: var(--radius);
+  resize: none;
+}
+
+.capture-error {
+  color: var(--danger);
+  margin: 0;
+}
+
+.capture-saved {
+  color: var(--success);
+  margin: 0;
+}
+
+.capture-button {
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.capture-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

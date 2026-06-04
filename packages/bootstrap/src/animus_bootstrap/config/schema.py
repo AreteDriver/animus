@@ -95,9 +95,31 @@ class ServicesSection(BaseModel):
     """Background services settings."""
 
     autostart: bool = True
+    host: str = "127.0.0.1"
     port: int = 7700
     log_level: str = "info"
     update_check: bool = True
+    # Remote-access auth for the dashboard/PWA API surface.
+    # auth_required: "auto" enforces a bearer token only when the server is
+    # reachable from a non-local client (i.e. bound to a non-localhost host);
+    # "always" enforces it everywhere; "never" disables it.
+    auth_required: str = "auto"
+    # Shared bearer token. Generated on first run when empty; stored in the
+    # chmod-600 config file. Used by the PWA over the Tailscale tunnel.
+    auth_token: str = ""
+    # Optional TLS termination directly in uvicorn. Point these at the files
+    # produced by ``tailscale cert <machine>.<tailnet>.ts.net``. When both are
+    # set the dashboard serves HTTPS (required for the PWA service worker and
+    # Web Push secure context) while preserving real remote client IPs so the
+    # bearer token stays enforceable (unlike a loopback reverse proxy).
+    tls_cert: str = ""
+    tls_key: str = ""
+    # Web Push (VAPID) keys for proactive push notifications to the PWA.
+    # Generated on first run when push is first used. The public key is shared
+    # with the browser; the private key (PEM) signs push requests.
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:admin@example.com"
 
 
 class GatewaySection(BaseModel):
@@ -107,6 +129,14 @@ class GatewaySection(BaseModel):
     default_backend: str = "anthropic"
     system_prompt: str = ""
     max_response_tokens: int = 4096
+    # Gateway middleware (all default to open/off → unchanged behaviour).
+    # allowlist entries are "channel:sender_id"; empty list = open mode.
+    allowlist: list[str] = Field(default_factory=list)
+    # Per-sender token bucket; 0 disables rate limiting.
+    rate_limit_max_tokens: int = 0
+    rate_limit_refill_rate: float = 1.0
+    # Persist an inbound/outbound audit log to SQLite when True.
+    message_log: bool = False
 
 
 class WebchatChannelConfig(BaseModel):
