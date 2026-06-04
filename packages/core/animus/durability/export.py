@@ -28,7 +28,7 @@ from __future__ import annotations
 import hashlib
 import json
 import zipfile
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -125,7 +125,7 @@ def export_all(
 
     manifest = {
         "schema_version": ARCHIVE_SCHEMA_VERSION,
-        "created_at": datetime.now(UTC).isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "tool_version": _tool_version(),
         "source_data_dir": str(data_dir.resolve()),
         "file_count": len(files),
