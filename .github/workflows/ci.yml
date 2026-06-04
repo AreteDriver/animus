@@ -104,6 +104,30 @@ jobs:
       - name: Test with coverage
         run: PYTHONPATH=packages/quorum/python pytest packages/quorum/tests/ -v --tb=short
 
+  test-types:
+    name: Test Types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-types-${{ hashFiles('packages/types/pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-types-
+
+      - name: Install dependencies
+        run: pip install -e "packages/types/[dev]"
+
+      - name: Test with coverage
+        run: pytest packages/types/tests/ -v --tb=short --cov=animus_types --cov-report=term-missing
+
   test-forge:
     name: Test Forge
     runs-on: ubuntu-latest
@@ -192,7 +216,7 @@ jobs:
     name: Benchmarks
     runs-on: ubuntu-latest
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
-    needs: [test-core, test-quorum, test-forge, test-bootstrap, security]
+    needs: [test-core, test-quorum, test-types, test-forge, test-bootstrap, security]
     permissions:
       contents: write
     steps:
