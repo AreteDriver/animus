@@ -568,6 +568,22 @@ class TestPersistentBudget:
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_restore_surfaces_genuine_backend_error(self):
+        """C1-13: a non-schema backend error (connection/corruption/bug) must
+        PROPAGATE, not be silently masked into a zeroed restore — masking
+        under-counts prior spend and invites overspend. Only the benign
+        'schema not ready' cases fall back gracefully."""
+        from unittest.mock import MagicMock
+
+        backend = MagicMock()
+        backend.fetchall.side_effect = RuntimeError("connection reset by peer")
+        with pytest.raises(RuntimeError, match="connection reset"):
+            BudgetManager(
+                config=BudgetConfig(total_budget=100000),
+                backend=backend,
+                session_id="sess-x",
+            )
+
     def test_reset_budget_tracker_function(self):
         """reset_budget_tracker() clears the singleton."""
         from animus_forge.budget import get_budget_tracker, reset_budget_tracker

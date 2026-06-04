@@ -293,7 +293,10 @@ class EvolutionLoop:
         """Check budget and threshold conditions."""
         if self._budget.status == BudgetStatus.EXCEEDED:
             return False
-        if self._budget.usage_percent >= self._config.budget_pause_threshold:
+        # C1-9: usage_percent is 0-100; budget_pause_threshold is a 0-1 fraction
+        # (default 0.80 = "pause at 80%"). The old direct comparison paused the
+        # loop at 0.8% usage. Compare on the same 0-1 scale.
+        if self._budget.usage_percent / 100.0 >= self._config.budget_pause_threshold:
             return False
         if not self._budget.can_allocate(self._config.estimated_tokens_per_iteration):
             return False

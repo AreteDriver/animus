@@ -216,16 +216,17 @@ class StreamChunk:
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
+        # C1-11: only reference fields that exist on StreamChunk. The previous
+        # version referenced tokens_used / latency_ms / timestamp (copied from
+        # CompletionResponse) which StreamChunk does not define → AttributeError.
         return {
             "content": self.content,
             "model": self.model,
             "provider": self.provider,
-            "tokens_used": self.tokens_used,
+            "finish_reason": self.finish_reason,
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
-            "finish_reason": self.finish_reason,
-            "latency_ms": self.latency_ms,
-            "timestamp": self.timestamp.isoformat(),
+            "is_final": self.is_final,
             "metadata": self.metadata,
         }
 

@@ -222,9 +222,19 @@ class BudgetManager:
                 self._agent_usage[agent_id] = tokens
                 self._total_used += tokens
                 self._total_effective += float(row["eff"] or 0.0)
-        except Exception:
-            logger.warning("ET-aware budget restore failed; trying raw-only", exc_info=True)
-            self._restore_from_db_raw_only()
+        except Exception as e:
+            # C1-13: fall back ONLY for benign "schema not ready" cases — an
+            # un-migrated DB missing the effective_tokens column, or a fresh DB
+            # with no usage table yet. Both delegate to the (also-graceful)
+            # raw-only restore. Any OTHER error (connection, corruption,
+            # programming bug) must propagate, not be masked: a silently-zeroed
+            # restore under-counts prior spend and invites overspend.
+            msg = str(e).lower()
+            if "no such column" in msg or "effective_tokens" in msg or "no such table" in msg:
+                logger.warning("budget restore: schema not ready, raw-only fallback", exc_info=True)
+                self._restore_from_db_raw_only()
+            else:
+                raise
 
     def _restore_from_db_raw_only(self) -> None:
         """Fallback restore for databases without the effective_tokens column."""
