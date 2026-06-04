@@ -124,6 +124,82 @@ separation; B7 byte-identical protocol extraction.
 
 ---
 
+## Phase C1 — close the enforcement loop END-TO-END (HIGH PRIORITY)
+
+A 2026-06-03 post-C0 fan-out review (40 agents, 5 dimensions, every finding
+adversarially verified) + a local-qwen self-audit found the **meta-gap C0
+didn't address**: C0 made the enforcement *primitives* correct, but the live
+request path drops the data they depend on, so two of them are **inert in
+production**. The primitives are right; the wiring isn't. (29 findings confirmed,
+6 false-positives filtered.)
+
+**The keystone cluster — enforcement built but not fed (all self-verified):** — CLOSED, PR #92
+- [x] **C1-1** ET enforcement is a no-op on the live path. `executor_core.py:265`
+      calls `record_usage(step.id, step_result.tokens_used)` and `StepResult`
+      (executor_results.py:33) carries only `tokens_used: int` — no model, no I/O
+      split. `effective_tokens()` takes the `m × tokens` branch with m=1.0, so
+      ET == raw on the only production path; the "5× real cost reads OK" §8.4
+      scenario is still reachable. **Fix:** thread `CompletionResponse`'s
+      `model`/`input_tokens`/`output_tokens` (already populated, base.py:177)
+      through `StepResult` into `record_usage(model=…, input_tokens=…,
+      output_tokens=…)` and pass `effective=` to `allocate`/`can_allocate`.
+- [x] **C1-2** Workflow AI requests never set `sensitivity` — `executor_ai.py:264`
+      builds `CompletionRequest(...)` with no `sensitivity`, so every
+      executor-issued request is PUBLIC and the egress *tier* gate is inert from
+      the workflow path. **Fix:** plumb step/workflow sensitivity into the request.
+- [x] **C1-3** `TierRouter` rebuild (router.py:130-142) drops `sensitivity`,
+      `tools`, `tool_choice` — silent PUBLIC downgrade + broken agentic tool-use
+      when routing to an Ollama model. **Fix:** copy all fields (or use
+      `dataclasses.replace`).
+- [x] **C1-4** `LlamaCppProvider` has NO egress gate (no `_check_request_egress`,
+      no `ANIMUS_OFFLINE`) yet `base_url` can be any remote host — a C2-class miss.
+      **Fix:** add the same gate the other cloud providers got in C2/C3.
+
+**Security residue (review + qwen agree):**
+- [ ] **C1-5** The 5 concrete cloud-provider modules (anthropic/openai/azure/
+      bedrock/vertex `_provider.py`) are NOT in the integrity tracked-set — only
+      `providers.base`/`router` are (C5 residual). Tampering a provider's own
+      `_check_request_egress` passes boot detection. **Fix:** add them to
+      `_TRACKED_MODULES_OPTIONAL`.
+- [ ] **C1-6** Credential DLP is all prefix-anchored (`sk-ant-`, `AKIA`, `AIza`…)
+      so prefixless/high-entropy secrets pass the content scan — content-DLP is
+      defense-in-depth behind the tier tag, but the gap is real. **Fix:** add a
+      shannon-entropy heuristic for long tokens; document residual limits.
+- [ ] **C1-7** Egress enforcement is per-provider convention, not structurally
+      enforced — every new/edited provider is additive risk. **Fix:** funnel all
+      providers through one `Provider.complete` wrapper that calls the gate, OR a
+      registry-level check at `manager.py:239-259`.
+- [ ] **C1-8** External (non-in-process) integrity check — the deferred half of
+      C13; the self-hash + `ANIMUS_INTEGRITY_OVERRIDE=1` are both bypassable by an
+      adversary with env/process control. Larger design item.
+
+**Correctness / quality (lower severity, real):**
+- [ ] **C1-9** `evolution_loop.py:296` compares a 0-100 percent against a 0.80
+      fraction (budget-pause threshold unit mismatch).
+- [ ] **C1-10** `PersistentBudgetManager.add_usage` (persistence.py:201-228) is a
+      non-atomic read-modify-write — concurrent spend updates are lost.
+- [ ] **C1-11** `StreamChunk.to_dict()` (base.py:217-230) references non-existent
+      attributes → `AttributeError` if ever called.
+- [ ] **C1-12** `cost_audit.py:170-177` empty-history path uses naive `datetime`
+      → `TypeError` against tz-aware `UsageRecord` timestamps. Persisted budget
+      timestamps are also naive local (persistence.py:105,170,224,250).
+- [ ] **C1-13** `BudgetManager._restore_from_db` (manager.py:225) catches all
+      exceptions and silently retries raw-only — masks real schema/backend bugs.
+
+**E2E coverage gaps (the review's e2e dimension):**
+- [x] **C1-14** No e2e proving a sensitive payload is *blocked at egress during a
+      real workflow run* (only unit-level egress tests exist). With C1-1/C1-2
+      fixed, add it — it's the test that would have caught this whole cluster.
+- [ ] **C1-15** Budget-EXCEEDED halting a *real* workflow is never tested (only
+      the dry-run estimate gate); checkpoint/resume e2e doesn't cover
+      resume-after-real-crash with partial AI work.
+
+**Auto-promotion / kaizen loop:** correct but **zero production callers** — the
+`EvolutionLoop` + `auto_promote_on_improvement` are exported, never invoked by a
+live workflow. Either wire them or mark explicitly experimental.
+
+---
+
 ## Phase 0 — DONE (PR #80)
 
 Closed already; recorded so future-me doesn't redo it.

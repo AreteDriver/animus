@@ -262,7 +262,16 @@ class WorkflowExecutor(
         result.total_duration_ms += step_result.duration_ms
 
         if self.budget_manager and step_result.tokens_used > 0:
-            self.budget_manager.record_usage(step.id, step_result.tokens_used)
+            # C1-1 — pass the model + input/output split so Effective-Tokens is
+            # cost-weighted (opus/output-heavy steps cost more ET than raw),
+            # instead of collapsing to raw because the breakdown was dropped.
+            self.budget_manager.record_usage(
+                step.id,
+                step_result.tokens_used,
+                model=step_result.model,
+                input_tokens=step_result.input_tokens,
+                output_tokens=step_result.output_tokens,
+            )
 
         # Feed step outcome into the intelligence layer
         if self.feedback_engine:
