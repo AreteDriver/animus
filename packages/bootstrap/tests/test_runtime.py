@@ -903,12 +903,12 @@ class TestServeFunction:
     """Tests for the serve() function."""
 
     def test_serve_reads_port_from_config(self) -> None:
-        """serve() reads port from config and passes it to uvicorn."""
+        """serve() reads host/port/log_level from config and passes to uvicorn."""
         cfg = _make_config()
         cfg.services.port = 8080
 
         with (
-            patch("animus_bootstrap.config.ConfigManager") as mock_cm,
+            patch("animus_bootstrap.dashboard.app.ConfigManager") as mock_cm,
             patch("uvicorn.run") as mock_run,
         ):
             mock_cm.return_value.load.return_value = cfg
@@ -919,8 +919,45 @@ class TestServeFunction:
                 "animus_bootstrap.dashboard.app:app",
                 host="127.0.0.1",
                 port=8080,
+                log_level="info",
                 reload=False,
             )
+
+    def test_serve_generates_token_when_remote(self) -> None:
+        """serve() generates + persists a token when bound to a non-local host."""
+        cfg = _make_config()
+        cfg.services.host = "0.0.0.0"
+        cfg.services.auth_token = ""
+
+        with (
+            patch("animus_bootstrap.dashboard.app.ConfigManager") as mock_cm,
+            patch("uvicorn.run"),
+        ):
+            manager = mock_cm.return_value
+            manager.load.return_value = cfg
+            from animus_bootstrap.dashboard.app import serve
+
+            serve()
+            assert cfg.services.auth_token  # generated
+            manager.save.assert_called_once_with(cfg)
+
+    def test_serve_passes_tls_when_configured(self) -> None:
+        """serve() forwards TLS cert/key to uvicorn when both are set."""
+        cfg = _make_config()
+        cfg.services.tls_cert = "/tmp/cert.pem"
+        cfg.services.tls_key = "/tmp/key.pem"
+
+        with (
+            patch("animus_bootstrap.dashboard.app.ConfigManager") as mock_cm,
+            patch("uvicorn.run") as mock_run,
+        ):
+            mock_cm.return_value.load.return_value = cfg
+            from animus_bootstrap.dashboard.app import serve
+
+            serve()
+            kwargs = mock_run.call_args.kwargs
+            assert kwargs["ssl_certfile"] == "/tmp/cert.pem"
+            assert kwargs["ssl_keyfile"] == "/tmp/key.pem"
 
 
 # ------------------------------------------------------------------

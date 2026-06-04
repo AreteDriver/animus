@@ -119,9 +119,46 @@ async def memory_scores_json(request: Request) -> JSONResponse:
     )
 
 
+# Field-name hints for secret values. ``public`` is exempt so the VAPID
+# *public* key (shared with the browser) is not redacted; redaction is
+# string-only so int budgets like ``max_response_tokens`` are untouched.
+_SECRET_HINTS: tuple[str, ...] = ("key", "token", "secret", "password", "private", "credential")
+
+
+def _looks_secret(name: str) -> bool:
+    n = name.lower()
+    if "public" in n:
+        return False
+    return any(h in n for h in _SECRET_HINTS)
+
+
+def _redact_secrets(obj: object) -> object:
+    """Recursively redact secret-looking string fields from a dumped config."""
+    if isinstance(obj, dict):
+        return {
+            k: (
+                "***redacted***"
+                if isinstance(v, str) and v and _looks_secret(k)
+                else _redact_secrets(v)
+            )
+            for k, v in obj.items()
+        }
+    if isinstance(obj, list):
+        return [_redact_secrets(x) for x in obj]
+    return obj
+
+
 @router.get("/memory/export")
 async def memory_export() -> JSONResponse:
-    """Return config data as a JSON placeholder for memory export."""
+    """Return a SECRET-REDACTED config snapshot (placeholder for memory export).
+
+    Security (C92): the previous version returned ``cfg.model_dump()`` verbatim,
+    leaking every API key, the auth token, the TLS key, and the VAPID private
+    key. This endpoint is reachable by an authenticated remote client, so it
+    must never serialize secrets — they are redacted by field name before
+    leaving the box. (It is also now bearer-gated for remote clients by
+    AuthMiddleware; this is the defense-in-depth second layer.)
+    """
     config_manager = ConfigManager()
     cfg = config_manager.load()
-    return JSONResponse(content=cfg.model_dump())
+    return JSONResponse(content=_redact_secrets(cfg.model_dump()))

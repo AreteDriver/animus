@@ -108,6 +108,20 @@
   border-color: var(--accent);
 }
 
+.chat-mic {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  border: 1px solid var(--bg-input);
+  font-size: 16px;
+  line-height: 1;
+  transition: background 0.15s;
+}
+
+.chat-mic--active {
+  background: var(--danger);
+}
+
 .chat-send {
   padding: 10px 18px;
   border-radius: var(--radius);
