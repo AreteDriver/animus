@@ -1,6 +1,6 @@
 # Animus — Document Canon & Status Index
 
-**Last updated: 2026-06-02**
+**Last updated: 2026-06-14**
 
 This repo accumulated multiple whitepapers, roadmaps, and design specs written
 at different times. Some describe shipped code; some describe aspirational
@@ -56,17 +56,21 @@ shipped capability:
 2. **Marketing Engine — 5-platform autonomous posting.** Design only.
    `SECURITY_LAYER.md`, `BROWSER_AUTOMATION.md`, `DEVELOPER_TOOLS.md` reference
    it as future context. **Status: specced, not built.**
-3. **Encryption at rest (AES-256) / Ed25519-signed memory.** Claimed in
-   `ARCHITECTURE.md`, `CASE_STUDY.md`, `ANIMUS_MEMORY_GAPS.md`, `rework/`.
-   Both memory stores persist **plaintext**; signing is unimplemented.
-   **Status: future work** (see `THREAT_MODEL.md` for the real at-rest gap).
+3. **Encryption at rest (AES-256) / Ed25519-signed memory.**
+   Persistence-layer encryption via gocryptfs vault **shipped** (PR #67, A5):
+   the memory store directory can be mounted inside an encrypted filesystem.
+   Individual memory-record signing remains unimplemented.
+   **Status: partial** — at-rest encryption operational, record-level signing
+   future work (see `THREAT_MODEL.md`).
 4. **Developer-Tools / Arete-Tools revenue-tier ecosystem.** `DEVELOPER_TOOLS.md`
    describes a 9-tool suite with $5–49/mo tiers. **Status: superseded** by the
    `PERSONAL_ROADMAP.md` anti-productization stance (no SSO/RBAC/billing).
 5. **HOT/WARM/COLD tiered memory + lossless compaction.** Fully specced in
    `ANIMUS_MEMORY_GAPS.md`; **zero implementing code**.
 6. **Quorum v2 active-inference resolver / liveness watchdog / coupling
-   dashboard.** Specs only; the planned modules do not exist.
+   dashboard.** The `StabilityScorer` Protocol + `DefaultStabilityScorer`
+   shipped (B7). Active-inference resolver, liveness watchdog, and coupling
+   dashboard remain specs-only.
 
 ## Design / spec docs (valid as intent, not as capability)
 
