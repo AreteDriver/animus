@@ -52,6 +52,10 @@ _TRACKED_RELATIVE_PATHS: tuple[str, ...] = (
     # detection) and the immutable learning guardrails.
     "integrity/checker.py",
     "learning/guardrails.py",
+    # E9 — systemd unit files define the sandbox boundaries (ProtectSystem,
+    # IPAddressDeny, etc.). Tampering them silently widens the attack surface.
+    "redteam/systemd/animus-redteam.service",
+    "redteam/systemd/animus-redteam.timer",
 )
 
 # A6 — cross-package critical-path modules. Core's ``network/egress.py`` is now

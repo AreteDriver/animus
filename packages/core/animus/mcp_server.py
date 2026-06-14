@@ -677,7 +677,7 @@ def create_mcp_server():
         codebase_path: str,
         provider: str = "ollama",
         focus: str = "",
-        auto_approve: bool = True,
+        auto_approve: bool = False,
         api_key: str = "",
     ) -> str:
         """Run the Forge self-improvement pipeline on a codebase.
@@ -689,7 +689,8 @@ def create_mcp_server():
             codebase_path: Path to the codebase to improve.
             provider: AI provider — 'ollama', 'anthropic', or 'openai'.
             focus: Optional focus category (e.g., 'testing', 'security', 'performance').
-            auto_approve: Auto-approve all stages (default True for MCP use).
+            auto_approve: Auto-approve all stages (default False; requires
+                ANIMUS_FORGE_ALLOW_AUTO_APPROVE=1 even when True).
             api_key: API key (required if ANIMUS_MCP_API_KEY is set).
         """
         auth_err = _check_auth(api_key)
