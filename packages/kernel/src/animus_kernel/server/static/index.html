@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Animus</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="header-row">
+      <h1>Animus</h1>
+      <span id="budget-label" class="budget-label">0 / 600 ET</span>
+    </div>
+    <div class="budget-track"><div id="budget-bar" class="budget-bar ok"></div></div>
+  </header>
+  <section id="queue-panel" class="queue-panel collapsed">
+    <button id="queue-toggle" class="queue-toggle" aria-expanded="false" aria-controls="queue-list">
+      Build Queue <span id="queue-count" class="badge">0</span>
+    </button>
+    <ul id="queue-list" class="queue-list"></ul>
+  </section>
+  <main id="chat" class="chat"></main>
+  <footer class="input-bar">
+    <textarea id="msg" rows="1" placeholder="Ask the kernel…" enterkeyhint="send"></textarea>
+    <button id="send" aria-label="Send">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </button>
+  </footer>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

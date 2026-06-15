@@ -1,0 +1,1490 @@
+"""
+Animus Cognitive Layer
+
+Handles reasoning, analysis, and response generation.
+Phase 2: Tool use, analysis modes, briefings.
+"""
+
+import inspect
+import json
+import os
+import re
+from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator, Awaitable, Callable
+from dataclasses import dataclass
+from enum import Enum
+from typing import TYPE_CHECKING, Any
+
+from animus_kernel.logger import get_logger
+from animus_kernel.network import EgressDeniedError
+from animus_kernel.protocols.intelligence import IntelligenceProvider
+from animus_kernel.register import RegisterTranslator
+
+if TYPE_CHECKING:
+    from animus_kernel.entities import EntityMemory
+    from animus_kernel.integrations.gorgon import GorgonClient
+    from animus_kernel.learning import LearningLayer
+    from animus_kernel.memory import MemoryLayer
+    from animus_kernel.proactive import ProactiveEngine
+    from animus_kernel.tools import ToolRegistry
+
+logger = get_logger("cognitive")
+
+
+class ModelProvider(Enum):
+    """Supported model providers."""
+
+    OLLAMA = "ollama"
+    ANTHROPIC = "anthropic"
+    OPENAI = "openai"
+    LLAMACPP = "llamacpp"
+    MOCK = "mock"
+
+
+class ReasoningMode(Enum):
+    """Different reasoning modes for different tasks."""
+
+    QUICK = "quick"  # Fast response, shorter context
+    DEEP = "deep"  # Extended thinking, full context
+    RESEARCH = "research"  # Web search + synthesis
+    BACKGROUND = "background"  # Async processing
+
+
+class TaskWeight(Enum):
+    """Task complexity classification for dual-model routing."""
+
+    HEAVY = "heavy"  # Planning, tool selection, code generation, multi-step reasoning
+    LIGHT = "light"  # Summarization, formatting, simple Q&A, data extraction
+
+
+# Patterns that indicate a lightweight task suitable for local/cheap models
+_LIGHT_TASK_PATTERNS = [
+    r"^summarize\b",
+    r"^format\b",
+    r"^reformat\b",
+    r"^rewrite\s+(?:this|the)\b",
+    r"^convert\s+(?:this|the)\b",
+    r"^extract\b",
+    r"^list\s+(?:the|all)\b",
+    r"^count\b",
+    r"^sort\b",
+    r"^what\s+(?:is|are)\s+(?:the\s+)?(?:name|type|value|size|length|count)\b",
+    r"^translate\b",
+    r"^clean\s+up\b",
+    r"^simplify\b",
+]
+
+# Patterns that indicate a heavyweight task requiring capable models
+_HEAVY_TASK_PATTERNS = [
+    r"^(?:plan|design|architect)\b",
+    r"^(?:implement|build|create|write|add)\s+(?:a\s+)?(?:new\s+)?(?:feature|module|class|function|endpoint|test|workflow)",
+    r"^(?:fix|debug|diagnose|investigate)\b",
+    r"^(?:review|audit|analyze)\s+(?:the\s+)?(?:code|security|performance|architecture|\w+\s+module)",
+    r"^(?:refactor|optimize|migrate)\b",
+    r"decide\b",
+    r"trade.?offs?\b",
+    r"(?:should\s+(?:I|we)|what\s+approach|how\s+(?:should|would|to)\s+(?:I|we))\b",
+]
+
+
+def classify_task(prompt: str) -> TaskWeight:
+    """Classify a task as heavy or light based on prompt patterns.
+
+    Heavy tasks go to the primary (capable) model.
+    Light tasks can be delegated to local/cheap models.
+    """
+    prompt_lower = prompt.lower().strip()
+
+    for pattern in _HEAVY_TASK_PATTERNS:
+        if re.search(pattern, prompt_lower):
+            return TaskWeight.HEAVY
+
+    for pattern in _LIGHT_TASK_PATTERNS:
+        if re.search(pattern, prompt_lower):
+            return TaskWeight.LIGHT
+
+    # Default: if prompt is short and looks like a simple question, it's light
+    # Otherwise, assume heavy (safer — don't send complex tasks to weak models)
+    if len(prompt) < 200 and not any(
+        kw in prompt_lower for kw in ("implement", "build", "fix", "debug", "plan", "review")
+    ):
+        return TaskWeight.LIGHT
+
+    return TaskWeight.HEAVY
+
+
+# Patterns for automatic mode detection
+MODE_PATTERNS = {
+    ReasoningMode.DEEP: [
+        r"^think\s+(about|through)",
+        r"^analyze",
+        r"^consider",
+        r"^explain\s+in\s+detail",
+        r"^what\s+are\s+the\s+(pros|cons|implications)",
+    ],
+    ReasoningMode.RESEARCH: [
+        r"^research",
+        r"^find\s+out",
+        r"^look\s+up",
+        r"^what\s+is\s+the\s+latest",
+        r"^search\s+for",
+    ],
+}
+
+
+def detect_mode(prompt: str) -> ReasoningMode:
+    """Detect reasoning mode from prompt patterns."""
+    prompt_lower = prompt.lower().strip()
+    for mode, patterns in MODE_PATTERNS.items():
+        for pattern in patterns:
+            if re.match(pattern, prompt_lower):
+                return mode
+    return ReasoningMode.QUICK
+
+
+# Patterns that suggest a task should be delegated to Gorgon
+_DELEGATION_PATTERNS = [
+    r"write\s+tests?",
+    r"refactor",
+    r"implement",
+    r"build\s+(?:a|the|out)",
+    r"review\s+(?:code|the\s+code|this)",
+    r"debug",
+    r"audit",
+    r"benchmark",
+    r"create\s+(?:a\s+)?(?:test|module|class|function|endpoint)",
+    r"migrate",
+    r"optimize\s+(?:the|this|code|query|queries)",
+]
+
+_DELEGATION_KEYWORDS = [
+    "codebase",
+    "repository",
+    "architecture",
+    "security audit",
+    "test suite",
+    "pipeline",
+    "pull request",
+    "code review",
+    "refactoring",
+    "integration test",
+]
+
+
+def should_delegate_to_gorgon(prompt: str) -> bool:
+    """Detect whether a prompt describes a task better suited for Gorgon.
+
+    Heuristic: 2+ pattern matches, or 1 pattern + 2 keywords, or long
+    (>500 char) technical prompt with at least 1 pattern match.
+    """
+    prompt_lower = prompt.lower()
+
+    pattern_hits = sum(1 for pat in _DELEGATION_PATTERNS if re.search(pat, prompt_lower))
+    keyword_hits = sum(1 for kw in _DELEGATION_KEYWORDS if kw in prompt_lower)
+
+    if pattern_hits >= 2:
+        return True
+    if pattern_hits >= 1 and keyword_hits >= 2:
+        return True
+    if len(prompt) > 500 and pattern_hits >= 1:
+        return True
+    return False
+
+
+@dataclass
+class ModelConfig:
+    """Configuration for a model."""
+
+    provider: ModelProvider
+    model_name: str
+    api_key: str | None = None
+    base_url: str | None = None
+
+    @classmethod
+    def ollama(cls, model: str = "llama3:8b") -> "ModelConfig":
+        return cls(
+            provider=ModelProvider.OLLAMA, model_name=model, base_url="http://localhost:11434"
+        )
+
+    @classmethod
+    def anthropic(cls, model: str = "claude-3-haiku-20240307") -> "ModelConfig":
+        return cls(
+            provider=ModelProvider.ANTHROPIC,
+            model_name=model,
+            api_key=os.environ.get("ANTHROPIC_API_KEY"),
+        )
+
+    @classmethod
+    def openai(cls, model: str = "gpt-4-turbo-preview") -> "ModelConfig":
+        return cls(
+            provider=ModelProvider.OPENAI,
+            model_name=model,
+            api_key=os.environ.get("OPENAI_API_KEY"),
+        )
+
+    @classmethod
+    def llamacpp(
+        cls,
+        model: str = "qwen3.6-research",
+        base_url: str = "http://127.0.0.1:11435/v1",
+    ) -> "ModelConfig":
+        """Local llama.cpp server (OpenAI-compatible).
+
+        Defaults target the Qwen3.6-35B-A3B research alias on port 11435.
+        """
+        return cls(
+            provider=ModelProvider.LLAMACPP,
+            model_name=model,
+            base_url=base_url,
+            api_key="sk-no-key-required",
+        )
+
+    @classmethod
+    def mock(
+        cls,
+        default_response: str = "This is a mock response.",
+        response_map: dict[str, str] | None = None,
+    ) -> "ModelConfig":
+        config = cls(provider=ModelProvider.MOCK, model_name="mock")
+        config._mock_default_response = default_response
+        config._mock_response_map = response_map or {}
+        return config
+
+
+class ModelInterface(ABC):
+    """Abstract interface for language models."""
+
+    @abstractmethod
+    def generate(self, prompt: str, system: str | None = None) -> str:
+        """Generate a response to a prompt."""
+        pass
+
+    @abstractmethod
+    async def generate_stream(self, prompt: str, system: str | None = None) -> AsyncIterator[str]:
+        """Generate a streaming response."""
+        pass
+
+    @abstractmethod
+    def generate_with_tools(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        tools: list[dict] | None = None,
+        max_tokens: int = 4096,
+    ) -> Any:
+        """Generate a response with tool definitions."""
+        pass
+
+
+class MockModel(ModelInterface):
+    """Deterministic mock model for testing without a live LLM backend."""
+
+    def __init__(self, config: ModelConfig):
+        self.config = config
+        self.default_response: str = getattr(
+            config, "_mock_default_response", "This is a mock response."
+        )
+        self.response_map: dict[str, str] = getattr(config, "_mock_response_map", {})
+        self.calls: list[dict] = []
+        logger.debug("MockModel initialized")
+
+    def generate(self, prompt: str, system: str | None = None) -> str:
+        """Return a deterministic response, checking response_map first."""
+        self.calls.append({"prompt": prompt, "system": system})
+        for substring, response in self.response_map.items():
+            if substring in prompt:
+                return response
+        return self.default_response
+
+    async def generate_stream(self, prompt: str, system: str | None = None) -> AsyncIterator[str]:
+        """Yield the response in chunks."""
+        response = self.generate(prompt, system)
+        chunk_size = max(1, len(response) // 3)
+        for i in range(0, len(response), chunk_size):
+            yield response[i : i + chunk_size]
+
+    def generate_with_tools(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        tools: list[dict] | None = None,
+        max_tokens: int = 4096,
+    ) -> Any:
+        """Mock tool generation — returns a simple mock response object."""
+        prompt = ""
+        for msg in messages:
+            if isinstance(msg.get("content"), str):
+                prompt += msg["content"] + "\n"
+        text = self.generate(prompt.strip(), system)
+
+        class _MockBlock:
+            def __init__(self, t: str):
+                self.type = "text"
+                self.text = t
+
+        class _MockResponse:
+            def __init__(self, t: str):
+                self.content = [_MockBlock(t)]
+                self.stop_reason = "end_turn"
+
+        return _MockResponse(text)
+
+    def reset(self) -> None:
+        """Clear call history."""
+        self.calls.clear()
+
+
+class OllamaModel(ModelInterface):
+    """Ollama local model interface."""
+
+    def __init__(self, config: ModelConfig):
+        self.config = config
+        logger.debug(f"OllamaModel initialized with {config.model_name}")
+
+    def generate(
+        self,
+        prompt: str,
+        system: str | None = None,
+        stream_callback: Callable[[str], None] | None = None,
+    ) -> str:
+        """Generate using Ollama.
+
+        Args:
+            prompt: The prompt text.
+            system: Optional system prompt.
+            stream_callback: If provided, called with each token chunk as it
+                arrives. The full response is still returned at the end.
+        """
+        try:
+            import ollama
+
+            messages = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+
+            logger.debug(
+                f"Ollama request: model={self.config.model_name}, prompt_len={len(prompt)}"
+            )
+
+            if stream_callback:
+                parts: list[str] = []
+                for chunk in ollama.chat(
+                    model=self.config.model_name, messages=messages, stream=True
+                ):
+                    token = chunk["message"]["content"]
+                    parts.append(token)
+                    stream_callback(token)
+                result = "".join(parts)
+            else:
+                response = ollama.chat(model=self.config.model_name, messages=messages)
+                result = response["message"]["content"]
+
+            logger.debug(f"Ollama response: len={len(result)}")
+            return result
+
+        except ImportError:
+            logger.error("ollama package not installed")
+            return "[Error: ollama package not installed]"
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
+            logger.error(f"Ollama error: {e}")
+            return f"[Error communicating with Ollama: {e}]"
+
+    def generate_with_tools(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        tools: list[dict] | None = None,
+        max_tokens: int = 4096,
+    ) -> Any:
+        """Generate with tools using Ollama — falls back to plain generate."""
+        prompt = ""
+        for msg in messages:
+            if isinstance(msg.get("content"), str):
+                prompt += msg["content"] + "\n"
+        text = self.generate(prompt.strip(), system)
+
+        class _Block:
+            def __init__(self, t: str):
+                self.type = "text"
+                self.text = t
+
+        class _Response:
+            def __init__(self, t: str):
+                self.content = [_Block(t)]
+                self.stop_reason = "end_turn"
+
+        return _Response(text)
+
+    async def generate_stream(self, prompt: str, system: str | None = None) -> AsyncIterator[str]:
+        """Streaming generation - to be implemented."""
+        yield self.generate(prompt, system)
+
+
+class AnthropicModel(ModelInterface):
+    """Anthropic Claude model interface."""
+
+    def __init__(self, config: ModelConfig):
+        self.config = config
+        self._client: Any = None
+        logger.debug(f"AnthropicModel initialized with {config.model_name}")
+
+    def _get_client(self) -> Any:
+        """Return a cached Anthropic client instance.
+
+        Stage 3.C — refuses to construct the cloud client when ANIMUS_OFFLINE=1.
+        Egress to api.anthropic.com is the load-bearing cloud LLM exit and
+        the offline sentinel must block it at the point of first use.
+        """
+        if self._client is None:
+            from animus_kernel.network import is_egress_allowed
+
+            if not is_egress_allowed("https://api.anthropic.com"):
+                raise EgressDeniedError(
+                    "ANIMUS_OFFLINE=1 — Anthropic cloud LLM blocked. "
+                    "Unset the env var or route through a local provider (Ollama)."
+                )
+
+            import anthropic
+
+            self._client = anthropic.Anthropic(api_key=self.config.api_key)
+        return self._client
+
+    def generate(
+        self,
+        prompt: str,
+        system: str | None = None,
+        stream_callback: Callable[[str], None] | None = None,
+    ) -> str:
+        """Generate using Claude.
+
+        Args:
+            prompt: The prompt text.
+            system: Optional system prompt.
+            stream_callback: If provided, called with each token chunk as it
+                arrives. The full response is still returned at the end.
+        """
+        try:
+            client = self._get_client()
+
+            logger.debug(
+                f"Anthropic request: model={self.config.model_name}, prompt_len={len(prompt)}"
+            )
+
+            if stream_callback:
+                parts: list[str] = []
+                with client.messages.stream(
+                    model=self.config.model_name,
+                    max_tokens=4096,
+                    system=system or "You are a helpful assistant.",
+                    messages=[{"role": "user", "content": prompt}],
+                ) as stream:
+                    for text in stream.text_stream:
+                        parts.append(text)
+                        stream_callback(text)
+                result = "".join(parts)
+            else:
+                message = client.messages.create(
+                    model=self.config.model_name,
+                    max_tokens=4096,
+                    system=system or "You are a helpful assistant.",
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                if not message.content:
+                    logger.warning("Anthropic returned empty content")
+                    return ""
+                result = message.content[0].text
+
+            logger.debug(f"Anthropic response: len={len(result)}")
+            return result
+
+        except ImportError:
+            logger.error("anthropic package not installed")
+            return "[Error: anthropic package not installed]"
+        except EgressDeniedError as e:
+            logger.warning(f"Egress blocked: {e}")
+            return f"[Egress blocked: {e}]"
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
+            logger.error(f"Anthropic error: {e}")
+            return f"[Error communicating with Anthropic: {e}]"
+
+    def generate_with_tools(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        tools: list[dict] | None = None,
+        max_tokens: int = 4096,
+    ) -> Any:
+        """Generate a response using Anthropic native tool_use.
+
+        Args:
+            messages: Conversation messages in Anthropic format.
+            system: System prompt.
+            tools: Tool definitions in Anthropic format (input_schema).
+            max_tokens: Maximum tokens to generate.
+
+        Returns:
+            Raw ``anthropic.types.Message`` object.
+        """
+        try:
+            client = self._get_client()
+
+            kwargs: dict[str, Any] = {
+                "model": self.config.model_name,
+                "max_tokens": max_tokens,
+                "system": system or "You are a helpful assistant.",
+                "messages": messages,
+            }
+            if tools:
+                kwargs["tools"] = tools
+
+            return client.messages.create(**kwargs)
+
+        except ImportError:
+            logger.error("anthropic package not installed")
+            raise
+        except Exception:
+            raise
+
+    async def generate_stream(self, prompt: str, system: str | None = None) -> AsyncIterator[str]:
+        """Streaming generation - to be implemented."""
+        yield self.generate(prompt, system)
+
+
+class OpenAIModel(ModelInterface):
+    """OpenAI-compatible model interface.
+
+    Works with OpenAI's API as well as any OpenAI-compatible endpoint
+    (e.g. LM Studio, vLLM, text-generation-webui, Together, Groq, etc.)
+    by setting a custom base_url.
+    """
+
+    def __init__(self, config: ModelConfig):
+        self.config = config
+        logger.debug(f"OpenAIModel initialized with {config.model_name}")
+
+    def generate(
+        self,
+        prompt: str,
+        system: str | None = None,
+        stream_callback: Callable[[str], None] | None = None,
+    ) -> str:
+        """Generate using OpenAI-compatible API.
+
+        Args:
+            prompt: The prompt text.
+            system: Optional system prompt.
+            stream_callback: If provided, called with each token chunk as it
+                arrives. The full response is still returned at the end.
+        """
+        try:
+            import openai
+
+            client_kwargs: dict = {}
+            if self.config.api_key:
+                client_kwargs["api_key"] = self.config.api_key
+            if self.config.base_url:
+                client_kwargs["base_url"] = self.config.base_url
+
+            client = openai.OpenAI(**client_kwargs)
+
+            messages: list[dict] = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+
+            logger.debug(
+                f"OpenAI request: model={self.config.model_name}, prompt_len={len(prompt)}"
+            )
+
+            if stream_callback:
+                parts: list[str] = []
+                stream = client.chat.completions.create(
+                    model=self.config.model_name,
+                    messages=messages,
+                    stream=True,
+                )
+                for chunk in stream:
+                    delta = chunk.choices[0].delta
+                    if delta.content:
+                        parts.append(delta.content)
+                        stream_callback(delta.content)
+                result = "".join(parts)
+            else:
+                response = client.chat.completions.create(
+                    model=self.config.model_name,
+                    messages=messages,
+                )
+                result = response.choices[0].message.content or ""
+
+            logger.debug(f"OpenAI response: len={len(result)}")
+            return result
+
+        except ImportError:
+            logger.error("openai package not installed")
+            return "[Error: openai package not installed. Install with: pip install openai]"
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
+            logger.error(f"OpenAI error: {e}")
+            return f"[Error communicating with OpenAI: {e}]"
+
+    def generate_with_tools(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        tools: list[dict] | None = None,
+        max_tokens: int = 4096,
+    ) -> Any:
+        """Generate with tools using OpenAI — falls back to plain generate."""
+        prompt = ""
+        for msg in messages:
+            if isinstance(msg.get("content"), str):
+                prompt += msg["content"] + "\n"
+        text = self.generate(prompt.strip(), system)
+
+        class _Block:
+            def __init__(self, t: str):
+                self.type = "text"
+                self.text = t
+
+        class _Response:
+            def __init__(self, t: str):
+                self.content = [_Block(t)]
+                self.stop_reason = "end_turn"
+
+        return _Response(text)
+
+    async def generate_stream(self, prompt: str, system: str | None = None) -> AsyncIterator[str]:
+        """Streaming generation - to be implemented."""
+        yield self.generate(prompt, system)
+
+
+class LlamaCppModel(OpenAIModel):
+    """Local llama.cpp server interface (Qwen3.6-tuned).
+
+    Wraps the OpenAI-compatible /v1 endpoint exposed by `llama-server`.
+    Qwen3.6 ships with thinking mode ON by default — a short generation
+    will spend its entire token budget inside `<think>...</think>` and
+    return empty content. We disable thinking unless the caller opts in
+    via `config.metadata["enable_thinking"] = True`.
+    """
+
+    def generate(
+        self,
+        prompt: str,
+        system: str | None = None,
+        stream_callback: Callable[[str], None] | None = None,
+    ) -> str:
+        try:
+            import openai
+
+            client_kwargs: dict = {}
+            if self.config.api_key:
+                client_kwargs["api_key"] = self.config.api_key
+            if self.config.base_url:
+                client_kwargs["base_url"] = self.config.base_url
+
+            client = openai.OpenAI(**client_kwargs)
+
+            messages: list[dict] = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+
+            enable_thinking = bool(getattr(self.config, "_enable_thinking", False))
+            extra_body = {
+                "chat_template_kwargs": {"enable_thinking": enable_thinking},
+            }
+
+            logger.debug(
+                f"llama.cpp request: model={self.config.model_name}, "
+                f"prompt_len={len(prompt)}, thinking={enable_thinking}"
+            )
+
+            if stream_callback:
+                parts: list[str] = []
+                stream = client.chat.completions.create(
+                    model=self.config.model_name,
+                    messages=messages,
+                    stream=True,
+                    extra_body=extra_body,
+                )
+                for chunk in stream:
+                    delta = chunk.choices[0].delta
+                    if delta.content:
+                        parts.append(delta.content)
+                        stream_callback(delta.content)
+                result = "".join(parts)
+            else:
+                response = client.chat.completions.create(
+                    model=self.config.model_name,
+                    messages=messages,
+                    extra_body=extra_body,
+                )
+                result = response.choices[0].message.content or ""
+
+            logger.debug(f"llama.cpp response: len={len(result)}")
+            return result
+
+        except ImportError:
+            logger.error("openai package not installed")
+            return "[Error: openai package not installed. Install with: pip install openai]"
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
+            logger.error(f"llama.cpp error: {e}")
+            return f"[Error communicating with llama.cpp server: {e}]"
+
+
+def create_model(config: ModelConfig) -> ModelInterface:
+    """Factory function to create the appropriate model interface."""
+    if config.provider == ModelProvider.MOCK:
+        return MockModel(config)
+    elif config.provider == ModelProvider.OLLAMA:
+        return OllamaModel(config)
+    elif config.provider == ModelProvider.ANTHROPIC:
+        return AnthropicModel(config)
+    elif config.provider == ModelProvider.OPENAI:
+        return OpenAIModel(config)
+    elif config.provider == ModelProvider.LLAMACPP:
+        return LlamaCppModel(config)
+    else:
+        raise ValueError(f"Unsupported provider: {config.provider}")
+
+
+class CognitiveLayer:
+    """
+    Main cognitive layer interface.
+
+    Handles model selection, context assembly, and response generation.
+    """
+
+    def __init__(
+        self,
+        primary_config: ModelConfig | None = None,
+        fallback_config: ModelConfig | None = None,
+        learning: "LearningLayer | None" = None,
+        entity_memory: "EntityMemory | None" = None,
+        proactive: "ProactiveEngine | None" = None,
+        gorgon_client: "GorgonClient | None" = None,
+    ):
+        self.primary_config = primary_config or ModelConfig.ollama()
+        self.fallback_config = fallback_config
+        self.learning = learning
+        self.entity_memory = entity_memory
+        self.proactive = proactive
+        self.register_translator = RegisterTranslator()
+        self.gorgon_client: GorgonClient | None = gorgon_client
+
+        self.primary: IntelligenceProvider = create_model(self.primary_config)
+        self.fallback: IntelligenceProvider | None = (
+            create_model(self.fallback_config) if self.fallback_config else None
+        )
+
+        logger.info(
+            f"CognitiveLayer initialized: primary={self.primary_config.provider.value}, "
+            f"model={self.primary_config.model_name}"
+        )
+
+    def think(
+        self,
+        prompt: str,
+        context: str | None = None,
+        mode: ReasoningMode = ReasoningMode.QUICK,
+    ) -> str:
+        """
+        Generate a thoughtful response.
+
+        Args:
+            prompt: The user's input
+            context: Relevant context from memory
+            mode: Reasoning mode to use
+
+        Returns:
+            Generated response
+        """
+        # Detect user's register and build system prompt
+        self.register_translator.detect_and_set(prompt)
+
+        # Enrich context with entity knowledge
+        context = self._enrich_context(prompt, context)
+
+        system = self._build_system_prompt(context, mode)
+        logger.debug(
+            f"Thinking with mode={mode.value}, "
+            f"register={self.register_translator.active_register.value}, "
+            f"context_len={len(context) if context else 0}"
+        )
+
+        # Try primary model
+        try:
+            response = self.primary.generate(prompt, system)
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
+            logger.warning(f"Primary model failed: {e}")
+            # Fall back if available
+            if self.fallback:
+                logger.info("Falling back to secondary model")
+                response = self.fallback.generate(prompt, system)
+            else:
+                raise e
+
+        # Post-processing: extract entities from the conversation
+        if self.entity_memory:
+            try:
+                self.entity_memory.extract_and_link(prompt)
+            except Exception as e:
+                logger.debug(f"Entity extraction failed: {e}")
+
+        return response
+
+    def delegate_to_local(
+        self,
+        prompt: str,
+        system: str | None = None,
+    ) -> str:
+        """Route a subtask to the local/fallback model for cheap execution.
+
+        When the primary model is a cloud API (Anthropic/OpenAI), this sends
+        the subtask to the local Ollama fallback instead of burning API tokens.
+        If no fallback is configured, falls back to the primary model.
+
+        Typical use: summarization, formatting, data extraction, simple Q&A
+        that doesn't need the reasoning power of the primary model.
+        """
+        target = self.fallback or self.primary
+        target_name = (
+            self.fallback_config.provider.value
+            if self.fallback_config
+            else self.primary_config.provider.value
+        )
+        logger.debug(f"Delegating to local model ({target_name}): {prompt[:80]}...")
+
+        try:
+            return target.generate(prompt, system)
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
+            logger.warning(f"Local delegation failed ({target_name}): {e}")
+            # If local fails and we have a different primary, try that
+            if target is not self.primary:
+                logger.info("Local model unavailable, using primary as fallback")
+                return self.primary.generate(prompt, system)
+            return f"[Error: local model unavailable: {e}]"
+
+    def think_routed(
+        self,
+        prompt: str,
+        context: str | None = None,
+        mode: ReasoningMode = ReasoningMode.QUICK,
+    ) -> str:
+        """Generate a response, routing to the appropriate model based on task weight.
+
+        Heavy tasks (planning, code gen, debugging) go to the primary model.
+        Light tasks (summarization, formatting) go to the local/fallback model.
+        """
+        weight = classify_task(prompt)
+        logger.debug(f"Task classified as {weight.value}: {prompt[:60]}...")
+
+        if weight == TaskWeight.LIGHT and self.fallback:
+            return self.delegate_to_local(prompt, self._build_system_prompt(context, mode))
+
+        return self.think(prompt, context, mode)
+
+    @property
+    def has_dual_models(self) -> bool:
+        """Whether both a cloud primary and local fallback are configured."""
+        return self.fallback is not None
+
+    def _enrich_context(self, prompt: str, context: str | None) -> str | None:
+        """Enrich context with entity knowledge and proactive nudges."""
+        extra_parts = []
+
+        # Entity context
+        if self.entity_memory:
+            try:
+                entity_context = self.entity_memory.get_context_for_text(prompt)
+                if entity_context:
+                    extra_parts.append(entity_context)
+            except Exception as e:
+                logger.debug(f"Entity context generation failed: {e}")
+
+        # Proactive context nudge
+        if self.proactive:
+            try:
+                nudge = self.proactive.generate_context_nudge(prompt)
+                if nudge:
+                    extra_parts.append(f"Related past context:\n{nudge.content}")
+            except Exception as e:
+                logger.debug(f"Context nudge generation failed: {e}")
+
+        if not extra_parts:
+            return context
+
+        enrichment = "\n\n".join(extra_parts)
+        if context:
+            return f"{context}\n\n{enrichment}"
+        return enrichment
+
+    def _build_system_prompt(
+        self,
+        context: str | None,
+        mode: ReasoningMode,
+        tools_schema: str | None = None,
+    ) -> str:
+        """Build the system prompt based on context, mode, and tools."""
+        base = """You are Animus, a personal AI assistant focused on being genuinely helpful.
+You are direct, honest, and thoughtful. You remember context from past conversations
+and use it to provide more relevant assistance.
+
+You serve one user and are aligned with their interests."""
+
+        # Apply learned preferences for communication style
+        if self.learning:
+            preferences = self.learning.get_preferences("communication")
+            if preferences:
+                pref_hints = []
+                for pref in preferences:
+                    if pref.confidence >= 0.6:
+                        pref_hints.append(f"- {pref.value}")
+                if pref_hints:
+                    base += "\n\nLearned user preferences:\n" + "\n".join(pref_hints)
+
+        if context:
+            base += f"\n\nRelevant context from memory:\n{context}"
+
+        if mode == ReasoningMode.DEEP:
+            base += (
+                "\n\nThink through this carefully, step by step. Consider multiple perspectives."
+            )
+        elif mode == ReasoningMode.RESEARCH:
+            base += "\n\nResearch this topic thoroughly. Use web search if available."
+
+        if tools_schema:
+            base += f"""
+
+{tools_schema}
+
+To use a tool, respond with a JSON block in this format:
+```tool
+{{"tool": "tool_name", "params": {{"param1": "value1"}}}}
+```
+
+You can use multiple tools. After tool results are returned, continue your response.
+When you have gathered enough information, provide your final answer."""
+
+        # Apply register translation
+        base = self.register_translator.adapt_prompt(base)
+
+        return base
+
+    def think_with_tools(
+        self,
+        prompt: str,
+        context: str | None = None,
+        mode: ReasoningMode = ReasoningMode.QUICK,
+        tools: "ToolRegistry | None" = None,
+        max_iterations: int = 5,
+        approval_callback: Callable | None = None,
+        stream_callback: Callable[[str], None] | None = None,
+    ) -> str:
+        """
+        Generate a response with tool use capability.
+
+        Dispatches to native Anthropic tool_use when the primary model is
+        AnthropicModel, otherwise falls back to the constrained agentic loop.
+
+        Args:
+            prompt: User's input
+            context: Relevant context from memory
+            mode: Reasoning mode
+            tools: ToolRegistry with available tools
+            max_iterations: Maximum tool use iterations
+            approval_callback: Function to approve tools that require it
+                               (tool_name, params) -> bool
+            stream_callback: If provided, called with each token chunk for
+                             streaming output. Only used with constrained loop.
+
+        Returns:
+            Final response after tool execution
+        """
+        if not tools or not tools.list_tools():
+            return self.think(prompt, context, mode)
+
+        if isinstance(self.primary, AnthropicModel):
+            return self._think_with_tools_anthropic(
+                prompt, context, mode, tools, max_iterations, approval_callback
+            )
+        return self._think_with_tools_constrained(
+            prompt,
+            context,
+            mode,
+            tools,
+            max_iterations,
+            approval_callback,
+            stream_callback,
+        )
+
+    def _think_with_tools_anthropic(
+        self,
+        prompt: str,
+        context: str | None = None,
+        mode: ReasoningMode = ReasoningMode.QUICK,
+        tools: "ToolRegistry | None" = None,
+        max_iterations: int = 5,
+        approval_callback: Callable | None = None,
+    ) -> str:
+        """Agentic loop using Anthropic native tool_use.
+
+        Uses structured tool_use content blocks instead of markdown parsing.
+        """
+        from animus_kernel.tools import tools_to_anthropic_format
+
+        system = self._build_system_prompt(context, mode)
+        anthropic_tools = tools_to_anthropic_format(tools)
+        messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
+        text_parts: list[str] = []
+
+        for _ in range(max_iterations):
+            response = self.primary.generate_with_tools(
+                messages=messages,
+                system=system,
+                tools=anthropic_tools,
+            )
+
+            # Collect text and tool_use blocks from the response
+            text_parts = []
+            tool_use_blocks: list[Any] = []
+            for block in response.content:
+                if block.type == "text":
+                    text_parts.append(block.text)
+                elif block.type == "tool_use":
+                    tool_use_blocks.append(block)
+
+            if not tool_use_blocks:
+                # No tool calls — return final text
+                return "\n".join(text_parts) if text_parts else ""
+
+            # Build assistant message with ALL content blocks (text + tool_use)
+            messages.append({"role": "assistant", "content": response.content})
+
+            # Execute each tool and build tool_result messages
+            tool_results: list[dict[str, Any]] = []
+            for block in tool_use_blocks:
+                tool = tools.get(block.name)
+                if not tool:
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": f"Error: Unknown tool '{block.name}'",
+                            "is_error": True,
+                        }
+                    )
+                    continue
+
+                if tool.requires_approval and approval_callback:
+                    if not approval_callback(block.name, block.input):
+                        tool_results.append(
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": block.id,
+                                "content": f"Tool '{block.name}' was not approved",
+                                "is_error": True,
+                            }
+                        )
+                        continue
+
+                result = tools.execute(block.name, block.input)
+                tool_results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result.to_context(),
+                        "is_error": not result.success,
+                    }
+                )
+                logger.debug(f"Tool {block.name} result: success={result.success}")
+
+            messages.append({"role": "user", "content": tool_results})
+
+        # Max iterations reached — return whatever text we have
+        logger.warning(f"Max tool iterations ({max_iterations}) reached")
+        return "\n".join(text_parts) if text_parts else ""
+
+    def _think_with_tools_markdown(
+        self,
+        prompt: str,
+        context: str | None = None,
+        mode: ReasoningMode = ReasoningMode.QUICK,
+        tools: "ToolRegistry | None" = None,
+        max_iterations: int = 5,
+        approval_callback: Callable | None = None,
+    ) -> str:
+        """Agentic loop using markdown ```tool blocks (Ollama/Mock/OpenAI)."""
+        tools_schema = tools.get_schema_text()
+        system = self._build_system_prompt(context, mode, tools_schema)
+
+        messages = [{"role": "user", "content": prompt}]
+        final_response = ""
+
+        for iteration in range(max_iterations):
+            logger.debug(f"Tool iteration {iteration + 1}/{max_iterations}")
+
+            # Generate response
+            full_prompt = self._format_messages(messages)
+            response = self.primary.generate(full_prompt, system)
+
+            # Parse tool calls
+            tool_calls = self._parse_tool_calls(response)
+
+            if not tool_calls:
+                # No tool calls, we're done
+                final_response = response
+                break
+
+            # Execute tools
+            tool_results = []
+            response_text = self._remove_tool_blocks(response)
+
+            for tool_name, params in tool_calls:
+                tool = tools.get(tool_name)
+                if not tool:
+                    tool_results.append(f"[Error: Unknown tool '{tool_name}']")
+                    continue
+
+                # Check approval for sensitive tools
+                if tool.requires_approval and approval_callback:
+                    if not approval_callback(tool_name, params):
+                        tool_results.append(f"[Tool '{tool_name}' was not approved]")
+                        continue
+
+                # Execute tool
+                result = tools.execute(tool_name, params)
+                tool_results.append(result.to_context())
+                logger.debug(f"Tool {tool_name} result: success={result.success}")
+
+            # Add to conversation
+            if response_text.strip():
+                messages.append({"role": "assistant", "content": response_text})
+
+            # Add tool results
+            results_text = "\n\n".join(tool_results)
+            messages.append({"role": "user", "content": f"Tool results:\n{results_text}"})
+
+        else:
+            # Max iterations reached
+            logger.warning(f"Max tool iterations ({max_iterations}) reached")
+            final_response = response
+
+        return final_response
+
+    def _think_with_tools_constrained(
+        self,
+        prompt: str,
+        context: str | None = None,
+        mode: ReasoningMode = ReasoningMode.QUICK,
+        tools: "ToolRegistry | None" = None,
+        max_iterations: int = 5,
+        approval_callback: Callable | None = None,
+        stream_callback: Callable[[str], None] | None = None,
+    ) -> str:
+        """Constrained tool loop for local models (Ollama/Mock/OpenAI).
+
+        Instead of asking the model to output free-form JSON tool calls,
+        presents a numbered menu and parses a simple structured response:
+
+            TOOL: 3
+            path: /some/file.py
+
+        This is much more reliable with 7B-8B models that struggle with
+        JSON formatting.
+        """
+        menu_text, number_map = tools.get_numbered_menu()
+        system = self._build_system_prompt(context, mode)
+
+        constrained_instructions = f"""{menu_text}
+
+To use a tool, respond with EXACTLY this format on its own line:
+TOOL: <number>
+Then each required parameter on its own line as key: value
+
+Example:
+TOOL: 3
+path: /home/user/file.py
+
+After seeing tool results, pick another tool or respond with TOOL: 0 to give your final answer.
+Your final answer (after TOOL: 0) should address the user's request directly."""
+
+        messages = [{"role": "user", "content": prompt}]
+        final_response = ""
+
+        for iteration in range(max_iterations):
+            logger.debug(f"Constrained tool iteration {iteration + 1}/{max_iterations}")
+
+            full_prompt = self._format_messages(messages)
+            full_prompt += f"\n\n{constrained_instructions}"
+
+            # Stream tokens if callback provided and model supports it
+            generate_kwargs: dict[str, Any] = {}
+            if stream_callback and hasattr(self.primary, "generate"):
+                sig = inspect.signature(self.primary.generate)
+                if "stream_callback" in sig.parameters:
+                    generate_kwargs["stream_callback"] = stream_callback
+
+            response = self.primary.generate(full_prompt, system, **generate_kwargs)
+
+            # Parse constrained tool selection
+            tool_selection = self._parse_constrained_tool(response, number_map)
+
+            if tool_selection is None:
+                # Check if response looks like a failed tool call attempt
+                if "TOOL" in response.upper() and "TOOL: 0" not in response.upper():
+                    # Model tried to call a tool but format was wrong — retry
+                    messages.append({"role": "assistant", "content": response})
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "Format error. Use EXACTLY: TOOL: <number>\n"
+                                "followed by param: value lines. Or TOOL: 0 for final answer."
+                            ),
+                        }
+                    )
+                    logger.debug("Constrained tool parse failed, retrying with format hint")
+                    continue
+                # No tool call found or TOOL: 0 — treat response as final
+                final_response = self._strip_tool_lines(response)
+                break
+
+            tool_name, params = tool_selection
+
+            tool = tools.get(tool_name)
+            if not tool:
+                messages.append({"role": "assistant", "content": response})
+                messages.append({"role": "user", "content": f"Error: Unknown tool '{tool_name}'"})
+                continue
+
+            # Check approval
+            if tool.requires_approval and approval_callback:
+                if not approval_callback(tool_name, params):
+                    messages.append({"role": "assistant", "content": response})
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": f"Tool '{tool_name}' was not approved by user.",
+                        }
+                    )
+                    continue
+
+            # Execute
+            result = tools.execute(tool_name, params)
+            logger.debug(f"Tool {tool_name} result: success={result.success}")
+
+            messages.append({"role": "assistant", "content": response})
+            messages.append({"role": "user", "content": f"Tool result:\n{result.to_context()}"})
+
+        else:
+            logger.warning(f"Max constrained iterations ({max_iterations}) reached")
+            final_response = response
+
+        return final_response
+
+    @staticmethod
+    def _parse_constrained_tool(
+        response: str,
+        number_map: dict[int, str],
+    ) -> tuple[str, dict] | None:
+        """Parse a constrained tool selection from model response.
+
+        Looks for 'TOOL: N' followed by key: value parameter lines.
+        Returns (tool_name, params) or None if no tool / TOOL: 0.
+        """
+        # Find TOOL: N line
+        tool_match = re.search(r"TOOL:\s*(\d+)", response)
+        if not tool_match:
+            return None
+
+        tool_num = int(tool_match.group(1))
+        if tool_num == 0:
+            return None
+
+        tool_name = number_map.get(tool_num)
+        if not tool_name:
+            return None
+
+        # Extract key: value lines after the TOOL line
+        params: dict[str, str] = {}
+        lines = response[tool_match.end() :].strip().split("\n")
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith("TOOL:"):
+                break
+            # Parse key: value (first colon splits key from value)
+            if ":" in line:
+                key, _, value = line.partition(":")
+                key = key.strip()
+                value = value.strip()
+                if key and value:
+                    params[key] = value
+
+        return tool_name, params
+
+    @staticmethod
+    def _strip_tool_lines(response: str) -> str:
+        """Remove TOOL: lines and parameter lines from response text."""
+        lines = response.split("\n")
+        result = []
+        skip_params = False
+        for line in lines:
+            tool_match = re.match(r"\s*TOOL:\s*(\d+)", line)
+            if tool_match:
+                tool_num = int(tool_match.group(1))
+                # TOOL: 0 means "no tool" — don't skip subsequent lines
+                skip_params = tool_num != 0
+                continue
+            if skip_params:
+                # Check if this looks like a key: value parameter line
+                stripped = line.strip()
+                if (
+                    stripped
+                    and ":" in stripped
+                    and not stripped.startswith(("- ", "* ", "#", " " * 4))
+                ):
+                    # Looks like a parameter — skip it
+                    continue
+                # Not a parameter line — stop skipping
+                skip_params = False
+            result.append(line)
+        return "\n".join(result).strip()
+
+    def _format_messages(self, messages: list[dict]) -> str:
+        """Format message history for the model."""
+        lines = []
+        for msg in messages:
+            role = msg["role"].capitalize()
+            lines.append(f"{role}: {msg['content']}")
+        return "\n\n".join(lines)
+
+    def _parse_tool_calls(self, response: str) -> list[tuple[str, dict]]:
+        """Parse tool calls from model response."""
+        tool_calls = []
+
+        # Look for ```tool blocks
+        pattern = r"```tool\s*\n?(.*?)\n?```"
+        matches = re.findall(pattern, response, re.DOTALL)
+
+        for match in matches:
+            try:
+                data = json.loads(match.strip())
+                tool_name = data.get("tool")
+                params = data.get("params", {})
+                if tool_name:
+                    tool_calls.append((tool_name, params))
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse tool call: {match[:50]}...")
+                continue
+
+        return tool_calls
+
+    def _remove_tool_blocks(self, response: str) -> str:
+        """Remove tool call blocks from response."""
+        pattern = r"```tool\s*\n?.*?\n?```"
+        return re.sub(pattern, "", response, flags=re.DOTALL).strip()
+
+    def brief(
+        self,
+        memory: "MemoryLayer",
+        topic: str | None = None,
+        limit: int = 10,
+    ) -> str:
+        """
+        Generate a situation briefing from memory.
+
+        Args:
+            memory: MemoryLayer to query for context
+            topic: Optional topic to focus on (searches all if None)
+            limit: Maximum memories to include
+
+        Returns:
+            Briefing text
+        """
+        # Gather relevant memories
+        if topic:
+            memories = memory.recall(topic, limit=limit)
+        else:
+            memories = memory.store.list_all()[:limit]
+
+        if not memories:
+            return "No memories available for briefing."
+
+        # Format memories for context
+        memory_texts = []
+        for mem in memories:
+            date_str = mem.created_at.strftime("%Y-%m-%d")
+            tags_str = f" [{', '.join(mem.tags)}]" if mem.tags else ""
+            memory_texts.append(f"- [{date_str}] {mem.content[:200]}{tags_str}")
+
+        context = "\n".join(memory_texts)
+
+        # Generate briefing
+        prompt = f"""Generate a concise situation briefing based on the following memories.
+Focus on key facts, recent developments, and actionable items.
+{"Topic: " + topic if topic else "General briefing"}
+
+Memories:
+{context}
+
+Provide a clear, structured briefing."""
+
+        return self.think(prompt, mode=ReasoningMode.QUICK)
+
+    async def delegate_to_gorgon(
+        self,
+        prompt: str,
+        priority: int = 5,
+        wait: bool = False,
+        workflow_id: str | None = None,
+        variables: dict[str, Any] | None = None,
+        on_approval: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
+    ) -> dict[str, Any]:
+        """Delegate a complex task to Gorgon's agent pipeline.
+
+        When *workflow_id* is provided, uses the execution API
+        (``/v1/workflows/{id}/execute``) instead of the legacy task queue.
+        If *on_approval* is supplied, approval gates are handled
+        automatically via the callback.
+
+        Falls back to ``self.think()`` on any error or if the client is
+        not configured.
+
+        Returns:
+            Task/execution result dict from Gorgon, or a synthetic dict
+            with the local ``think()`` response as fallback.
+        """
+        if not self.gorgon_client:
+            logger.debug("No Gorgon client, falling back to local think")
+            return {"fallback": True, "response": self.think(prompt)}
+
+        try:
+            if workflow_id:
+                if wait:
+                    return await self.gorgon_client.execute_and_wait(
+                        workflow_id,
+                        variables=variables,
+                        on_approval=on_approval,
+                    )
+                return await self.gorgon_client.execute_workflow(
+                    workflow_id,
+                    variables=variables,
+                )
+
+            title = prompt[:80]
+            if wait:
+                return await self.gorgon_client.submit_and_wait(
+                    title=title,
+                    description=prompt,
+                    priority=priority,
+                )
+            return await self.gorgon_client.submit_task(
+                title=title,
+                description=prompt,
+                priority=priority,
+            )
+        except (ConnectionError, RuntimeError, ValueError, TimeoutError, OSError) as e:
+            logger.warning(f"Gorgon delegation failed, falling back: {e}")
+            return {"fallback": True, "response": self.think(prompt)}

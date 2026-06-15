@@ -1,0 +1,218 @@
+# Animus Portfolio Manifest
+
+**Generated:** 2026-06-14 · **Method:** Directory scan + inferred metadata
+**Purpose:** Registry for the autonomous builder engine. Every project scored and tracked.
+
+---
+
+projects:
+  - name: animus
+    path: ~/projects/animus
+    language: python
+    type: kernel
+    status: active
+    priority: critical
+    last_commit: 2026-06-14
+    description: Multi-agent orchestration framework with budget controls and checkpoint/resume
+
+  - name: anchormd
+    path: ~/projects/anchormd
+    language: python/rust
+    type: tool
+    status: active
+    priority: high
+    last_commit: 2026-05-15
+    description: CLAUDE.md audit and generation tool
+
+  - name: arete-evals
+    path: ~/projects/arete-evals
+    language: python
+    type: infrastructure
+    status: active
+    priority: high
+    last_commit: 2026-05-20
+    description: Evaluation framework and benchmarking
+
+  - name: arete-graph-utils
+    path: ~/projects/arete-graph-utils
+    language: python
+    type: library
+    status: active
+    priority: medium
+    last_commit: 2026-04-10
+    description: Graph utilities for portfolio analysis
+
+  - name: arete-portfolio
+    path: ~/projects/arete-portfolio
+    language: html/css
+    type: landing-page
+    status: active
+    priority: low
+    last_commit: 2026-03-01
+    description: Portfolio landing page
+
+  - name: arete-cc-plugin
+    path: ~/projects/arete-cc-plugin
+    language: typescript
+    type: plugin
+    status: active
+    priority: medium
+    last_commit: 2026-05-10
+    description: Claude Code plugin for portfolio integration
+
+  - name: auditchain
+    path: ~/projects/auditchain
+    language: python
+    type: tool
+    status: active
+    priority: high
+    last_commit: 2026-05-25
+    description: Chain auditing and verification
+
+  - name: BenchGoblins
+    path: ~/projects/BenchGoblins
+    language: python
+    type: product
+    status: active
+    priority: medium
+    last_commit: 2026-04-15
+    description: Fantasy sports analytics platform
+
+  - name: chainlog
+    path: ~/projects/chainlog
+    language: python
+    type: infrastructure
+    status: active
+    priority: high
+    last_commit: 2026-05-18
+    description: Chain logging infrastructure
+
+  - name: drift-monitor
+    path: ~/projects/drift-monitor
+    language: typescript
+    type: infrastructure
+    status: active
+    priority: high
+    last_commit: 2026-05-22
+    description: AI model drift detection and monitoring
+
+  - name: gatekeeper
+    path: ~/projects/gatekeeper
+    language: python
+    type: product
+    status: active
+    priority: high
+    last_commit: 2026-05-28
+    description: EVE Online authentication and security
+
+  - name: gorgon
+    path: ~/projects/gorgon
+    language: python
+    type: product
+    status: active
+    priority: medium
+    last_commit: 2026-04-20
+    description: AI-assisted development workflow orchestrator
+
+  - name: herald
+    path: ~/projects/herald
+    language: python
+    type: infrastructure
+    status: active
+    priority: medium
+    last_commit: 2026-04-25
+    description: Notification and alerting system
+
+  - name: memboot
+    path: ~/projects/memboot
+    language: python
+    type: infrastructure
+    status: active
+    priority: high
+    last_commit: 2026-05-30
+    description: Memory bootstrap and initialization
+
+  - name: monolith
+    path: ~/projects/monolith
+    language: python
+    type: product
+    status: active
+    priority: high
+    last_commit: 2026-06-01
+    description: EVE Online data aggregation and analysis
+
+  - name: notes
+    path: ~/projects/notes
+    language: markdown
+    type: knowledge-base
+    status: active
+    priority: critical
+    last_commit: 2026-06-14
+    description: Cross-session knowledge base and decision logs
+
+  - name: promptctl
+    path: ~/projects/promptctl
+    language: python
+    type: tool
+    status: active
+    priority: medium
+    last_commit: 2026-05-05
+    description: Prompt management and versioning
+
+  - name: quartermaster
+    path: ~/projects/quartermaster
+    language: python
+    type: product
+    status: maintenance
+    priority: low
+    last_commit: 2026-03-15
+    description: EVE Online inventory and logistics
+
+  - name: tiaid
+    path: ~/projects/tiaid
+    language: markdown/python
+    type: product
+    status: active
+    priority: high
+    last_commit: 2026-06-10
+    description: Trauma-Informed AI Deployment methodology
+
+  - name: vercel-fleet
+    path: ~/projects/vercel-fleet
+    language: typescript
+    type: infrastructure
+    status: active
+    priority: high
+    last_commit: 2026-06-05
+    description: Vercel fleet monitoring and deployment
+
+---
+
+## Scoring Dimensions (Template for Automation)
+
+Each project is scored on:
+
+| Dimension | Weight | Source |
+|---|---|---|
+| Test Coverage | 15% | `pytest --collect-only` + coverage |
+| CI Health | 15% | GitHub Actions status |
+| Dependency Freshness | 10% | Dependabot alerts + `pip list --outdated` |
+| Documentation | 10% | README completeness + API docs |
+| Active Development | 15% | Commits in last 30 days |
+| Security Posture | 15% | `gitleaks` + `bandit` + CodeQL |
+| Operator Utility | 20% | Manual self-reported: "did I use this today?" |
+
+**Target:** Auto-generated weekly scorecard.
+
+---
+
+## Backlog Rules
+
+1. A project drops below 40/100 → auto-flag for review
+2. A project has 0 commits in 90 days → auto-flag for archival
+3. A project's deps have HIGH CVE → auto-create "bump deps" task
+4. A project's tests fail on main → auto-create "fix CI" task (top priority)
+
+---
+
+*Canonical. Update weekly via automated scan. Manual overrides allowed.*

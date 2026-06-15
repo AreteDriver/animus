@@ -1,0 +1,141 @@
+# Roadmap: Hermes/Animus Integration & Mobile Builder Surface
+
+**Status:** Canonical roadmap · Created 2026-06-14 · Owner: ARETE  
+**Methodology:** `METHOD_AGENT_WORKFLOW.md` — 5-phase multi-agent build loop.
+
+---
+
+## Strategic Goal
+
+Turn the Animus kernel from an extractable engine into a **daily-use autonomous builder** that runs on local GPU, is controlled from a phone, and costs $0 per month.
+
+This means:
+1. **Hermes model integration** — tool-calling prompts, role-based routing, schema validation.
+2. **Terminal builder** — iterative read-plan-edit-test-retry loop for actual code changes.
+3. **Web UI** — minimal chat interface accessible from phone browser on local network.
+4. **Discord** — status checks and approval gates without opening a terminal.
+5. **Ollama-first** — works with zero cloud API subscriptions.
+
+---
+
+## Milestones
+
+| Milestone | Priority | Status | Depends On | Deliverable |
+|---|---|---|---|---|
+| **M1: Hermes Model Integration** | 1 | Spec ready | — | Hermes prompts, role router, schema validator |
+| **M2: TerminalAgent** | 2 | Spec ready | M1 | Iterative builder loop (`read→plan→edit→test→retry`) |
+| **M3: Minimal Web UI** | 3 | Spec ready | M1, M2 | FastAPI endpoint + vanilla-JS chat page |
+| **M4: Discord Bot** | 4 | Spec ready | M1 | `/build` slash commands for status/approve/queue |
+| **M5: Ollama-Default Wiring** | 5 | Spec ready | M1 | Auto-detect offline, default to local models |
+
+### Dependency Graph
+
+```
+M1 (Hermes) ──┬── M2 (TerminalAgent) ── M3 (Web UI)
+              ├── M4 (Discord)
+              └── M5 (Ollama-Default)
+```
+
+M1 unlocks everything. Sequential within a milestone, parallel across milestones where dependency-free.
+
+---
+
+## Task Inventory
+
+| Task | Name | Milestone | ET | Dependencies |
+|---|---|---|---|---|
+| TASK-001 | Hermes Prompt Templates | M1 | 800 | — |
+| TASK-002 | ProviderRouter Role-Based Tuning | M1 | 600 | TASK-001 |
+| TASK-003 | Tool-Call Schema Validation | M1 | 700 | TASK-002 |
+| TASK-004 | CommandRunner | M2 | 600 | — |
+| TASK-005 | TerminalAgent Loop | M2 | 1,200 | TASK-003, TASK-004 |
+| TASK-006 | FastAPI Chat Endpoint | M3 | 800 | TASK-005 |
+| TASK-007 | Mobile HTML UI | M3 | 600 | TASK-006 |
+| TASK-008 | Discord Slash Commands | M4 | 900 | TASK-002 |
+| TASK-009 | Ollama Default Detection | M5 | 500 | TASK-002 |
+| TASK-010 | Kernel Integration Tests | ALL | 1,500 | TASK-001–009 |
+
+**Total Estimated Budget:** ~8,200 ET (well within the 15,000 ET pool reserved for this roadmap).
+
+---
+
+## Execution Phases
+
+### Phase A: SPECIFICATION (Complete ✓)
+- **Status:** Done 2026-06-14
+- **Deliverables:**
+  - `docs/METHOD_AGENT_WORKFLOW.md` (reusable methodology)
+  - `docs/ROADMAP_HERMES_2026-06.md` (this file)
+  - `TASK_SPECS/001_hermes_prompts.md` through `010_integration_tests.md`
+
+### Phase B: DELEGATE (Pending)
+- **Goal:** Spawn Builder agents for each task in dependency order.
+- **Order:**
+  1. Wave 1 (no deps): TASK-001, TASK-004
+  2. Wave 2 (deps satisfied): TASK-002, TASK-003, TASK-009
+  3. Wave 3: TASK-005, TASK-008
+  4. Wave 4: TASK-006, TASK-007
+  5. Wave 5: TASK-010
+- **Agents:** 10× Builder, operating in parallel within waves.
+- **Budget:** ~8,200 ET.
+
+### Phase C: EVALUATE (Pending)
+- **Goal:** Score each output against its rubric.
+- **Agents:** 10× Reviewer.
+- **Budget:** ~1,640 ET (20% of delegate).
+
+### Phase D: REPAIR (Pending)
+- **Goal:** Re-run rejected tasks.
+- **Expected rejections:** 30% (3 tasks).
+- **Budget:** ~1,640 ET.
+
+### Phase E: INTEGRATE (Pending)
+- **Goal:** Merge, run tests, commit.
+- **Budget:** ~410 ET.
+
+---
+
+## Risks & Mitigations
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| Hermes prompts don't match model expectations | Medium | High | Include dual-format (JSON) fallback; test early with actual model |
+| CommandRunner false positives on safe commands | Low | Medium | Whitelist tests; safety patterns reviewed by human |
+| Discord bot rate limits | Medium | Low | Batch embeds; exponential backoff |
+| Ollama model not loaded when UI starts | High | Medium | UI shows "loading model..." with `ollama pull` hint |
+| Browser CORS issues in local network | Low | Low | Allow `*` origin in dev mode; tighten in prod |
+| Web UI > 50KB with budget bar + queue | Low | Low | Use inline SVG for icons, no external libs |
+
+---
+
+## Open Decisions (Need Human Input)
+
+1. **M3 vs M4 priority:** Should Web UI ship before Discord, or vice versa? Discord is lower-friction for approvals. Web UI is richer for exploration.
+2. **TerminalAgent iteration limit:** Currently capped at 10. Too restrictive for complex refactors?
+3. **Hermes vs Qwen for Builder:** The spec assumes Hermes for Builder. If Hermes underperforms on your GPU, should we dynamically fall back to Qwen?
+4. **Auto-commit:** TerminalAgent rolls back on failure but does not auto-commit on success. Should successful builds auto-commit or queue for human approval?
+
+---
+
+## Success Criteria (End of Roadmap)
+
+- [ ] All 10 task specs marked COMPLETE in `TASK_SPECS/`.
+- [ ] `pytest packages/kernel/tests/` passes.
+- [ ] `python packages/kernel/scripts/verify_imports.py` passes.
+- [ ] `curl http://localhost:8000/chat` streams a response from local Ollama.
+- [ ] `/build status` in Discord shows active builds and budget.
+- [ ] Zero cloud API keys required for daily use.
+
+---
+
+## References
+
+- [[Methodology]] `docs/METHOD_AGENT_WORKFLOW.md`
+- [[Task Specs]] `TASK_SPECS/*.md`
+- [[Kernel Map]] `packages/kernel/KERNEL_FILE_MAP.md`
+- [[Interface Vision]] `docs/INTERFACE_BOOTSTRAP_VISION.md`
+- [[Engine Assessment]] `docs/ENGINE_VS_SHELL_ASSESSMENT.md`
+
+---
+
+*Part of the Animus system. Built with the multi-agent workflow methodology.*
