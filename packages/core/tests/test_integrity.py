@@ -284,3 +284,31 @@ class TestSignedBaseline:
         )
         with pytest.raises(IntegritySignatureError):
             verify_or_raise(data_dir, root=pkg_root)
+
+
+class TestE9SystemdUnitIntegrity:
+    """E9 — systemd unit files that define sandbox boundaries must be tracked
+    and tampering detected at boot time."""
+
+    def test_systemd_files_in_tracked_set(self):
+        assert "redteam/systemd/animus-redteam.service" in _TRACKED_RELATIVE_PATHS
+        assert "redteam/systemd/animus-redteam.timer" in _TRACKED_RELATIVE_PATHS
+
+    def test_systemd_drift_trips_verify(self, fake_tree, monkeypatch):
+        pkg_root, data_dir = fake_tree
+        regenerate_baseline(data_dir, root=pkg_root)
+
+        # Tamper with the service file — e.g., attacker widens the sandbox
+        service = pkg_root / "redteam/systemd/animus-redteam.service"
+        service.write_text(service.read_text() + "\n# attacker-added override\n")
+
+        with pytest.raises(IntegrityMismatchError) as exc:
+            verify_or_raise(data_dir, root=pkg_root)
+        assert "animus-redteam.service" in str(exc.value)
+
+    def test_systemd_unit_exists_in_live_package(self):
+        import animus
+
+        pkg_root = Path(animus.__file__).parent
+        assert (pkg_root / "redteam/systemd/animus-redteam.service").is_file()
+        assert (pkg_root / "redteam/systemd/animus-redteam.timer").is_file()

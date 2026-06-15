@@ -6,6 +6,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from animus_types import Sensitivity
 
 from animus_forge.providers.base import (
     CompletionRequest,
@@ -373,6 +374,83 @@ class TestFailover:
         # Only local providers allowed — no fallback to cloud
         with pytest.raises(ProviderError):
             router.complete(_make_request())
+
+
+class TestE13FallbackSensitivityToctou:
+    """E13: SECRET/CONFIDENTIAL requests must NOT fallback to cloud providers.
+
+    The TOCTOU gap: _select_provider correctly forces local for sensitive tiers,
+    but if the chosen local provider fails, _get_fallback could select a cloud
+    provider because it only checked self._force_local (an instance flag) not
+    the request's actual sensitivity.
+    """
+
+    def test_secret_request_fallback_rejects_cloud(self):
+        """A SECRET request whose primary fails must not fall back to OPENAI."""
+        pm = ProviderManager()
+
+        mock_local = MagicMock(spec=OllamaProvider)
+        mock_local.provider_type = ProviderType.OLLAMA
+        mock_local.complete.side_effect = ProviderError("ollama down")
+        mock_local.select_model_for_tier.return_value = None
+        pm.register("ollama", provider=mock_local)
+
+        mock_cloud = MagicMock()
+        mock_cloud.provider_type = ProviderType.OPENAI
+        mock_cloud.complete.return_value = _mock_response("openai")
+        pm.register("openai", provider=mock_cloud)
+
+        config = RoutingConfig(mode=RoutingMode.HYBRID)
+        router = TierRouter(pm, config)
+
+        req = _make_request(sensitivity=Sensitivity.SECRET)
+        # ollama is selected (local), fails, fallback must NOT pick openai.
+        with pytest.raises(ProviderError):
+            router.complete(req)
+
+    def test_confidential_request_fallback_rejects_cloud(self):
+        """Same test for CONFIDENTIAL tier."""
+        pm = ProviderManager()
+
+        mock_local = MagicMock(spec=OllamaProvider)
+        mock_local.provider_type = ProviderType.OLLAMA
+        mock_local.complete.side_effect = ProviderError("ollama down")
+        mock_local.select_model_for_tier.return_value = None
+        pm.register("ollama", provider=mock_local)
+
+        mock_cloud = MagicMock()
+        mock_cloud.provider_type = ProviderType.OPENAI
+        mock_cloud.complete.return_value = _mock_response("openai")
+        pm.register("openai", provider=mock_cloud)
+
+        config = RoutingConfig(mode=RoutingMode.HYBRID)
+        router = TierRouter(pm, config)
+
+        req = _make_request(sensitivity=Sensitivity.CONFIDENTIAL)
+        with pytest.raises(ProviderError):
+            router.complete(req)
+
+    def test_public_request_fallback_allows_cloud(self):
+        """PUBLIC requests should still be able to fallback to cloud providers."""
+        pm = ProviderManager()
+
+        mock_local = MagicMock(spec=OllamaProvider)
+        mock_local.provider_type = ProviderType.OLLAMA
+        mock_local.complete.side_effect = ProviderError("ollama down")
+        mock_local.select_model_for_tier.return_value = None
+        pm.register("ollama", provider=mock_local)
+
+        mock_cloud = MagicMock()
+        mock_cloud.provider_type = ProviderType.OPENAI
+        mock_cloud.complete.return_value = _mock_response("openai")
+        pm.register("openai", provider=mock_cloud)
+
+        config = RoutingConfig(mode=RoutingMode.HYBRID)
+        router = TierRouter(pm, config)
+
+        req = _make_request(sensitivity=Sensitivity.PUBLIC)
+        resp = router.complete(req)
+        assert resp.provider == "openai"
 
 
 # ---------------------------------------------------------------------------

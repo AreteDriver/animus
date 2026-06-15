@@ -368,6 +368,18 @@ class TierRouter:
                 if self._pm.get(p) and self._pm.get(p).provider_type in _LOCAL_PROVIDER_TYPES
             ]
 
+        # E13 — TOCTOU: re-check sensitivity before selecting a fallback.
+        # A SECRET/CONFIDENTIAL request whose primary provider failed must NOT
+        # silently fall back to a cloud provider. This mirrors the Stage 3.D
+        # enforcement in _select_provider.
+        sensitivity = getattr(request, "sensitivity", Sensitivity.PUBLIC)
+        if sensitivity in (Sensitivity.CONFIDENTIAL, Sensitivity.SECRET):
+            candidates = [
+                p
+                for p in candidates
+                if self._pm.get(p) and self._pm.get(p).provider_type in _LOCAL_PROVIDER_TYPES
+            ]
+
         if not candidates:
             return None
 

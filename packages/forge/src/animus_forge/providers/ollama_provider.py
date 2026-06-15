@@ -19,6 +19,7 @@ from .base import (
     StreamChunk,
     ToolCall,
 )
+from .model_pin import ModelPinStore, fetch_ollama_digest
 
 try:
     import httpx
@@ -161,6 +162,29 @@ class OllamaProvider(Provider):
         )
         self._initialized = True
 
+    def _verify_model_pin(self, model: str) -> None:
+        """Check pinned digest for the model; raise ProviderError on mismatch.
+
+        E12: if a model pin exists and the on-disk digest has drifted,
+        we treat it as a potential supply-chain compromise and refuse inference.
+        """
+        store = ModelPinStore()
+        pin = store.get_pin(model)
+        if pin is None:
+            return
+        current = fetch_ollama_digest(model, base_url=self.base_url)
+        if current is None:
+            # Cannot verify — fail closed (safe default).
+            raise ProviderError(
+                f"Model '{model}' is pinned but Ollama digest could not be retrieved. "
+                "Refusing inference until the digest is verifiable."
+            )
+        if current != pin:
+            raise ProviderError(
+                f"Model '{model}' digest mismatch: expected {pin}, got {current}. "
+                "Possible supply-chain tampering — inference blocked."
+            )
+
     def _build_request(self, request: CompletionRequest, stream: bool = False) -> dict:
         """Build request payload for Ollama API."""
         model = request.model or self.default_model
@@ -208,6 +232,7 @@ class OllamaProvider(Provider):
 
         payload = self._build_request(request, stream=False)
         model = request.model or self.default_model
+        self._verify_model_pin(model)
 
         start_time = time.time()
         try:
@@ -263,6 +288,7 @@ class OllamaProvider(Provider):
 
         payload = self._build_request(request, stream=False)
         model = request.model or self.default_model
+        self._verify_model_pin(model)
 
         start_time = time.time()
         try:
@@ -342,6 +368,7 @@ class OllamaProvider(Provider):
 
         payload = self._build_request(request, stream=True)
         model = request.model or self.default_model
+        self._verify_model_pin(model)
 
         try:
             with self._client.stream("POST", "/api/chat", json=payload) as response:
@@ -385,6 +412,7 @@ class OllamaProvider(Provider):
 
         payload = self._build_request(request, stream=True)
         model = request.model or self.default_model
+        self._verify_model_pin(model)
 
         try:
             async with self._async_client.stream("POST", "/api/chat", json=payload) as response:
