@@ -27,8 +27,8 @@ class RoleRoutingConfig:
     # Offline (no cloud API keys): role → (provider_name, model)
     offline_defaults: dict[AgentRole, tuple[str, str | None]] = field(
         default_factory=lambda: {
-            AgentRole.BUILDER: ("ollama", "hermes"),
-            AgentRole.PLANNER: ("ollama", "qwen2.5"),
+            AgentRole.BUILDER: ("ollama", "hermes3:8b"),
+            AgentRole.PLANNER: ("ollama", "qwen2.5:14b"),
         }
     )
 

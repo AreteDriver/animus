@@ -186,22 +186,34 @@ def parse_hermes_tool_call(xml_str: str) -> tuple[str, dict[str, Any]]:
     Raises:
         ContractViolation: If the XML is malformed.
     """
+    text = xml_str.strip()
+    # Hermes sometimes emits multiple root-level blocks (e.g. <tool_call> then
+    # <result>). Isolate the first <tool_call> element if present.
+    tc_start = text.find("<tool_call>")
+    if tc_start != -1:
+        tc_end = text.find("</tool_call>", tc_start)
+        if tc_end != -1:
+            text = text[tc_start : tc_end + len("</tool_call>")]
+
     try:
-        root = ET.fromstring(xml_str.strip())
+        root = ET.fromstring(text)
     except ET.ParseError as exc:
         raise ContractViolation(
             message=f"Invalid Hermes XML: {exc}",
             field_path="tool_call",
         )
 
-    name_el = root.find("name")
+    # Some Hermes outputs wrap the payload in an extra <tool> element.
+    search_root = root.find("tool") or root
+
+    name_el = search_root.find("name")
     if name_el is None:
-        name_el = root.find("tool_name")
-    args_el = root.find("arguments")
+        name_el = search_root.find("tool_name")
+    args_el = search_root.find("arguments")
     if args_el is None:
-        args_el = root.find("parameters")
+        args_el = search_root.find("parameters")
     if args_el is None:
-        args_el = root.find("params")
+        args_el = search_root.find("params")
 
     name = name_el.text if name_el is not None else ""
     raw_args = args_el.text if args_el is not None else "{}"
