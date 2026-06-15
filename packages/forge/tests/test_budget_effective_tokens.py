@@ -55,8 +55,9 @@ class TestEffectiveTokensFormula:
         assert effective_tokens(haiku) < effective_tokens(sonnet) < effective_tokens(opus)
         # Sonnet base: 1.0 × (1·1000 + 4·1000) = 5000
         assert effective_tokens(sonnet) == pytest.approx(5000.0)
-        # Haiku at 0.08× → 400; Opus at 5× → 25000
-        assert effective_tokens(haiku) == pytest.approx(400.0)
+        # C12: Haiku-4 blended rate is $3/M (multiplier 0.3333), not legacy
+        # 3.x ($0.75/M, multiplier 0.0833). Opus remains 5× sonnet.
+        assert effective_tokens(haiku) == pytest.approx(1666.5)
         assert effective_tokens(opus) == pytest.approx(25000.0)
 
     def test_unknown_model_defaults_to_sonnet_tier(self):
@@ -115,17 +116,17 @@ class TestManagerAggregateET:
     def test_total_effective_tokens_sums_across_records(self):
         bm = BudgetManager(BudgetConfig(total_budget=10_000))
         bm.record_usage("a1", input_tokens=100, output_tokens=100, model="sonnet")  # 500
-        bm.record_usage("a2", input_tokens=100, output_tokens=100, model="haiku")  # 40
-        assert bm.total_effective_tokens() == pytest.approx(540.0)
+        bm.record_usage("a2", input_tokens=100, output_tokens=100, model="haiku")  # 166.65
+        assert bm.total_effective_tokens() == pytest.approx(666.65)
 
     def test_effective_tokens_by_agent_groups_correctly(self):
         bm = BudgetManager(BudgetConfig(total_budget=10_000))
         bm.record_usage("a1", input_tokens=100, output_tokens=100, model="sonnet")  # 500
         bm.record_usage("a1", input_tokens=50, output_tokens=50, model="sonnet")  # 250
-        bm.record_usage("a2", input_tokens=100, output_tokens=100, model="haiku")  # 40
+        bm.record_usage("a2", input_tokens=100, output_tokens=100, model="haiku")  # 166.65
         by_agent = bm.effective_tokens_by_agent()
         assert by_agent["a1"] == pytest.approx(750.0)
-        assert by_agent["a2"] == pytest.approx(40.0)
+        assert by_agent["a2"] == pytest.approx(166.65)
 
     def test_config_can_override_model_multipliers(self):
         bm = BudgetManager(BudgetConfig(total_budget=10_000, model_multipliers={"sonnet": 2.0}))
@@ -300,9 +301,9 @@ class TestSinglePricingSource:
         sonnet = bm.estimate_cost(1_000_000, "claude-sonnet-4-6")
         opus = bm.estimate_cost(1_000_000, "claude-opus-4-7")
         haiku = bm.estimate_cost(1_000_000, "claude-haiku-4-5")
-        # Ratios match the multiplier table (opus 5x, haiku 0.08x sonnet).
+        # C12: ratios match the multiplier table (opus 5x, haiku 0.3333x sonnet).
         assert opus == pytest.approx(sonnet * 5.0)
-        assert haiku == pytest.approx(sonnet * 0.08)
+        assert haiku == pytest.approx(sonnet * 0.3333)
         # Sonnet base is the single $9/1M rate.
         assert sonnet == pytest.approx(9.0)
 

@@ -62,23 +62,30 @@ ET_OUTPUT_WEIGHT = 4.0
 BASE_USD_PER_1M_TOKENS = 9.0
 
 
-# Default model-tier multipliers (m), normalised so Sonnet = 1.0. Reflect
-# Anthropic's published price ratios — Haiku is the cheap tier, Opus the
-# expensive one. Override via ``BudgetConfig.model_multipliers``; unknown
-# models fall back to 1.0 (Sonnet-equivalent).
+# Default model-tier multipliers (m), normalised so Sonnet = 1.0. Derived
+# from the blended (input+output)/2 rates in ``CostTracker.PRICING`` so
+# ``estimate_cost`` and ``effective_tokens`` share ONE source of truth
+# with the live billing path (C12). Override via
+# ``BudgetConfig.model_multipliers``; unknown models fall back to 1.0.
 DEFAULT_MODEL_MULTIPLIERS: dict[str, float] = {
-    "haiku": 0.08,
-    "claude-haiku": 0.08,
-    "claude-haiku-4-5": 0.08,
-    "sonnet": 1.0,
-    "claude-sonnet": 1.0,
-    "claude-sonnet-4-6": 1.0,
-    "opus": 5.0,
+    # Anthropic — Claude 4.x (current)
+    "claude-opus-4": 5.0,
     "claude-opus": 5.0,
-    "claude-opus-4-7": 5.0,
-    "gpt-4o-mini": 0.05,
-    "gpt-4o": 0.5,
-    "gpt-5": 0.7,
+    "opus": 5.0,
+    "claude-sonnet-4": 1.0,
+    "claude-sonnet": 1.0,
+    "sonnet": 1.0,
+    "claude-haiku-4": 0.3333,
+    "claude-haiku": 0.3333,
+    "haiku": 0.3333,
+    # Anthropic — Claude 3.x (legacy)
+    "claude-3-5-haiku": 0.2667,
+    "claude-3-haiku": 0.0833,
+    # OpenAI
+    "gpt-4.1": 0.5556,
+    "gpt-4.1-mini": 0.1111,
+    "gpt-4o": 0.6944,
+    "gpt-4o-mini": 0.0417,
     "ollama": 0.0,  # local — no $ cost (compute is the cost, not tokens)
 }
 
