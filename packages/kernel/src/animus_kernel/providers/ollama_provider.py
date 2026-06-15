@@ -131,7 +131,7 @@ class OllamaProvider(Provider):
         return ProviderType.OLLAMA
 
     def _get_fallback_model(self) -> str:
-        return "llama3.2"
+        return "qwen2.5:14b"
 
     @property
     def base_url(self) -> str:
