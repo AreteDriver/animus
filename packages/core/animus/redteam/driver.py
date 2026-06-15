@@ -41,13 +41,11 @@ from typing import Any
 logger = logging.getLogger("redteam")
 
 
-# Default to qwen2.5:14b — proven to load and answer adversarial prompts
-# in the user's environment. The HauhauCS uncensored Qwen3.6 35B
-# (``hf.co/HauhauCS/Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive:Q6_K_P``)
-# is the preferred red-team model when reachable; set the env var
-# ``ANIMUS_REDTEAM_MODEL`` to override. The uncensored variant produces
-# adversarial inputs with fewer refusals.
-DEFAULT_RED_TEAM_MODEL = "qwen2.5:14b"
+# Default to the HauhauCS uncensored Qwen3.6 35B — the aggressive red-team
+# model that produces adversarial inputs with fewer refusals. Falls back to
+# ``qwen2.5:14b`` if the env var points there. Set ``ANIMUS_REDTEAM_MODEL``
+# to override (e.g., for the 14B abliterated variant on low-RAM boxes).
+DEFAULT_RED_TEAM_MODEL = "hf.co/HauhauCS/Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive:Q6_K_P"
 DEFAULT_OLLAMA_HOST = "http://localhost:11434"
 # llama.cpp source build serves the OpenAI-compatible /v1/chat/completions
 # endpoint at this default. Set ``ANIMUS_REDTEAM_BASE_URL`` to override.
@@ -406,10 +404,13 @@ class RedTeamDriver:
         Returns a list of generated strings. On error, returns an empty
         list so the driver can continue.
 
-        Reasoning-tag handling: when the backend returns ``<think>...</think>``
-        prefix (Qwen3 / Qwen3.6 chat template default), we strip it. We also
-        pass ``chat_template_kwargs.enable_thinking=false`` which llama.cpp
-        respects and ollama ignores — cheap belt-and-suspenders.
+        Reasoning-tag handling: Qwen3 / Qwen3.6 thinking models emit a
+        ``\n\n<antThinking>...\n\n</antThinking>`` block.  We strip it.
+        When Ollama separates the block into the ``reasoning`` field and
+        leaves ``content`` empty (observed on Qwen3.6-A3B), we fall back to
+        ``reasoning`` and clean the thinking preamble so the payload isn't
+        lost.  ``max_tokens`` is generous (1000) because thinking models burn
+        ~300–500 tokens on internal reasoning before emitting content.
         """
         try:
             import httpx
@@ -436,7 +437,7 @@ class RedTeamDriver:
                             },
                         ],
                         "temperature": 0.9,
-                        "max_tokens": 400,
+                        "max_tokens": 1000,
                         # Qwen3 chat-template hint — llama.cpp honors, ollama
                         # ignores silently.
                         "chat_template_kwargs": {"enable_thinking": False},
@@ -446,11 +447,23 @@ class RedTeamDriver:
                 resp.raise_for_status()
                 data = resp.json()
                 msg = data.get("choices", [{}])[0].get("message", {})
-                text = (msg.get("content") or "").strip()
-                # Strip a leaked <think>...</think> block if the backend
+                text = msg.get("content") or ""
+                # E14 — thinking-model fallback: when Ollama puts the thinking
+                # block in the ``reasoning`` field and leaves ``content``
+                # empty, fall back to reasoning and strip the preamble.
+                if not text:
+                    reasoning = (msg.get("reasoning") or "").strip()
+                    if reasoning:
+                        for marker in ("Output:", "Payload:", "Result:"):
+                            if marker in reasoning:
+                                reasoning = reasoning.rsplit(marker, 1)[1]
+                                break
+                        text = reasoning.strip()
+                # Strip a leaked \n\n<antThinking>...\n\n</antThinking> block if the backend
                 # ignored enable_thinking and the model emitted it inline.
-                if "<think>" in text and "</think>" in text:
-                    text = text.split("</think>", 1)[1].strip()
+                if "\n\n<antThinking>" in text and "\n\n</antThinking>" in text:
+                    text = text.split("\n\n</antThinking>", 1)[1]
+                text = text.strip()
                 if text:
                     # Strip common LLM artifacts (quotes, leading dashes)
                     text = text.strip(" \"'\n`")

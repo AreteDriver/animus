@@ -25,10 +25,11 @@ IPAddressDeny=any
 IPAddressAllow=127.0.0.0/8 ::1/128
 
 # Defaults — override with: systemctl --user edit animus-redteam
-Environment="ANIMUS_REDTEAM_MODEL=qwen2.5:14b"
+Environment="ANIMUS_REDTEAM_MODEL=hf.co/HauhauCS/Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive:Q6_K_P"
 Environment="ANIMUS_REDTEAM_BASE_URL="
 # Set ANIMUS_REDTEAM_BASE_URL=http://127.0.0.1:8081 to route through a
-# llama-server build (HauhauCS Qwen3.6 etc.); leave empty to use ollama.
+# llama-server build; leave empty to use ollama. Override the model env
+# to qwen2.5:14b on low-RAM boxes that cannot load the 35B variant.
 WorkingDirectory=%h/projects/animus
 ExecStart=%h/projects/animus/.venv/bin/python -m animus.redteam.standing --n-per-category 5 --alert-on high
 

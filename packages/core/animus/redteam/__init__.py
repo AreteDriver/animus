@@ -3,9 +3,9 @@
 Two layers:
 
 - ``animus.redteam.driver`` — the one-shot driver. Generates probes via
-  an uncensored local model (default ``qwen2.5:14b``, preferred
-  ``hauhaucs`` via llama-server), applies them against isolated test
-  fixtures of every gate, emits a JSONL report.
+  an uncensored local model (default HauhauCS Qwen3.6 35B-A3B via Ollama,
+  fallback ``qwen2.5:14b`` on low-RAM boxes), applies them against isolated
+  test fixtures of every gate, emits a JSONL report.
 - ``animus.redteam.standing`` — the standing capability. Runs the
   driver on a schedule (systemd timer), appends every probe to a
   persistent ledger, classifies novel-vs-known, renders a tail-friendly

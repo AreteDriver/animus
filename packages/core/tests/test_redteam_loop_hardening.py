@@ -31,9 +31,7 @@ class TestAutoApproveDefaults:
                         if idx < len(node.args):
                             name = node.args[idx].arg
                             if name == "auto_approve":
-                                pytest.fail(
-                                    "mcp_server.py has auto_approve defaulting to True"
-                                )
+                                pytest.fail("mcp_server.py has auto_approve defaulting to True")
 
     def test_docstring_mentions_secure_default(self) -> None:
         tree = self._parse_mcp_server()
