@@ -18,10 +18,12 @@ from __future__ import annotations
 
 from animus.memory.layer import MemoryLayer
 from animus.memory.stores import ChromaMemoryStore, LocalMemoryStore, MemoryStore
+from animus.memory.tier import TierManager
 from animus.memory.types import (
     Conversation,
     Memory,
     MemorySource,
+    MemoryTier,
     MemoryType,
     Message,
     Procedure,
@@ -36,8 +38,10 @@ __all__ = [
     "MemoryLayer",
     "MemorySource",
     "MemoryStore",
+    "MemoryTier",
     "MemoryType",
     "Message",
     "Procedure",
     "SemanticFact",
+    "TierManager",
 ]

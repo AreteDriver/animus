@@ -31,6 +31,14 @@ class MemorySource(Enum):
     LEARNED = "learned"  # Pattern detected over time
 
 
+class MemoryTier(str, Enum):
+    """Temperature-based storage tier for memory retention policy."""
+
+    HOT = "hot"  # Active session context
+    WARM = "warm"  # Recently accessed, fast retrieval
+    COLD = "cold"  # Archival, retrieve on explicit request
+
+
 # Stage 3.D — Sensitivity hoisted to the shared ``animus-types`` package so
 # Forge providers can import it without violating the Core → Forge dep
 # direction. Re-exported here to keep the legacy import path
@@ -61,6 +69,10 @@ class Memory:
     provenance: str = "direct"  # "direct" | "sync" | "consolidation" | "import" | "mcp"
     # Stage 2 hardening — disclosure tier (default PUBLIC for backward compat)
     sensitivity: Sensitivity = Sensitivity.PUBLIC
+    # D2 — temperature-based tiering for retention and retrieval priority
+    tier: MemoryTier = MemoryTier.WARM
+    access_count: int = 0
+    last_accessed: datetime | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -79,6 +91,9 @@ class Memory:
             "change_summary": self.change_summary,
             "provenance": self.provenance,
             "sensitivity": self.sensitivity.value,
+            "tier": self.tier.value,
+            "access_count": self.access_count,
+            "last_accessed": self.last_accessed.isoformat() if self.last_accessed else None,
         }
 
     @classmethod
@@ -99,6 +114,11 @@ class Memory:
             change_summary=data.get("change_summary"),
             provenance=data.get("provenance", "direct"),
             sensitivity=Sensitivity(data.get("sensitivity", Sensitivity.PUBLIC.value)),
+            tier=MemoryTier(data.get("tier", MemoryTier.WARM.value)),
+            access_count=data.get("access_count", 0),
+            last_accessed=(
+                datetime.fromisoformat(data["last_accessed"]) if data.get("last_accessed") else None
+            ),
         )
 
     @classmethod
@@ -116,6 +136,9 @@ class Memory:
         change_summary: str | None = None,
         provenance: str = "direct",
         sensitivity: Sensitivity = Sensitivity.PUBLIC,
+        tier: MemoryTier = MemoryTier.WARM,
+        access_count: int = 0,
+        last_accessed: datetime | None = None,
     ) -> Memory:
         """Factory method to create a Memory with auto-generated id and timestamps."""
         now = datetime.now()
@@ -135,6 +158,9 @@ class Memory:
             change_summary=change_summary,
             provenance=provenance,
             sensitivity=sensitivity,
+            tier=tier,
+            access_count=access_count,
+            last_accessed=last_accessed,
         )
 
     def add_tag(self, tag: str) -> None:

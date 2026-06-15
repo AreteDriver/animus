@@ -9,7 +9,7 @@ from pathlib import Path
 from animus.logging import get_logger
 from animus.memory.fusion import _rrf_fuse
 from animus.memory.stores.base import MemoryStore
-from animus.memory.types import Memory, MemoryType, Sensitivity
+from animus.memory.types import Memory, MemoryTier, MemoryType, Sensitivity
 
 logger = get_logger("memory")
 
@@ -126,6 +126,9 @@ class ChromaMemoryStore(MemoryStore):
                             "change_summary",
                             "provenance",
                             "sensitivity",
+                            "tier",
+                            "access_count",
+                            "last_accessed",
                         )
                     },
                     tags=tags,
@@ -137,6 +140,13 @@ class ChromaMemoryStore(MemoryStore):
                     change_summary=metadata.get("change_summary") or None,
                     provenance=metadata.get("provenance", "direct"),
                     sensitivity=Sensitivity(metadata.get("sensitivity", Sensitivity.PUBLIC.value)),
+                    tier=MemoryTier(metadata.get("tier", MemoryTier.WARM.value)),
+                    access_count=int(metadata.get("access_count", 0)),
+                    last_accessed=(
+                        datetime.fromisoformat(metadata["last_accessed"])
+                        if metadata.get("last_accessed")
+                        else None
+                    ),
                 )
         except Exception as e:
             logger.warning(f"Failed to load metadata from ChromaDB: {e}")
@@ -182,6 +192,9 @@ class ChromaMemoryStore(MemoryStore):
             "version": str(memory.version),
             "provenance": memory.provenance,
             "sensitivity": memory.sensitivity.value,
+            "tier": memory.tier.value,
+            "access_count": memory.access_count,
+            "last_accessed": memory.last_accessed.isoformat() if memory.last_accessed else "",
         }
         if memory.subtype:
             metadata["subtype"] = memory.subtype

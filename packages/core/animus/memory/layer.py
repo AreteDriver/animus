@@ -11,9 +11,11 @@ from typing import TYPE_CHECKING, ClassVar
 
 from animus.logging import get_logger
 from animus.memory.redaction import redact
+from animus.memory.tier import TierManager
 from animus.memory.types import (
     Conversation,
     Memory,
+    MemoryTier,
     MemoryType,
     Procedure,
     SemanticFact,
@@ -61,6 +63,7 @@ class MemoryLayer:
         else:
             self.store = _memory.LocalMemoryStore(data_dir)
 
+        self.tier_manager = TierManager(self)
         logger.info(f"MemoryLayer initialized with {type(self.store).__name__}")
 
     def remember(
@@ -74,6 +77,7 @@ class MemoryLayer:
         subtype: str | None = None,
         provenance: str = "direct",
         sensitivity: Sensitivity = Sensitivity.PUBLIC,
+        tier: MemoryTier = MemoryTier.WARM,
     ) -> Memory:
         """
         Store a new memory.
@@ -91,6 +95,7 @@ class MemoryLayer:
                 Defaults to PUBLIC; callers handling private material should
                 set this explicitly. Read-side filtering happens via
                 ``recall(allowed_tiers=...)``.
+            tier: Temperature tier (HOT/WARM/COLD). Defaults to WARM.
 
         Returns:
             The created Memory object
@@ -122,6 +127,7 @@ class MemoryLayer:
             subtype=subtype,
             provenance=provenance,
             sensitivity=sensitivity,
+            tier=tier,
         )
 
         self.store.store(memory)
@@ -224,6 +230,7 @@ class MemoryLayer:
         min_confidence: float = 0.0,
         limit: int = 10,
         allowed_tiers: set[Sensitivity] | None = None,
+        tier: MemoryTier | None = None,
     ) -> list[Memory]:
         """
         Retrieve relevant memories with optional filters.
@@ -249,11 +256,12 @@ class MemoryLayer:
                 :meth:`recall_for_egress`, which pins ``{Sensitivity.PUBLIC}``
                 in one place so a new egress site cannot accidentally widen the
                 scope.
+            tier: Optional temperature tier filter (HOT/WARM/COLD).
 
         Returns:
             List of relevant memories
         """
-        return self.store.search(
+        results = self.store.search(
             query,
             memory_type,
             tags,
@@ -262,6 +270,15 @@ class MemoryLayer:
             limit,
             allowed_tiers=allowed_tiers,
         )
+
+        # D2 — temperature-based filtering and ranking
+        if tier is not None:
+            results = [m for m in results if m.tier == tier]
+        for mem in results:
+            self.tier_manager.on_access(mem)
+        results = self.tier_manager.rerank_for_tier(results)
+
+        return results[:limit]
 
     def recall_by_tags(
         self,
@@ -324,16 +341,74 @@ class MemoryLayer:
         )
 
     def get_memory(self, memory_id: str) -> Memory | None:
-        """Get a specific memory by ID or partial ID."""
+        """Get a specific memory by ID or partial ID.
+
+        Records an access for tier-tracking purposes.
+        """
         # Try exact match first
         memory = self.store.retrieve(memory_id)
         if memory:
+            self.tier_manager.on_access(memory)
             return memory
         # Try partial match
         for mem in self.store.list_all():
             if mem.id.startswith(memory_id):
+                self.tier_manager.on_access(mem)
                 return mem
         return None
+
+    def promote_memory(self, memory_id: str) -> bool:
+        """Explicitly promote a memory to the next tier (max HOT).
+
+        Does not trigger access tracking — this is an administrative
+        operation, not a recall.
+        """
+        memory = self.store.retrieve(memory_id)
+        if not memory:
+            # Try partial match
+            for mem in self.store.list_all():
+                if mem.id.startswith(memory_id):
+                    memory = mem
+                    break
+        if not memory:
+            return False
+        if memory.tier == MemoryTier.COLD:
+            memory.tier = MemoryTier.WARM
+        elif memory.tier == MemoryTier.WARM:
+            memory.tier = MemoryTier.HOT
+        else:
+            return True  # Already HOT
+        return self.update_memory(memory)
+
+    def demote_memory(self, memory_id: str) -> bool:
+        """Explicitly demote a memory to the previous tier (min COLD).
+
+        Does not trigger access tracking — this is an administrative
+        operation, not a recall.
+        """
+        memory = self.store.retrieve(memory_id)
+        if not memory:
+            for mem in self.store.list_all():
+                if mem.id.startswith(memory_id):
+                    memory = mem
+                    break
+        if not memory:
+            return False
+        if memory.tier == MemoryTier.HOT:
+            memory.tier = MemoryTier.WARM
+        elif memory.tier == MemoryTier.WARM:
+            memory.tier = MemoryTier.COLD
+        else:
+            return True  # Already COLD
+        return self.update_memory(memory)
+
+    def run_tier_review(self) -> tuple[int, int]:
+        """Run the periodic tier review (demote stale, enforce HOT cap).
+
+        Returns:
+            (demoted_count, promoted_count)
+        """
+        return self.tier_manager.review()
 
     def update_memory(self, memory: Memory) -> bool:
         """Update an existing memory."""
@@ -642,14 +717,17 @@ class MemoryLayer:
         total_versions = sum(m.version for m in all_memories)
         memories_with_history = sum(1 for m in all_memories if m.parent_id is not None)
         by_provenance: dict[str, int] = {}
+        by_tier: dict[str, int] = {}
         for mem in all_memories:
             by_provenance[mem.provenance] = by_provenance.get(mem.provenance, 0) + 1
+            by_tier[mem.tier.value] = by_tier.get(mem.tier.value, 0) + 1
 
         return {
             "total": len(all_memories),
             "by_type": by_type,
             "by_source": by_source,
             "by_subtype": by_subtype,
+            "by_tier": by_tier,
             "avg_confidence": total_confidence / len(all_memories) if all_memories else 0,
             "unique_tags": len(tags),
             "top_tags": sorted(tags.items(), key=lambda x: x[1], reverse=True)[:10],
