@@ -97,14 +97,10 @@ class TestE12OllamaProvider:
                 from animus_forge.providers.base import CompletionRequest, ProviderError
 
                 with pytest.raises(ProviderError) as exc_info:
-                    provider.complete(
-                        CompletionRequest(prompt="hello", model="qwen2.5:14b")
-                    )
+                    provider.complete(CompletionRequest(prompt="hello", model="qwen2.5:14b"))
                 assert "digest mismatch" in str(exc_info.value).lower()
 
-    def test_complete_allowed_when_no_pin(
-        self, provider: OllamaProvider, tmp_path: Path
-    ) -> None:
+    def test_complete_allowed_when_no_pin(self, provider: OllamaProvider, tmp_path: Path) -> None:
         store = ModelPinStore(path=tmp_path / "pins.json")
         provider._client = MagicMock()
         provider._client.post.return_value = MagicMock(
@@ -125,9 +121,7 @@ class TestE12OllamaProvider:
         ):
             from animus_forge.providers.base import CompletionRequest
 
-            resp = provider.complete(
-                CompletionRequest(prompt="hello", model="qwen2.5:14b")
-            )
+            resp = provider.complete(CompletionRequest(prompt="hello", model="qwen2.5:14b"))
             assert resp.content == "hi"
 
     def test_complete_allowed_when_digest_matches(
@@ -159,9 +153,7 @@ class TestE12OllamaProvider:
             ):
                 from animus_forge.providers.base import CompletionRequest
 
-                resp = provider.complete(
-                    CompletionRequest(prompt="hello", model="qwen2.5:14b")
-                )
+                resp = provider.complete(CompletionRequest(prompt="hello", model="qwen2.5:14b"))
                 assert resp.content == "ok"
 
     def test_complete_blocked_when_fetch_fails(
@@ -184,7 +176,5 @@ class TestE12OllamaProvider:
                 from animus_forge.providers.base import CompletionRequest, ProviderError
 
                 with pytest.raises(ProviderError) as exc_info:
-                    provider.complete(
-                        CompletionRequest(prompt="hello", model="qwen2.5:14b")
-                    )
+                    provider.complete(CompletionRequest(prompt="hello", model="qwen2.5:14b"))
                 assert "could not be retrieved" in str(exc_info.value).lower()
