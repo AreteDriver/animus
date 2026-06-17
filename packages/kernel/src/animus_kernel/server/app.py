@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -32,9 +33,12 @@ _build_queue: list[dict] = []
 
 app = FastAPI(title="Animus Kernel Chat")
 
+_cors_origins_raw = os.environ.get("ANIMUS_CORS_ORIGINS", "http://localhost:3000,http://localhost:8080")
+CORS_ORIGINS = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8080"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

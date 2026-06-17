@@ -52,24 +52,9 @@ _UNIVERSAL_COMPILED: list[tuple[str, Pattern[str]]] = [
 ]
 
 
-DEFAULT_PERSONAL_EMAILS: tuple[str, ...] = (
-    "aretedriver@gmail.com",
-    "jamesyng79@gmail.com",
-)
-
-DEFAULT_PERSONAL_PHONES: tuple[str, ...] = (
-    "503-449-8300",
-    "5034498300",
-    "(503) 449-8300",
-    "503.449.8300",
-)
-
-DEFAULT_SENSITIVE_PATHS: tuple[str, ...] = (
-    "/home/arete/Documents/WORK",
-    "/home/arete/Documents/TIAID",
-    "/home/arete/.local/share/animus/secrets.env",
-    "/home/arete/.config/animus/secrets.env",
-)
+DEFAULT_PERSONAL_EMAILS: tuple[str, ...] = ()
+DEFAULT_PERSONAL_PHONES: tuple[str, ...] = ()
+DEFAULT_SENSITIVE_PATHS: tuple[str, ...] = ()
 
 
 def _split_env(name: str, default: tuple[str, ...]) -> tuple[str, ...]:

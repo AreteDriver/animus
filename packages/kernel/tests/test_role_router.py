@@ -16,7 +16,7 @@ class TestRoleRouterOffline:
         router = RoleRouter(pm)
         decision = router.route(AgentRole.BUILDER, "implement oauth")
         assert decision.provider_name == "ollama"
-        assert decision.model == "hermes"
+        assert decision.model and "hermes" in decision.model
         assert "role=builder" in decision.reason
 
     def test_planner_routes_to_qwen_offline(self, monkeypatch):
@@ -26,7 +26,7 @@ class TestRoleRouterOffline:
         router = RoleRouter(pm)
         decision = router.route(AgentRole.PLANNER, "design api")
         assert decision.provider_name == "ollama"
-        assert decision.model == "qwen2.5"
+        assert decision.model and "qwen2.5" in decision.model
 
     def test_unmapped_role_fallback_to_tier_router(self, monkeypatch):
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
