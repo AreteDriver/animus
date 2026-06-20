@@ -1,0 +1,408 @@
+name: ci-diagnosis
+version: "1.0.0"
+description: Intelligent CI failure diagnosis and optional remediation for GitHub Actions
+
+token_budget: 100000
+timeout_seconds: 1800
+
+inputs:
+  owner:
+    type: string
+    required: true
+    description: GitHub repository owner
+  repo:
+    type: string
+    required: true
+    description: GitHub repository name
+  run_id:
+    type: string
+    required: true
+    description: GitHub Actions run ID
+  conclusion:
+    type: string
+    required: true
+    description: Workflow conclusion (failure, cancelled, timed_out)
+  branch:
+    type: string
+    required: true
+    description: Git branch that triggered the run
+  commit_sha:
+    type: string
+    required: true
+    description: Commit SHA associated with the run
+  pr_number:
+    type: string
+    required: false
+    default: ""
+    description: Associated pull request number, if any
+  actor:
+    type: string
+    required: false
+    default: ""
+    description: GitHub username of the actor who triggered the run
+  workflow_name:
+    type: string
+    required: false
+    default: ""
+    description: Name of the workflow that failed
+  remediate:
+    type: string
+    required: false
+    default: "false"
+    description: Whether to attempt autonomous remediation after diagnosis
+
+outputs:
+  - diagnosis
+  - failure_taxonomy
+  - recommended_fix
+  - pr_comment_url
+  - remediation_applied
+
+steps:
+  - id: fetch_logs
+    type: shell
+    params:
+      command: |
+        set -euo pipefail
+        OWNER="${owner}"
+        REPO="${repo}"
+        RUN_ID="${run_id}"
+        LOG_DIR="/tmp/ci-diagnosis-${RUN_ID}"
+        mkdir -p "${LOG_DIR}"
+
+        echo "Downloading failed job logs..."
+        gh run view --repo "${OWNER}/${REPO}" "${RUN_ID}" --log-failed > "${LOG_DIR}/failed-logs.txt" 2>&1 || true
+
+        # Fallback: grab full log archive
+        gh run download --repo "${OWNER}/${REPO}" "${RUN_ID}" --dir "${LOG_DIR}/artifacts" 2>/dev/null || true
+
+        # Emit first 500 lines for downstream analysis
+        head -n 500 "${LOG_DIR}/failed-logs.txt"
+      allow_failure: false
+    outputs:
+      - failed_logs
+    timeout_seconds: 120
+
+  - id: parse_failures
+    type: ollama
+    params:
+      model: qwen2.5:14b
+      max_tokens: 4096
+      temperature: 0.3
+      prompt: |
+        You are a CI failure analysis specialist. Extract structured data from noisy build logs. Output JSON when requested. Be concise.
+
+        Analyze the following GitHub Actions failed build logs.
+
+        Repository: ${owner}/${repo}
+        Workflow: ${workflow_name}
+        Run ID: ${run_id}
+        Branch: ${branch}
+        Commit: ${commit_sha}
+
+        Failed logs:
+        ${fetch_logs}
+
+        Tasks:
+        1. Identify each distinct failure (test failure, lint error, build error, infra error).
+        2. Extract the exact error messages, stack traces, and file locations.
+        3. Determine which job/step failed.
+        4. Hypothesize the most likely root cause based on the logs alone.
+
+        Return structured JSON with keys: failures[], root_cause_hypothesis, confidence (low/medium/high).
+    outputs:
+      - parsed_failures
+      - root_cause_hypothesis
+    on_failure: retry
+    max_retries: 1
+
+  - id: classify_taxonomy
+    type: ollama
+    params:
+      model: qwen2.5:14b
+      max_tokens: 4096
+      temperature: 0.3
+      prompt: |
+        You are a CI failure analysis specialist. Classify failures using structured taxonomies. Output JSON.
+
+        Classify the CI failure using the Animus failure taxonomy.
+
+        Parsed failures: ${parsed_failures}
+        Root cause hypothesis: ${root_cause_hypothesis}
+
+        Technical taxonomy (pick one):
+        - schema_drift, hallucination, wrong_answer, refused, over_budget, timeout, contract_violation, judge_disagreement, flaky, provider_error
+
+        Content taxonomy (pick all that apply):
+        - F1_missing_constraint, F2_wrong_assumption, F3_weak_evidence, F4_too_generic, F5_overlong, F6_poor_structure, F7_false_precision, F8_insufficient_adversarial_review
+
+        Also classify CI-specific types:
+        - test_regression, lint_failure, type_error, build_break, dependency_failure, infra_timeout, secret_leak, merge_conflict, configuration_drift
+
+        Return JSON: { technical_mode, content_modes[], ci_mode, justification }.
+    outputs:
+      - failure_taxonomy
+    on_failure: retry
+    max_retries: 1
+
+  - id: check_recent_changes
+    type: shell
+    params:
+      command: |
+        set -euo pipefail
+        REPO_DIR="${HOME}/projects/${repo}"
+        if [ -d "${REPO_DIR}/.git" ]; then
+          cd "${REPO_DIR}"
+          echo "=== Last 5 commits ==="
+          git log --oneline -5
+          echo ""
+          echo "=== Changed files in last commit ==="
+          git diff-tree --no-commit-id --name-only -r HEAD
+        else
+          echo "No local repo found at ${REPO_DIR}; skipping git context."
+        fi
+      allow_failure: true
+    outputs:
+      - recent_changes
+    timeout_seconds: 15
+    on_failure: skip
+
+  - id: resolve_pr
+    type: shell
+    params:
+      command: |
+        PR_NUM=$(gh api "repos/${owner}/${repo}/actions/runs/${run_id}" --jq '.pull_requests[0].number // empty' 2>/dev/null || true)
+        echo "${PR_NUM}"
+      allow_failure: true
+    outputs:
+      - resolved_pr_number
+    timeout_seconds: 15
+    on_failure: skip
+
+  - id: diagnose
+    type: ollama
+    params:
+      model: qwen2.5:14b
+      max_tokens: 4096
+      temperature: 0.3
+      prompt: |
+        You are a CI diagnosis planner. Synthesize root causes from parsed failures. Under 300 words. Be decisive.
+
+        Synthesize a final CI diagnosis.
+
+        Parsed failures: ${parsed_failures}
+        Root cause hypothesis: ${root_cause_hypothesis}
+        Failure taxonomy: ${classify_taxonomy}
+        Recent changes: ${check_recent_changes}
+
+        Provide:
+        1. DIAGNOSIS: A concise 2-sentence explanation of the root cause.
+        2. SEVERITY: Critical / High / Medium / Low
+        3. LIKELY CULPRIT: Which commit or change most likely caused it.
+        4. RECOMMENDED FIX: A precise, minimal fix (code or config).
+        5. PREVENTION: How to prevent this class of failure in the future.
+
+        Keep under 300 words.
+    outputs:
+      - diagnosis
+      - recommended_fix
+      - severity
+    on_failure: retry
+    max_retries: 1
+
+  - id: comment_pr
+    type: shell
+    params:
+      command: |
+        PR_NUM="${resolved_pr_number}"
+        if [ -z "${PR_NUM}" ]; then
+          echo "No PR number resolved; skipping comment."
+          exit 0
+        fi
+        BODY=$(cat <<EOF
+        ## CI Diagnosis 🤖
+
+        **Workflow:** ${workflow_name}
+        **Run:** https://github.com/${owner}/${repo}/actions/runs/${run_id}
+        **Severity:** ${severity}
+
+        ### Diagnosis
+        ${diagnosis}
+
+        ### Recommended Fix
+        ${recommended_fix}
+
+        ---
+        *Generated by Animus CI Diagnostician*
+        EOF
+        )
+        printf '%s\n' "${BODY}" | gh pr comment "${PR_NUM}" --repo "${owner}/${repo}" --body-file -
+      allow_failure: true
+    outputs:
+      - pr_comment_url
+    timeout_seconds: 30
+    on_failure: skip
+
+  - id: approval_gate
+    type: approval
+    params:
+      prompt: "Approve autonomous remediation for this CI failure?"
+      timeout_hours: 2
+      preview_from:
+        - diagnose
+        - classify_taxonomy
+    outputs:
+      - approval_result
+    condition:
+      field: remediate
+      operator: equals
+      value: "true"
+
+  - id: generate_patch
+    type: ollama
+    params:
+      model: qwen2.5:14b
+      max_tokens: 4096
+      temperature: 0.3
+      prompt: |
+        You are a CI remediation engineer. Generate minimal, safe patches. Prefer unified diff format. No prose beyond explanation.
+
+        Generate a minimal patch to fix the diagnosed CI failure.
+
+        Diagnosis: ${diagnosis}
+        Recommended fix: ${recommended_fix}
+        Failure taxonomy: ${classify_taxonomy}
+
+        Requirements:
+        - Produce a unified diff (git diff format) or a series of Edit instructions.
+        - The patch must be minimal and directly address the root cause.
+        - Do NOT change unrelated code.
+        - If the fix requires adding a dependency, include the exact package name and version constraint.
+
+        Return the patch as a code block and a short description.
+    outputs:
+      - patch
+      - patch_description
+    condition:
+      field: remediate
+      operator: equals
+      value: "true"
+    on_failure: skip
+
+  - id: apply_patch_locally
+    type: shell
+    params:
+      command: |
+        set -euo pipefail
+        REPO_DIR="${HOME}/projects/${repo}"
+        if [ ! -d "${REPO_DIR}/.git" ]; then
+          echo "Local repo not found; cannot apply patch."
+          exit 1
+        fi
+        cd "${REPO_DIR}"
+        PATCH_FILE="/tmp/ci-patch-${run_id}.patch"
+        cat <<'PATCH_EOF' > "${PATCH_FILE}"
+        ${patch}
+        PATCH_EOF
+        git apply --check "${PATCH_FILE}" || { echo "Patch does not apply cleanly"; exit 1; }
+        git apply "${PATCH_FILE}"
+        echo "Patch applied successfully"
+      allow_failure: false
+    outputs:
+      - patch_applied
+    condition:
+      field: remediate
+      operator: equals
+      value: "true"
+    timeout_seconds: 30
+    on_failure: abort
+
+  - id: run_local_tests
+    type: shell
+    params:
+      command: |
+        set -euo pipefail
+        REPO_DIR="${HOME}/projects/${repo}"
+        cd "${REPO_DIR}"
+        if [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
+          python -m pytest -x --tb=short 2>&1 | tail -n 50
+        elif [ -f "package.json" ]; then
+          npm test 2>&1 | tail -n 50
+        elif [ -f "Cargo.toml" ]; then
+          cargo test 2>&1 | tail -n 50
+        else
+          echo "No recognized test framework; skipping local verification."
+        fi
+      allow_failure: true
+    outputs:
+      - local_test_results
+    condition:
+      field: remediate
+      operator: equals
+      value: "true"
+    timeout_seconds: 300
+    on_failure: skip
+
+  - id: commit_fix
+    type: github
+    params:
+      action: commit_file
+      repo: "${owner}/${repo}"
+      branch: "ci-fix-${run_id}"
+      file_path: "CI_FIX.md"
+      message: "ci(fix): auto-remediate ${failure_taxonomy} failure [run ${run_id}]"
+      body: |
+        ## CI Auto-Remediation Summary
+
+        - Run: ${run_id}
+        - Taxonomy: ${failure_taxonomy}
+        - Diagnosis: ${diagnosis}
+        - Patch description: ${patch_description}
+
+        **Note:** This commit was generated by Animus CI Diagnostician.
+        Review before merging.
+    outputs:
+      - commit_result
+    condition:
+      field: remediate
+      operator: equals
+      value: "true"
+    on_failure: skip
+
+  - id: summarize
+    type: ollama
+    params:
+      model: qwen2.5:14b
+      max_tokens: 4096
+      temperature: 0.3
+      prompt: |
+        You are a CI session reviewer. Summarize concisely. Note what worked and what needs human attention.
+
+        Summarize the CI diagnosis session:
+
+        Diagnosis: ${diagnosis}
+        Severity: ${severity}
+        Taxonomy: ${classify_taxonomy}
+        Remediation applied: ${patch_applied} (tests: ${run_local_tests})
+
+        Provide:
+        1. One-line status
+        2. Whether human approval was obtained
+        3. Any warnings or caveats
+    outputs:
+      - summary
+      - remediation_applied
+    on_failure: skip
+
+metadata:
+  author: animus
+  category: devops
+  tags:
+    - ci
+    - github-actions
+    - diagnosis
+    - remediation
+    - automation
+
+evolution_notes:
+  - "v1.0.0: Initial CI diagnosis workflow with optional auto-remediation"

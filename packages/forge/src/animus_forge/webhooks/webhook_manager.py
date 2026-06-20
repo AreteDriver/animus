@@ -242,11 +242,17 @@ class WebhookManager:
             logger.error(f"Failed to update webhook {webhook.id}: {e}")
             return False
 
+    def _workflow_exists(self, workflow_id: str) -> bool:
+        """Check if a workflow exists (JSON or YAML)."""
+        if self.workflow_engine.load_workflow(workflow_id):
+            return True
+        yaml_path = self.settings.workflows_dir / f"{workflow_id}.yaml"
+        return yaml_path.exists()
+
     def create_webhook(self, webhook: Webhook) -> bool:
         """Create a new webhook."""
-        # Validate workflow exists
-        workflow = self.workflow_engine.load_workflow(webhook.workflow_id)
-        if not workflow:
+        # Validate workflow exists (JSON or YAML)
+        if not self._workflow_exists(webhook.workflow_id):
             raise ValueError(f"Workflow {webhook.workflow_id} not found")
 
         # Check for duplicate ID
@@ -382,16 +388,32 @@ class WebhookManager:
 
         try:
             workflow = self.workflow_engine.load_workflow(webhook.workflow_id)
-            if not workflow:
-                raise ValueError(f"Workflow {webhook.workflow_id} not found")
+            if workflow:
+                # Map payload to variables
+                variables = self._map_payload_to_variables(webhook, payload)
+                workflow.variables.update(variables)
 
-            # Map payload to variables
-            variables = self._map_payload_to_variables(webhook, payload)
-            workflow.variables.update(variables)
+                result = self.workflow_engine.execute_workflow(workflow)
+                status = result.status
+                workflow_result = result.model_dump(mode="json")
+            else:
+                # Fallback to YAML workflow execution
+                yaml_path = self.settings.workflows_dir / f"{webhook.workflow_id}.yaml"
+                if not yaml_path.exists():
+                    raise ValueError(f"Workflow {webhook.workflow_id} not found")
 
-            result = self.workflow_engine.execute_workflow(workflow)
-            status = result.status
-            workflow_result = result.model_dump(mode="json")
+                from animus_forge.workflow.loader import load_workflow
+                from animus_forge.orchestrator.workflow_engine_adapter import (
+                    convert_execution_result,
+                )
+
+                config = load_workflow(yaml_path, validate_path=False)
+                variables = self._map_payload_to_variables(webhook, payload)
+                result = self.workflow_engine._executor.execute(config, inputs=variables)
+                status = result.status
+                workflow_result = convert_execution_result(
+                    result, webhook.workflow_id
+                ).model_dump(mode="json")
 
         except Exception as e:
             logger.error(f"Webhook trigger failed: {e}")

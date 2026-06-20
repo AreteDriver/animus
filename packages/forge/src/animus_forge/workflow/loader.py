@@ -513,6 +513,8 @@ VALID_STEP_TYPES = frozenset(
         # Agent step types
         "autonomy",
         "handoff",
+        # Integration step types
+        "github",
     }
 )
 VALID_OPERATORS = frozenset(
