@@ -93,3 +93,15 @@ node_modules/
 package-lock.json
 packages/forge/forge/forge_audit.jsonl
 .claude/
+
+# Security: prevent secret files from being committed
+.env
+.env.local
+.envrc
+*.pem
+*.key
+id_rsa*
+id_ecdsa*
+id_ed25519*
+*.p12
+secrets.json
