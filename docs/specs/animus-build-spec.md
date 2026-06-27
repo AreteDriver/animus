@@ -1,4 +1,7 @@
 # Animus — Complete Build Specification
+
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
 **For:** Claude Code / Animus self-directed development  
 **Repo:** `AreteDriver/Animus` (private → alpha on Phase 1b completion)  
 **Architecture:** Three-layer cognitive system — Core / Forge / Quorum  

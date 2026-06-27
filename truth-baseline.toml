@@ -1,0 +1,64 @@
+[metadata]
+name = "animus"
+
+[[checks]]
+type = "version_consistency"
+name = "version_consistency"
+sources = [
+    { file = "pyproject.toml", pattern = 'version = "(\d+\.\d+\.\d+)"' },
+    { file = "README.md", pattern = 'v(\d+\.\d+\.\d+)' },
+    { file = "CLAUDE.md", pattern = '(\d+\.\d+\.\d+)' },
+    { file = "packages/core/pyproject.toml", pattern = 'version = "(\d+\.\d+\.\d+)"' },
+]
+
+[[checks]]
+type = "file_exists"
+name = "dead_packages_present"
+paths = [
+    "packages/arbitrage",
+    "packages/bounty",
+    "packages/content",
+    "packages/faucet",
+    "packages/mev",
+    "packages/prospector",
+    "packages/referral",
+    "packages/validator",
+]
+should_exist = false
+
+[[checks]]
+type = "count"
+name = "schema_json_files"
+glob = "packages/**/*.schema.json"
+
+[[checks]]
+type = "file_exists"
+name = "adr_directory"
+paths = ["adrs/ADR-001.md"]
+should_exist = true
+
+[[checks]]
+type = "test_count"
+name = "core_tests"
+command = "python -m pytest --collect-only -q"
+pattern = '(\d+) tests? collected'
+cwd = "packages/core"
+
+[[checks]]
+type = "test_count"
+name = "forge_tests"
+command = "python -m pytest --collect-only -q"
+pattern = '(\d+) tests? collected'
+cwd = "packages/forge"
+
+[[checks]]
+type = "file_exists"
+name = "root_architecture_dirs"
+paths = ["apps/", "modules/", "contracts/", "database/", "infra/"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "evidence_directory"
+paths = ["evidence/releases/"]
+should_exist = true

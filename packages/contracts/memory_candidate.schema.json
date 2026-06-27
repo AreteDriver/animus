@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/memory_candidate.schema.json",
+  "title": "Animus Memory Candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "candidate_id",
+    "owner_id",
+    "workspace_id",
+    "proposed_object",
+    "candidate_reason",
+    "duplicate_refs",
+    "contradiction_refs",
+    "validation",
+    "approval_required",
+    "status",
+    "created_at"
+  ],
+  "properties": {
+    "candidate_id": {
+      "type": "string",
+      "pattern": "^mc-[a-z0-9_-]+$"
+    },
+    "owner_id": {
+      "type": "string",
+      "pattern": "^owner-[a-z0-9_-]+$"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^ws-[a-z0-9_-]+$"
+    },
+    "proposed_object": {
+      "type": "object"
+    },
+    "candidate_reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "duplicate_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "contradiction_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_valid",
+        "scope_valid",
+        "time_valid",
+        "sensitivity_valid",
+        "confidence_valid"
+      ],
+      "properties": {
+        "source_valid": {
+          "type": "boolean"
+        },
+        "scope_valid": {
+          "type": "boolean"
+        },
+        "time_valid": {
+          "type": "boolean"
+        },
+        "sensitivity_valid": {
+          "type": "boolean"
+        },
+        "confidence_valid": {
+          "type": "boolean"
+        }
+      }
+    },
+    "approval_required": {
+      "type": "boolean"
+    },
+    "approval_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "enum": [
+        "candidate",
+        "approved",
+        "rejected",
+        "committed"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "resolved_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    }
+  }
+}

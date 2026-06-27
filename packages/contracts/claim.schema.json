@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/claim.schema.json",
+  "title": "Animus Claim Object",
+  "allOf": [
+    {
+      "$ref": "common.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "artifact_type": {
+          "const": "claim"
+        },
+        "schema_id": {
+          "const": "https://animus.local/schemas/claim.schema.json"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "proposition",
+            "claim_kind",
+            "supporting_evidence",
+            "contradicting_evidence",
+            "confidence"
+          ],
+          "properties": {
+            "proposition": {
+              "type": "string",
+              "minLength": 1
+            },
+            "claim_kind": {
+              "enum": [
+                "factual",
+                "causal",
+                "interpretive",
+                "normative",
+                "identity",
+                "requirement"
+              ]
+            },
+            "supporting_evidence": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "contradicting_evidence": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "contradiction_refs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      }
+    }
+  ]
+}

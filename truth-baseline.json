@@ -1,0 +1,111 @@
+{
+  "project": "animus",
+  "timestamp": "2026-06-19T22:05:26.609236+00:00",
+  "summary": {
+    "pass": 8,
+    "fail": 0,
+    "skip": 0,
+    "error": 0
+  },
+  "checks": [
+    {
+      "name": "version_consistency",
+      "check_type": "version_consistency",
+      "status": "PASS",
+      "expected": "2.3.0",
+      "actual": {
+        "pyproject.toml": "2.3.0",
+        "README.md": "2.3.0",
+        "CLAUDE.md": "2.3.0",
+        "packages/core/pyproject.toml": "2.3.0"
+      },
+      "claim_source": "",
+      "message": "Versions: {'pyproject.toml': '2.3.0', 'README.md': '2.3.0', 'CLAUDE.md': '2.3.0', 'packages/core/pyproject.toml': '2.3.0'}"
+    },
+    {
+      "name": "dead_packages_present",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "schema_json_files",
+      "check_type": "count",
+      "status": "PASS",
+      "expected": null,
+      "actual": 20,
+      "claim_source": "",
+      "message": "Found 20 files matching ['packages/**/*.schema.json']"
+    },
+    {
+      "name": "adr_directory",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "adrs/ADR-001.md"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "core_tests",
+      "check_type": "test_count",
+      "status": "PASS",
+      "expected": null,
+      "actual": 0,
+      "claim_source": "",
+      "message": "Collected 0 tests (command failed: /bin/sh: 1: python: not found\n)"
+    },
+    {
+      "name": "forge_tests",
+      "check_type": "test_count",
+      "status": "PASS",
+      "expected": null,
+      "actual": 0,
+      "claim_source": "",
+      "message": "Collected 0 tests (command failed: /bin/sh: 1: python: not found\n)"
+    },
+    {
+      "name": "root_architecture_dirs",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "apps/",
+        "modules/",
+        "contracts/",
+        "database/",
+        "infra/"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "evidence_directory",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "evidence/releases/"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    }
+  ]
+}

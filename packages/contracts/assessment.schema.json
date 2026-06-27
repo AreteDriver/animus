@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/assessment.schema.json",
+  "title": "Animus Assessment Object",
+  "allOf": [
+    {
+      "$ref": "common.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "artifact_type": {
+          "const": "assessment"
+        },
+        "schema_id": {
+          "const": "https://animus.local/schemas/assessment.schema.json"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "question",
+            "judgment",
+            "evidence_refs",
+            "alternative_judgments",
+            "confidence_dimensions",
+            "dissent"
+          ],
+          "properties": {
+            "question": {
+              "type": "string",
+              "minLength": 1
+            },
+            "judgment": {
+              "type": "string",
+              "minLength": 1
+            },
+            "evidence_refs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "alternative_judgments": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "confidence_dimensions": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "evidence",
+                "reasoning",
+                "prediction",
+                "action"
+              ],
+              "properties": {
+                "evidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "reasoning": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "prediction": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "action": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            },
+            "dissent": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "position",
+                  "severity"
+                ],
+                "properties": {
+                  "position": {
+                    "type": "string"
+                  },
+                  "severity": {
+                    "enum": [
+                      "low",
+                      "medium",
+                      "high",
+                      "critical"
+                    ]
+                  },
+                  "agent_ref": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

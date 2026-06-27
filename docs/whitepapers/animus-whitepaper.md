@@ -4,7 +4,7 @@
 > and security guarantees (Ed25519-signed memory, AES-256 at rest) that are **not
 > implemented**. Do not cite it. The current, code-grounded paper is
 > [`ANIMUS_WHITEPAPER_2026-06.md`](ANIMUS_WHITEPAPER_2026-06.md).
-> See [`../CANON.md`](../CANON.md) for document status.
+> See [`../architecture/canonical-principles.md`](../architecture/canonical-principles.md) for document status.
 
 # Animus: A Three-Layer Architecture for Personal AI Sovereignty
 

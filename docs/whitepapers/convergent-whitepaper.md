@@ -1,5 +1,8 @@
 # CONVERGENT
 
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
+
 ## Multi-Agent Coherence Through Ambient Intent Awareness
 
 *A Technical Whitepaper*

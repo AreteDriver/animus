@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/common.schema.json",
+  "title": "Animus Canonical Object Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "object_id",
+    "object_version",
+    "schema_id",
+    "schema_version",
+    "owner_id",
+    "workspace_id",
+    "subject_domain",
+    "artifact_type",
+    "cognitive_role",
+    "workflow_status",
+    "epistemic_status",
+    "lifecycle_status",
+    "storage_tier",
+    "presentation",
+    "security_class",
+    "valid_time",
+    "transaction_time",
+    "provenance",
+    "integrity",
+    "payload"
+  ],
+  "properties": {
+    "object_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{2,127}$"
+    },
+    "object_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "schema_id": {
+      "type": "string",
+      "minLength": 3
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "owner_id": {
+      "type": "string",
+      "pattern": "^owner-[a-z0-9_-]+$"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^ws-[a-z0-9_-]+$"
+    },
+    "subject_domain": {
+      "enum": [
+        "self",
+        "world",
+        "project",
+        "operations"
+      ]
+    },
+    "artifact_type": {
+      "enum": [
+        "source",
+        "observation",
+        "claim",
+        "entity",
+        "event",
+        "signal",
+        "pattern",
+        "hypothesis",
+        "assessment",
+        "forecast",
+        "decision",
+        "action",
+        "outcome",
+        "lesson",
+        "memory_candidate",
+        "approval_receipt",
+        "action_receipt",
+        "context_envelope",
+        "trace"
+      ]
+    },
+    "cognitive_role": {
+      "enum": [
+        "memory",
+        "knowledge",
+        "intelligence",
+        "none"
+      ]
+    },
+    "workflow_status": {
+      "enum": [
+        "candidate",
+        "approved",
+        "rejected",
+        "not_applicable"
+      ]
+    },
+    "epistemic_status": {
+      "enum": [
+        "unverified",
+        "supported",
+        "disputed",
+        "refuted",
+        "not_applicable"
+      ]
+    },
+    "lifecycle_status": {
+      "enum": [
+        "active",
+        "superseded",
+        "deprecated",
+        "archived",
+        "deleted"
+      ]
+    },
+    "storage_tier": {
+      "enum": [
+        "hot",
+        "warm",
+        "cold"
+      ]
+    },
+    "presentation": {
+      "enum": [
+        "canonical",
+        "generated_view"
+      ]
+    },
+    "security_class": {
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ]
+    },
+    "valid_time": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "valid_from",
+        "valid_to"
+      ],
+      "properties": {
+        "valid_from": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "valid_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "transaction_time": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recorded_at",
+        "superseded_at"
+      ],
+      "properties": {
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "superseded_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "created_by",
+        "source_refs",
+        "derived_from",
+        "trace_id"
+      ],
+      "properties": {
+        "created_by": {
+          "type": "string",
+          "minLength": 3
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "derived_from": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "trace_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model_lineage": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "prompt_lineage": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content_sha256"
+      ],
+      "properties": {
+        "content_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "previous_version_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}

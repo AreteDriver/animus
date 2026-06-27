@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/action_receipt.schema.json",
+  "title": "Animus Action Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_id",
+    "trace_id",
+    "principal_id",
+    "tool_id",
+    "risk_class",
+    "request_hash",
+    "policy_decision",
+    "approval_id",
+    "idempotency_key",
+    "status",
+    "requested_at",
+    "completed_at",
+    "side_effect_refs"
+  ],
+  "properties": {
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^ar-[a-z0-9_-]+$"
+    },
+    "trace_id": {
+      "type": "string",
+      "minLength": 3
+    },
+    "principal_id": {
+      "type": "string",
+      "minLength": 3
+    },
+    "tool_id": {
+      "type": "string",
+      "minLength": 3
+    },
+    "risk_class": {
+      "enum": [
+        "R0",
+        "R1",
+        "R2",
+        "R3",
+        "R4"
+      ]
+    },
+    "request_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "policy_decision": {
+      "enum": [
+        "allow",
+        "deny",
+        "require_approval"
+      ]
+    },
+    "approval_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 8
+    },
+    "status": {
+      "enum": [
+        "denied",
+        "pending",
+        "succeeded",
+        "failed",
+        "partially_succeeded",
+        "compensated"
+      ]
+    },
+    "requested_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "side_effect_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  }
+}

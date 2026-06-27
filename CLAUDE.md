@@ -4,7 +4,7 @@
 
 Personal AI exocortex with multi-agent orchestration and coordination protocol.
 
-- **Version**: 2.7.0
+- **Version**: 2.3.0
 - **Python**: >=3.10 (Core), >=3.11 (Bootstrap), >=3.12 (Forge)
 - **Layout**: Multi-package monorepo — `packages/core`, `packages/forge`, `packages/quorum`, `packages/bootstrap`, `packages/pwa`
 - **Tests**: 14,596+ across 4 packages (Core 2109, Forge 9720, Quorum 926, Bootstrap 1841+)

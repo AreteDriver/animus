@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/entity.schema.json",
+  "title": "Animus Entity Object",
+  "allOf": [
+    {
+      "$ref": "common.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "artifact_type": {
+          "const": "entity"
+        },
+        "schema_id": {
+          "const": "https://animus.local/schemas/entity.schema.json"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "entity_kind",
+            "canonical_name",
+            "aliases"
+          ],
+          "properties": {
+            "entity_kind": {
+              "enum": [
+                "person",
+                "organization",
+                "place",
+                "system",
+                "concept",
+                "asset",
+                "document",
+                "project",
+                "other"
+              ]
+            },
+            "canonical_name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "aliases": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "attributes": {
+              "type": "object"
+            },
+            "external_ids": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

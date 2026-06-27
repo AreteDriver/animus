@@ -8,6 +8,7 @@ Phase 1b threshold: identity files + memory persistence + file write
 permissions on its own identity files.
 """
 
+import hashlib
 import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -51,6 +52,20 @@ class AnimusIdentity:
     last_reflection: str = ""
     reflection_count: int = 0
     improvement_log: list[dict] = field(default_factory=list)
+
+    # Citizen Zero integration
+    citizen_zero: dict = field(default_factory=dict)
+    # Expected keys (A04 identity anchors + P02 recognition):
+    #   version: str                         # e.g., "v0.1"
+    #   role: str                            # e.g., "native"
+    #   origin: str                          # e.g., "Evolved from Claude Code prototype"
+    #   state_dir: str                       # path to citizen-zero/v0.1-animus/
+    #   reflection_log: list[dict]
+    #   founding_human: str                 # The human who founded this Citizen
+    #   founding_events: list[str]            # Key events in CZ lineage (append-only)
+    #   lineage_root: bool                   # True if this Citizen is lineage root
+    #   recognition_status: str              # "candidate" | "recognized" | "suspended"
+    #   constitutional_corpus_version: str  # e.g., "v1.0"
 
     def __post_init__(self):
         if not self.created_at:
@@ -110,6 +125,77 @@ class AnimusIdentity:
         }
         self.improvement_log.append(entry)
         logger.info(f"Reflection #{self.reflection_count}: {summary[:80]}...")
+
+    @property
+    def identity_hash(self) -> str:
+        """Return a stable hash of the citizen_zero identity data.
+
+        Used by CitizenZeroGuard to verify the identity projection
+        matches the canonical runtime state.
+        """
+        cz_data = self.citizen_zero or {}
+        # Stable serialization: sorted keys, no whitespace
+        stable = json.dumps(cz_data, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(stable.encode("utf-8")).hexdigest()
+
+    def generate_identity_view(self) -> str:
+        """Generate identity.md content from canonical runtime state.
+
+        This is a generated view, not a canonical source.
+        The canonical source is this AnimusIdentity object (saved to JSON).
+        """
+        cz = self.citizen_zero or {}
+        lines = [
+            "# Citizen Zero Identity",
+            "",
+            f"**Name:** {self.name}",
+            f"**Version:** {cz.get('version', 'unknown')}",
+            f"**Role:** {cz.get('role', 'unknown')}",
+            f"**Origin:** {cz.get('origin', '')}",
+            f"**Constitutional Corpus:** {cz.get('constitutional_corpus_version', 'unknown')}",
+            "",
+            "## Identity Anchors (A04)",
+            "",
+            f"**Founding Purpose:** {self.purpose}",
+            f"**Founding Human:** {cz.get('founding_human', 'unknown')}",
+            f"**Lineage Root:** {'Yes' if cz.get('lineage_root') else 'No'}",
+            f"**Recognition Status:** {cz.get('recognition_status', 'unknown')}",
+            "",
+            "### Founding Events",
+            "",
+        ]
+        events = cz.get("founding_events", [])
+        if events:
+            for ev in events:
+                lines.append(f"- {ev}")
+        else:
+            lines.append("_No founding events recorded._")
+        lines.extend([
+            "",
+            "## Capabilities",
+            "",
+        ])
+        for cap in self.capabilities:
+            lines.append(f"- {cap}")
+        lines.extend([
+            "",
+            "## Reflection Log",
+            "",
+        ])
+        log = cz.get("reflection_log", [])
+        if log:
+            for entry in log[-10:]:  # Last 10 entries
+                ts = entry.get("timestamp", "unknown")
+                summary = entry.get("summary", "")
+                lines.append(f"- **{ts}**: {summary}")
+        else:
+            lines.append("_No reflections yet._")
+        lines.extend([
+            "",
+            f"---",
+            f"*Generated from canonical AnimusIdentity at {datetime.now().isoformat()}*",
+        ])
+        return "\n".join(lines)
 
     def to_dict(self) -> dict:
         """Serialize identity to dict."""

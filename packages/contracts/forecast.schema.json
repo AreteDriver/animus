@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/forecast.schema.json",
+  "title": "Animus Forecast Object",
+  "allOf": [
+    {
+      "$ref": "common.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "artifact_type": {
+          "const": "forecast"
+        },
+        "schema_id": {
+          "const": "https://animus.local/schemas/forecast.schema.json"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "statement",
+            "probability",
+            "horizon",
+            "resolution_rule",
+            "assumptions",
+            "alternative_outcomes"
+          ],
+          "properties": {
+            "statement": {
+              "type": "string",
+              "minLength": 1
+            },
+            "probability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "horizon": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "resolution_rule": {
+              "type": "string",
+              "minLength": 1
+            },
+            "assumptions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "alternative_outcomes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "outcome",
+                  "probability"
+                ],
+                "properties": {
+                  "outcome": {
+                    "type": "string"
+                  },
+                  "probability": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "additionalProperties": false
+              },
+              "minItems": 1
+            },
+            "resolved_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "resolution": {
+              "enum": [
+                "true",
+                "false",
+                "ambiguous",
+                "cancelled",
+                null
+              ]
+            },
+            "brier_score": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    }
+  ]
+}
