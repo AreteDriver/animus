@@ -1,5 +1,8 @@
 # Workflow Evolution Constraints
 
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
+
 > Safety rules and changelog pattern for YAML workflow self-modification. This supplements the existing `self_improve/` pipeline — it does NOT replace it.
 
 ## Context

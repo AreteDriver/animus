@@ -1,5 +1,8 @@
 # Evolution Loop — Forge Autonomous Improvement
 
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
+
 ## Overview
 
 The evolution loop is Forge's autoresearch-style improvement engine. It runs

@@ -1,5 +1,8 @@
 # Safety & Ethics
 
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
+
 Animus is designed to serve its user. This document defines what that means, where the boundaries are, and how safety is implemented.
 
 ---

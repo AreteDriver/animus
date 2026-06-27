@@ -1,5 +1,8 @@
 # Animus Security Layer: Secret Manager + CodeQL
 
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
+
 > Production-grade secret management and automated code scanning for the Animus ecosystem.
 
 ---

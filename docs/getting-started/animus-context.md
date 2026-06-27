@@ -1,5 +1,8 @@
 # Animus Context — ARETE
 
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
+
 > This file is the system context for Animus, your personal AI exocortex.
 > Feed this as the system prompt to your local LLM via Ollama.
 > Update regularly as projects and priorities evolve.

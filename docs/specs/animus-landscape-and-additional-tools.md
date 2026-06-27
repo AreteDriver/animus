@@ -1,4 +1,7 @@
 # Animus — Competitive Landscape, Differentiation & Additional Tools
+
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
 **Date:** 2026-03-04  
 **Purpose:** Honest positioning analysis + spec for three additional Arete Tools  
 **For:** Strategic planning, Claude Code, Animus self-directed development

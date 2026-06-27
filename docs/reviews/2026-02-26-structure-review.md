@@ -1,5 +1,8 @@
 # Animus Monorepo Structure & Code Review
 
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
+
 **Date:** 2026-02-26
 **Scope:** Full monorepo — structure, CI, all 4 packages (Core, Forge, Quorum, Bootstrap)
 **Reviewer:** Claude (automated deep review)

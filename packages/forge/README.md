@@ -22,13 +22,13 @@ pip install animus-forge
 
 ```bash
 # Run a workflow
-gorgon run workflows/examples/build_task.yaml
+animus-forge run workflows/examples/build_task.yaml
 
 # Self-improve a codebase
-gorgon self-improve run --provider ollama --path /my/project
+animus-forge self-improve run --provider ollama --path /my/project
 
 # Analyze without making changes
-gorgon self-improve analyze --focus security
+animus-forge self-improve analyze --focus security
 ```
 
 ## Self-Improvement Pipeline

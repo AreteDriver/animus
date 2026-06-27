@@ -1,5 +1,8 @@
 # Use Cases
 
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
+
 Real-world scenarios where Animus provides value. These aren't hypothetical - they're the problems this project aims to solve.
 
 ---

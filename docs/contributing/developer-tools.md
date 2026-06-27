@@ -1,5 +1,8 @@
 # Developer Tools Build Specs
 
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
+
 > Five tools to build after CLAUDE.md Generator. Each follows the same pattern: underserved niche, CLI-first, PyPI published, free tier + paid upgrade path.
 
 ---

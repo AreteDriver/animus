@@ -1,5 +1,8 @@
 # Connectivity & Interfaces
 
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
+
 How Animus connects across devices, vehicles, and contexts. The core requirement: **seamless handoff with zero context loss**.
 
 ---

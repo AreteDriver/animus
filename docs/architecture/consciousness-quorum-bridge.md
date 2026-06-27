@@ -1,5 +1,8 @@
 # Consciousness-Quorum Bridge — Integration Spec
 
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
+
 > Wiring the existing reflection loop to Quorum's intent graph. This is the novel integration — reflection outputs become coordination signals.
 
 ## What This Adds

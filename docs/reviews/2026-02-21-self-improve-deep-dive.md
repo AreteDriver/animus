@@ -1,5 +1,8 @@
 # Animus Forge Self-Improvement Subsystem: Deep Review
 
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
+
 **Date:** 2026-02-21
 **Reviewer:** Claude Opus 4.6
 **Scope:** `packages/forge/src/animus_forge/self_improve/`

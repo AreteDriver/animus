@@ -1,5 +1,8 @@
 # Constitutional Principles — Animus
 
+> ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
+
+
 > Nine principles that constrain all agent behavior. Forge reads these before task execution.
 
 ## How This Integrates
