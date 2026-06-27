@@ -111,7 +111,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Cache pip
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-core-${{ matrix.python-version }}-${{ hashFiles('packages/core/pyproject.toml') }}
@@ -140,7 +140,7 @@ jobs:
           python-version: "3.12"
 
       - name: Cache pip
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-quorum-${{ hashFiles('packages/quorum/pyproject.toml') }}
@@ -164,7 +164,7 @@ jobs:
           python-version: "3.12"
 
       - name: Cache pip
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-types-${{ hashFiles('packages/types/pyproject.toml') }}
@@ -188,7 +188,7 @@ jobs:
           python-version: "3.12"
 
       - name: Cache pip
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-forge-${{ hashFiles('packages/forge/pyproject.toml') }}
@@ -227,7 +227,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Cache pip
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-bootstrap-${{ matrix.python-version }}-${{ hashFiles('packages/bootstrap/pyproject.toml') }}
@@ -276,7 +276,7 @@ jobs:
           python-version: "3.12"
 
       - name: Cache pip
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-bench-${{ hashFiles('packages/*/pyproject.toml') }}
