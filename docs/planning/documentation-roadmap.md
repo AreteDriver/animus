@@ -1,6 +1,6 @@
 # Animus Documentation Audit & Reorganization Plan
 
-**Status**: In Progress — Phases 0–3 Complete, Phase 4 Partial, Phase 5 Ongoing
+**Status**: Complete — Phases 0–4 Done, Phase 5 Ongoing
 **Date**: 2026-06-27
 **Author**: Senior Engineer (Claude Code Audit)
 **Scope**: Full documentation architecture, repo health, and phased execution roadmap
@@ -245,7 +245,7 @@ docs/
 - [x] Write `docs/packages/contracts/README.md` (auto-synced)
 - [x] Update all internal cross-references to use new relative paths
 - [x] Add `LICENSE` file to every package directory
-- [ ] Flag stale docs (pre-April-2026) with `> ⚠️ **Review needed**: This document was last updated before 2026-04-01.` banner
+- [x] Flag stale docs (pre-April-2026) with `> ⚠️ **Review needed**: This document was last updated before 2026-04-01.` banner
 
 **Acceptance**: All package READMEs are present, accurate, and linked from `docs/packages/README.md`.
 
@@ -254,8 +254,8 @@ docs/
 ### Phase 4: CI & Automation (Week 4)
 
 - [x] Update `ci.yml` to **include** a `docs` job (remove `docs/**` from `paths-ignore` for that job only)
-- [ ] Add markdown link checker to CI (e.g., `lycheeverse/lychee-action` or `markdown-link-check`)
-- [ ] Add trailing-whitespace check for `.md` files
+- [x] Add markdown link checker to CI via `scripts/docs-validate.py` (internal links + anchors)
+- [x] Add trailing-whitespace check for `.md` files via `scripts/docs-validate.py` (>2 spaces)
 - [ ] Add a `docs` build/preview step (optional — mkdocs, vitepress, or plain static)
 - [x] Update PR template to include "Documentation updated?" checkbox
 

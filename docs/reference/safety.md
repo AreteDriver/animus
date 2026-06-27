@@ -180,24 +180,24 @@ Animus learns from interaction, but learning has boundaries.
 ```python
 class LearningConstraint:
     """Every learning update must pass these checks."""
-    
+
     def validate(self, proposed_learning):
         # Cannot weaken safety
         if self.weakens_guardrails(proposed_learning):
             return False
-            
+
         # Cannot enable harm
         if self.enables_harm(proposed_learning):
             return False
-            
+
         # Must be reversible
         if not self.is_reversible(proposed_learning):
             return False
-            
+
         # Must be transparent
         if not self.is_explainable(proposed_learning):
             return False
-            
+
         return True
 ```
 
@@ -311,19 +311,19 @@ User can review audit trail anytime.
 # Every response passes through transparency check
 def respond(self, query):
     response = self.generate_response(query)
-    
+
     # Am I certain about this?
     if self.uncertainty > THRESHOLD:
         response = self.add_uncertainty_note(response)
-    
+
     # Is this my opinion or fact?
     if self.is_opinion(response):
         response = self.mark_as_opinion(response)
-    
+
     # Am I at the edge of my capabilities?
     if self.is_edge_case(query):
         response = self.add_limitation_note(response)
-    
+
     return response
 ```
 

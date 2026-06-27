@@ -29,51 +29,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate internal markdown links
+      - name: Run docs validation
         run: |
-          python3 -c "
-          import os, re
-          from pathlib import Path
-          repo = Path('.')
-          md_files = [f for f in repo.rglob('*.md') if '.git/' not in str(f) and 'node_modules' not in str(f) and '.venv' not in str(f) and '.pytest_cache' not in str(f)]
-          broken = []
-          for md in md_files:
-              content = md.read_text()
-              for match in re.finditer(r'\[([^\]]*)\]\(([^)]+)\)', content):
-                  url = match.group(2)
-                  if url.startswith('http') or url.startswith('#'):
-                      continue
-                  target = (md.parent / url).resolve()
-                  if '#' in str(target):
-                      target = Path(str(target).split('#')[0])
-                  if not target.exists():
-                      broken.append((str(md), url))
-          if broken:
-              print(f'Broken links: {len(broken)}')
-              for src, url in broken[:20]:
-                  print(f'  {src} -> {url}')
-              raise SystemExit(1)
-          print(f'Scanned {len(md_files)} files, all internal links valid.')
-          "
+          python3 scripts/docs-validate.py
 
-      - name: Check trailing whitespace in markdown
-        run: |
-          WHITESPACE=$(grep -rn ' $' --include='*.md' docs/ packages/*/README.md *.md 2>/dev/null | wc -l)
-          if [ "$WHITESPACE" -gt 0 ]; then
-            echo "Found $WHITESPACE lines with trailing whitespace in .md files"
-            grep -rn ' $' --include='*.md' docs/ packages/*/README.md *.md | head -20
-            exit 1
-          fi
-          echo "No trailing whitespace in markdown files."
-
-      - name: Check for broken redirect stubs
-        run: |
-          for stub in README.md CONTRIBUTING.md CHANGELOG.md ROADMAP.md PROJECT_CHARTER.md SECURITY.md; do
-            if [ -f "$stub" ] && ! grep -q 'This document has moved' "$stub" 2>/dev/null; then
-              echo "WARNING: $stub may need redirect stub"
-            fi
-          done
-          echo "Redirect stubs checked."
 
   lint:
     name: Lint
