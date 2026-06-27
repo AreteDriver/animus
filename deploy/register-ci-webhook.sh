@@ -37,9 +37,13 @@ JSON
 )
 
 echo "Registering webhook 'github-ci-failure'..."
+HEADERS=(-H "Content-Type: application/json")
+if [ -n "${AUTH_TOKEN}" ]; then
+  HEADERS+=(-H "Authorization: Bearer ${AUTH_TOKEN}")
+fi
+
 RESPONSE=$(curl -s -w "\n%{http_code}" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ${AUTH_TOKEN}" \
+  "${HEADERS[@]}" \
   -d "${PAYLOAD}" \
   "${ANIMUS_HOST}/v1/webhooks")
 
