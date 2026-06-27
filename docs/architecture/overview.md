@@ -1,240 +1,151 @@
 # Architecture Overview
 
-Animus is designed as a modular system with four primary layers, built for extensibility, portability, and user sovereignty.
+> Animus is a modular, local-first AI exocortex built around 8 technical planes. Each plane is independently useful and composable.
 
 ---
 
-## System Diagram
+## System Diagram (v2.1)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Interface Layer                         │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────────┐  │
-│  │ Desktop  │ │  Mobile  │ │ Wearable │ │    Vehicle    │  │
-│  │   App    │ │   App    │ │  (Ring)  │ │  (CarPlay)    │  │
-│  └──────────┘ └──────────┘ └──────────┘ └───────────────┘  │
+│                     Interface Plane                         │
+│   CLI · Bootstrap Dashboard · API · MCP Server           │
 ├─────────────────────────────────────────────────────────────┤
-│                    Cognitive Layer                          │
-│         (reasoning, analysis, generation, learning)         │
+│                    Cognitive Plane                          │
+│   Forge (orchestration) · Quorum (coordination)            │
 ├─────────────────────────────────────────────────────────────┤
-│                     Memory Layer                            │
-│       (context, knowledge, patterns, file storage)          │
+│                     Memory Plane                            │
+│   Episodic · Semantic · Procedural · Reflection            │
 ├─────────────────────────────────────────────────────────────┤
-│                      Core Layer                             │
-│       (identity, security, preferences, guardrails)         │
+│                     Identity Plane                          │
+│   Self · Persona · Core Values · Preferences              │
+├─────────────────────────────────────────────────────────────┤
+│                    Integration Plane                        │
+│   Calendar · Tasks · Filesystem · Webhooks · Tools         │
+├─────────────────────────────────────────────────────────────┤
+│                     Kernel Plane                            │
+│   Budget · Executor · Sandbox · Safety · Resume           │
+├─────────────────────────────────────────────────────────────┤
+│                    Contracts Plane                          │
+│   Canonical JSON schemas (20+) — actions, events,        │
+│   assessments, memories, feedback                         │
+├─────────────────────────────────────────────────────────────┤
+│                     Types Plane                             │
+│   Shared Python schemas — install first, used by all    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
----
-
-## Core Layer
-
-The foundation. Defines *who* this Animus belongs to and what it cannot do.
-
-### Components
-
-**Identity**
-- Cryptographic ownership verification
-- This instance serves one user, authenticated
-- Device pairing and trust establishment
-
-**Preferences**
-- Communication style (formal, casual, technical)
-- Priorities and values
-- Interaction patterns
-
-**Security** (target posture; see status notes)
-- Encryption at rest (AES-256) — *PLANNED, not yet implemented: both memory
-  stores currently persist plaintext on disk. Tracked as future work.*
-- Access control and authentication
-- Secure key storage — *PLANNED (unified secret manager is specced, not built)*
-- Audit logging — implemented (metadata-only egress audit log)
-
-**Guardrails**
-- User-defined constraints on behavior
-- Inviolable safety rules (cannot harm user)
-- Boundary enforcement for self-learning
-- Action approval thresholds
-
-### Design Principles
-
-- Core layer is immutable without explicit user authentication
-- Guardrails cannot be overridden by learned behavior
-- All access logged and auditable
-- Fail-secure: if uncertain, restrict rather than permit
+*Verified 2026-06-27. See [Package Architecture](packages.md) for dependency graph and version matrix.*
 
 ---
 
-## Memory Layer
+## Interface Plane
 
-What makes it *yours* over time. The accumulated context that transforms a generic AI into a personal one.
+How you interact with Animus. Local-first by default.
 
-### Memory Types
+**CLI** (`python -m animus`) — Interactive agent with memory, streaming, and tool use.
 
-**Episodic Memory**
-- Conversations with timestamps
-- Events and decisions
-- Context of interactions
-- "What happened"
+**Bootstrap Dashboard** (`localhost:7700`) — FastAPI+HTMX ops UI. Daemon status, Ollama health, memory backend status, identity proposals.
 
-**Semantic Memory**
-- Facts about user and their world
-- Learned preferences and knowledge
-- Relationships and entities
-- "What you know"
+**MCP Server** (`python -m animus.mcp_server`) — 10 tools exposed to Claude Code: memory read/write, task creation, workflow dispatch, self-improve triggers.
 
-**Procedural Memory**
-- Workflows and patterns
-- How you do things
-- Repeated task sequences
-- "How you work"
-
-**Active Context**
-- Current situation
-- Recent conversation threads
-- Live priorities and tasks
-- "What's happening now"
-
-**File Storage**
-- User documents and files
-- Portable across devices
-- Encrypted at rest
-- Accessible to AI for context
-
-### Implementation Options
-
-| Component | Options | Tradeoffs |
-|-----------|---------|-----------|
-| Vector DB | ChromaDB, Qdrant, Milvus | ChromaDB simplest for local |
-| Knowledge Graph | Neo4j, local JSON-LD | Neo4j powerful but heavy |
-| Structured Data | SQLite, DuckDB | SQLite most portable |
-| File Storage | Local encrypted FS, IPFS | Local simpler, IPFS for sync |
-
-### Memory Management
-
-- User can review, edit, delete any memory
-- Retention policies configurable
-- Export to standard formats
-- Import from other systems
+**API** — RESTful endpoints for third-party integrations. Forge runs as a service on port 8000.
 
 ---
 
-## Cognitive Layer
+## Cognitive Plane
 
-The reasoning engine. Model-agnostic by design.
+The reasoning and coordination engines.
 
-### Components
+### Forge
 
-**Model Interface**
-- Abstraction layer for different LLMs
-- Local models: Llama, Mistral, Phi
-- API models: Claude, GPT (optional, user choice)
-- Hot-swappable based on task requirements
+Multi-agent workflow orchestration (`animus_forge`). Define pipelines in YAML, assign per-agent token budgets, set quality gates, and checkpoint state to SQLite for automatic resume on failure.
 
-**Tool Use Framework**
-- File system access
-- Web search and retrieval
-- API calls to external services
-- Device control and automation
+- **10 agent archetypes**: researcher, reviewer, writer, tester, security, etc.
+- **Budget controls**: Every agent has a token ceiling. Every workflow has a cost cap.
+- **Checkpoint/resume**: If a pipeline fails at step 4 of 6, it restarts at step 4.
+- **Quality gates**: Threshold checks after each stage. Failures trigger rollback or retry.
 
-**Analysis Modes**
+### Quorum
 
-| Mode | Use Case | Resources |
-|------|----------|-----------|
-| Quick | Simple queries, chat | Fast, low compute |
-| Standard | Most interactions | Balanced |
-| Deep | Complex analysis, planning | High compute, slower |
-| Background | Learning, pattern detection | Async, low priority |
+Decentralized agent coordination (`convergent`). No supervisor bottleneck — agents read a shared intent graph and self-adjust based on stability scores.
 
-**Register Translation**
-- Formal ↔ Casual ↔ Technical
-- Context-aware communication adjustment
-- User-defined style preferences
-
-**Self-Learning Engine**
-- Pattern recognition from interactions
-- Preference inference
-- Workflow optimization suggestions
-- Bounded by guardrails - cannot learn outside permitted domains
-
-### Learning Constraints
-
-The self-learning system operates within strict boundaries:
-
-1. **Cannot learn to bypass guardrails** - Safety rules are immutable
-2. **Cannot learn harmful patterns** - Even if user attempts to teach them
-3. **Transparency required** - User can see what was learned
-4. **Reversible** - Any learned behavior can be unlearned
-5. **Approval thresholds** - Significant changes require user confirmation
+- **Intent graph**: Agents register intents (provides/requires/stability). Conflicts resolved by overlap detection.
+- **Triumvirate voting**: Three agents vote on contentious decisions.
+- **Flocking**: Agents converge on consensus without central control.
 
 ---
 
-## Interface Layer
+## Memory Plane
 
-How you interact across contexts. The key requirement is **seamless handoff** - context follows you across devices.
+What makes it *yours* over time.
 
-### Supported Interfaces
+| Type | What it stores | Backend |
+|---|---|---|
+| **Episodic** | Conversations, events, decisions | SQLite / ChromaDB |
+| **Semantic** | Facts, preferences, relationships | ChromaDB / Weaviate |
+| **Procedural** | Workflows, patterns, how you work | SQLite + learned embeddings |
+| **Reflection** | Feedback loop outcomes, improvement history | SQLite |
 
-**Desktop Application**
-- Full-featured interface
-- Long-form work and complex tasks
-- File management and organization
-- Development and technical work
+**Implementation**: Default is SQLite for portability. ChromaDB and Weaviate are optional backends via `memory.backend` config.
 
-**Mobile Application**
-- Voice-first design
-- Quick queries and responses
-- On-the-go access
-- Notification management
+---
 
-**Wearable Interface**
-- Minimal, ambient
-- Voice-activated
-- Haptic feedback
-- Glanceable information
+## Identity Plane
 
-**Vehicle Integration**
-- CarPlay / Android Auto compatible
-- Voice-primary interaction
-- Driving-safe UI patterns
-- Location-aware context
+Defines *who* this Animus belongs to and what it cannot do.
 
-**Storage Device Mode**
-- Animus as portable storage
-- Plug into any compatible device
-- Secure file access
-- Temporary interface on host device
+- **Self** — The persistent identity file. What Animus calls itself, its values, its relationship to the user.
+- **Persona** — Adjustable communication style (formal, casual, technical).
+- **Core Values** — Immutable. Stored in `CORE_VALUES.md`. Cannot be modified by self-improvement.
+- **Preferences** — Learned over time. Communication style, priorities, interaction patterns.
 
-### Handoff Protocol
+**Guardrails**: Small changes (<20% of file size) are written directly. Larger changes require dashboard approval. Safety rules are immutable — learned behavior cannot override them.
 
-```
-Device A (active)
-    │
-    ├── Saves current context to sync layer
-    ├── Marks conversation as "in handoff"
-    │
-    ▼
-Sync Layer (encrypted)
-    │
-    ├── Validates Device B authorization
-    ├── Transfers active context
-    │
-    ▼
-Device B (activating)
-    │
-    ├── Retrieves context
-    ├── Resumes conversation seamlessly
-    └── User experiences no interruption
-```
+---
 
-### Communication Protocol
+## Integration Plane
 
-For real-time communication across devices:
+External tool connections. All optional, user-configured.
 
-- WebSocket for low-latency sync
-- End-to-end encryption
-- Conflict resolution (last-write-wins with history)
-- Offline-first with eventual consistency
+| Integration | Purpose | Status |
+|---|---|---|
+| Google Calendar | Event read/write | Active |
+| Todoist | Task sync | Active |
+| Filesystem | Local file access | Active |
+| Webhooks | Event callbacks | Active |
+| Ollama | Local LLM inference | Active |
+| Anthropic / OpenAI | Cloud LLM APIs | Optional |
+
+---
+
+## Kernel Plane
+
+The autonomous builder engine (`animus_kernel`). Extracted from Forge for standalone use.
+
+- **Budget Manager** — Token accounting, spend tracking, cost ceiling enforcement.
+- **Executor** — Runs workflow steps, handles async DAG scheduling.
+- **Sandbox** — Validates changes before application. Test-driven safety.
+- **Safety Checks** — Config validation, guardrail enforcement, forbidden skill blocking.
+- **Resume** — State persistence to SQLite. Workflow recovery on failure.
+
+---
+
+## Contracts Plane
+
+Canonical JSON schemas (`packages/contracts/`). 20+ schemas define data structures across all subsystems.
+
+Key schemas: `Action`, `Event`, `Assessment`, `Memory`, `Feedback`, `Identity`, `Task`, `Workflow`.
+
+Every package validates inputs and outputs against these schemas. The Contracts package has no runtime dependencies — it is pure JSON.
+
+---
+
+## Types Plane
+
+Shared Python type definitions (`animus_types`). Install this package **first** — all other packages depend on it as a local sibling.
+
+Contains: dataclasses, enums, protocol definitions, and shared constants used across Core, Forge, Bootstrap, Quorum, and Kernel.
 
 ---
 
@@ -243,75 +154,59 @@ For real-time communication across devices:
 ### Standard Interaction
 
 ```
-User input (any interface)
+User input (CLI / Dashboard / MCP)
          │
          ▼
 ┌─────────────────────┐
-│   Interface Layer   │  ← Captures, normalizes input
+│   Identity Plane    │  ← Load persona, apply preferences
 └─────────────────────┘
          │
          ▼
 ┌─────────────────────┐
-│     Core Layer      │  ← Authenticates, applies preferences
+│    Memory Plane     │  ← Retrieve relevant context
 └─────────────────────┘
          │
          ▼
 ┌─────────────────────┐
-│    Memory Layer     │  ← Retrieves relevant context
+│   Cognitive Plane   │  ← Forge/Quorum reason, generate
 └─────────────────────┘
          │
          ▼
 ┌─────────────────────┐
-│   Cognitive Layer   │  ← Reasons, generates response
+│    Memory Plane     │  ← Store new context, update patterns
 └─────────────────────┘
          │
          ▼
 ┌─────────────────────┐
-│    Memory Layer     │  ← Stores new context, updates patterns
-└─────────────────────┘
-         │
-         ▼
-┌─────────────────────┐
-│   Interface Layer   │  ← Delivers response to user
+│   Interface Plane   │  ← Deliver response
 └─────────────────────┘
 ```
 
-### Learning Flow
+### Self-Improvement Flow
 
 ```
-Interaction occurs
+Feedback collected (up/down votes, comments)
          │
          ▼
 ┌─────────────────────┐
-│ Pattern Detection   │  ← Identifies potential learning
-└─────────────────────┘
-         │
-         ▼
-┌─────────────────────┐
-│ Guardrail Check     │  ← Is this learning permitted?
-└─────────────────────┘
-         │
-    ┌────┴────┐
-    │         │
-   YES        NO → Log and discard
-    │
-    ▼
-┌─────────────────────┐
-│ Threshold Check     │  ← Does this need approval?
-└─────────────────────┘
-         │
-    ┌────┴────┐
-    │         │
-  Minor     Major → Queue for user approval
-    │
-    ▼
-┌─────────────────────┐
-│ Apply Learning      │  ← Update relevant memory
+│   Reflection Loop   │  ← Aggregate, identify patterns
 └─────────────────────┘
          │
          ▼
 ┌─────────────────────┐
-│ Log Change          │  ← Transparent, reversible
+│   Kernel Plane       │  ← Plan changes, safety check
+│   (Sandbox)          │
+└─────────────────────┘
+         │
+         ▼
+┌─────────────────────┐
+│   Apply Changes      │  ← Update docs, code, or identity
+│   (Approval Gate)    │
+└─────────────────────┘
+         │
+         ▼
+┌─────────────────────┐
+│   Log Change         │  ← Transparent, reversible
 └─────────────────────┘
 ```
 
@@ -322,19 +217,21 @@ Interaction occurs
 ### Threat Model
 
 | Threat | Mitigation |
-|--------|------------|
-| Device theft | Encryption at rest, secure boot |
-| Network interception | E2E encryption, certificate pinning |
-| Malicious input | Guardrails, input sanitization |
-| Unauthorized access | Multi-factor auth, device trust |
-| Data exfiltration | Local-first, explicit sharing only |
+|---|---|
+| Unauthorized config access | Config files chmod 600 |
+| Malicious self-modification | Approval gate for >20% file changes |
+| Data exfiltration | Local-first by default; no telemetry |
+| Model prompt injection | Guardrails, input sanitization |
+| API key leakage | Stored in config, never transmitted |
 
 ### Privacy Guarantees
 
-1. **No telemetry without consent** - Nothing phones home by default
-2. **No training data extraction** - Your data doesn't improve someone else's model
-3. **Explicit sharing only** - Data leaves device only when you choose
-4. **Audit trail** - You can see everything that happened
+1. **No telemetry without consent** — Nothing phones home by default
+2. **Local memory** — SQLite/ChromaDB on your machine
+3. **Explicit sharing only** — Data leaves device only when you choose
+4. **Audit trail** — You can see everything that happened
+
+See [Reference → Security](../reference/security.md) for full threat model.
 
 ---
 
@@ -342,18 +239,41 @@ Interaction occurs
 
 ### Plugin Architecture
 
-Animus supports plugins for:
-- Additional interfaces
-- New tool integrations
-- Custom memory backends
+Animus supports extensions for:
+- Additional memory backends
+- Custom tool integrations
+- New agent archetypes in Forge
 - Specialized cognitive modules
 
 ### API Layer
 
-RESTful API for:
-- Third-party integrations
-- Custom clients
-- Automation scripts
-- Inter-system communication
+RESTful API on port 8000 (Forge service):
+- Workflow submission and monitoring
+- Memory read/write
+- Task and feedback management
+- MCP tool execution
 
-All API access subject to Core Layer authentication and guardrails.
+All API access subject to Identity Plane authentication and guardrails.
+
+---
+
+## Design Principles
+
+**Budget-first execution.** Every agent has a token budget. Every workflow has a cost ceiling. Inspired by Toyota Production System — make cost visible, make waste impossible to ignore.
+
+**No supervisor bottleneck.** Quorum replaces centralized supervision with environmental awareness. Agents observe shared state and independently converge.
+
+**Checkpoint/resume.** All Forge workflows persist state to SQLite. If a pipeline fails at step 4 of 6, it restarts at step 4. No wasted compute.
+
+**Provider-agnostic.** LLM calls go through a shared interface. Swap Claude for OpenAI or Ollama without touching agent code.
+
+**Local-first.** Your memory, your identity, your hardware. Nothing leaves unless you configure it to.
+
+---
+
+## See Also
+
+- [Package Architecture](packages.md) — Dependency graph and version matrix
+- [Decisions](decisions/) — Architecture Decision Records (ADRs)
+- [Reference → Glossary](../reference/glossary.md) — Domain terms
+- [Roadmap](../roadmap/current.md) — Future plans

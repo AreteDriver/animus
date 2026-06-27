@@ -30,10 +30,10 @@
 
 | Package | Import | Purpose | Tests | Coverage |
 |---|---|---|---|---|
-| [Core](core/) | `import animus` | Personal AI exocortex — memory, CLI, integrations | 2,109 | 97% |
-| [Forge](forge/) | `import animus_forge` | Multi-agent workflow orchestration | 9,720 | 97% |
-| [Bootstrap](bootstrap/) | `import animus_bootstrap` | Install daemon, wizard, dashboard | 1,841 | 97% |
-| [Quorum](quorum/) | `import convergent` | Decentralized agent coordination | 926 | 97% |
+| [Core](core/) | `import animus` | Personal AI exocortex — memory, CLI, integrations | 2,865 | 97% |
+| [Forge](forge/) | `import animus_forge` | Multi-agent workflow orchestration | 10,304 | 97% |
+| [Bootstrap](bootstrap/) | `import animus_bootstrap` | Install daemon, wizard, dashboard | 2,048 | 97% |
+| [Quorum](quorum/) | `import convergent` | Decentralized agent coordination | 961 | 97% |
 | [Kernel](kernel/) | `import animus_kernel` | Autonomous builder engine (standalone) | — | — |
 | [Types](types/) | `import animus_types` | Shared schemas and type definitions | — | — |
 | [PWA](pwa/) | N/A | Progressive web app interface | — | — |

@@ -10,7 +10,7 @@
 
 Animus coordinates AI agents across complex workflows — with the operational discipline of a manufacturing line. Every agent has a token budget. Every workflow has a cost ceiling. If a pipeline fails at step 4 of 6, it restarts at step 4, not step 1. Inspired by the Toyota Production System: make cost visible, make waste impossible to ignore.
 
-Four independently-installable packages. 13,700+ tests. Proactive engine with 6 self-healing checks and an autonomous improvement loop verified end-to-end against local inference.
+Eight packages (four installable via PyPI). 16,178+ tests. Proactive engine with 6 self-healing checks and an autonomous improvement loop verified end-to-end against local inference.
 
 **[Architecture](docs/architecture/overview.md)** | **[Roadmap](docs/roadmap/current.md)** | **[Whitepaper](docs/whitepaper.pdf)**
 
@@ -81,13 +81,13 @@ One-command install, Rich-based onboarding wizard, FastAPI+HTMX ops dashboard at
 ```bash
 git clone https://github.com/AreteDriver/animus && cd animus
 pip install -e packages/core -e packages/forge -e packages/quorum
-pytest packages/core/tests/ packages/quorum/tests/ -q  # 3,000+ tests in seconds
+pytest packages/core/tests/ packages/quorum/tests/ -q  # 3,800+ tests in seconds
 ```
 
 To run the Forge test suite (must run from its package directory):
 
 ```bash
-cd packages/forge && pytest tests/ -q  # 8,800+ tests
+cd packages/forge && pytest tests/ -q  # 10,300+ tests
 ```
 
 ### Run the CLI
@@ -184,10 +184,10 @@ Animus can analyze and improve its own codebase:
 ```bash
 # CLI: analyze and improve
 cd packages/forge
-gorgon self-improve run --provider ollama --path /path/to/project
+animus-forge self-improve run --provider ollama --path /path/to/project
 
 # Analyze only (no changes)
-gorgon self-improve analyze --focus security
+animus-forge self-improve analyze --focus security
 
 # Record feedback for the reflection loop
 animus-bootstrap feedback add up -m "Good response" -c "Accurate and concise"
@@ -211,20 +211,31 @@ animus/
 ├── packages/
 │   ├── core/                    # import animus
 │   │   ├── animus/              # Identity, memory, cognitive, CLI, integrations
-│   │   └── tests/               # 2,108 tests, 97% coverage
+│   │   └── tests/               # 2,865 tests, 97% coverage
 │   ├── forge/                   # import animus_forge
 │   │   ├── src/animus_forge/    # Executor, agents, API, CLI, TUI, dashboard
 │   │   ├── migrations/          # 16 SQL migrations
 │   │   ├── workflows/           # YAML workflow definitions
-│   │   └── tests/               # 8,894 tests, 97% coverage
+│   │   └── tests/               # 10,304 tests, 97% coverage
 │   ├── quorum/                  # import convergent (PyPI: convergentAI)
 │   │   ├── python/convergent/   # Intent graph, voting, stigmergy, bridge
 │   │   ├── src/                 # Rust PyO3 (optional performance layer)
-│   │   └── tests/               # 926 tests, 97% coverage
-│   └── bootstrap/               # import animus_bootstrap
-│       ├── src/animus_bootstrap/ # Daemon, wizard, dashboard
-│       └── tests/               # 1,748 tests, 97% coverage
-├── docs/                        # Architecture, roadmap, whitepapers
+│   │   └── tests/               # 961 tests, 97% coverage
+│   ├── bootstrap/               # import animus_bootstrap
+│   │   ├── src/animus_bootstrap/ # Daemon, wizard, dashboard
+│   │   └── tests/               # 2,048 tests, 97% coverage
+│   ├── kernel/                  # import animus_kernel
+│   ├── types/                   # import animus_types
+│   ├── pwa/                     # Progressive web app
+│   └── contracts/               # Canonical JSON schemas (20+)
+├── docs/                        # Audience-based docs tree
+│   ├── getting-started/         # Install, quickstart, concepts
+│   ├── architecture/            # Overview, packages, decisions, standards
+│   ├── packages/                # Per-package docs
+│   ├── contributing/            # Setup, workflow, debugging
+│   ├── operators/               # Deployment, config, monitoring
+│   ├── reference/               # Glossary, FAQ, security, whitepapers
+│   └── roadmap/                 # Current priorities and plans
 └── .github/workflows/           # CI: lint, test (per-package), security, CodeQL
 ```
 
@@ -236,12 +247,12 @@ Active development. Architecture stable. v2.3.0 (migrating to v2.1 baseline) rel
 
 | Component | Version | Tests | Coverage | Stage |
 |-----------|---------|------:|:--------:|-------|
-| Core | 2.3.0 | 2,108 | 97% | [Live on PyPI](https://pypi.org/project/animus-core/) — CLI, memory, MCP server |
-| Forge | 1.3.0 | 8,894 | 97% | Self-improve pipeline, workflow orchestration |
-| Quorum | 1.1.0 | 926 | 97% | [Live on PyPI](https://pypi.org/project/convergentAI/) |
-| Bootstrap | 0.5.0 | 1,748 | 97% | Daemon + wizard + dashboard + reflection |
+| Core | 2.3.0 | 2,865 | 97% | [Live on PyPI](https://pypi.org/project/animus-core/) — CLI, memory, MCP server |
+| Forge | 1.9.0 | 10,304 | 97% | Self-improve pipeline, workflow orchestration |
+| Quorum | 1.2.0 | 961 | 97% | [Live on PyPI](https://pypi.org/project/convergentAI/) |
+| Bootstrap | 0.8.0 | 2,048 | 97% | Daemon + wizard + dashboard + reflection |
 
-**Total: 13,676 tests across 4 packages.**
+**Total: 16,178 tests across 4 packages.**
 
 ---
 
@@ -261,9 +272,14 @@ Active development. Architecture stable. v2.3.0 (migrating to v2.1 baseline) rel
 
 ## Documentation
 
-- [Architecture](docs/architecture/overview.md)
-- [Whitepaper (PDF)](docs/whitepaper.pdf)
+- [Getting Started](docs/getting-started/quickstart.md) — Install and first steps
+- [Architecture](docs/architecture/overview.md) — System design and layers
+- [Packages](docs/packages/) — Per-package docs and version matrix
+- [Contributing](docs/contributing/setup.md) — Dev environment and workflow
+- [Operators](docs/operators/deployment.md) — Deploy, configure, monitor
+- [Reference](docs/reference/glossary.md) — Glossary, FAQ, security
 - [Roadmap](docs/roadmap/current.md)
+- [Whitepaper (PDF)](docs/whitepaper.pdf)
 - [Whitepapers (Markdown)](docs/whitepapers/)
 
 ---
