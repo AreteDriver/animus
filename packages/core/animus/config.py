@@ -281,6 +281,47 @@ class EntityConfig:
 
 
 @dataclass
+class CitizenZeroConfig:
+    """Configuration for Citizen Zero overlay."""
+
+    enabled: bool = True
+    citizen_dir: str = ""           # auto-discovered if empty
+    shared_dir: str = ""            # auto-discovered if empty
+    constitutional_corpus_dir: str = ""  # auto-discovered if empty
+    context_budget_tokens: int = 2000
+    default_failure_mode: str = "interactive"  # "strict" | "interactive" | "degraded"
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("ANIMUS_CITIZEN_ZERO_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+
+        if not self.citizen_dir:
+            for candidate in [
+                Path.home() / "projects" / "notes" / "citizen-zero",
+                Path.home() / "notes" / "citizen-zero",
+                Path.home() / "citizen-zero",
+            ]:
+                if candidate.exists():
+                    self.citizen_dir = str(candidate / "v0.1-animus")
+                    self.shared_dir = str(candidate / "shared")
+                    self.constitutional_corpus_dir = str(candidate / "corpus")
+                    break
+
+        if env_corpus := os.environ.get("ANIMUS_CZ_CONSTITUTIONAL_DIR"):
+            self.constitutional_corpus_dir = env_corpus
+
+        if env_budget := os.environ.get("ANIMUS_CZ_CONTEXT_BUDGET"):
+            try:
+                self.context_budget_tokens = int(env_budget)
+            except ValueError:
+                pass
+
+        if env_mode := os.environ.get("ANIMUS_CZ_FAILURE_MODE"):
+            if env_mode in ("strict", "interactive", "degraded"):
+                self.default_failure_mode = env_mode
+
+
+@dataclass
 class AutonomousConfig:
     """Configuration for the autonomous action system.
 
@@ -330,6 +371,7 @@ class AnimusConfig:
     proactive: ProactiveConfig = field(default_factory=ProactiveConfig)
     entities: EntityConfig = field(default_factory=EntityConfig)
     autonomous: AutonomousConfig = field(default_factory=AutonomousConfig)
+    citizen_zero: CitizenZeroConfig = field(default_factory=CitizenZeroConfig)
 
     def __post_init__(self):
         # Convert string to Path if needed
@@ -440,6 +482,14 @@ class AnimusConfig:
                 "notify_policy": self.autonomous.notify_policy,
                 "act_policy": self.autonomous.act_policy,
                 "execute_policy": self.autonomous.execute_policy,
+            },
+            "citizen_zero": {
+                "enabled": self.citizen_zero.enabled,
+                "citizen_dir": self.citizen_zero.citizen_dir,
+                "shared_dir": self.citizen_zero.shared_dir,
+                "constitutional_corpus_dir": self.citizen_zero.constitutional_corpus_dir,
+                "context_budget_tokens": self.citizen_zero.context_budget_tokens,
+                "default_failure_mode": self.citizen_zero.default_failure_mode,
             },
         }
 
@@ -611,6 +661,20 @@ class AnimusConfig:
                 if "execute_policy" in autonomous_data:
                     config.autonomous.execute_policy = autonomous_data["execute_policy"]
 
+            if citizen_zero_data := data.get("citizen_zero"):
+                if "enabled" in citizen_zero_data:
+                    config.citizen_zero.enabled = citizen_zero_data["enabled"]
+                if "citizen_dir" in citizen_zero_data:
+                    config.citizen_zero.citizen_dir = citizen_zero_data["citizen_dir"]
+                if "shared_dir" in citizen_zero_data:
+                    config.citizen_zero.shared_dir = citizen_zero_data["shared_dir"]
+                if "constitutional_corpus_dir" in citizen_zero_data:
+                    config.citizen_zero.constitutional_corpus_dir = citizen_zero_data["constitutional_corpus_dir"]
+                if "context_budget_tokens" in citizen_zero_data:
+                    config.citizen_zero.context_budget_tokens = citizen_zero_data["context_budget_tokens"]
+                if "default_failure_mode" in citizen_zero_data:
+                    config.citizen_zero.default_failure_mode = citizen_zero_data["default_failure_mode"]
+
             # Re-apply environment overrides
             config.__post_init__()
             config.model.__post_init__()
@@ -626,6 +690,7 @@ class AnimusConfig:
             config.proactive.__post_init__()
             config.entities.__post_init__()
             config.autonomous.__post_init__()
+            config.citizen_zero.__post_init__()
 
         return config
 

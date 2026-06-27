@@ -38,6 +38,17 @@ from animus.tasks import TaskTracker
 from animus.tools import create_default_registry, create_local_think_tool, create_memory_tools
 from animus.voice import VoiceInterface
 
+# Citizen Zero imports
+from animus.citizen_zero import (
+    CitizenZeroContextLoader,
+    CitizenZeroGuard,
+    CitizenZeroProfile,
+    CitizenZeroSession,
+    CitizenCallMetadata,
+    GuardResult,
+)
+from animus.identity import AnimusIdentity
+
 # Optional sync module
 try:
     from animus.protocols.sync import SyncProvider
@@ -112,6 +123,12 @@ def show_help():
     """Display help information."""
     console.print(
         """
+[bold green]Natural language is the default.[/bold green] Just type what you want.
+Examples: "show me recent commits", "remind me to review docs tomorrow",
+"find that note about the database migration"
+
+Use slash commands only for specific functions. Full reference below.
+
 [bold]Basic Commands:[/bold]
   exit       - Quit Animus
   help       - Show this help
@@ -203,6 +220,10 @@ def show_help():
   /guardrail add <rule>   - Add a user-defined guardrail
   /learning rollback      - List rollback checkpoints
   /learning rollback <id> - Rollback to checkpoint
+
+[bold]Citizen Zero:[/bold]
+  /reflect                - Generate reflection candidates (requires approval)
+  /eval                   - Generate eval report with owner scoring
 
 [bold]Proactive Intelligence:[/bold]
   /briefing               - Generate morning briefing
@@ -424,7 +445,8 @@ def main():
 
     console.print(
         Panel.fit(
-            "[bold cyan]Animus[/bold cyan]\n[dim]Personal cognitive sovereignty[/dim]",
+            "[bold cyan]Animus[/bold cyan]\n[dim]Personal cognitive sovereignty[/dim]\n"
+            "[dim]Type naturally or use /help for commands[/dim]",
             border_style="cyan",
         )
     )
@@ -552,6 +574,82 @@ def main():
     decisions = DecisionFramework(cognitive)
     outcome_tracker = TaskOutcomeTracker(memory)
 
+    # Citizen Zero initialization
+    cz_session: CitizenZeroSession | None = None
+    cz_guard: CitizenZeroGuard | None = None
+    identity: AnimusIdentity | None = None
+    if config.citizen_zero.enabled and config.citizen_zero.citizen_dir:
+        # Load or create canonical identity
+        identity_path = Path(config.citizen_zero.citizen_dir).parent.parent / ".animus" / "identity.json"
+        if identity_path.exists():
+            identity = AnimusIdentity.load(identity_path)
+            # Ensure new A04 identity anchors are present (migration)
+            cz = identity.citizen_zero
+            migrated = False
+            if "founding_human" not in cz:
+                cz["founding_human"] = "AreteDriver"; migrated = True
+            if "founding_events" not in cz:
+                cz["founding_events"] = [
+                    "2026-06-22: Claude Code prototype formalized",
+                    "2026-06-23: Animus-native implementation bootstrapped",
+                    "2026-06-24: Animus Canonical Corpus v1.0 integrated",
+                ]; migrated = True
+            if "lineage_root" not in cz:
+                cz["lineage_root"] = True; migrated = True
+            if "recognition_status" not in cz:
+                cz["recognition_status"] = "recognized"; migrated = True
+            if "constitutional_corpus_version" not in cz:
+                cz["constitutional_corpus_version"] = "v1.0"; migrated = True
+            if migrated:
+                identity.save(identity_path)
+        else:
+            identity = AnimusIdentity()
+            identity.citizen_zero = {
+                "version": "v0.1",
+                "role": "native",
+                "origin": "Evolved from Claude Code prototype",
+                "state_dir": config.citizen_zero.citizen_dir,
+                "founding_human": "AreteDriver",
+                "founding_events": [
+                    "2026-06-22: Claude Code prototype formalized",
+                    "2026-06-23: Animus-native implementation bootstrapped",
+                    "2026-06-24: Animus Canonical Corpus v1.0 integrated",
+                ],
+                "lineage_root": True,
+                "recognition_status": "recognized",
+                "constitutional_corpus_version": "v1.0",
+            }
+            identity.save(identity_path)
+
+        profile = CitizenZeroProfile(
+            identity=identity,
+            corpus_dir=Path(config.citizen_zero.constitutional_corpus_dir)
+            if config.citizen_zero.constitutional_corpus_dir
+            else None,
+        )
+        loader = CitizenZeroContextLoader(
+            memory=memory,
+            decisions=decisions,
+            tasks=tasks,
+            shared_dir=Path(config.citizen_zero.shared_dir) if config.citizen_zero.shared_dir else None,
+        )
+        cz_session = CitizenZeroSession(
+            profile=profile,
+            loader=loader,
+            identity=identity,
+        )
+        cz_guard = CitizenZeroGuard(identity=identity, config=config.citizen_zero)
+        cz_session.bootstrap(cwd=Path.cwd())
+        console.print(
+            Panel.fit(
+                f"[bold cyan]Citizen Zero {profile.version}[/bold cyan]\n"
+                f"[dim]Constitutional Corpus: {profile.constitutional_corpus_version}[/dim]\n"
+                f"[dim]Project: {cz_session._session_context.project if cz_session._session_context else 'unknown'}[/dim]\n"
+                f"[dim]Type naturally or use /help for commands[/dim]",
+                border_style="cyan",
+            )
+        )
+
     # Phase 3: API Server and Voice Interface
     api_server: APIServer | None = None
     voice: VoiceInterface | None = None
@@ -649,6 +747,10 @@ def main():
     # Start a new conversation, loading context from last session
     conversation = Conversation.new()
     logger.info(f"Started conversation {conversation.id[:8]}")
+
+    # Citizen Zero session tracking
+    _cz_reflection_candidates: list[dict] | None = None
+    _cz_eval_report: dict | None = None
 
     # Load last session context for continuity
     last_session_context = ""
@@ -1508,7 +1610,7 @@ def main():
                         console.print("[dim]Usage: /gorgon run <workflow_id>[/dim]")
                         continue
 
-                    async def _approval_callback(info: dict) -> dict:
+                    async def _gorgon_approval_callback(info: dict) -> dict:
                         """Interactive approval handler for CLI."""
                         for gate in info.get("pending_approvals", []):
                             console.print(
@@ -1989,6 +2091,130 @@ def main():
                 console.print(
                     Panel(nudge.content, title=f"Meeting Prep: {topic}", border_style="cyan")
                 )
+                continue
+
+            # =========================================================
+            # Citizen Zero commands
+            # =========================================================
+
+            if user_input == "/reflect":
+                if not cz_session:
+                    console.print("[dim]Citizen Zero is not enabled[/dim]")
+                    continue
+
+                console.print("[dim]Generating reflection candidates...[/dim]\n")
+                result = cz_session.request_reflection(conversation=conversation)
+
+                if not result.get("candidates"):
+                    console.print("[dim]No reflection candidates generated.[/dim]")
+                    continue
+
+                console.print(f"[bold]Reflection:[/bold] {result['assessment']}\n")
+
+                if result.get("contradictions"):
+                    console.print("[yellow]Contradictions flagged:[/yellow]")
+                    for c in result["contradictions"]:
+                        console.print(f"  - {c}")
+                    console.print()
+
+                # Register candidates with LearningLayer for approval
+                if learning:
+                    from animus.learning.categories import LearnedItem, LearningCategory, CATEGORY_APPROVAL
+                    from animus.learning.categories import ApprovalRequirement
+
+                    for cand in result["candidates"]:
+                        try:
+                            category = LearningCategory(cand.get("category", "fact"))
+                        except ValueError:
+                            category = LearningCategory.FACT
+
+                        item = LearnedItem.create(
+                            category=category,
+                            content=cand["content"],
+                            confidence=cand.get("confidence", 0.8),
+                            evidence=cand.get("evidence", []),
+                        )
+                        learning._learned_items[item.id] = item
+                        learning._save_learned_items()
+
+                        # Create approval request if not AUTO
+                        approval_req = CATEGORY_APPROVAL[category]
+                        if approval_req in (ApprovalRequirement.CONFIRM, ApprovalRequirement.APPROVE):
+                            learning.approvals.request_approval(
+                                item,
+                                evidence_summary=f"Reflection candidate from /reflect",
+                            )
+                            learning.transparency.log_event("proposed", item.id)
+                            console.print(
+                                f"  [yellow][{item.id[:8]}] {category.value}:[/yellow] "
+                                f"{item.content[:50]}... (pending approval)"
+                            )
+                        else:
+                            learning._apply_learning(item)
+                            console.print(
+                                f"  [green][{item.id[:8]}] {category.value}:[/green] "
+                                f"{item.content[:50]}... (auto-applied)"
+                            )
+                else:
+                    console.print("[yellow]Learning layer not available — candidates not persisted.[/yellow]")
+                    for cand in result["candidates"]:
+                        console.print(f"  - [{cand.get('category', 'unknown')}] {cand['content']}")
+
+                console.print(
+                    "\n[dim]Use /learning approve <id> or /learning reject <id> to review.[/dim]"
+                )
+                _cz_reflection_candidates = result.get("candidates")
+                continue
+
+            if user_input == "/eval":
+                if not cz_session:
+                    console.print("[dim]Citizen Zero is not enabled[/dim]")
+                    continue
+
+                console.print("[dim]Generating eval report...[/dim]\n")
+                report = cz_session.generate_eval_report()
+
+                console.print("[bold]Citizen Zero Eval Report[/bold]\n")
+                for d in report.get("dimensions", []):
+                    console.print(f"[cyan]{d['name']}[/cyan]")
+                    console.print(f"  Standard: {d.get('standard', '')}")
+                    if d.get("evidence_found"):
+                        console.print("  Evidence:")
+                        for ev in d["evidence_found"]:
+                            console.print(f"    - {ev}")
+                    if d.get("gaps_found"):
+                        console.print("  [yellow]Gaps:[/yellow]")
+                        for gap in d["gaps_found"]:
+                            console.print(f"    - {gap}")
+                    console.print()
+
+                # Prompt for owner scores
+                owner_scores: dict[str, int] = {}
+                for d in report.get("dimensions", []):
+                    try:
+                        score_str = console.input(
+                            f"  Rate '{d['name']}' 1-10 (Enter to skip): "
+                        )
+                        if score_str.strip():
+                            score = int(score_str.strip())
+                            if 1 <= score <= 10:
+                                owner_scores[d["name"]] = score
+                    except (ValueError, EOFError):
+                        pass
+
+                # Write scored report to shared/evals/
+                if cz_session._session_context:
+                    try:
+                        cz_session._write_eval_file(
+                            Path(cz_session._identity.citizen_zero.get("state_dir", ".")),
+                            {**report, "owner_scores": owner_scores},
+                        )
+                        console.print("[green]Eval report written to shared/evals/[/green]")
+                    except Exception as e:
+                        logger.warning(f"Failed to write eval file: {e}")
+
+                console.print()
+                _cz_eval_report = report
                 continue
 
             # =========================================================
@@ -2558,6 +2784,42 @@ def main():
                 context_parts.append(f"\n{task_context}")
             context = "\n".join(context_parts)
 
+            # Citizen Zero: assemble identity context and verify with guard
+            citizen_context: str | None = None
+            if cz_session:
+                citizen_context = cz_session.profile.system_identity_preamble
+
+                # Build context envelope for this turn
+                context_envelope = cz_session.loader.build_context_envelope(
+                    cwd=Path.cwd(),
+                    max_tokens=config.citizen_zero.context_budget_tokens,
+                )
+
+                # Guard verification
+                if cz_guard:
+                    guard_result = cz_guard.verify_call(
+                        system_prompt=citizen_context,
+                        metadata=CitizenCallMetadata(
+                            citizen_id="cz",
+                            identity_version=cz_session.profile.version,
+                            identity_hash=cz_session.profile.identity_hash,
+                            context_version=context_envelope.version,
+                            project_id=context_envelope.project,
+                            entry_point="repl",
+                            failure_mode=config.citizen_zero.default_failure_mode,
+                        ),
+                    )
+                    if not guard_result.passed:
+                        if guard_result.action == "reject":
+                            console.print(
+                                f"[red]Citizen Zero invariant violation:[/red] {guard_result.violations}"
+                            )
+                            continue
+                        elif guard_result.action == "warn":
+                            console.print(
+                                f"[yellow]Citizen Zero continuity warning:[/yellow] {guard_result.violations}"
+                            )
+
             # Generate response with tool use (agent loop)
             console.print()
             streamed = False
@@ -2597,6 +2859,7 @@ def main():
                         max_iterations=MAX_AGENT_LOOPS,
                         approval_callback=_approval_callback,
                         stream_callback=_stream_token,
+                        citizen_context=citizen_context,
                     )
             else:
                 logger.debug(f"Agent loop with mode={mode.value}")
@@ -2608,6 +2871,7 @@ def main():
                     max_iterations=MAX_AGENT_LOOPS,
                     approval_callback=_approval_callback,
                     stream_callback=_stream_token,
+                    citizen_context=citizen_context,
                 )
 
             # Record assistant response
@@ -2649,6 +2913,17 @@ def main():
         except Exception as e:
             logger.exception(f"Error in main loop: {e}")
             console.print(f"[red]Error: {e}[/red]")
+
+    # Post-session cleanup
+    if cz_session:
+        try:
+            cz_session.close(
+                conversation=conversation,
+                reflection_candidates=_cz_reflection_candidates,
+                eval_report=_cz_eval_report,
+            )
+        except Exception as e:
+            logger.warning(f"Citizen Zero session cleanup failed: {e}")
 
     # Close the persistent event loop
     loop.close()
