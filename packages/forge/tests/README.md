@@ -1,6 +1,6 @@
-# Gorgon Tests
+# Forge Tests
 
-This directory contains tests for Gorgon.
+This directory contains tests for Animus Forge.
 
 ## 🧪 Test Structure
 

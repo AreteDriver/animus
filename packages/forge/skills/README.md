@@ -1,11 +1,11 @@
-# Gorgon Skills Library
+# Forge Skills Library
 
-This directory contains the skill definitions for the Gorgon multi-agent orchestration system. Skills provide agents with structured capabilities, safety guardrails, and best practices for executing tasks.
+This directory contains the skill definitions for the Animus Forge multi-agent orchestration system. Skills provide agents with structured capabilities, safety guardrails, and best practices for executing tasks.
 
 ## Directory Structure
 
 ```
-gorgon-skills/
+skills/
 ├── registry.yaml              # Master index of all skills
 ├── README.md                  # This file
 │
@@ -108,7 +108,7 @@ The Triumvirate (Zorya Utrennyaya, Zorya Vechernyaya, Zorya Polunochnaya) uses t
 ## Using Skills in Agents
 
 ```python
-from gorgon.skills import SkillLibrary
+from animus_forge.skills import SkillLibrary
 
 # Load all skills
 library = SkillLibrary()
@@ -136,13 +136,13 @@ prompt = agent.build_system_prompt(task)  # Injects relevant skills
 
 ```bash
 # Dry run a skill operation
-gorgon --dry-run "delete all .tmp files in /home/gorgon"
+animus-forge --dry-run "delete all .tmp files in /home/gorgon"
 
 # Test specific skill
-gorgon skills test file_operations
+animus-forge skills test file_operations
 
 # Validate skill schema
-gorgon skills validate system/file_operations
+animus-forge skills validate system/file_operations
 ```
 
 ## Contributing
