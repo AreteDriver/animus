@@ -10,7 +10,7 @@ from the cold read. It is **not** a pitch and not a product roadmap. It is the
 "what do I do next, in what order, and how do I know each piece is done" doc for
 future-me.
 
-Relationship to other docs (see [`CANON.md`](CANON.md)):
+Relationship to other docs (see [`../architecture/canonical-principles.md`](../architecture/canonical-principles.md)):
 - `whitepapers/ANIMUS_WHITEPAPER_2026-06.md` — the audit that found these gaps.
 - `PERSONAL_ROADMAP.md` — *direction* (what Animus is allowed to become).
 - This file — *remediation* (closing the gaps to 10/10). When this and
@@ -31,7 +31,7 @@ honest reads from the whitepaper maturity (68 production / 6 beta / 4 exp / 5 st
 
 | # | Dimension | Now | 10/10 acceptance criteria |
 |---|---|---|---|
-| D1 | **Cost discipline** (keystone) | **8** (was claimed 10; [review](reviews/animus-10-10-review-2026-06-03.md) corrected) | Raw-token `allocate()` reservation is atomic + thread-safe ✅ (A2). **Gaps:** ET ceiling is *not* enforced at the admission gate (`can_allocate` ignores the ET axis — a single opus/output-heavy step can overshoot 100x); `estimate_cost` "single source" is a dead method — the live spend path uses a *second*, stale 2024 table in `metrics/cost_tracker.py`. → corrections C1, C8, C12. |
+| D1 | **Cost discipline** (keystone) | **8** (was claimed 10; [review](../reviews/animus-10-10-review-2026-06-03.md) corrected) | Raw-token `allocate()` reservation is atomic + thread-safe ✅ (A2). **Gaps:** ET ceiling is *not* enforced at the admission gate (`can_allocate` ignores the ET axis — a single opus/output-heavy step can overshoot 100x); `estimate_cost` "single source" is a dead method — the live spend path uses a *second*, stale 2024 table in `metrics/cost_tracker.py`. → corrections C1, C8, C12. |
 | D2 | **Memory** | 7 | Tiered HOT/WARM/COLD with real promotion; incremental BM25; no full second in-RAM copy; LLM-summarized consolidation; sync conflict-surfacing. |
 | D3 | **Security & at-rest** | **6** (was claimed 9; review corrected) | Content-DLP + integrity *mechanisms* are sound, but **wired incompletely:** Bedrock/Vertex have NO egress gate; Azure streaming bypasses it; `scannable_text()` misses tool defs/results/args; the deployed integrity baseline is STALE (daemon refuses boot now); forge-side enforcement call-sites are untracked. Per-install salt ✅ (A7). → corrections C2–C5, ops re-baseline. Encryption at rest (A5) still outstanding. |
 | D4 | **Eval integrity** | **8** (was claimed 10; review corrected) | Judge-failure handling ✅ (B1), RLIMIT sandbox bounding ✅ (B4), calibration stats ✅ (B2) all genuinely hold. **Gaps:** `CodeExecutionMetric` scores *crashing* code 1.0 when `expected` is None (returncode never checked); regex precedence no-ops a configured pattern; equivalence uses CI half-width not bounds. → corrections C6, C9, C10. |
@@ -47,7 +47,7 @@ because every other claim rests on it.
 
 ## Phase C0 — 10/10 corrections (HIGHEST PRIORITY)
 
-The 2026-06-03 adversarial [review](reviews/animus-10-10-review-2026-06-03.md)
+The 2026-06-03 adversarial [review](../reviews/animus-10-10-review-2026-06-03.md)
 found that Sessions 1-6 declared several dimensions 10/10 prematurely: real
 cores with bypassable edges, masked by tests that mocked or centered the buggy
 path. These must close before any 10/10 claim. **Each must land with a test
@@ -209,7 +209,7 @@ Closed already; recorded so future-me doesn't redo it.
   `animus_types` (#5), tier default-deny reframed + `recall_for_egress` contract
   (#1), ET **opt-in ceiling** mechanism shipped (#4 — the *flip* is A1).
 - Test-warning cleanup (root-fixed dead `yaml_file` config + Security filters).
-- Claim reconciliation + `CANON.md` + canonical whitepaper + clickable PDF.
+- Claim reconciliation + `../architecture/canonical-principles.md` + canonical whitepaper + clickable PDF.
 - → Advances D8 to ~8; lays the mechanism for D1.
 
 ---
@@ -512,10 +512,10 @@ Cheap correctness + the poka-yoke that would have caught Session 1's own bug.
       near Session 7 or whenever credential handling next causes friction.
       *Done when:* a `secrets://` reference resolves at load; no plaintext
       secret in config; round-trip test green. Flip the SECURITY_LAYER spec
-      `ASPIRATIONAL-SPEC → CANONICAL` in `CANON.md` when it lands.
+      `ASPIRATIONAL-SPEC → CANONICAL` in `../architecture/canonical-principles.md` when it lands.
 
 ## Working rule
 
-When an item lands, in the **same PR**: flip its status in `CANON.md`, tick it
+When an item lands, in the **same PR**: flip its status in `../architecture/canonical-principles.md`, tick it
 here, and remove it from `TODO_NEXT.md`. That is how this stays a live map and
 not roadmap #5.

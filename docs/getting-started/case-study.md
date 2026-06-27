@@ -5,7 +5,7 @@
 > ℹ️ **Point-in-time snapshot (early 2026).** The metrics below (18K LOC, 333
 > tests, 5 packages) reflect an early build and are **not current** — the
 > monorepo has since grown to four shipped packages with ~14K+ tests. See the
-> repo `README.md` for live counts and [`CANON.md`](CANON.md) for which
+> repo `README.md` for live counts and [`../architecture/canonical-principles.md`](../architecture/canonical-principles.md) for which
 > documents are authoritative. The "AES-256 at rest" line is a design target,
 > **not implemented** (stores persist plaintext).
 
@@ -277,7 +277,7 @@ For interviews and walkthroughs:
 ## Links
 
 - **Repository:** [github.com/AreteDriver/animus](https://github.com/AreteDriver/animus)
-- **Architecture:** [docs/ARCHITECTURE.md](ARCHITECTURE.md)
-- **Use Cases:** [docs/USE_CASES.md](USE_CASES.md)
-- **Safety Model:** [docs/SAFETY.md](SAFETY.md)
-- **Roadmap:** [docs/ROADMAP.md](ROADMAP.md)
+- **Architecture:** [docs/../architecture/overview.md](../architecture/overview.md)
+- **Use Cases:** [docs/use-cases.md](use-cases.md)
+- **Safety Model:** [docs/../reference/safety.md](../reference/safety.md)
+- **Roadmap:** [docs/../roadmap/current.md](../roadmap/current.md)

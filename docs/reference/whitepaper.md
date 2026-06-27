@@ -3,8 +3,8 @@
 > 5-platform Marketing Engine) that has **no implementing code in this repository**,
 > and security guarantees (Ed25519-signed memory, AES-256 at rest) that are **not
 > implemented**. Do not cite it. The current, code-grounded paper is
-> [`whitepapers/ANIMUS_WHITEPAPER_2026-06.md`](whitepapers/ANIMUS_WHITEPAPER_2026-06.md).
-> See [`CANON.md`](CANON.md) for document status.
+> [`../whitepapers/ANIMUS_WHITEPAPER_2026-06.md`](../whitepapers/ANIMUS_WHITEPAPER_2026-06.md).
+> See [`../architecture/canonical-principles.md`](../architecture/canonical-principles.md) for document status.
 
 # Animus: A Three-Layer Architecture for Personal AI Sovereignty
 

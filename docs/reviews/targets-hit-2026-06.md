@@ -1,9 +1,9 @@
 # Targets-Hit Analysis — Remediation Roadmap Closure (2026-06-04)
 
-Verification that every target in the [remediation roadmap](ROADMAP_TO_10.md)
+Verification that every target in the [remediation roadmap](../roadmap/roadmap-to-10.md)
 (C0, C1, Phase A) is closed on `main`, with the landing PR and the test that
 proves it. Cross-checked against the 2026-06-03 adversarial
-[review](reviews/animus-10-10-review-2026-06-03.md).
+[review](../reviews/animus-10-10-review-2026-06-03.md).
 
 **Verdict: the remediation roadmap is fully closed.** Every C0, C1 (including
 the previously-deferred C1-8), and Phase-A keystone (A2–A8) is merged to `main`

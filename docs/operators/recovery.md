@@ -1,7 +1,7 @@
 # Animus Recovery Guide
 
 Steps for the predictable disaster cases. Not a substitute for the
-broader [`THREAT_MODEL.md`](THREAT_MODEL.md) which describes what each
+broader [`../reference/threat-model.md`](../reference/threat-model.md) which describes what each
 gate defends against and how.
 
 ## At-rest-encrypted memory: rollback to unencrypted

@@ -40,8 +40,8 @@ v2.1 migration: schema integration, durable core, evidence bundles.
 
 ## Quick Links
 
-- [ROADMAP.md](ROADMAP.md)
-- [PROJECT_CHARTER.md](PROJECT_CHARTER.md)
-- [CLAUDE.md](CLAUDE.md)
-- [README.md](README.md)
-- [ADL entry](decisions/2026-06.md)
+- [../roadmap/current.md](../roadmap/current.md)
+- [../architecture/charter.md](../architecture/charter.md)
+- [../../CLAUDE.md](../../CLAUDE.md)
+- [../README.md](../README.md)
+- [ADL entry](../architecture/decisions/ADL-20260618-001.md)

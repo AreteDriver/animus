@@ -12,7 +12,7 @@ Animus coordinates AI agents across complex workflows — with the operational d
 
 Four independently-installable packages. 13,700+ tests. Proactive engine with 6 self-healing checks and an autonomous improvement loop verified end-to-end against local inference.
 
-**[Architecture](docs/ARCHITECTURE.md)** | **[Roadmap](docs/ROADMAP.md)** | **[Whitepaper](docs/whitepaper.pdf)**
+**[Architecture](docs/architecture/overview.md)** | **[Roadmap](docs/roadmap/current.md)** | **[Whitepaper](docs/whitepaper.pdf)**
 
 ---
 
@@ -261,9 +261,9 @@ Active development. Architecture stable. v2.3.0 (migrating to v2.1 baseline) rel
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md)
+- [Architecture](docs/architecture/overview.md)
 - [Whitepaper (PDF)](docs/whitepaper.pdf)
-- [Roadmap](docs/ROADMAP.md)
+- [Roadmap](docs/roadmap/current.md)
 - [Whitepapers (Markdown)](docs/whitepapers/)
 
 ---

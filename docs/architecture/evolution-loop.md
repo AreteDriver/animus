@@ -80,6 +80,6 @@ Each iteration produces a structured JSONL entry:
 
 ## Related
 
-- [Consciousness-Quorum Bridge](CONSCIOUSNESS_QUORUM_BRIDGE.md) — reflection loop (structural template)
-- [Workflow Evolution Constraints](WORKFLOW_EVOLUTION_CONSTRAINTS.md) — YAML-only fast path
-- [Constitutional Principles](CONSTITUTIONAL_PRINCIPLES.md) — P4 (Constraint), P6 (Budget Sovereignty), P8 (Jidoka)
+- [Consciousness-Quorum Bridge](consciousness-quorum-bridge.md) — reflection loop (structural template)
+- [Workflow Evolution Constraints](workflow-constraints.md) — YAML-only fast path
+- [Constitutional Principles](constitutional-principles.md) — P4 (Constraint), P6 (Budget Sovereignty), P8 (Jidoka)

@@ -42,4 +42,4 @@ An **Arete Decision Log (ADL)** entry is a higher-level commitment scoped to a p
 
 ## Template
 
-See [_templates/adr.md](../_templates/adr.md).
+See [_templates/adr.md](../../_templates/adr.md).

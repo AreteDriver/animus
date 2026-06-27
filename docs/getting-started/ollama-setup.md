@@ -92,7 +92,7 @@ Planned workload (design target, NOT a current deployment): a Media Engine
 were the motivating examples in early design docs. Neither has implementing
 code in this repo. The actually-exercised local-inference workloads today are
 developer and fleet-ops oriented (code-review, fleet-incident-triage,
-security-audit, red-team generation). See [`CANON.md`](CANON.md).
+security-audit, red-team generation). See [`../architecture/canonical-principles.md`](../architecture/canonical-principles.md).
 
 ### BenchGoblins (Fantasy Sports Decision Engine)
 Pricing: Free / Pro $6-9/mo or $39/season / League $59-99/season (league-centric model).

@@ -1,10 +1,10 @@
 # Current Code vs the 2026-06 Whitepaper — Gap Closure (refreshed 2026-06-03, post-C0)
 
 Re-running the canonical whitepaper's own gap list
-([`whitepapers/ANIMUS_WHITEPAPER_2026-06.md`](whitepapers/ANIMUS_WHITEPAPER_2026-06.md))
+([`../whitepapers/ANIMUS_WHITEPAPER_2026-06.md`](../whitepapers/ANIMUS_WHITEPAPER_2026-06.md))
 against the code after Sessions 1-6 **and the full Phase C0 backlog**
 (PR #89 must-fix C2–C7, PR #90 should-fix C8–C13), cross-checked against the
-2026-06-03 adversarial [review](reviews/animus-10-10-review-2026-06-03.md).
+2026-06-03 adversarial [review](../reviews/animus-10-10-review-2026-06-03.md).
 Status is honest: ✅ closed, ◐ partial (closed in mechanism, gap remains), ✗ open.
 
 ## §6 Design Refinements (the P0-P3 backlog)
@@ -65,7 +65,7 @@ Azure streaming, tool-block DLP, the integrity tracked-set, sandbox
 crash-scoring, the auto-promotion runner) were bypassable or broken, several
 masked by tests that mocked the failing path.
 
-**Phase C0 has now closed all 13 of those corrections** ([PR #89](ROADMAP_TO_10.md)
+**Phase C0 has now closed all 13 of those corrections** ([PR #89](../roadmap/roadmap-to-10.md)
 must-fix C2-C7, PR #90 should-fix C8-C13), each with a test that exercises the
 real failing path. The honest delta from the whitepaper today: **the entire
 catalogued P0-P3 enforcement backlog is closed and adversarially verified; the
