@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/context_envelope.schema.json",
+  "title": "Animus Context Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "envelope_id",
+    "trace_id",
+    "owner_id",
+    "workspace_id",
+    "purpose",
+    "query",
+    "as_of",
+    "security_ceiling",
+    "token_budget",
+    "items",
+    "contradictions",
+    "omissions",
+    "freshness",
+    "created_at"
+  ],
+  "properties": {
+    "envelope_id": {
+      "type": "string",
+      "pattern": "^ce-[a-z0-9_-]+$"
+    },
+    "trace_id": {
+      "type": "string",
+      "minLength": 3
+    },
+    "owner_id": {
+      "type": "string",
+      "pattern": "^owner-[a-z0-9_-]+$"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^ws-[a-z0-9_-]+$"
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "query": {
+      "type": "string",
+      "minLength": 1
+    },
+    "as_of": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "security_ceiling": {
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ]
+    },
+    "token_budget": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "object_id",
+          "object_version",
+          "score",
+          "role",
+          "source_refs"
+        ],
+        "properties": {
+          "object_id": {
+            "type": "string"
+          },
+          "object_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "role": {
+            "enum": [
+              "evidence",
+              "memory",
+              "knowledge",
+              "intelligence"
+            ]
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "contradictions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "left_ref",
+          "right_ref",
+          "type",
+          "status"
+        ],
+        "properties": {
+          "left_ref": {
+            "type": "string"
+          },
+          "right_ref": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "resolved",
+              "accepted_tension"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "omissions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "reason",
+          "count"
+        ],
+        "properties": {
+          "reason": {
+            "enum": [
+              "access_denied",
+              "stale",
+              "budget",
+              "low_relevance",
+              "invalid",
+              "unavailable"
+            ]
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "required": [
+        "oldest_recorded_at",
+        "newest_recorded_at"
+      ],
+      "properties": {
+        "oldest_recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "newest_recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

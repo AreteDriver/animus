@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/action.schema.json",
+  "title": "Animus Action Object",
+  "allOf": [
+    {
+      "$ref": "common.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "artifact_type": {
+          "const": "action"
+        },
+        "schema_id": {
+          "const": "https://animus.local/schemas/action.schema.json"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action_kind",
+            "risk_class",
+            "target",
+            "parameters",
+            "approval_required",
+            "approval_id",
+            "idempotency_key",
+            "status"
+          ],
+          "properties": {
+            "action_kind": {
+              "type": "string",
+              "minLength": 1
+            },
+            "risk_class": {
+              "enum": [
+                "R0",
+                "R1",
+                "R2",
+                "R3",
+                "R4"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "minLength": 1
+            },
+            "parameters": {
+              "type": "object"
+            },
+            "approval_required": {
+              "type": "boolean"
+            },
+            "approval_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 8
+            },
+            "status": {
+              "enum": [
+                "proposed",
+                "authorized",
+                "executing",
+                "succeeded",
+                "failed",
+                "compensated",
+                "denied"
+              ]
+            },
+            "compensation_action_ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "approval_required": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "approval_required"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "approval_id": {
+                    "type": "string",
+                    "minLength": 3
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

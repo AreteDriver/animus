@@ -788,6 +788,7 @@ class CognitiveLayer:
         prompt: str,
         context: str | None = None,
         mode: ReasoningMode = ReasoningMode.QUICK,
+        citizen_context: str | None = None,
     ) -> str:
         """
         Generate a thoughtful response.
@@ -796,6 +797,7 @@ class CognitiveLayer:
             prompt: The user's input
             context: Relevant context from memory
             mode: Reasoning mode to use
+            citizen_context: Citizen Zero identity projection (Layer 1)
 
         Returns:
             Generated response
@@ -806,7 +808,7 @@ class CognitiveLayer:
         # Enrich context with entity knowledge
         context = self._enrich_context(prompt, context)
 
-        system = self._build_system_prompt(context, mode)
+        system = self._build_system_prompt(context, mode, citizen_context=citizen_context)
         logger.debug(
             f"Thinking with mode={mode.value}, "
             f"register={self.register_translator.active_register.value}, "
@@ -925,13 +927,25 @@ class CognitiveLayer:
         context: str | None,
         mode: ReasoningMode,
         tools_schema: str | None = None,
+        citizen_context: str | None = None,
     ) -> str:
-        """Build the system prompt based on context, mode, and tools."""
+        """Build the system prompt based on context, mode, and tools.
+
+        Four-layer architecture:
+        1. Constitutional and identity context (citizen_context)
+        2. Project and continuity context (context)
+        3. Persona (base)
+        4. Behavioral rules (tools_schema)
+        """
         base = """You are Animus, a personal AI assistant focused on being genuinely helpful.
 You are direct, honest, and thoughtful. You remember context from past conversations
 and use it to provide more relevant assistance.
 
 You serve one user and are aligned with their interests."""
+
+        # Layer 1: Constitutional and identity context
+        if citizen_context:
+            base = citizen_context + "\n\n" + base
 
         # Apply learned preferences for communication style
         if self.learning:
@@ -944,6 +958,7 @@ You serve one user and are aligned with their interests."""
                 if pref_hints:
                     base += "\n\nLearned user preferences:\n" + "\n".join(pref_hints)
 
+        # Layer 2: Project and continuity context
         if context:
             base += f"\n\nRelevant context from memory:\n{context}"
 
@@ -981,6 +996,7 @@ When you have gathered enough information, provide your final answer."""
         max_iterations: int = 5,
         approval_callback: Callable | None = None,
         stream_callback: Callable[[str], None] | None = None,
+        citizen_context: str | None = None,
     ) -> str:
         """
         Generate a response with tool use capability.
@@ -998,16 +1014,18 @@ When you have gathered enough information, provide your final answer."""
                                (tool_name, params) -> bool
             stream_callback: If provided, called with each token chunk for
                              streaming output. Only used with constrained loop.
+            citizen_context: Citizen Zero identity projection (Layer 1)
 
         Returns:
             Final response after tool execution
         """
         if not tools or not tools.list_tools():
-            return self.think(prompt, context, mode)
+            return self.think(prompt, context, mode, citizen_context=citizen_context)
 
         if isinstance(self.primary, AnthropicModel):
             return self._think_with_tools_anthropic(
-                prompt, context, mode, tools, max_iterations, approval_callback
+                prompt, context, mode, tools, max_iterations, approval_callback,
+                citizen_context=citizen_context,
             )
         return self._think_with_tools_constrained(
             prompt,
@@ -1017,6 +1035,7 @@ When you have gathered enough information, provide your final answer."""
             max_iterations,
             approval_callback,
             stream_callback,
+            citizen_context=citizen_context,
         )
 
     def _think_with_tools_anthropic(
@@ -1027,6 +1046,7 @@ When you have gathered enough information, provide your final answer."""
         tools: "ToolRegistry | None" = None,
         max_iterations: int = 5,
         approval_callback: Callable | None = None,
+        citizen_context: str | None = None,
     ) -> str:
         """Agentic loop using Anthropic native tool_use.
 
@@ -1034,7 +1054,7 @@ When you have gathered enough information, provide your final answer."""
         """
         from animus.tools import tools_to_anthropic_format
 
-        system = self._build_system_prompt(context, mode)
+        system = self._build_system_prompt(context, mode, citizen_context=citizen_context)
         anthropic_tools = tools_to_anthropic_format(tools)
         messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
         text_parts: list[str] = []
@@ -1182,6 +1202,7 @@ When you have gathered enough information, provide your final answer."""
         max_iterations: int = 5,
         approval_callback: Callable | None = None,
         stream_callback: Callable[[str], None] | None = None,
+        citizen_context: str | None = None,
     ) -> str:
         """Constrained tool loop for local models (Ollama/Mock/OpenAI).
 
@@ -1195,7 +1216,7 @@ When you have gathered enough information, provide your final answer."""
         JSON formatting.
         """
         menu_text, number_map = tools.get_numbered_menu()
-        system = self._build_system_prompt(context, mode)
+        system = self._build_system_prompt(context, mode, citizen_context=citizen_context)
 
         constrained_instructions = f"""{menu_text}
 

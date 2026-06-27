@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/hypothesis.schema.json",
+  "title": "Animus Hypothesis Object",
+  "allOf": [
+    {
+      "$ref": "common.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "artifact_type": {
+          "const": "hypothesis"
+        },
+        "schema_id": {
+          "const": "https://animus.local/schemas/hypothesis.schema.json"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "statement",
+            "pattern_refs",
+            "predictions",
+            "falsification_conditions",
+            "alternatives"
+          ],
+          "properties": {
+            "statement": {
+              "type": "string",
+              "minLength": 1
+            },
+            "pattern_refs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "predictions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "falsification_conditions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "alternatives": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "prior_probability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    }
+  ]
+}

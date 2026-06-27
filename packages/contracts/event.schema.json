@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/event.schema.json",
+  "title": "Animus Event Object",
+  "allOf": [
+    {
+      "$ref": "common.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "artifact_type": {
+          "const": "event"
+        },
+        "schema_id": {
+          "const": "https://animus.local/schemas/event.schema.json"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "event_kind",
+            "occurred_at",
+            "actor_refs",
+            "object_refs",
+            "event_data"
+          ],
+          "properties": {
+            "event_kind": {
+              "type": "string",
+              "minLength": 1
+            },
+            "occurred_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "actor_refs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "object_refs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "event_data": {
+              "type": "object"
+            },
+            "idempotency_key": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

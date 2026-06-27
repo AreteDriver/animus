@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/decision.schema.json",
+  "title": "Animus Decision Object",
+  "allOf": [
+    {
+      "$ref": "common.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "artifact_type": {
+          "const": "decision"
+        },
+        "schema_id": {
+          "const": "https://animus.local/schemas/decision.schema.json"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "question",
+            "chosen_option",
+            "alternatives",
+            "rationale",
+            "authority",
+            "decision_at"
+          ],
+          "properties": {
+            "question": {
+              "type": "string",
+              "minLength": 1
+            },
+            "chosen_option": {
+              "type": "string",
+              "minLength": 1
+            },
+            "alternatives": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "rationale": {
+              "type": "string",
+              "minLength": 1
+            },
+            "authority": {
+              "enum": [
+                "owner",
+                "standing_policy",
+                "delegated"
+              ]
+            },
+            "decision_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "review_trigger": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

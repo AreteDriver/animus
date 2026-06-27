@@ -1,0 +1,52 @@
+{
+  "id": "github-ci-failure",
+  "name": "GitHub Actions CI Failure",
+  "description": "Triggers ci-diagnosis workflow when a GitHub Actions workflow run fails",
+  "workflow_id": "ci-diagnosis",
+  "payload_mappings": [
+    {
+      "source_path": "repository.owner.login",
+      "target_variable": "owner",
+      "default": "unknown"
+    },
+    {
+      "source_path": "repository.name",
+      "target_variable": "repo",
+      "default": "unknown"
+    },
+    {
+      "source_path": "workflow_run.id",
+      "target_variable": "run_id",
+      "default": "0"
+    },
+    {
+      "source_path": "workflow_run.conclusion",
+      "target_variable": "conclusion",
+      "default": "failure"
+    },
+    {
+      "source_path": "workflow_run.head_branch",
+      "target_variable": "branch",
+      "default": "main"
+    },
+    {
+      "source_path": "workflow_run.head_sha",
+      "target_variable": "commit_sha",
+      "default": ""
+    },
+    {
+      "source_path": "workflow_run.name",
+      "target_variable": "workflow_name",
+      "default": ""
+    },
+    {
+      "source_path": "sender.login",
+      "target_variable": "actor",
+      "default": "github-actions"
+    }
+  ],
+  "static_variables": {
+    "remediate": "false"
+  },
+  "status": "active"
+}

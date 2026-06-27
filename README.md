@@ -232,7 +232,7 @@ animus/
 
 ## Status
 
-Active development. Architecture stable. v2.3.0 released.
+Active development. Architecture stable. v2.3.0 (migrating to v2.1 baseline) released.
 
 | Component | Version | Tests | Coverage | Stage |
 |-----------|---------|------:|:--------:|-------|

@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/source.schema.json",
+  "title": "Animus Source Object",
+  "allOf": [
+    {
+      "$ref": "common.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "artifact_type": {
+          "const": "source"
+        },
+        "schema_id": {
+          "const": "https://animus.local/schemas/source.schema.json"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "title",
+            "source_kind",
+            "capture_uri",
+            "captured_at",
+            "content_sha256",
+            "authority_status"
+          ],
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source_kind": {
+              "enum": [
+                "document",
+                "web",
+                "email",
+                "message",
+                "audio",
+                "video",
+                "dataset",
+                "sensor",
+                "manual_entry",
+                "system"
+              ]
+            },
+            "capture_uri": {
+              "type": "string",
+              "minLength": 1
+            },
+            "captured_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "content_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "authority_status": {
+              "enum": [
+                "canonical",
+                "supporting",
+                "historical",
+                "superseded",
+                "untrusted"
+              ]
+            },
+            "publisher": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "published_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "extraction_refs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

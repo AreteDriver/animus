@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/observation.schema.json",
+  "title": "Animus Observation Object",
+  "allOf": [
+    {
+      "$ref": "common.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "artifact_type": {
+          "const": "observation"
+        },
+        "schema_id": {
+          "const": "https://animus.local/schemas/observation.schema.json"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "description",
+            "observed_at",
+            "observation_method",
+            "source_anchor"
+          ],
+          "properties": {
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "observed_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "observation_method": {
+              "enum": [
+                "direct",
+                "document_extraction",
+                "measurement",
+                "reported",
+                "computed"
+              ]
+            },
+            "source_anchor": {
+              "type": "object",
+              "required": [
+                "source_id",
+                "locator"
+              ],
+              "properties": {
+                "source_id": {
+                  "type": "string"
+                },
+                "locator": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "measurement": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/trace.schema.json",
+  "title": "Animus Trace Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "trace_id",
+    "owner_id",
+    "workspace_id",
+    "purpose",
+    "started_at",
+    "completed_at",
+    "status",
+    "spans",
+    "input_hashes",
+    "output_hashes",
+    "policy_versions",
+    "schema_versions",
+    "reproducibility"
+  ],
+  "properties": {
+    "trace_id": {
+      "type": "string",
+      "pattern": "^tr-[a-z0-9_-]+$"
+    },
+    "owner_id": {
+      "type": "string",
+      "pattern": "^owner-[a-z0-9_-]+$"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^ws-[a-z0-9_-]+$"
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "status": {
+      "enum": [
+        "running",
+        "succeeded",
+        "failed",
+        "cancelled",
+        "degraded"
+      ]
+    },
+    "spans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "span_id",
+          "kind",
+          "started_at",
+          "status"
+        ],
+        "properties": {
+          "span_id": {
+            "type": "string"
+          },
+          "parent_span_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "enum": [
+              "retrieval",
+              "model",
+              "tool",
+              "policy",
+              "write",
+              "queue",
+              "evaluation",
+              "view"
+            ]
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "succeeded",
+              "failed",
+              "denied",
+              "cancelled"
+            ]
+          },
+          "input_hash": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "output_hash": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "input_hashes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "output_hashes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "policy_versions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "schema_versions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "reproducibility": {
+      "type": "object",
+      "required": [
+        "captured_inputs",
+        "captured_prompts",
+        "captured_model_ids",
+        "captured_tool_versions",
+        "replay_status"
+      ],
+      "properties": {
+        "captured_inputs": {
+          "type": "boolean"
+        },
+        "captured_prompts": {
+          "type": "boolean"
+        },
+        "captured_model_ids": {
+          "type": "boolean"
+        },
+        "captured_tool_versions": {
+          "type": "boolean"
+        },
+        "replay_status": {
+          "enum": [
+            "not_tested",
+            "passed",
+            "failed",
+            "not_reproducible"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

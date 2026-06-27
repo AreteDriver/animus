@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/approval_receipt.schema.json",
+  "title": "Animus Approval Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approval_id",
+    "principal_id",
+    "owner_id",
+    "workspace_id",
+    "purpose",
+    "resource_refs",
+    "action_scope",
+    "issued_at",
+    "expires_at",
+    "policy_version",
+    "status",
+    "signature"
+  ],
+  "properties": {
+    "approval_id": {
+      "type": "string",
+      "pattern": "^apr-[a-z0-9_-]+$"
+    },
+    "principal_id": {
+      "type": "string",
+      "minLength": 3
+    },
+    "owner_id": {
+      "type": "string",
+      "pattern": "^owner-[a-z0-9_-]+$"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^ws-[a-z0-9_-]+$"
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "resource_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "action_scope": {
+      "type": "object"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "policy_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "active",
+        "consumed",
+        "expired",
+        "revoked"
+      ]
+    },
+    "signature": {
+      "type": "string",
+      "minLength": 16
+    }
+  }
+}

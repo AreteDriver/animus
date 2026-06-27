@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/signal.schema.json",
+  "title": "Animus Signal Object",
+  "allOf": [
+    {
+      "$ref": "common.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "artifact_type": {
+          "const": "signal"
+        },
+        "schema_id": {
+          "const": "https://animus.local/schemas/signal.schema.json"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "description",
+            "observation_refs",
+            "relevance",
+            "novelty"
+          ],
+          "properties": {
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "observation_refs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "relevance": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "novelty": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "expiry_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/outcome.schema.json",
+  "title": "Animus Outcome Object",
+  "allOf": [
+    {
+      "$ref": "common.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "artifact_type": {
+          "const": "outcome"
+        },
+        "schema_id": {
+          "const": "https://animus.local/schemas/outcome.schema.json"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action_refs",
+            "description",
+            "observed_at",
+            "metrics",
+            "expected_comparison"
+          ],
+          "properties": {
+            "action_refs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "observed_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "expected_comparison": {
+              "enum": [
+                "better",
+                "as_expected",
+                "worse",
+                "inconclusive"
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}
