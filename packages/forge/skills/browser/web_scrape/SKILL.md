@@ -10,7 +10,7 @@ description: "Fetch and extract content from web pages. Parse HTML, extract text
 
 ## Purpose
 
-Fetch web pages and extract structured content. This skill enables Gorgon agents to retrieve full page content, extract specific elements, parse tables, and handle dynamic JavaScript-rendered content.
+Fetch web pages and extract structured content. This skill enables Forge agents to retrieve full page content, extract specific elements, parse tables, and handle dynamic JavaScript-rendered content.
 
 ## Safety Rules
 
@@ -49,7 +49,7 @@ curl -s "https://example.com/page" -o page.html
 
 # With headers
 curl -s "https://example.com/page" \
-  -H "User-Agent: GorgonBot/1.0 (+https://github.com/yourrepo)" \
+  -H "User-Agent: AnimusForgeBot/1.0 (+https://github.com/yourrepo)" \
   -H "Accept: text/html" \
   -o page.html
 
@@ -69,7 +69,7 @@ def fetch_page(url: str, timeout: int = 30) -> dict:
     """Fetch a web page with proper error handling."""
     
     headers = {
-        "User-Agent": "GorgonBot/1.0 (+https://github.com/yourrepo)",
+        "User-Agent": "AnimusForgeBot/1.0 (+https://github.com/yourrepo)",
         "Accept": "text/html,application/xhtml+xml",
         "Accept-Language": "en-US,en;q=0.9",
     }
@@ -105,7 +105,7 @@ def fetch_js_page(url: str, wait_for: str = None) -> dict:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            user_agent="GorgonBot/1.0 (+https://github.com/yourrepo)"
+            user_agent="AnimusForgeBot/1.0 (+https://github.com/yourrepo)"
         )
         page = context.new_page()
         

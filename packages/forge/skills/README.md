@@ -136,7 +136,7 @@ prompt = agent.build_system_prompt(task)  # Injects relevant skills
 
 ```bash
 # Dry run a skill operation
-animus-forge --dry-run "delete all .tmp files in /home/gorgon"
+animus-forge --dry-run "delete all .tmp files in /home/user"
 
 # Test specific skill
 animus-forge skills test file_operations

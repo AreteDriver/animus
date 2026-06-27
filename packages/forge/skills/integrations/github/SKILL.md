@@ -10,7 +10,7 @@ description: "Interact with GitHub repositories. Clone, pull, push, create issue
 
 ## Purpose
 
-Interact with GitHub repositories for code management, issue tracking, and automation. This skill enables Gorgon to manage code repositories, create issues, submit pull requests, and automate development workflows.
+Interact with GitHub repositories for code management, issue tracking, and automation. This skill enables Forge to manage code repositories, create issues, submit pull requests, and automate development workflows.
 
 ## Safety Rules
 
@@ -49,11 +49,11 @@ github:
   default_branch: main
   
   # Workspace for cloned repos
-  workspace: ~/gorgon-repos
+  workspace: ~/animus-repos
   
   # Commit settings
-  commit_author_name: "Gorgon Bot"
-  commit_author_email: "gorgon@yourdomain.com"
+  commit_author_name: "Animus Forge Bot"
+  commit_author_email: "forge@yourdomain.com"
 ```
 
 ## Capabilities
@@ -63,13 +63,13 @@ Clone a GitHub repository.
 
 ```bash
 # Using git CLI
-git clone https://github.com/owner/repo.git ~/gorgon-repos/repo
+git clone https://github.com/owner/repo.git ~/animus-repos/repo
 
 # With token for private repos
-git clone https://${GITHUB_TOKEN}@github.com/owner/repo.git ~/gorgon-repos/repo
+git clone https://${GITHUB_TOKEN}@github.com/owner/repo.git ~/animus-repos/repo
 
 # Shallow clone (faster for large repos)
-git clone --depth 1 https://github.com/owner/repo.git ~/gorgon-repos/repo
+git clone --depth 1 https://github.com/owner/repo.git ~/animus-repos/repo
 ```
 
 ```python
@@ -79,7 +79,7 @@ from pathlib import Path
 def clone_repo(
     owner: str,
     repo: str,
-    workspace: Path = Path.home() / "gorgon-repos",
+    workspace: Path = Path.home() / "animus-repos",
     shallow: bool = False,
     branch: str = None
 ) -> dict:
@@ -558,14 +558,14 @@ def get_diff(repo_path: Path, staged: bool = False, branch: str = None) -> dict:
 ## Examples
 
 ### Example 1: Clone and create feature branch
-**Intent:** "Clone my gorgon-skills repo and create a branch for new email templates"
+**Intent:** "Clone my animus-skills repo and create a branch for new email templates"
 
 **Execution:**
 ```python
 # Clone repository
 result = clone_repo(
     owner="yourusername",
-    repo="gorgon-skills",
+    repo="animus-skills",
     shallow=False
 )
 print(f"Cloned to: {result['path']}")
@@ -588,7 +588,7 @@ print(f"Created branch: {branch['branch']}")
 
 **Execution:**
 ```python
-repo_path = Path.home() / "gorgon-repos" / "gorgon-skills"
+repo_path = Path.home() / "animus-repos" / "animus-skills"
 
 # Review changes first
 diff = get_diff(repo_path)
@@ -617,7 +617,7 @@ print(f"Pushed: {push['branch']}")
 # Create issue
 issue = create_issue(
     owner="yourusername",
-    repo="gorgon",
+    repo="animus",
     title="Bug: Email skill fails with unicode characters",
     body="""
 ## Description
@@ -641,7 +641,7 @@ print(f"Created issue #{issue['issue_number']}: {issue['url']}")
 # Create PR (REQUIRES MAJORITY CONSENSUS)
 pr = create_pull_request(
     owner="yourusername",
-    repo="gorgon",
+    repo="animus",
     title=f"Fix: Handle unicode in email body (closes #{issue['issue_number']})",
     body=f"""
 ## Summary

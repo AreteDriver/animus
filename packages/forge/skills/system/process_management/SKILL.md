@@ -10,7 +10,7 @@ description: "Monitor, control, and manage system processes. Includes starting, 
 
 ## Purpose
 
-Monitor and control system processes on the Gorgon host machine. This skill enables Gorgon agents to launch applications, manage services, monitor system health, and handle background jobs.
+Monitor and control system processes on the host machine. This skill enables Gorgon agents to launch applications, manage services, monitor system health, and handle background jobs.
 
 ## Safety Rules
 
@@ -19,7 +19,7 @@ Monitor and control system processes on the Gorgon host machine. This skill enab
 init (PID 1)
 systemd
 sshd
-Gorgon supervisor (self)
+Forge supervisor (self)
 kernel threads [kthreadd, kworker, etc.]
 ```
 
@@ -59,7 +59,7 @@ pstree -p
 pgrep -la python
 
 # By user
-ps -u gorgon
+ps -u animus
 
 # Top CPU consumers
 ps aux --sort=-%cpu | head -20
@@ -165,8 +165,8 @@ Launch a new process.
 python3 /path/to/script.py
 
 # Background with nohup
-nohup python3 /path/to/script.py > /var/log/gorgon/script.log 2>&1 &
-echo $! > /var/run/gorgon/script.pid
+nohup python3 /path/to/script.py > /var/log/animus/script.log 2>&1 &
+echo $! > /var/run/animus/script.pid
 
 # With resource limits
 systemd-run --user --scope \
@@ -181,7 +181,7 @@ env VAR1=value1 VAR2=value2 python3 /path/to/script.py
 cd /path/to/workdir && python3 script.py
 
 # Detached with logging
-setsid python3 /path/to/script.py > /var/log/gorgon/script.log 2>&1 &
+setsid python3 /path/to/script.py > /var/log/animus/script.log 2>&1 &
 ```
 
 **Safety:**
@@ -211,8 +211,8 @@ pgrep -la myprocess  # List first!
 pkill -TERM myprocess
 
 # By PID file
-kill -TERM $(cat /var/run/gorgon/myprocess.pid)
-rm /var/run/gorgon/myprocess.pid
+kill -TERM $(cat /var/run/animus/myprocess.pid)
+rm /var/run/animus/myprocess.pid
 ```
 
 **Safety:**
@@ -375,23 +375,23 @@ ps -p 5678 > /dev/null 2>&1 && echo "Still running - may need force kill" || ech
 **Execution:**
 ```bash
 # Create log directory if needed
-mkdir -p /var/log/gorgon
+mkdir -p /var/log/animus
 
 # Launch with limits and logging
 systemd-run --user --scope \
-  --unit=gorgon-datasync \
+  --unit=animus-datasync \
   -p MemoryMax=1G \
   -p CPUQuota=50% \
-  bash -c 'python3 /home/gorgon/scripts/datasync.py >> /var/log/gorgon/datasync.log 2>&1'
+  bash -c 'python3 /home/gorgon/scripts/datasync.py >> /var/log/animus/datasync.log 2>&1'
 
 # Get the PID
-systemctl --user show gorgon-datasync --property=MainPID
+systemctl --user show animus-datasync --property=MainPID
 
 # Store for tracking
-systemctl --user show gorgon-datasync --property=MainPID --value > /var/run/gorgon/datasync.pid
+systemctl --user show animus-datasync --property=MainPID --value > /var/run/animus/datasync.pid
 
 # Monitor
-systemctl --user status gorgon-datasync
+systemctl --user status animus-datasync
 ```
 
 ---

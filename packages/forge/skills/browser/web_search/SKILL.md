@@ -10,7 +10,7 @@ description: "Search the web for information using search engines. Retrieve, par
 
 ## Purpose
 
-Search the web for information to support Gorgon tasks. This skill enables agents to gather current information, research topics, verify facts, and find resources not available in local knowledge.
+Search the web for information to support Forge tasks. This skill enables agents to gather current information, research topics, verify facts, and find resources not available in local knowledge.
 
 ## Safety Rules
 

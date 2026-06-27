@@ -64,5 +64,5 @@
 
 ## See Also
 
-- [Concepts](../../getting-started/concepts.md) — Core mental models
-- [Architecture → Overview](../../architecture/overview.md) — System architecture
+- [Concepts](../getting-started/concepts.md) — Core mental models
+- [Architecture → Overview](../architecture/overview.md) — System architecture

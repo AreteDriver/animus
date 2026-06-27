@@ -49,6 +49,6 @@ A: GitHub Actions may be blocked by billing limits. Verify locally with `pytest`
 
 ## See Also
 
-- [Getting Started → Quickstart](../../getting-started/quickstart.md)
-- [Contributing → Setup](../../contributing/setup.md)
-- [Operators → Troubleshooting](../../operators/troubleshooting.md)
+- [Getting Started → Quickstart](../getting-started/quickstart.md)
+- [Contributing → Setup](../contributing/setup.md)
+- [Operators → Troubleshooting](../operators/troubleshooting.md)

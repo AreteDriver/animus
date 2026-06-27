@@ -1,6 +1,6 @@
 # Animus Documentation Audit & Reorganization Plan
 
-**Status**: Draft — Pending Approval  
+**Status**: In Progress — Phases 0–3 Complete, Phase 4 Partial, Phase 5 Ongoing  
 **Date**: 2026-06-27  
 **Author**: Senior Engineer (Claude Code Audit)  
 **Scope**: Full documentation architecture, repo health, and phased execution roadmap
@@ -69,18 +69,18 @@ animus/
 
 ### Critical Findings
 
-| # | Finding | Severity | Evidence |
-|---|---------|----------|----------|
-| 1 | **No docs entry point** | High | `docs/` has 44 `.md` files, zero `README.md`. No index. |
-| 2 | **Duplicate ROADMAP** | Medium | Root `ROADMAP.md` and `docs/ROADMAP.md` are identical (2.7K). |
-| 3 | **Stale references in Forge README** | Medium | `gorgon run workflows/...` — Gorgon was renamed to Forge. |
-| 4 | **20 docs files predate April 2026** | Medium | Likely stale: `BROWSER_AUTOMATION.md`, `CONNECTIVITY.md`, `DEVELOPER_TOOLS.md`, etc. |
-| 5 | **No per-package README for pwa, contracts** | Medium | New contributors can't orient. |
-| 6 | **ADRs scattered** | Medium | Only `ADR-001.md` in `adrs/`. Decisions in `decisions/2026-06.md`. No unified log. |
-| 7 | **CI ignores docs** | Low | `paths-ignore: ['*.md', 'docs/**']` means doc changes are unvalidated. |
-| 8 | **Generic project-management docs in root** | Low | `PROJECT_ORGANIZATION_GUIDELINES.md`, `PROJECT_FOLDER_SETUP_EVALUATION_STANDARD.md` may belong in `docs/contributing/` or `docs/reference/`. |
-| 9 | **Personal scratchpads in repo root** | Low | `TODO_NEXT.md`, `TODO_CHAT_AGENT.md` are ephemeral. Should migrate to issues or private notes. |
-| 10 | **No package LICENSE files** | Low | Only root `LICENSE` exists. PyPI packages should each carry one. |
+| # | Finding | Severity | Status | Evidence |
+|---|---------|----------|--------|----------|
+| 1 | **No docs entry point** | High | ✅ **Fixed** | `docs/README.md` created with 5 nav links to every major lane |
+| 2 | **Duplicate ROADMAP** | Medium | ✅ **Fixed** | Root `ROADMAP.md` → thin redirect stub; canonical in `docs/roadmap/current.md` |
+| 3 | **Stale references in Forge README** | Medium | ✅ **Fixed** | `gorgon` → `animus-forge` CLI refs cleaned in Forge README + tests README + skills README + 6 SKILL.md files |
+| 4 | **20 docs files predate April 2026** | Medium | 🔄 **In Progress** | Flagged in `docs/planning/content-accuracy-report.md`; banners pending |
+| 5 | **No per-package README for pwa, contracts** | Medium | ✅ **Fixed** | `packages/pwa/README.md`, `packages/contracts/README.md`, `packages/quorum/README.md` written |
+| 6 | **ADRs scattered** | Medium | ✅ **Fixed** | `adrs/ADR-001.md` → `docs/architecture/decisions/ADR-001.md`; `decisions/2026-06.md` split into ADL entries |
+| 7 | **CI ignores docs** | Low | ✅ **Fixed** | `ci.yml` updated: `docs/**` removed from paths-ignore; Docs Validation job added |
+| 8 | **Generic project-management docs in root** | Low | ✅ **Fixed** | `PROJECT_ORGANIZATION_GUIDELINES.md` → `docs/contributing/organization.md`; `PROJECT_FOLDER_SETUP_EVALUATION_STANDARD.md` → `docs/reference/project-folder-evaluation-standard.md` |
+| 9 | **Personal scratchpads in repo root** | Low | ✅ **Fixed** | `TODO_NEXT.md`, `TODO_CHAT_AGENT.md` deleted |
+| 10 | **No package LICENSE files** | Low | ✅ **Fixed** | MIT `LICENSE` added to all 8 packages |
 
 ---
 
@@ -190,10 +190,10 @@ docs/
 
 ### Phase 0: Pre-Flight (Before Any Moves)
 
-- [ ] **Validate all code examples** in `packages/bootstrap/README.md`, `packages/core/README.md`, `packages/forge/README.md`, `packages/kernel/README.md`
-- [ ] **Run link audit** on current `docs/` — identify broken relative links
-- [ ] **Identify stale docs** — flag the 20 pre-April-2026 files for review
-- [ ] **Create `docs/planning/` branch** — `git checkout -b docs/audit-2026-06`
+- [x] **Validate all code examples** in `packages/bootstrap/README.md`, `packages/core/README.md`, `packages/forge/README.md`, `packages/kernel/README.md`
+- [x] **Run link audit** on current `docs/` — identify broken relative links
+- [x] **Identify stale docs** — flag the 20 pre-April-2026 files for review
+- [x] **Create `docs/planning/` branch** — `git checkout -b docs/audit-2026-06`
 
 **Acceptance**: A spreadsheet/list of every doc with freshness + quality score.
 
@@ -201,11 +201,11 @@ docs/
 
 ### Phase 1: Structural Scaffold (Week 1)
 
-- [ ] Create target directory tree (`docs/getting-started/`, `docs/architecture/`, `docs/packages/`, etc.)
-- [ ] Write `docs/README.md` — the entry point
-- [ ] Write `docs/architecture/decisions/README.md` — ADR index + template
-- [ ] Write `docs/roadmap/README.md` — roadmap index
-- [ ] Write `docs/packages/README.md` — package overview
+- [x] Create target directory tree (`docs/getting-started/`, `docs/architecture/`, `docs/packages/`, etc.)
+- [x] Write `docs/README.md` — the entry point
+- [x] Write `docs/architecture/decisions/README.md` — ADR index + template
+- [x] Write `docs/roadmap/README.md` — roadmap index
+- [x] Write `docs/packages/README.md` — package overview
 
 **Acceptance**: A new engineer can navigate from `docs/README.md` to any package README in ≤2 clicks.
 
@@ -213,22 +213,22 @@ docs/
 
 ### Phase 2: Migration with `git mv` (Week 2)
 
-- [ ] Move `adrs/ADR-001.md` → `docs/architecture/decisions/ADR-001.md`
-- [ ] Split `decisions/2026-06.md` into individual ADL entries in `docs/architecture/decisions/`
-- [ ] Move root `ROADMAP.md` → `docs/roadmap/current.md` (delete root duplicate)
-- [ ] Move `docs/ROADMAP_TO_10.md` → `docs/roadmap/roadmap-to-10.md`
-- [ ] Move `docs/ROADMAP_HERMES_2026-06.md` → `docs/roadmap/hermes-2026-06.md`
-- [ ] Move `docs/ROADMAP_quorum_v2.md` → `docs/roadmap/quorum-v2.md`
-- [ ] Move `docs/ROADMAP_research_assistant.md` → `docs/roadmap/research-assistant.md`
-- [ ] Move `CONTRIBUTING.md` → `docs/contributing/guidelines.md`; root gets redirect stub
-- [ ] Move `CHANGELOG.md` → `docs/reference/changelog.md`; root gets redirect stub
-- [ ] Move `PROJECT_CHARTER.md` → `docs/architecture/charter.md`
-- [ ] Move `PROJECT_CONTEXT.md` → `docs/reference/project-context.md`
-- [ ] Move `PROJECT_ORGANIZATION_GUIDELINES.md` → `docs/contributing/organization.md`
-- [ ] Move `OLLAMA_AGENT.md` → `docs/operators/ollama-setup.md`
-- [ ] Move `SECURITY.md` + `docs/THREAT_MODEL.md` + `docs/SECURITY_LAYER.md` → `docs/reference/security.md`
-- [ ] Consolidate `docs/ARCHITECTURE.md` + `docs/CANON.md` → `docs/architecture/overview.md`
-- [ ] Move `docs/CONSTITUTIONAL_PRINCIPLES.md` → `docs/architecture/constitutional-principles.md`
+- [x] Move `adrs/ADR-001.md` → `docs/architecture/decisions/ADR-001.md`
+- [x] Split `decisions/2026-06.md` into individual ADL entries in `docs/architecture/decisions/`
+- [x] Move root `ROADMAP.md` → `docs/roadmap/current.md` (delete root duplicate)
+- [x] Move `docs/ROADMAP_TO_10.md` → `docs/roadmap/roadmap-to-10.md`
+- [x] Move `docs/ROADMAP_HERMES_2026-06.md` → `docs/roadmap/hermes-2026-06.md`
+- [x] Move `docs/ROADMAP_quorum_v2.md` → `docs/roadmap/quorum-v2.md`
+- [x] Move `docs/ROADMAP_research_assistant.md` → `docs/roadmap/research-assistant.md`
+- [x] Move `CONTRIBUTING.md` → `docs/contributing/guidelines.md`; root gets redirect stub
+- [x] Move `CHANGELOG.md` → `docs/reference/changelog.md`; root gets redirect stub
+- [x] Move `PROJECT_CHARTER.md` → `docs/architecture/charter.md`
+- [x] Move `PROJECT_CONTEXT.md` → `docs/reference/project-context.md`
+- [x] Move `PROJECT_ORGANIZATION_GUIDELINES.md` → `docs/contributing/organization.md`
+- [x] Move `OLLAMA_AGENT.md` → `docs/operators/ollama-setup.md`
+- [x] Move `SECURITY.md` + `docs/THREAT_MODEL.md` + `docs/SECURITY_LAYER.md` → `docs/reference/security.md`
+- [x] Consolidate `docs/ARCHITECTURE.md` + `docs/CANON.md` → `docs/architecture/overview.md`
+- [x] Move `docs/CONSTITUTIONAL_PRINCIPLES.md` → `docs/architecture/constitutional-principles.md`
 
 **Acceptance**: `git log --follow` shows history preserved. No file has >1 redirect stub.
 
@@ -236,15 +236,15 @@ docs/
 
 ### Phase 3: Content Fixes & Gap Fill (Week 3)
 
-- [ ] Fix `packages/forge/README.md`: replace `gorgon` with `animus-forge` CLI references
-- [ ] Write `packages/quorum/README.md`
-- [ ] Write `packages/pwa/README.md`
-- [ ] Write `packages/contracts/README.md`
-- [ ] Write `docs/packages/quorum/README.md` (symlink or copy)
-- [ ] Write `docs/packages/pwa/README.md`
-- [ ] Write `docs/packages/contracts/README.md`
-- [ ] Update all internal cross-references to use new relative paths
-- [ ] Add `LICENSE` file to every package directory
+- [x] Fix `packages/forge/README.md`: replace `gorgon` with `animus-forge` CLI references
+- [x] Write `packages/quorum/README.md`
+- [x] Write `packages/pwa/README.md`
+- [x] Write `packages/contracts/README.md`
+- [x] Write `docs/packages/quorum/README.md` (auto-synced)
+- [x] Write `docs/packages/pwa/README.md` (auto-synced)
+- [x] Write `docs/packages/contracts/README.md` (auto-synced)
+- [x] Update all internal cross-references to use new relative paths
+- [x] Add `LICENSE` file to every package directory
 - [ ] Flag stale docs (pre-April-2026) with `> ⚠️ **Review needed**: This document was last updated before 2026-04-01.` banner
 
 **Acceptance**: All package READMEs are present, accurate, and linked from `docs/packages/README.md`.
@@ -253,11 +253,11 @@ docs/
 
 ### Phase 4: CI & Automation (Week 4)
 
-- [ ] Update `ci.yml` to **include** a `docs` job (remove `docs/**` from `paths-ignore` for that job only)
+- [x] Update `ci.yml` to **include** a `docs` job (remove `docs/**` from `paths-ignore` for that job only)
 - [ ] Add markdown link checker to CI (e.g., `lycheeverse/lychee-action` or `markdown-link-check`)
 - [ ] Add trailing-whitespace check for `.md` files
 - [ ] Add a `docs` build/preview step (optional — mkdocs, vitepress, or plain static)
-- [ ] Update PR template to include "Documentation updated?" checkbox
+- [x] Update PR template to include "Documentation updated?" checkbox
 
 **Acceptance**: A PR that breaks an internal markdown link fails CI.
 
@@ -265,8 +265,8 @@ docs/
 
 ### Phase 5: Ongoing Hygiene
 
-- [ ] Weekly: 5-minute doc freshness sweep (check dates, remove resolved TODOs)
-- [ ] Per-ADR: Every architectural decision gets an ADR in `docs/architecture/decisions/`
+- [x] Weekly: 5-minute doc freshness sweep (check dates, remove resolved TODOs)
+- [x] Per-ADR: Every architectural decision gets an ADR in `docs/architecture/decisions/`
 - [ ] Per-release: Update `docs/reference/changelog.md`
 - [ ] Quarterly: Full-site link validation + stale doc review
 

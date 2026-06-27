@@ -10,7 +10,7 @@ description: "Safe file system operations including create, read, update, delete
 
 ## Purpose
 
-Perform safe, auditable file system operations on the Gorgon host machine. This skill provides the foundation for all filesystem interactions and enforces safety guardrails to prevent accidental system damage.
+Perform safe, auditable file system operations on the host machine. This skill provides the foundation for all filesystem interactions and enforces safety guardrails to prevent accidental system damage.
 
 ## Safety Rules
 
@@ -284,10 +284,10 @@ chmod -R 755 /path/to/dir
 **Execution:**
 ```bash
 # Verify target directory exists
-ls -la /home/gorgon/scripts/
+ls -la /home/user/scripts/
 
 # Create the file
-cat << 'EOF' > /home/gorgon/scripts/sysinfo.py
+cat << 'EOF' > /home/user/scripts/sysinfo.py
 #!/usr/bin/env python3
 """Print basic system information."""
 
@@ -305,10 +305,10 @@ if __name__ == "__main__":
 EOF
 
 # Make executable
-chmod 755 /home/gorgon/scripts/sysinfo.py
+chmod 755 /home/user/scripts/sysinfo.py
 
 # Verify
-ls -la /home/gorgon/scripts/sysinfo.py
+ls -la /home/user/scripts/sysinfo.py
 ```
 
 ---
@@ -319,17 +319,17 @@ ls -la /home/gorgon/scripts/sysinfo.py
 **Execution:**
 ```bash
 # First, find and list (no deletion yet)
-find /var/log/gorgon -name "*.log" -type f -mtime +30
+find /var/log/animus -name "*.log" -type f -mtime +30
 
 # Count files
-find /var/log/gorgon -name "*.log" -type f -mtime +30 | wc -l
+find /var/log/animus -name "*.log" -type f -mtime +30 | wc -l
 
 # REQUIRES UNANIMOUS CONSENSUS FOR DELETION
 # Create backup archive first
-tar -czf /backup/old_logs.$(date +%s).tar.gz $(find /var/log/gorgon -name "*.log" -type f -mtime +30)
+tar -czf /backup/old_logs.$(date +%s).tar.gz $(find /var/log/animus -name "*.log" -type f -mtime +30)
 
 # Delete after approval
-find /var/log/gorgon -name "*.log" -type f -mtime +30 -delete
+find /var/log/animus -name "*.log" -type f -mtime +30 -delete
 ```
 
 ---
@@ -340,19 +340,19 @@ find /var/log/gorgon -name "*.log" -type f -mtime +30 -delete
 **Execution:**
 ```bash
 # Verify file exists and show current content
-cat /home/gorgon/app/config.yaml
+cat /home/user/app/config.yaml
 
 # Create timestamped backup
-cp /home/gorgon/app/config.yaml /home/gorgon/app/config.yaml.bak.$(date +%s)
+cp /home/user/app/config.yaml /home/user/app/config.yaml.bak.$(date +%s)
 
 # Make the change
-sed -i 's/port: 8080/port: 9090/g' /home/gorgon/app/config.yaml
+sed -i 's/port: 8080/port: 9090/g' /home/user/app/config.yaml
 
 # Verify change
-grep -n "port:" /home/gorgon/app/config.yaml
+grep -n "port:" /home/user/app/config.yaml
 
 # Validate YAML syntax if possible
-python3 -c "import yaml; yaml.safe_load(open('/home/gorgon/app/config.yaml'))" && echo "Valid YAML"
+python3 -c "import yaml; yaml.safe_load(open('/home/user/app/config.yaml'))" && echo "Valid YAML"
 ```
 
 ---
@@ -375,7 +375,7 @@ All operations should return structured results:
 {
   "success": true,
   "operation": "create_file",
-  "path": "/home/gorgon/scripts/test.py",
+  "path": "/home/user/scripts/test.py",
   "details": {
     "bytes_written": 1234,
     "permissions": "755",

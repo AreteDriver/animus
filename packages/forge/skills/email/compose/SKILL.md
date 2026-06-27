@@ -10,7 +10,7 @@ description: "Compose and send emails via SMTP. Support for plain text, HTML, at
 
 ## Purpose
 
-Compose, draft, and send emails on behalf of the Gorgon system. This skill enables automated email workflows including notifications, reports, outreach, and responses. Due to the irreversible nature of sending emails, this skill requires elevated consensus for send operations.
+Compose, draft, and send emails on behalf of the Animus Forge system. This skill enables automated email workflows including notifications, reports, outreach, and responses. Due to the irreversible nature of sending emails, this skill requires elevated consensus for send operations.
 
 ## Safety Rules
 
@@ -51,12 +51,12 @@ smtp:
   password: ${GORGON_EMAIL_PASS}  # Use app password for Gmail
 
 defaults:
-  from_name: "Gorgon System"
-  from_address: "gorgon@yourdomain.com"
+  from_name: "Animus Forge"
+  from_address: "forge@yourdomain.com"
   reply_to: "you@yourdomain.com"
   signature: |
     --
-    Sent by Gorgon Automation System
+    Sent by Animus Forge Automation System
     This is an automated message.
 ```
 
