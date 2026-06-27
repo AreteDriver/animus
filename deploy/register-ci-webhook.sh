@@ -50,7 +50,7 @@ RESPONSE=$(curl -s -w "\n%{http_code}" \
 HTTP_CODE=$(echo "$RESPONSE" | tail -n 1)
 BODY=$(echo "$RESPONSE" | sed '$d')
 
-if [ "$HTTP_CODE" -eq 200 ]; then
+if [ "$HTTP_CODE" = "200" ]; then
   echo "✅ Webhook registered successfully"
   echo "$BODY" | jq .
   echo ""
