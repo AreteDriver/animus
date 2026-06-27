@@ -47,10 +47,10 @@ github:
   token: ${GITHUB_TOKEN}
   username: your-username
   default_branch: main
-  
+
   # Workspace for cloned repos
   workspace: ~/animus-repos
-  
+
   # Commit settings
   commit_author_name: "Animus Forge Bot"
   commit_author_email: "forge@yourdomain.com"
@@ -84,39 +84,39 @@ def clone_repo(
     branch: str = None
 ) -> dict:
     """Clone a GitHub repository."""
-    
+
     workspace.mkdir(parents=True, exist_ok=True)
     target_path = workspace / repo
-    
+
     if target_path.exists():
         return {
             "success": False,
             "error": f"Directory already exists: {target_path}",
             "suggestion": "Use pull_repo to update, or remove directory first"
         }
-    
+
     # Build clone command
     url = f"https://github.com/{owner}/{repo}.git"
     cmd = ["git", "clone"]
-    
+
     if shallow:
         cmd.extend(["--depth", "1"])
-    
+
     if branch:
         cmd.extend(["--branch", branch])
-    
+
     cmd.extend([url, str(target_path)])
-    
+
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        
+
         return {
             "success": True,
             "path": str(target_path),
             "url": url,
             "branch": branch or "default"
         }
-    
+
     except subprocess.CalledProcessError as e:
         return {
             "success": False,
@@ -132,10 +132,10 @@ Pull latest changes from remote.
 ```python
 def pull_repo(repo_path: Path) -> dict:
     """Pull latest changes from remote."""
-    
+
     if not (repo_path / ".git").exists():
         return {"success": False, "error": "Not a git repository"}
-    
+
     try:
         # Fetch first
         subprocess.run(
@@ -144,7 +144,7 @@ def pull_repo(repo_path: Path) -> dict:
             capture_output=True,
             check=True
         )
-        
+
         # Get current branch
         result = subprocess.run(
             ["git", "branch", "--show-current"],
@@ -154,7 +154,7 @@ def pull_repo(repo_path: Path) -> dict:
             check=True
         )
         current_branch = result.stdout.strip()
-        
+
         # Pull
         result = subprocess.run(
             ["git", "pull", "origin", current_branch],
@@ -163,13 +163,13 @@ def pull_repo(repo_path: Path) -> dict:
             text=True,
             check=True
         )
-        
+
         return {
             "success": True,
             "branch": current_branch,
             "output": result.stdout
         }
-    
+
     except subprocess.CalledProcessError as e:
         return {
             "success": False,
@@ -185,7 +185,7 @@ Create a new branch.
 ```python
 def create_branch(repo_path: Path, branch_name: str, from_branch: str = None) -> dict:
     """Create and checkout a new branch."""
-    
+
     try:
         # Optionally checkout source branch first
         if from_branch:
@@ -201,7 +201,7 @@ def create_branch(repo_path: Path, branch_name: str, from_branch: str = None) ->
                 capture_output=True,
                 check=True
             )
-        
+
         # Create and checkout new branch
         subprocess.run(
             ["git", "checkout", "-b", branch_name],
@@ -209,13 +209,13 @@ def create_branch(repo_path: Path, branch_name: str, from_branch: str = None) ->
             capture_output=True,
             check=True
         )
-        
+
         return {
             "success": True,
             "branch": branch_name,
             "from_branch": from_branch or "current HEAD"
         }
-    
+
     except subprocess.CalledProcessError as e:
         return {
             "success": False,
@@ -236,9 +236,9 @@ def commit_changes(
     all_changes: bool = False
 ) -> dict:
     """Stage and commit changes."""
-    
+
     config = load_github_config()
-    
+
     try:
         # Configure commit author
         subprocess.run(
@@ -251,7 +251,7 @@ def commit_changes(
             cwd=repo_path,
             check=True
         )
-        
+
         # Stage files
         if all_changes:
             subprocess.run(["git", "add", "-A"], cwd=repo_path, check=True)
@@ -260,7 +260,7 @@ def commit_changes(
                 subprocess.run(["git", "add", f], cwd=repo_path, check=True)
         else:
             return {"success": False, "error": "Specify files or use all_changes=True"}
-        
+
         # Show what will be committed
         diff_result = subprocess.run(
             ["git", "diff", "--cached", "--stat"],
@@ -268,7 +268,7 @@ def commit_changes(
             capture_output=True,
             text=True
         )
-        
+
         # Commit
         subprocess.run(
             ["git", "commit", "-m", message],
@@ -276,7 +276,7 @@ def commit_changes(
             capture_output=True,
             check=True
         )
-        
+
         # Get commit hash
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -284,14 +284,14 @@ def commit_changes(
             capture_output=True,
             text=True
         )
-        
+
         return {
             "success": True,
             "commit_hash": result.stdout.strip()[:8],
             "message": message,
             "changes": diff_result.stdout
         }
-    
+
     except subprocess.CalledProcessError as e:
         return {
             "success": False,
@@ -307,7 +307,7 @@ Push branch to remote. REQUIRES UNANIMOUS CONSENSUS.
 ```python
 def push_branch(repo_path: Path, branch: str = None, set_upstream: bool = True) -> dict:
     """Push branch to remote. REQUIRES UNANIMOUS CONSENSUS."""
-    
+
     try:
         # Get current branch if not specified
         if not branch:
@@ -319,7 +319,7 @@ def push_branch(repo_path: Path, branch: str = None, set_upstream: bool = True) 
                 check=True
             )
             branch = result.stdout.strip()
-        
+
         # Prevent pushing to protected branches
         protected = ["main", "master", "production", "release"]
         if branch in protected:
@@ -328,14 +328,14 @@ def push_branch(repo_path: Path, branch: str = None, set_upstream: bool = True) 
                 "error": f"Cannot push directly to protected branch: {branch}",
                 "suggestion": "Create a feature branch and submit a PR"
             }
-        
+
         # Push
         cmd = ["git", "push"]
         if set_upstream:
             cmd.extend(["--set-upstream", "origin", branch])
         else:
             cmd.extend(["origin", branch])
-        
+
         result = subprocess.run(
             cmd,
             cwd=repo_path,
@@ -343,13 +343,13 @@ def push_branch(repo_path: Path, branch: str = None, set_upstream: bool = True) 
             text=True,
             check=True
         )
-        
+
         return {
             "success": True,
             "branch": branch,
             "output": result.stdout or result.stderr
         }
-    
+
     except subprocess.CalledProcessError as e:
         return {
             "success": False,
@@ -374,27 +374,27 @@ def create_issue(
     assignees: list[str] = None
 ) -> dict:
     """Create a GitHub issue."""
-    
+
     config = load_github_config()
-    
+
     url = f"https://api.github.com/repos/{owner}/{repo}/issues"
     headers = {
         "Authorization": f"token {config['token']}",
         "Accept": "application/vnd.github.v3+json"
     }
-    
+
     data = {
         "title": title,
         "body": body
     }
-    
+
     if labels:
         data["labels"] = labels
     if assignees:
         data["assignees"] = assignees
-    
+
     response = requests.post(url, json=data, headers=headers)
-    
+
     if response.status_code == 201:
         issue = response.json()
         return {
@@ -427,15 +427,15 @@ def create_pull_request(
     draft: bool = False
 ) -> dict:
     """Create a pull request."""
-    
+
     config = load_github_config()
-    
+
     url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
     headers = {
         "Authorization": f"token {config['token']}",
         "Accept": "application/vnd.github.v3+json"
     }
-    
+
     data = {
         "title": title,
         "body": body,
@@ -443,9 +443,9 @@ def create_pull_request(
         "base": base_branch,
         "draft": draft
     }
-    
+
     response = requests.post(url, json=data, headers=headers)
-    
+
     if response.status_code == 201:
         pr = response.json()
         return {
@@ -472,9 +472,9 @@ List repositories for a user or organization.
 ```python
 def list_repos(owner: str, repo_type: str = "all") -> dict:
     """List repositories for a user or organization."""
-    
+
     config = load_github_config()
-    
+
     # Try user endpoint first
     url = f"https://api.github.com/users/{owner}/repos"
     headers = {
@@ -486,9 +486,9 @@ def list_repos(owner: str, repo_type: str = "all") -> dict:
         "sort": "updated",
         "per_page": 100
     }
-    
+
     response = requests.get(url, headers=headers, params=params)
-    
+
     if response.status_code == 200:
         repos = response.json()
         return {
@@ -521,7 +521,7 @@ Show uncommitted changes or diff between branches.
 ```python
 def get_diff(repo_path: Path, staged: bool = False, branch: str = None) -> dict:
     """Show diff of changes."""
-    
+
     try:
         if branch:
             # Diff against branch
@@ -532,20 +532,20 @@ def get_diff(repo_path: Path, staged: bool = False, branch: str = None) -> dict:
         else:
             # Unstaged changes
             cmd = ["git", "diff"]
-        
+
         result = subprocess.run(
             cmd,
             cwd=repo_path,
             capture_output=True,
             text=True
         )
-        
+
         return {
             "success": True,
             "diff": result.stdout,
             "has_changes": len(result.stdout) > 0
         }
-    
+
     except subprocess.CalledProcessError as e:
         return {
             "success": False,

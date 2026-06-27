@@ -83,18 +83,18 @@ The Triumvirate (Zorya Utrennyaya, Zorya Vechernyaya, Zorya Polunochnaya) uses t
    risk_level: low|medium|high|critical
    description: "Brief description"
    ---
-   
+
    # Skill Name
-   
+
    ## Purpose
    ...
-   
+
    ## Safety Rules
    ...
-   
+
    ## Capabilities
    ...
-   
+
    ## Examples
    ...
    ```

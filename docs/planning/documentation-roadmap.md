@@ -1,8 +1,8 @@
 # Animus Documentation Audit & Reorganization Plan
 
-**Status**: In Progress — Phases 0–3 Complete, Phase 4 Partial, Phase 5 Ongoing  
-**Date**: 2026-06-27  
-**Author**: Senior Engineer (Claude Code Audit)  
+**Status**: In Progress — Phases 0–3 Complete, Phase 4 Partial, Phase 5 Ongoing
+**Date**: 2026-06-27
+**Author**: Senior Engineer (Claude Code Audit)
 **Scope**: Full documentation architecture, repo health, and phased execution roadmap
 
 ---

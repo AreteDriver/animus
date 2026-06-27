@@ -80,13 +80,13 @@ import pytest
 
 def test_workflow_execution():
     """Test basic workflow execution.
-    
+
     This example demonstrates the testing pattern.
     Adjust imports and assertions based on actual implementation.
     """
     # Example test code
     # engine = WorkflowEngine()
-    # 
+    #
     # workflow = Workflow(
     #     workflow_id="test",
     #     name="Test Workflow",
@@ -100,7 +100,7 @@ def test_workflow_execution():
     #         )
     #     ]
     # )
-    # 
+    #
     # result = engine.execute_workflow(workflow)
     # assert result.success is True
     pass

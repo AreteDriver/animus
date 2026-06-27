@@ -97,11 +97,11 @@ def create_draft(
     attachments: list[str] = None
 ) -> dict:
     """Create an email draft for review."""
-    
+
     DRAFTS_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     draft_id = f"draft_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    
+
     draft = EmailDraft(
         id=draft_id,
         to=to,
@@ -114,11 +114,11 @@ def create_draft(
         created_at=datetime.now().isoformat(),
         status="draft"
     )
-    
+
     # Save draft
     draft_file = DRAFTS_DIR / f"{draft_id}.json"
     draft_file.write_text(json.dumps(draft.__dict__, indent=2))
-    
+
     return {
         "success": True,
         "draft_id": draft_id,
@@ -139,14 +139,14 @@ Display draft for review and approval.
 ```python
 def review_draft(draft_id: str) -> dict:
     """Load and display a draft for review."""
-    
+
     draft_file = DRAFTS_DIR / f"{draft_id}.json"
-    
+
     if not draft_file.exists():
         return {"success": False, "error": f"Draft not found: {draft_id}"}
-    
+
     draft_data = json.loads(draft_file.read_text())
-    
+
     # Format for display
     review = f"""
 ═══════════════════════════════════════════════════════════════
@@ -172,7 +172,7 @@ ATTACHMENTS: {', '.join(draft_data['attachments']) if draft_data['attachments'] 
 
 ═══════════════════════════════════════════════════════════════
     """
-    
+
     return {
         "success": True,
         "draft_id": draft_id,
@@ -190,22 +190,22 @@ Mark a draft as approved for sending.
 ```python
 def approve_draft(draft_id: str) -> dict:
     """Mark draft as approved (requires Triumvirate unanimous consensus)."""
-    
+
     draft_file = DRAFTS_DIR / f"{draft_id}.json"
-    
+
     if not draft_file.exists():
         return {"success": False, "error": f"Draft not found: {draft_id}"}
-    
+
     draft_data = json.loads(draft_file.read_text())
-    
+
     if draft_data['status'] != 'draft':
         return {"success": False, "error": f"Draft status is {draft_data['status']}, cannot approve"}
-    
+
     draft_data['status'] = 'approved'
     draft_data['approved_at'] = datetime.now().isoformat()
-    
+
     draft_file.write_text(json.dumps(draft_data, indent=2))
-    
+
     return {
         "success": True,
         "draft_id": draft_id,
@@ -231,37 +231,37 @@ from pathlib import Path
 def load_email_config() -> dict:
     """Load email configuration."""
     config_path = Path.home() / ".gorgon" / "config" / "email.yaml"
-    
+
     if not config_path.exists():
         raise FileNotFoundError("Email config not found. Create ~/.gorgon/config/email.yaml")
-    
+
     with open(config_path) as f:
         return yaml.safe_load(f)
 
 def send_email(draft_id: str, confirm: bool = False) -> dict:
     """
     Send an approved email draft.
-    
+
     REQUIRES:
     - Triumvirate UNANIMOUS consensus
     - User confirmation (confirm=True)
     """
-    
+
     # Load draft
     draft_file = DRAFTS_DIR / f"{draft_id}.json"
-    
+
     if not draft_file.exists():
         return {"success": False, "error": f"Draft not found: {draft_id}"}
-    
+
     draft_data = json.loads(draft_file.read_text())
-    
+
     # Verify approved
     if draft_data['status'] != 'approved':
         return {
-            "success": False, 
+            "success": False,
             "error": f"Draft must be approved first. Current status: {draft_data['status']}"
         }
-    
+
     # Require explicit confirmation
     if not confirm:
         return {
@@ -270,29 +270,29 @@ def send_email(draft_id: str, confirm: bool = False) -> dict:
             "draft_id": draft_id,
             "recipients": draft_data['to'] + draft_data['cc'] + draft_data['bcc']
         }
-    
+
     # Load config
     config = load_email_config()
-    
+
     # Build message
     msg = MIMEMultipart('alternative')
     msg['From'] = f"{config['defaults']['from_name']} <{config['defaults']['from_address']}>"
     msg['To'] = ', '.join(draft_data['to'])
     msg['Subject'] = draft_data['subject']
-    
+
     if draft_data['cc']:
         msg['Cc'] = ', '.join(draft_data['cc'])
-    
+
     if config['defaults'].get('reply_to'):
         msg['Reply-To'] = config['defaults']['reply_to']
-    
+
     # Add body
     body_with_sig = draft_data['body_text'] + config['defaults'].get('signature', '')
     msg.attach(MIMEText(body_with_sig, 'plain'))
-    
+
     if draft_data['body_html']:
         msg.attach(MIMEText(draft_data['body_html'], 'html'))
-    
+
     # Add attachments
     for attachment_path in draft_data['attachments']:
         path = Path(attachment_path)
@@ -306,27 +306,27 @@ def send_email(draft_id: str, confirm: bool = False) -> dict:
                     f'attachment; filename="{path.name}"'
                 )
                 msg.attach(part)
-    
+
     # Send
     try:
         all_recipients = draft_data['to'] + draft_data['cc'] + draft_data['bcc']
-        
+
         with smtplib.SMTP(config['smtp']['host'], config['smtp']['port']) as server:
             if config['smtp'].get('use_tls', True):
                 server.starttls()
-            
+
             server.login(config['smtp']['username'], config['smtp']['password'])
             server.sendmail(
                 config['defaults']['from_address'],
                 all_recipients,
                 msg.as_string()
             )
-        
+
         # Update draft status
         draft_data['status'] = 'sent'
         draft_data['sent_at'] = datetime.now().isoformat()
         draft_file.write_text(json.dumps(draft_data, indent=2))
-        
+
         return {
             "success": True,
             "draft_id": draft_id,
@@ -334,7 +334,7 @@ def send_email(draft_id: str, confirm: bool = False) -> dict:
             "recipients": all_recipients,
             "sent_at": draft_data['sent_at']
         }
-    
+
     except Exception as e:
         return {
             "success": False,
@@ -351,29 +351,29 @@ Add an attachment to a draft.
 ```python
 def add_attachment(draft_id: str, file_path: str) -> dict:
     """Add an attachment to an existing draft."""
-    
+
     draft_file = DRAFTS_DIR / f"{draft_id}.json"
-    
+
     if not draft_file.exists():
         return {"success": False, "error": f"Draft not found: {draft_id}"}
-    
+
     # Verify file exists
     attachment = Path(file_path)
     if not attachment.exists():
         return {"success": False, "error": f"Attachment not found: {file_path}"}
-    
+
     # Check file size (limit 25MB)
     if attachment.stat().st_size > 25 * 1024 * 1024:
         return {"success": False, "error": "Attachment too large (max 25MB)"}
-    
+
     draft_data = json.loads(draft_file.read_text())
-    
+
     if draft_data['status'] != 'draft':
         return {"success": False, "error": "Cannot modify approved/sent draft"}
-    
+
     draft_data['attachments'].append(str(attachment.absolute()))
     draft_file.write_text(json.dumps(draft_data, indent=2))
-    
+
     return {
         "success": True,
         "draft_id": draft_id,
@@ -397,23 +397,23 @@ def use_template(
     cc: list[str] = None
 ) -> dict:
     """Create a draft from a template."""
-    
+
     template_file = TEMPLATES_DIR / f"{template_name}.yaml"
-    
+
     if not template_file.exists():
         return {"success": False, "error": f"Template not found: {template_name}"}
-    
+
     with open(template_file) as f:
         template = yaml.safe_load(f)
-    
+
     # Substitute variables
     subject = template['subject']
     body = template['body']
-    
+
     for key, value in variables.items():
         subject = subject.replace(f"{{{{{key}}}}}", str(value))
         body = body.replace(f"{{{{{key}}}}}", str(value))
-    
+
     # Check for unsubstituted variables
     import re
     remaining = re.findall(r'\{\{(\w+)\}\}', subject + body)
@@ -422,7 +422,7 @@ def use_template(
             "success": False,
             "error": f"Missing template variables: {remaining}"
         }
-    
+
     # Create draft
     return create_draft(
         to=to,
@@ -443,15 +443,15 @@ subject: "Following up on {{position}} application - {{applicant_name}}"
 
 body: |
   Dear {{hiring_manager}},
-  
-  I hope this email finds you well. I wanted to follow up on my application 
+
+  I hope this email finds you well. I wanted to follow up on my application
   for the {{position}} position at {{company}} that I submitted on {{apply_date}}.
-  
-  I remain very interested in this opportunity and would welcome the chance 
+
+  I remain very interested in this opportunity and would welcome the chance
   to discuss how my experience in {{relevant_skill}} could benefit your team.
-  
+
   Please let me know if you need any additional information from me.
-  
+
   Best regards,
   {{applicant_name}}
 ```

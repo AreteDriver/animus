@@ -99,7 +99,7 @@ install -m 644 /dev/null /path/to/file.txt
 echo "content" > /path/to/file.txt
 ```
 
-**Safety:** 
+**Safety:**
 - Check if file already exists
 - If exists, require majority consensus for overwrite
 - Verify parent directory exists and is writable
@@ -245,7 +245,7 @@ find /search/path -name "*.py" -type f -mtime -7 -size +1k
 find /search/path -name "*.txt" -type f -exec ls -lh {} \;
 ```
 
-**Safety:** 
+**Safety:**
 - Limit search depth for broad searches: `-maxdepth 5`
 - Avoid searching `/proc`, `/sys`, `/dev`
 

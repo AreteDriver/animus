@@ -144,7 +144,7 @@ def get_system_metrics():
         "cpu_per_core": psutil.cpu_percent(interval=1, percpu=True),
         "memory": dict(psutil.virtual_memory()._asdict()),
         "swap": dict(psutil.swap_memory()._asdict()),
-        "disk": {p.mountpoint: dict(psutil.disk_usage(p.mountpoint)._asdict()) 
+        "disk": {p.mountpoint: dict(psutil.disk_usage(p.mountpoint)._asdict())
                  for p in psutil.disk_partitions()},
         "network": dict(psutil.net_io_counters()._asdict()),
         "load_average": psutil.getloadavg(),
@@ -444,10 +444,10 @@ The process_management skill provides critical data for the Triumvirate's resour
 # Supervisor calls this periodically
 def collect_metrics_for_triumvirate():
     """Collect metrics for supervisor decision making."""
-    
+
     # Uses monitor_resources capability
     metrics = execute_skill("process_management", "monitor_resources")
-    
+
     # Feed to triumvirate for scaling decisions
     triumvirate.evaluate_resources(metrics)
 ```

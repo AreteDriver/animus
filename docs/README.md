@@ -1,6 +1,6 @@
 # Animus Documentation
 
-> **What is Animus?** A Mind-class AI exocortex — persistent memory, multi-agent orchestration, and autonomous improvement.  
+> **What is Animus?** A Mind-class AI exocortex — persistent memory, multi-agent orchestration, and autonomous improvement.
 > **Version**: 2.3.0 (migrating to v2.1 baseline) · **Tests**: 16,178+ · **License**: MIT
 
 ---
