@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Documentation Reorganization (2026-06)
+
+- **Audience-based docs tree** — `docs/` reorganized from flat graveyard (44 files, no index) into structured lanes:
+  - `getting-started/` — quickstart, installation, concepts
+  - `architecture/` — overview (rewritten for v2.1, 8 planes), packages, decisions, standards
+  - `packages/` — per-package documentation with version matrix
+  - `contributing/` — setup, workflow, debugging
+  - `operators/` — deployment, configuration, monitoring, troubleshooting
+  - `reference/` — glossary, FAQ, changelog, security, whitepapers
+  - `roadmap/` — current priorities and plans
+- **14 new placeholder files** written with minimal viable content across all doc lanes
+- **docs-validate.py** — CI validation script for internal links, anchor references, trailing whitespace, and redirect stubs
+- **Test count reconciliation** — Core 2,865, Forge 10,304, Bootstrap 2,048, Quorum 961 (total 16,178)
+- **Gorgon→Forge naming cleanup** in `packages/forge/` (tests/README, skills/README, 6 SKILL.md files)
+- **Bootstrap config reference expanded** in `docs/operators/configuration.md` — full schema covering identity, ollama, gateway, intelligence, channels, self-improvement, proactive, personas
+- **Package READMEs written** for Quorum, PWA, Contracts (previously missing)
+- **Whitepaper index** populated at `docs/reference/whitepapers/README.md`
+
+### Changed
+
+- `docs/architecture/overview.md` — rewritten from aspirational 4-layer hardware diagram to v2.1 reality (8 technical planes, no stale hardware references)
+- `.github/workflows/ci.yml` — Docs Validation job now calls `scripts/docs-validate.py` instead of inline Python/shell
+- Root `README.md` — ASCII tree expanded to show all 8 packages, nav links updated to new docs tree
+
+### Fixed
+
+- 6 broken internal links in `docs/reference/faq.md` and `glossary.md` (path depth errors)
+- Trailing whitespace in 29 session-modified files
+- Stale test counts understated by ~11% across `docs/packages/README.md` and root README
+
+---
+
 ### Added — Quorum v2 Week 1: EventLog bitemporal + signal bridge
 
 - **Bitemporal-lite on `CoordinationEvent`** — `valid_from` (world-time) and `recorded_at` (observation-time) fields ported from memboot's pattern. Backward-compatible: `timestamp` preserved as alias.

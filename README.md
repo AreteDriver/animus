@@ -224,8 +224,8 @@ animus/
 │   ├── bootstrap/               # import animus_bootstrap
 │   │   ├── src/animus_bootstrap/ # Daemon, wizard, dashboard
 │   │   └── tests/               # 2,048 tests, 97% coverage
-│   ├── kernel/                  # import animus_kernel
-│   ├── types/                   # import animus_types
+│   ├── kernel/                  # import animus_kernel — Autonomous builder engine
+│   ├── types/                   # import animus_types — Shared schemas
 │   ├── pwa/                     # Progressive web app
 │   └── contracts/               # Canonical JSON schemas (20+)
 ├── docs/                        # Audience-based docs tree
