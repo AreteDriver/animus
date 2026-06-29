@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`packages/types/tests/test_schemas.py`** — 22 tests: importable check for all 20 schemas + round-trip validation for `action` and `event`.
 - **`packages/contracts/pyproject.toml`** — New package manifest, making contracts a real installable package.
 
+### Added — Scaffold Cleanup (2026-06-27)
+
+- **Root `contracts/` deleted** — Empty directory removed; canonical schemas live in `packages/contracts/`.
+- **READMEs added** to `apps/`, `modules/`, `database/`, `infra/`, `evidence/releases/` — each explains what belongs there, boundary vs `packages/`, and owner.
+- **ADRs written**: ADR-002 (Audience-Based Docs Tree), ADR-003 (Schema Compiler), ADR-004 (Truth Baseline Fix), ADR-005 (Kernel Extraction).
+- **`truth-baseline.toml`** updated: removed `contracts/` from `root_architecture_dirs`, added `root_architecture_readmes` and `adr_coverage` checks.
+
 ### Added — Documentation Reorganization (2026-06)
 
 - **Audience-based docs tree** — `docs/` reorganized from flat graveyard (44 files, no index) into structured lanes:

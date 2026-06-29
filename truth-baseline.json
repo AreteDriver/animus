@@ -1,8 +1,8 @@
 {
   "project": "animus",
-  "timestamp": "2026-06-29T06:27:03.311262+00:00",
+  "timestamp": "2026-06-29T07:04:35.796522+00:00",
   "summary": {
-    "pass": 6,
+    "pass": 8,
     "fail": 3,
     "skip": 0,
     "error": 0
@@ -82,9 +82,26 @@
       "expected": [
         "apps/",
         "modules/",
-        "contracts/",
         "database/",
         "infra/"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "root_architecture_readmes",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "apps/README.md",
+        "modules/README.md",
+        "database/README.md",
+        "infra/README.md",
+        "evidence/releases/README.md"
       ],
       "actual": {
         "missing": [],
@@ -99,6 +116,24 @@
       "status": "PASS",
       "expected": [
         "evidence/releases/"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "adr_coverage",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "adrs/ADR-001.md",
+        "adrs/ADR-002.md",
+        "adrs/ADR-003.md",
+        "adrs/ADR-004.md",
+        "adrs/ADR-005.md"
       ],
       "actual": {
         "missing": [],
@@ -123,7 +158,7 @@
         "types": "0.1.0"
       },
       "claim_source": "",
-      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'1.2.0', '2.3.0', '0.1.0', '1.9.0', '0.8.0'}"
+      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'0.8.0', '0.1.0', '1.2.0', '2.3.0', '1.9.0'}"
     }
   ]
 }

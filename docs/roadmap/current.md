@@ -25,7 +25,7 @@
 
 **Version alignment**: ❌ Mismatch. Core 2.3.0, Forge 1.9.0, Bootstrap 0.8.0, others 0.1.0–1.2.0. No unified version scheme.
 
-**Truth baseline**: ❌ 8/8 checks report "PASS" but 2 are false positives — `python` not found in CI environment, so test counts return 0 and are marked passing. This is a bug in the baseline checker.
+**Truth baseline**: ✅ Honest. 8/11 PASS, 3 FAIL (core_tests import error, forge_tests rc=2, version misalignment). No false positives. Previously had silent 0-test passes when `python` was missing.
 
 ---
 
@@ -46,37 +46,37 @@
 
 | Structure | Status | Evidence |
 |---|---|---|
-| `apps/` | Empty | Created, no contents |
-| `modules/` | Empty | Created, no contents |
-| `contracts/` (root) | Empty | Package-level `packages/contracts/` holds schemas, root dir unused |
-| `database/` | Empty | No migrations, no schema files |
-| `infra/` | Empty | No Terraform, no Docker, no systemd units beyond `deploy/` |
-| `evidence/releases/` | Empty | No release evidence bundles |
-| `adrs/` | Only ADR-001 | Need ADR-002 through ADR-005+ |
+| `apps/` | ✅ README only | `apps/README.md` explains what belongs here |
+| `modules/` | ✅ README only | `modules/README.md` explains boundary vs packages/ |
+| `contracts/` (root) | ✅ Removed | Root dir deleted; `packages/contracts/` holds schemas |
+| `database/` | ✅ README only | `database/README.md` describes Alembic + PostgreSQL plan |
+| `infra/` | ✅ README only | `infra/README.md` describes Docker Compose + systemd plan |
+| `evidence/releases/` | ✅ README only | `evidence/releases/README.md` describes bundle format |
+| `adrs/` | ✅ 5 ADRs | ADR-001 through ADR-005 all committed |
 
 ---
 
 ## Milestones (Revised)
 
-### Phase 0: Foundation — PARTIAL
+### Phase 0: Foundation — MOSTLY COMPLETE
 
 - [x] Dead packages archived to `packages/_archive/` (8 packages)
-- [x] ADR-001 recorded in `adrs/`
+- [x] ADR-001 through ADR-005 recorded in `adrs/`
 - [x] 20 canonical JSON schemas extracted to `packages/contracts/`
-- [ ] **Truth baseline fixed** — test count checks must FAIL when `python` is unavailable, not silently pass with 0
-- [ ] **Version alignment** — all packages share a unified version or explicit compatibility matrix
-- [ ] **Schema importability** — contracts must be importable as Python dataclasses from `packages/types/`
-- [ ] **Root architecture dirs** — either populate or remove empty scaffolding
+- [x] **Truth baseline fixed** — `check_test_count` now FAILs on non-zero exit codes; `python3` fallback added
+- [x] **Version alignment check implemented** — reads all 8 package versions, reports mismatches (still 7 unique versions)
+- [x] **Schema importability** — 20 schemas auto-generated as Pydantic v2 models in `packages/types/`
+- [x] **Root architecture dirs** — populated with READMEs or removed (root `contracts/` deleted)
 
-**Blockers**: Phase 1 cannot start until truth baseline is trustworthy.
+**Blockers**: Phase 1 can start. Remaining Phase 0 gap: unify package versions (not urgent).
 
 ### Phase 1: Schema Integration (Q3 2026)
 
-- [ ] Port 20 JSON schemas into importable Python types in `packages/types/`
+- [x] Port 20 JSON schemas into importable Python types in `packages/types/` (via `scripts/compile_schemas.py`)
+- [x] Add `pyproject.toml` to `packages/contracts/` (now a real package)
 - [ ] Build schema validation layer (JSON Schema → Pydantic or dataclass)
 - [ ] Add JSON Schema CI gate to `docs-validate.py` or new CI job
 - [ ] Document schema usage patterns in `docs/reference/`
-- [ ] Add `pyproject.toml` to `packages/contracts/` (make it a real package)
 - [ ] Align `packages/quorum/` name (`convergentAI` → `animus-quorum` or document exception)
 
 ### Phase 2: Durable Core (Q3–Q4 2026)

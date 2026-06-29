@@ -58,13 +58,31 @@ cwd = "packages/forge"
 [[checks]]
 type = "file_exists"
 name = "root_architecture_dirs"
-paths = ["apps/", "modules/", "contracts/", "database/", "infra/"]
+paths = ["apps/", "modules/", "database/", "infra/"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "root_architecture_readmes"
+paths = [
+    "apps/README.md",
+    "modules/README.md",
+    "database/README.md",
+    "infra/README.md",
+    "evidence/releases/README.md",
+]
 should_exist = true
 
 [[checks]]
 type = "file_exists"
 name = "evidence_directory"
 paths = ["evidence/releases/"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "adr_coverage"
+paths = ["adrs/ADR-001.md", "adrs/ADR-002.md", "adrs/ADR-003.md", "adrs/ADR-004.md", "adrs/ADR-005.md"]
 should_exist = true
 
 [[checks]]
