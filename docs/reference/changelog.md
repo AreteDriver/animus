@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`truth-baseline.toml`** — added `expected = 1` and `op = ">="` to `core_tests` and `forge_tests` checks, plus `python3` fallback when `python` is unavailable.
 - **New `version_alignment` check** — reads all `packages/*/pyproject.toml` and `pwa/package.json` versions, reports mismatches. `contracts/` documented as exception (no manifest). Surfaces actual misalignment: core 2.3.0, forge 1.9.0, bootstrap 0.8.0, kernel 0.1.0, quorum 1.2.0, types 0.1.0, pwa 0.1.0.
 
+### Fixed — Test Infrastructure (2026-06-27)
+
+- **Root `pyproject.toml`** — Added `[tool.pytest.ini_options]` with `pythonpath` covering all 8 package source directories, enabling pytest to discover sibling packages when run from repo root.
+- **`truth-baseline.toml`** — `core_tests` and `forge_tests` commands updated to run from repo root with `-c pyproject.toml` flag, bypassing per-package config files that lacked sibling package paths.
+- **Results**: core 2,832 tests (was 0), forge 10,431 tests (was 9,425 with 25 errors), kernel 99 tests (was 0), quorum 961 tests (was 861 with 2 errors), types 67 tests (was 22 with 3 errors). Truth baseline now **10/11 PASS** (only `version_alignment` remains FAIL).
+
 ### Added — Schema Compiler (2026-06-27)
 
 - **`scripts/compile_schemas.py`** — New script using `datamodel-code-generator` to auto-generate Pydantic v2 models from `packages/contracts/*.schema.json`.

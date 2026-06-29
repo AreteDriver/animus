@@ -14,18 +14,18 @@
 
 | Package | Version | Source Files | Tests | Runtime Status |
 |---|---|---|---|---|
-| `core` | 2.3.0 | 94 Python | 31 | CLI + memory + dashboard operational |
-| `forge` | 1.9.0 | 352 Python | 276 | Workflow orchestration operational |
-| `bootstrap` | 0.8.0 | 136 Python | 63 | Daemon + onboarding + dashboard operational |
-| `kernel` | 0.1.0 | 189 Python | 8 | Extracted from Forge, under-tested |
-| `quorum` | 1.2.0 (convergentAI) | 14 Rust + 10 Python | 32 | Rust core + Python bindings, active |
-| `types` | 0.1.0 | 4 Python | 3 | Minimal but functional |
+| `core` | 2.3.0 | 94 Python | 2,832 | CLI + memory + dashboard operational |
+| `forge` | 1.9.0 | 352 Python | 10,431 | Workflow orchestration operational |
+| `bootstrap` | 0.8.0 | 136 Python | 1,874 | Daemon + onboarding + dashboard operational |
+| `kernel` | 0.1.0 | 189 Python | 99 | Extracted from Forge, under-tested |
+| `quorum` | 1.2.0 (convergentAI) | 14 Rust + 10 Python | 961 | Rust core + Python bindings, active |
+| `types` | 0.1.0 | 4 Python | 67 | Minimal but functional |
 | `pwa` | — | 19 TypeScript | 0 | Frontend scaffolded, wiring TBD |
 | `contracts` | — | 20 JSON schemas | 0 | Pure JSON, no runtime validation |
 
 **Version alignment**: ❌ Mismatch. Core 2.3.0, Forge 1.9.0, Bootstrap 0.8.0, others 0.1.0–1.2.0. No unified version scheme.
 
-**Truth baseline**: ✅ Honest. 8/11 PASS, 3 FAIL (core_tests import error, forge_tests rc=2, version misalignment). No false positives. Previously had silent 0-test passes when `python` was missing.
+**Truth baseline**: ✅ Honest. **10/11 PASS**, 1 FAIL (`version_alignment`). Previously: 8/11 with 3 FAIL (2 were false positives, 1 was real version misalignment). Test infrastructure fixed: root `pyproject.toml` now sets `pythonpath` for all sibling packages.
 
 ---
 
@@ -127,8 +127,7 @@
 |---|---|---|
 | Truth baseline false positives | High | Fix `truth-baseline.toml` test-count logic |
 | Schemas not importable | High | Blocks Phase 1 and all downstream validation |
-| Kernel under-tested (8 tests for 189 files) | Medium | Add coverage before durable core integration |
-| Empty root architecture dirs | Low | Confusing to new contributors; populate or remove |
+| Kernel under-tested (99 tests for 189 files) | Medium | Add coverage before durable core integration |
 | GitHub CI billing blocked | Medium | All CI jobs fail; local-first validation only |
 | MkDocs deployment blocked | Low | Repo is private; Pages requires Pro or public repo |
 
@@ -136,11 +135,11 @@
 
 ## Definition of Done (Phase 0 Completion)
 
-- [ ] Truth baseline fails on broken checks, not silently passes
+- [x] Truth baseline fails on broken checks, not silently passes
 - [ ] All 8 packages have version metadata and alignment is documented
-- [ ] `packages/types/` imports at least 10 of the 20 contract schemas as Python
-- [ ] Every root architecture directory has a `README.md` explaining its purpose or is removed
-- [ ] `scripts/assemble_evidence_bundle.py` exists and produces a manifest
+- [x] `packages/types/` imports at least 10 of the 20 contract schemas as Python
+- [x] Every root architecture directory has a `README.md` explaining its purpose or is removed
+- [x] `scripts/assemble_evidence_bundle.py` exists and produces a manifest
 
 ---
 
