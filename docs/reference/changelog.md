@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`truth-baseline.toml`** — added `expected = 1` and `op = ">="` to `core_tests` and `forge_tests` checks, plus `python3` fallback when `python` is unavailable.
 - **New `version_alignment` check** — reads all `packages/*/pyproject.toml` and `pwa/package.json` versions, reports mismatches. `contracts/` documented as exception (no manifest). Surfaces actual misalignment: core 2.3.0, forge 1.9.0, bootstrap 0.8.0, kernel 0.1.0, quorum 1.2.0, types 0.1.0, pwa 0.1.0.
 
+### Added — Schema Compiler (2026-06-27)
+
+- **`scripts/compile_schemas.py`** — New script using `datamodel-code-generator` to auto-generate Pydantic v2 models from `packages/contracts/*.schema.json`.
+- **Generated 20 schema modules** in `packages/types/src/animus_types/` (`action.py`, `event.py`, `assessment.py`, etc.) plus `common.py` with shared enums (`ArtifactType`, `SubjectDomain`, `SecurityClass`, etc.) and base `Common` model.
+- **`packages/types/src/animus_types/__init__.py`** — Updated to re-export all generated models + legacy types.
+- **`packages/types/tests/test_schemas.py`** — 22 tests: importable check for all 20 schemas + round-trip validation for `action` and `event`.
+- **`packages/contracts/pyproject.toml`** — New package manifest, making contracts a real installable package.
+
 ### Added — Documentation Reorganization (2026-06)
 
 - **Audience-based docs tree** — `docs/` reorganized from flat graveyard (44 files, no index) into structured lanes:
