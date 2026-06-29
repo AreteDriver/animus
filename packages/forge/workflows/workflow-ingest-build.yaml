@@ -1,0 +1,153 @@
+name: Workflow Ingest Lugh-Ogma Implementation
+version: "1.0"
+description: Build the animus.workflows.ingest module from spec — deterministic Lugh → Ogma → Memory pipeline
+
+token_budget: 200000
+timeout_seconds: 3600
+
+inputs:
+  spec_path:
+    type: string
+    required: true
+    default: "/home/arete/projects/animus/docs/specs/workflow-ingest-lugh-ogma.md"
+    description: Path to the specification document
+  codebase_path:
+    type: string
+    required: true
+    default: "/home/arete/projects/animus"
+    description: Path to the Animus monorepo
+  test_command:
+    type: string
+    required: false
+    default: "cd /home/arete/projects/animus/packages/core && python -m pytest"
+    description: Command to run tests
+
+outputs:
+  - plan
+  - code
+  - tests
+  - test_results
+  - review
+
+steps:
+  - id: read_spec
+    type: shell
+    params:
+      command: "cat ${spec_path}"
+    outputs:
+      - spec_content
+
+  - id: plan
+    type: claude_code
+    params:
+      role: planner
+      prompt: |
+        You are implementing the specification below. Create a detailed implementation plan.
+
+        SPEC:
+        ${spec_content}
+
+        CODEBASE: ${codebase_path}
+
+        Provide:
+        1. Exact files to create/modify with line-level detail
+        2. Import statements needed
+        3. Dependencies to verify
+        4. Risk: any spec requirement that conflicts with existing code
+      estimated_tokens: 8000
+    outputs:
+      - plan
+      - tasks
+      - files_to_modify
+    on_failure: abort
+
+  - id: build
+    type: claude_code
+    params:
+      role: builder
+      prompt: |
+        Implement the workflow module according to this plan:
+
+        ${plan}
+
+        SPEC:
+        ${spec_content}
+
+        Requirements:
+        - Write production-quality Python with type hints
+        - Follow existing animus package conventions (see packages/core/animus/)
+        - Reuse lugh and ogma exactly as specified
+        - Handle partial failures per spec section 3
+        - Add CLI subcommand to existing animus CLI
+        - Include docstrings
+        - Match error handling in existing modules (see ogma/read.py for OgmaSynthesisError pattern)
+      estimated_tokens: 25000
+    outputs:
+      - code
+      - files_modified
+    on_failure: retry
+    max_retries: 1
+
+  - id: checkpoint_after_build
+    type: checkpoint
+    params:
+      message: "Build phase complete — waiting for user review before tests"
+
+  - id: test
+    type: claude_code
+    params:
+      role: tester
+      prompt: |
+        Write comprehensive tests for the new ingest workflow module.
+
+        Files modified: ${files_modified}
+        Code: ${code}
+
+        Write tests covering ALL acceptance criteria from the spec:
+        - A1: full YouTube pipeline
+        - A2: Lugh-only
+        - A3: Ogma failure is partial
+        - A4: CLI invocation
+        - A5: cache reuse
+        - A6: invalid URL
+        - A7: CLI partial exit code
+        - A8: memory tag failure is partial
+
+        Use pytest and existing test fixtures in packages/core/tests/.
+        Mock network calls and Ogma synthesis.
+      estimated_tokens: 15000
+    outputs:
+      - tests
+    on_failure: retry
+    max_retries: 1
+
+  - id: run_tests
+    type: shell
+    params:
+      command: "${test_command} -xvs -k ingest"
+      allow_failure: true
+    outputs:
+      - test_results
+
+  - id: review
+    type: claude_code
+    params:
+      role: reviewer
+      prompt: |
+        Review the implementation against the specification.
+
+        Spec: ${spec_content}
+        Code: ${code}
+        Tests: ${tests}
+        Test results: ${test_results}
+
+        Provide:
+        1. Compliance check — does code match every MUST/MAY/MUST NOT?
+        2. Style check — does it match surrounding animus code?
+        3. Gaps — anything missing or wrong?
+        4. Go / No-go verdict
+      estimated_tokens: 10000
+    outputs:
+      - review
+      - verdict
+    on_failure: abort

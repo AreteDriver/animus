@@ -60,6 +60,8 @@ class MemoryLayer:
             except ImportError:
                 logger.warning("ChromaDB not available, falling back to JSON storage")
                 self.store = _memory.LocalMemoryStore(data_dir)
+        elif backend == "durable":
+            self.store = _memory.DurableMemoryStore()
         else:
             self.store = _memory.LocalMemoryStore(data_dir)
 

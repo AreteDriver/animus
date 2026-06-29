@@ -17,7 +17,7 @@
 | `core` | 2.3.0 | 94 Python | 2,832 | CLI + memory + dashboard operational |
 | `forge` | 1.9.0 | 352 Python | 10,431 | Workflow orchestration operational |
 | `bootstrap` | 0.8.0 | 136 Python | 1,874 | Daemon + onboarding + dashboard operational |
-| `kernel` | 0.1.0 | 189 Python | 99 | Extracted from Forge, under-tested |
+| `kernel` | 0.1.0 | 189 Python | 107 | Extracted from Forge, durable core wired |
 | `quorum` | 1.2.0 (convergentAI) | 14 Rust + 10 Python | 961 | Rust core + Python bindings, active |
 | `types` | 0.1.0 | 4 Python | 67 | Minimal but functional |
 | `pwa` | — | 19 TypeScript | 0 | Frontend scaffolded, wiring TBD |
@@ -26,7 +26,7 @@
 
 **Version alignment**: ⚠️ Documented mismatch. Core 2.3.0, Forge 1.9.0, Bootstrap 0.8.0, others 0.1.0–1.2.0. See `COMPATIBILITY_MATRIX.md` for dependency graph and compatibility ranges. Unified versioning deferred to Phase 2.
 
-**Truth baseline**: ✅ Honest. **15/16 PASS**, 1 FAIL (`version_alignment` — expected and documented). Previously: 8/11 with 3 FAIL (2 were false positives, 1 was real version misalignment). Test infrastructure fixed: root `pyproject.toml` now sets `pythonpath` for all sibling packages.
+**Truth baseline**: ✅ Honest. **18/19 PASS**, 1 FAIL (`version_alignment` — expected and documented). Previously: 15/16 with 1 FAIL. Test infrastructure fixed: root `pyproject.toml` now sets `pythonpath` for all sibling packages.
 
 ---
 
@@ -38,7 +38,7 @@
 - **Bootstrap**: Install daemon, onboarding wizard, FastAPI+HTMX dashboard (`localhost:7700`), Ollama health checks
 - **Forge**: Multi-agent YAML workflows, 10 archetypes, token budgets, checkpoint/resume, SQLite state
 - **Quorum**: Rust intent graph + Python bindings, stigmergy coordination, signal bus, triumvirate voting
-- **Kernel**: Extracted 172 files / 55K LOC from Forge, budget/executor/sandbox/resume all present
+- **Kernel**: Extracted 172 files / 55K LOC from Forge, budget/executor/sandbox/resume all present, durable core wired
 - **PWA**: TypeScript frontend scaffolded with Vite, login/chat/personas/status views, service worker
 - **Types**: Sensitivity, egress, secrets dataclasses (security-focused)
 - **Contracts**: 20 canonical JSON schemas (`action`, `event`, `assessment`, `memory`, `trace`, etc.)
@@ -80,12 +80,12 @@
 - [ ] Document schema usage patterns in `docs/reference/`
 - [ ] Align `packages/quorum/` name (`convergentAI` → `animus-quorum` or document exception)
 
-### Phase 2: Durable Core (Q3–Q4 2026) — IN PROGRESS
+### Phase 2: Durable Core (Q3–Q4 2026) — COMPLETE
 
 - [x] Implement object registry in `database/` (PostgreSQL default, SQLite projection)
 - [x] Implement event ledger with bitemporal projections
-- [ ] Wire `packages/kernel/` into durable core model (it has memory backends but no registry/ledger)
-- [ ] Add traceability linter (requirement-to-test mapping)
+- [x] Wire `packages/kernel/` into durable core model (`DurableMemoryStore` in `memory/stores/durable.py`)
+- [x] Add traceability linter (`scripts/traceability_linter.py`)
 - [x] Populate `database/` with migration tooling
 - [x] Populate `infra/` with Docker Compose or systemd deployment manifests
 

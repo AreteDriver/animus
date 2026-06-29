@@ -123,3 +123,23 @@ command = "python -m pytest -c pyproject.toml database/tests --collect-only"
 pattern = '(\d+) tests? collected'
 expected = 1
 op = ">="
+
+[[checks]]
+type = "test_count"
+name = "kernel_tests"
+command = "python -m pytest -c pyproject.toml packages/kernel/tests --collect-only"
+pattern = '(\d+) tests? collected'
+expected = 1
+op = ">="
+
+[[checks]]
+type = "file_exists"
+name = "traceability_linter"
+paths = ["scripts/traceability_linter.py"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "durable_memory_store"
+paths = ["packages/kernel/src/animus_kernel/memory/stores/durable.py"]
+should_exist = true
