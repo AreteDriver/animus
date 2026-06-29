@@ -96,3 +96,30 @@ type = "file_exists"
 name = "compatibility_matrix"
 paths = ["COMPATIBILITY_MATRIX.md"]
 should_exist = true
+
+# Phase 2: Durable Core
+[[checks]]
+type = "file_exists"
+name = "initial_migration"
+paths = ["database/migrations/versions/001_initial_schema.py"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "docker_compose"
+paths = ["infra/docker-compose.yml"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "infra_env_example"
+paths = ["infra/.env.example"]
+should_exist = true
+
+[[checks]]
+type = "test_count"
+name = "database_tests"
+command = "python -m pytest -c pyproject.toml database/tests --collect-only"
+pattern = '(\d+) tests? collected'
+expected = 1
+op = ">="

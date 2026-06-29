@@ -2,6 +2,20 @@
 
 Deployment infrastructure for Animus — local development, CI, and production (self-hosted).
 
+## Quick Start
+
+```bash
+cd infra
+cp .env.example .env      # edit with your credentials
+docker compose up -d
+```
+
+This starts PostgreSQL.  
+To run migrations:
+```bash
+cd database && alembic upgrade head
+```
+
 ## What Goes Here
 
 - **Docker Compose** (`docker-compose.yml`) — PostgreSQL, Redis, Ollama, Animus services
@@ -21,4 +35,4 @@ AreteDriver
 
 ## Status
 
-Scaffolded — no manifests yet. Will be populated during Phase 2 (Durable Core) and Phase 4 (Public/Private Split) of the roadmap.
+Docker Compose for PostgreSQL added during Phase 2 (Durable Core). Remaining manifests (systemd, Terraform, Nix, monitoring) scheduled for Phase 4 (Public/Private Split).

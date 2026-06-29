@@ -1,6 +1,53 @@
 # database/
 
-Database schemas, migrations, and seed data for the Animus durable core.
+Durable core — PostgreSQL schema, Alembic migrations, and bitemporal projection utilities.
+
+## Quick Start
+
+1. Ensure PostgreSQL is running (see infra/docker-compose.yml).
+2. Copy infra/.env.example to infra/.env and fill in your credentials.
+3. Export connection string:  
+   ```bash
+   export ANIMUS_DATABASE_URL=<your-db-url>
+   ```
+   Replace `<your-db-url>` with your actual connection string.
+4. Run migrations:  
+   ```bash
+   cd database && alembic upgrade head
+   ```
+
+## Schema Overview
+
+| Table | Purpose |
+|---|---|
+| object_registry | Canonical objects with bitemporal validity |
+| event_ledger | Append-only log of significant system events |
+| traceability | Links requirements → tests → evidence bundles |
+
+## Bitemporal Fields
+
+- **valid_from / valid_to**: When the row was true in the real world (world time).  
+- **recorded_at / superseded_at**: When the row was written to the system (transaction time).
+
+## Migrations
+
+Managed by Alembic. Add new revisions with:
+```bash
+alembic revision -m "description"
+```
+
+**Note**: `alembic.ini` contains a default placeholder URL.  
+Do **not** commit real credentials. Set the connection string via environment variable:
+```bash
+export DATABASE_URL="postgresql://..."
+```
+Or override `sqlalchemy.url` in a local `alembic-local.ini` that is `.gitignore`d.
+
+## Tests
+
+```bash
+pytest database/tests/
+```
 
 ## What Goes Here
 
@@ -23,7 +70,3 @@ Database schemas, migrations, and seed data for the Animus durable core.
 ## Owner
 
 AreteDriver
-
-## Status
-
-Scaffolded — no migrations yet. Will be populated during Phase 2 (Durable Core) of the roadmap.

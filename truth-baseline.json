@@ -1,8 +1,8 @@
 {
   "project": "animus",
-  "timestamp": "2026-06-29T07:34:26.088574+00:00",
+  "timestamp": "2026-06-29T07:47:31.097062+00:00",
   "summary": {
-    "pass": 11,
+    "pass": 15,
     "fail": 1,
     "skip": 0,
     "error": 0
@@ -158,7 +158,7 @@
         "types": "0.1.0"
       },
       "claim_source": "",
-      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'1.2.0', '0.8.0', '2.3.0', '0.1.0', '1.9.0'}"
+      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'0.1.0', '2.3.0', '1.9.0', '1.2.0', '0.8.0'}"
     },
     {
       "name": "compatibility_matrix",
@@ -173,6 +173,57 @@
       },
       "claim_source": "",
       "message": "All paths match expectation"
+    },
+    {
+      "name": "initial_migration",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "database/migrations/versions/001_initial_schema.py"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "docker_compose",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "infra/docker-compose.yml"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "infra_env_example",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "infra/.env.example"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "database_tests",
+      "check_type": "test_count",
+      "status": "PASS",
+      "expected": 1,
+      "actual": 4,
+      "claim_source": "",
+      "message": "Collected 4 tests; expected >= 1"
     }
   ]
 }

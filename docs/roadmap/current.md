@@ -22,10 +22,11 @@
 | `types` | 0.1.0 | 4 Python | 67 | Minimal but functional |
 | `pwa` | — | 19 TypeScript | 0 | Frontend scaffolded, wiring TBD |
 | `contracts` | — | 20 JSON schemas | 0 | Pure JSON, no runtime validation |
+| `database` | — | 1 Python + 1 SQL migration | 4 | Migration syntax tests (no DB required) |
 
 **Version alignment**: ⚠️ Documented mismatch. Core 2.3.0, Forge 1.9.0, Bootstrap 0.8.0, others 0.1.0–1.2.0. See `COMPATIBILITY_MATRIX.md` for dependency graph and compatibility ranges. Unified versioning deferred to Phase 2.
 
-**Truth baseline**: ✅ Honest. **11/12 PASS**, 1 FAIL (`version_alignment` — expected and documented). Previously: 8/11 with 3 FAIL (2 were false positives, 1 was real version misalignment). Test infrastructure fixed: root `pyproject.toml` now sets `pythonpath` for all sibling packages.
+**Truth baseline**: ✅ Honest. **15/16 PASS**, 1 FAIL (`version_alignment` — expected and documented). Previously: 8/11 with 3 FAIL (2 were false positives, 1 was real version misalignment). Test infrastructure fixed: root `pyproject.toml` now sets `pythonpath` for all sibling packages.
 
 ---
 
@@ -49,8 +50,8 @@
 | `apps/` | ✅ README only | `apps/README.md` explains what belongs here |
 | `modules/` | ✅ README only | `modules/README.md` explains boundary vs packages/ |
 | `contracts/` (root) | ✅ Removed | Root dir deleted; `packages/contracts/` holds schemas |
-| `database/` | ✅ README only | `database/README.md` describes Alembic + PostgreSQL plan |
-| `infra/` | ✅ README only | `infra/README.md` describes Docker Compose + systemd plan |
+| `database/` | ✅ Migration + README | `database/README.md` + `migrations/versions/001_initial_schema.py` |
+| `infra/` | ✅ Docker Compose + README | `infra/docker-compose.yml` + `infra/.env.example` |
 | `evidence/releases/` | ✅ README only | `evidence/releases/README.md` describes bundle format |
 | `adrs/` | ✅ 5 ADRs | ADR-001 through ADR-005 all committed |
 
@@ -79,22 +80,22 @@
 - [ ] Document schema usage patterns in `docs/reference/`
 - [ ] Align `packages/quorum/` name (`convergentAI` → `animus-quorum` or document exception)
 
-### Phase 2: Durable Core (Q3–Q4 2026)
+### Phase 2: Durable Core (Q3–Q4 2026) — IN PROGRESS
 
-- [ ] Implement object registry in `database/` (PostgreSQL default, SQLite projection)
-- [ ] Implement event ledger with bitemporal projections
+- [x] Implement object registry in `database/` (PostgreSQL default, SQLite projection)
+- [x] Implement event ledger with bitemporal projections
 - [ ] Wire `packages/kernel/` into durable core model (it has memory backends but no registry/ledger)
 - [ ] Add traceability linter (requirement-to-test mapping)
-- [ ] Populate `database/` with migration tooling
-- [ ] Populate `infra/` with Docker Compose or systemd deployment manifests
+- [x] Populate `database/` with migration tooling
+- [x] Populate `infra/` with Docker Compose or systemd deployment manifests
 
 ### Phase 3: Evidence & Governance (Q4 2026)
 
-- [ ] Build `scripts/assemble_evidence_bundle.py`
+- [x] Build `scripts/assemble_evidence_bundle.py`
 - [ ] Create release evidence bundles in `evidence/releases/`
 - [ ] Integrate adversarial test harness (property-based + fault-injection) into Forge evaluation
 - [ ] Implement policy decision point + governance plane
-- [ ] Add ADR-002 through ADR-005 for decisions made to date
+- [x] Add ADR-002 through ADR-005 for decisions made to date
 
 ### Phase 4: Public/Private Split (Q1 2027)
 
@@ -111,13 +112,13 @@
 
 ---
 
-## Prioritized Next Actions
+## Prioritized Next Actions (Post-Phase 0)
 
-1. **Fix truth baseline** — `truth-baseline.toml` test-count checks must fail on command error, not return 0 tests passing
-2. **Add version check to truth baseline** — verify all 8 packages have aligned versions or documented exceptions
-3. **Schema compiler spike** — auto-generate Python dataclasses from `packages/contracts/*.schema.json` into `packages/types/`
-4. **Remove or populate empty scaffolding** — `apps/`, `modules/`, `database/`, `infra/`, `evidence/releases/`
-5. **Evidence bundle MVP** — start with `scripts/assemble_evidence_bundle.py` that just collects test output + git commit + schema list
+1. **Schema validation layer** — JSON Schema → Pydantic gate in CI for `packages/contracts/`
+2. **Kernel durable core wiring** — connect `packages/kernel/` memory backends to `database/` registry/ledger
+3. **Traceability linter** — requirement-to-test mapping from ADRs to test modules
+4. **Evidence bundle release** — generate first official bundle in `evidence/releases/`
+5. **Quorum naming alignment** — document or rename `convergentAI` → `animus-quorum`
 
 ---
 
@@ -125,10 +126,11 @@
 
 | Blocker | Impact | Resolution |
 |---|---|---|
-| Version misalignment | Low | Documented in `COMPATIBILITY_MATRIX.md`; unified versioning deferred to Phase 2 |
+| Version misalignment | Low | Documented in `COMPATIBILITY_MATRIX.md`; unified versioning deferred |
 | Kernel under-tested (99 tests for 189 files) | Medium | Add coverage before durable core integration |
 | GitHub CI billing blocked | Medium | All CI jobs fail; local-first validation only |
 | MkDocs deployment blocked | Low | Repo is private; Pages requires Pro or public repo |
+| Alembic `sqlalchemy.url` configuration | Low | Default `driver://user:pass@...` in `alembic.ini` — set via env var or local config |
 
 ---
 
