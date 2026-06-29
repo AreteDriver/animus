@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+
+from animus_bootstrap.gateway.models import GatewayResponse, create_message
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +52,58 @@ async def get_messages(limit: int = 50) -> JSONResponse:
     messages = get_message_store()
     recent = list(reversed(messages[-limit:]))
     return JSONResponse(content=recent)
+
+
+@router.post("/api/conversations/messages")
+async def post_message(request: Request) -> JSONResponse:
+    """Receive a message from the PWA (REST fallback), route it, and return the reply.
+
+    Expects JSON body: {"text": str}
+    Returns JSON: {"text": str}
+    """
+    body = await request.json()
+    text = body.get("text", "")
+    if not text:
+        return JSONResponse(content={"text": "Message text is required."}, status_code=400)
+
+    store = get_message_store()
+    store.append(
+        {
+            "channel": "pwa",
+            "sender": "User",
+            "text": text,
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+    )
+
+    runtime = getattr(request.app.state, "runtime", None)
+    if runtime is not None and runtime.started and runtime.router is not None:
+        msg = create_message(
+            channel="pwa",
+            sender_id="pwa-user",
+            sender_name="User",
+            text=text,
+        )
+        try:
+            response: GatewayResponse = await runtime.router.handle_message(msg)
+        except Exception:
+            logger.exception("Router failed to handle PWA message")
+            response = GatewayResponse(text="Sorry, something went wrong.", channel="pwa")
+    else:
+        response = GatewayResponse(
+            text="Animus is currently offline — message queued.", channel="pwa"
+        )
+
+    store.append(
+        {
+            "channel": response.channel,
+            "sender": "Animus",
+            "text": response.text,
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+    )
+
+    return JSONResponse(content={"text": response.text})
 
 
 @router.get("/api/conversations/history")

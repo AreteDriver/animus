@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AnimusSection(BaseModel):
@@ -345,7 +345,12 @@ class AnimusConfig(BaseSettings):
 
     All fields are optional with sensible defaults. Config file lives at
     ``~/.config/animus/config.toml``.
+
+    Extra fields (e.g. user-defined sections like ``[providers]``) are
+    ignored so that forward-compatible config files do not crash startup.
     """
+
+    model_config = SettingsConfigDict(extra="ignore")
 
     animus: AnimusSection = Field(default_factory=AnimusSection)
     api: ApiSection = Field(default_factory=ApiSection)

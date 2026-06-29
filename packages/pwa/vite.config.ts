@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  base: "/pwa/",
   plugins: [
     react(),
     VitePWA({
@@ -21,12 +22,12 @@ export default defineConfig({
         background_color: "#0f172a",
         display: "standalone",
         orientation: "portrait",
-        scope: "/",
-        start_url: "/",
+        scope: "/pwa/",
+        start_url: "/pwa/",
         // OS share sheet → opens the app at start_url with the shared text as
         // query params; App.tsx routes that into the Capture view.
         share_target: {
-          action: "/",
+          action: "/pwa/",
           method: "GET",
           params: { title: "title", text: "text", url: "url" },
         },

@@ -9,6 +9,7 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, Request, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -48,6 +49,7 @@ logger = logging.getLogger(__name__)
 _DASHBOARD_DIR = Path(__file__).resolve().parent
 _STATIC_DIR = _DASHBOARD_DIR / "static"
 _TEMPLATE_DIR = _DASHBOARD_DIR / "templates"
+_PWA_DIR = _DASHBOARD_DIR.parent.parent.parent.parent.parent / "pwa" / "dist"
 
 
 @asynccontextmanager
@@ -132,11 +134,27 @@ app = FastAPI(title="Animus Dashboard", version=animus_bootstrap.__version__, li
 # localhost binding, auth is a no-op (see auth_required_for).
 app.state.config = ConfigManager().load()
 
+# CORS — allow the PWA (or any dev frontend) to hit the API surface.
+# In production with a reverse proxy this can be tightened to the origin.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Bearer-token auth for the PWA API surface (no-op for local HTMX dashboard).
 app.add_middleware(AuthMiddleware)
 
-# Static files
+# Static files — dashboard assets
 app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+
+# PWA static files — built React app mounted at /pwa
+if _PWA_DIR.is_dir():
+    app.mount("/pwa", StaticFiles(directory=str(_PWA_DIR), html=True), name="pwa")
+else:
+    logger.warning("PWA build directory not found at %s — skipping mount", _PWA_DIR)
 
 # Jinja2 templates (shared across routers via app.state)
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))

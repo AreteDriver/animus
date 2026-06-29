@@ -22,9 +22,13 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+dependencies = [
+    "jsonschema>=4.17.0",
+    "referencing>=0.30.0",
+]
 
 [tool.hatch.build.targets.wheel]
-packages = ["animus_contracts"]
+packages = ["src/animus_contracts"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "*.schema.json" = "animus_contracts/"

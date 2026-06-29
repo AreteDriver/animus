@@ -42,7 +42,7 @@ class AnimusMemoryBackend:
 
         self._data_dir = Path(data_dir)
         self._data_dir.mkdir(parents=True, exist_ok=True)
-        self._core = MemoryLayer(data_dir=self._data_dir)
+        self._core = MemoryLayer(data_dir=self._data_dir, backend="auto")
         logger.info("AnimusMemoryBackend initialized at %s", self._data_dir)
 
     # ------------------------------------------------------------------

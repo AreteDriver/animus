@@ -39,7 +39,7 @@ class MemoryLayer:
     def __init__(
         self,
         data_dir: Path,
-        backend: str = "chroma",
+        backend: str = "auto",
         entity_memory: EntityMemory | None = None,
         auto_discover_entities: bool = False,
     ):
@@ -54,7 +54,9 @@ class MemoryLayer:
         import animus_kernel.memory as _memory
 
         self.store: MemoryProvider
-        if backend == "chroma":
+        if backend == "auto":
+            self.store = self._resolve_auto_backend(data_dir, _memory)
+        elif backend == "chroma":
             try:
                 self.store = _memory.ChromaMemoryStore(data_dir)
             except ImportError:
@@ -67,6 +69,36 @@ class MemoryLayer:
 
         self.tier_manager = TierManager(self)
         logger.info(f"MemoryLayer initialized with {type(self.store).__name__}")
+
+    @staticmethod
+    def _resolve_auto_backend(data_dir: Path, _memory: Any) -> MemoryProvider:
+        """Pick the best available backend: PostgreSQL > ChromaDB > Local JSON.
+
+        When ``ANIMUS_DATABASE_URL`` is set and PostgreSQL is reachable,
+        returns a :class:`DurableMemoryStore`. Otherwise tries ChromaDB,
+        then falls back to :class:`LocalMemoryStore`.
+        """
+        import os
+
+        db_url = os.getenv("ANIMUS_DATABASE_URL")
+        if db_url:
+            try:
+                store = _memory.DurableMemoryStore(database_url=db_url)
+                logger.info("Auto-selected DurableMemoryStore (PostgreSQL)")
+                return store
+            except Exception as exc:
+                logger.warning(
+                    "ANIMUS_DATABASE_URL is set but DurableMemoryStore failed (%s). "
+                    "Falling back to ChromaDB / JSON.",
+                    exc,
+                )
+        try:
+            store = _memory.ChromaMemoryStore(data_dir)
+            logger.info("Auto-selected ChromaMemoryStore")
+            return store
+        except ImportError:
+            logger.warning("ChromaDB not available, falling back to JSON storage")
+            return _memory.LocalMemoryStore(data_dir)
 
     def remember(
         self,
