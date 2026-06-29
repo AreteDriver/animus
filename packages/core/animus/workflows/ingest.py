@@ -59,7 +59,12 @@ class IngestResult:
 
 
 class Cache:
-    """Thin wrapper around ``SourceCache`` that also writes raw text to disk."""
+    """Bridge layer: wraps ``SourceCache`` (SQLite dedup) with raw-text disk writes.
+
+    Lugh's ``SourceCache`` stores JSON in SQLite and provides ``put()`` / ``recent()``.
+    This wrapper adds URL-based lookup and plain-text file output for manual inspection
+    and downstream tools that expect filesystem access (e.g. ``cat ~/.animus/lugh_raw/…``).
+    """
 
     def __init__(
         self,
