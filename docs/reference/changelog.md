@@ -28,6 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ADRs written**: ADR-002 (Audience-Based Docs Tree), ADR-003 (Schema Compiler), ADR-004 (Truth Baseline Fix), ADR-005 (Kernel Extraction).
 - **`truth-baseline.toml`** updated: removed `contracts/` from `root_architecture_dirs`, added `root_architecture_readmes` and `adr_coverage` checks.
 
+### Added — Evidence Bundle MVP (2026-06-27)
+
+- **`scripts/assemble_evidence_bundle.py`** — New script that collects test counts, validates JSON schemas, captures git provenance, locks dependencies, and produces a human-readable markdown report with pass/fail badges.
+- **Output**: timestamped directory in `evidence/releases/evidence-YYYY-MM-DD-HHMMSS/` containing `manifest.json`, `test-results.json`, `schema-validation.json`, `git-info.txt`, `dependencies.lock`, `report.md`.
+- **Flags**: `--output-dir` for custom path, `--allow-dirty` to permit uncommitted changes.
+- **Integration**: documented in `docs/operators/deployment.md` as a pre-release step.
+
 ### Added — Documentation Reorganization (2026-06)
 
 - **Audience-based docs tree** — `docs/` reorganized from flat graveyard (44 files, no index) into structured lanes:

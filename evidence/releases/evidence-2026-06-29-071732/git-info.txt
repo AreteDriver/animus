@@ -1,0 +1,11 @@
+Branch: main
+SHA: 02f481007d924d6443b8b05f701b87c6f23f387b
+Status: DIRTY
+
+Last 5 commits:
+02f4810 chore: populate or remove empty root architecture directories
+22e85c1 feat: add schema compiler and generate Python types from contracts
+0bc0b5d fix: truth baseline detects command failures and version alignment
+f0d94b4 docs: rewrite roadmap to match actual build state
+4971015 docs: add MkDocs site with Material theme
+

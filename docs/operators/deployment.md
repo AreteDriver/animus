@@ -43,6 +43,33 @@ See [Configuration](configuration.md) for the full config reference.
 
 ---
 
+## Release Evidence Bundles
+
+Before tagging a release, generate an evidence bundle that proves the codebase is tested, traceable, and schema-compliant:
+
+```bash
+python scripts/assemble_evidence_bundle.py
+```
+
+This produces a timestamped directory in `evidence/releases/` containing:
+
+| File | Purpose |
+|---|---|
+| `manifest.json` | Git SHA, timestamp, version, builder identity |
+| `test-results.json` | Aggregated pytest counts per package |
+| `schema-validation.json` | JSON Schema parseability report |
+| `git-info.txt` | Last 5 commits and dirty/clean status |
+| `dependencies.lock` | `pip freeze`, `cargo tree`, `npm ls` |
+| `report.md` | Human-readable summary with pass/fail badges |
+
+Options:
+- `--output-dir PATH` — write bundle to a custom directory
+- `--allow-dirty` — allow dirty git working tree (default: fail if uncommitted changes exist)
+
+See `evidence/releases/README.md` for the full bundle format specification.
+
+---
+
 ## See Also
 
 - [Configuration](configuration.md) — Config file reference

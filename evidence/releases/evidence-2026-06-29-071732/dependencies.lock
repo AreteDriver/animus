@@ -1,0 +1,513 @@
+=== PYTHON ===
+aiofiles==25.1.0
+aiohappyeyeballs==2.6.2
+aiohttp==3.14.1
+aiosignal==1.4.0
+aiosqlite==0.22.1
+altair==6.0.0
+-e git+https://github.com/Arete-Consortium/anchormd.git@8d1e4df3a54d5fc28e70ea7dd3d48eb67fa065d6#egg=anchormd
+-e git+https://github.com/AreteDriver/animus.git@4228cf97397d173efd01796c7afc1cac44d5244d#egg=animus_liquidator&subdirectory=../../.claude/worktrees/agent-a6a25bb3/packages/liquidator
+annotated-doc==0.0.4
+annotated-types==0.7.0
+anthropic==0.75.0
+anyio==4.12.0
+APScheduler==3.11.2
+-e git+https://github.com/AreteDriver/arete-guard.git@fb5703dbf3790f4ccf5cfe8c324f28dcd3c6c4dd#egg=arete_guard
+argcomplete==3.1.4
+asyncpg==0.31.0
+attrs==23.2.0
+Babel==2.10.3
+backrefs==7.0
+bcc==0.29.1
+bcrypt==3.2.2
+beautifulsoup4==4.12.3
+black==26.5.1
+blinker==1.7.0
+bracex==2.6
+Brlapi==0.8.5
+build==1.3.0
+CacheControl==0.14.4
+cachetools==6.2.4
+cairocffi==1.7.1
+CairoSVG==2.8.2
+certifi==2023.11.17
+cffi==2.0.0
+chardet==5.2.0
+choreographer==1.2.1
+# Editable install with no version control (claudemd-forge==0.2.1)
+-e /home/arete/projects/claudemd-forge
+cleo==2.1.0
+click==8.1.6
+cloud-init==26.1
+colorama==0.4.6
+command-not-found==0.3
+configobj==5.0.8
+contourpy==1.3.3
+convergentAI==1.1.0
+coverage==7.13.1
+crashtest==0.4.1
+cryptography==41.0.7
+css-parser==1.0.10
+cssselect==1.2.0
+cssselect2==0.8.0
+cupshelpers==1.0
+cycler==0.12.1
+daemonize==2.5.0
+datamodel-code-generator==0.66.0
+dbus-python==1.3.2
+decorator==5.1.1
+defer==1.0.6
+defusedxml==0.7.1
+Deprecated==1.3.1
+discord.py==2.7.1
+distlib==0.4.0
+distro==1.9.0
+distro-info==1.7+build1
+dnspython==2.8.0
+docstring_parser==0.17.0
+docutils==0.22.4
+dulwich==0.24.10
+duplicity==2.1.4
+et_xmlfile==2.0.0
+evdev==1.7.0
+ExifRead==3.5.1
+fail2ban==1.0.2
+fastapi==0.129.0
+fasteners==0.18
+fastjsonschema==2.21.2
+filelock==3.20.1
+findpython==0.7.1
+fonttools==4.61.0
+frozenlist==1.8.0
+gajim==1.8.4
+genson==1.3.0
+ghp-import==2.1.0
+gitdb==4.0.12
+GitPython==3.1.45
+google-api-core==2.29.0
+google-api-python-client==2.190.0
+google-auth==2.48.0
+google-auth-httplib2==0.3.0
+google-auth-oauthlib==1.2.4
+googleapis-common-protos==1.72.0
+gpg==1.18.0
+greenlet==3.0.3
+gssapi==1.8.2
+gyp==0.1
+h11==0.16.0
+hidapi==0.15.0
+html5lib==1.1
+httpcore==1.0.9
+httplib2==0.20.4
+httptools==0.7.1
+httpx==0.28.1
+id==1.6.1
+idna==3.6
+importlib-metadata==4.12.0
+inflect==7.5.0
+iniconfig==2.3.0
+input-remapper==2.0.1
+installer==0.7.0
+isort==8.0.1
+jaraco.classes==3.4.0
+jaraco.context==6.0.1
+jaraco.functools==4.3.0
+jeepney==0.9.0
+Jinja2==3.1.2
+jiter==0.12.0
+joblib==1.5.3
+jsonpatch==1.32
+jsonpointer==2.0
+jsonschema==4.10.3
+kaleido==1.2.0
+keyring==25.7.0
+kiwisolver==1.4.9
+language-selector==0.1
+launchpadlib==1.11.0
+lazr.restfulclient==0.14.6
+lazr.uri==1.0.6
+limits==5.8.0
+linkify-it-py==2.0.3
+logistro==2.0.1
+louis==3.29.0
+lxml==5.2.1
+Mako==1.3.2.dev0
+Markdown==3.10.2
+markdown-it-py==3.0.0
+MarkupSafe==2.1.5
+matplotlib==3.10.7
+mdit-py-plugins==0.5.0
+mdurl==0.1.2
+mergedeep==1.3.4
+mkdocs==1.6.1
+mkdocs-awesome-pages-plugin==2.10.1
+mkdocs-get-deps==0.2.2
+mkdocs-material==9.7.6
+mkdocs-material-extensions==1.3.1
+monotonic==1.6
+more-itertools==10.8.0
+msgpack==1.0.3
+multidict==6.7.1
+mypy_extensions==1.1.0
+narwhals==2.13.0
+natsort==8.4.0
+nbxmpp==4.5.4
+netaddr==0.8.0
+netifaces==0.11.0
+networkx==3.6.1
+nh3==0.3.3
+notify2==0.3
+notion-client==2.7.0
+numpy==2.2.6
+oauthlib==3.2.2
+olefile==0.46
+omemo-dr==1.0.1
+openai==2.20.0
+opencv-python-headless==4.12.0.88
+openpyxl==3.1.5
+orjson==3.11.5
+packaging==25.0
+paginate==0.5.7
+pandas==2.3.3
+paramiko==2.12.0
+pathspec==1.1.1
+pbs-installer==2025.12.5
+pexpect==4.9.0
+pillow==10.2.0
+pipenv==2026.0.3
+pipx==1.4.3
+pkginfo==1.12.1.2
+platformdirs==4.5.1
+plotly==6.5.0
+pluggy==1.6.0
+poetry==2.2.1
+poetry-core==2.2.1
+precis-i18n==1.0.5
+prometheus_client==0.24.1
+propcache==0.5.2
+proto-plus==1.27.1
+protobuf==4.25.8
+psutil==5.9.8
+psycopg==3.3.3
+psycopg-binary==3.3.3
+ptyprocess==0.7.0
+pyarrow==22.0.0
+pyasn1==0.6.2
+pyasn1_modules==0.4.2
+pyasyncore==1.0.2
+pycairo==1.25.1
+pycparser==2.23
+pycups==2.0.1
+pydantic==2.12.5
+pydantic-settings==2.12.0
+pydantic_core==2.41.5
+pydbus==0.6.0
+pydeck==0.9.1
+pygame==2.6.1
+PyGithub==2.8.1
+Pygments==2.17.2
+PyGObject==3.48.2
+pyinotify==0.9.6
+PyJWT==2.7.0
+pymdown-extensions==11.0
+PyNaCl==1.5.0
+pynput==1.8.1
+pynvim==0.5.0
+pyparsing==3.1.1
+pypdf==4.3.1
+pypng==0.20231004.0
+pyproject_hooks==1.2.0
+PyQt5==5.15.10
+PyQt5-sip==12.13.0
+pyrsistent==0.20.0
+pyserial==3.5
+PySide6==6.10.1
+PySide6_Addons==6.10.1
+PySide6_Essentials==6.10.1
+pytesseract==0.3.13
+pytest==9.0.2
+pytest-asyncio==1.3.0
+pytest-cov==7.0.0
+pytest-timeout==2.4.0
+python-apt==2.7.7+ubuntu5.2
+python-dateutil==2.8.2
+python-debian==0.1.49+ubuntu2
+python-docx==1.1.2
+python-dotenv==1.2.1
+python-json-logger==3.2.1
+python-multipart==0.0.22
+python-pptx==0.6.23
+python-xlib==0.33
+pytokens==0.4.1
+pytz==2024.1
+pyudev==0.24.0
+pyxdg==0.28
+PyYAML==6.0.1
+pyyaml_env_tag==1.1
+qrcode==7.4.2
+RapidFuzz==3.14.3
+readme_renderer==44.0
+redis==7.3.0
+-e git+ssh://git@github.com/Arete-Consortium/RedOPS.git@cbb88933f7227105ca4879ec79a0fdfd239739e3#egg=redops
+requests==2.31.0
+requests-oauthlib==2.0.0
+requests-toolbelt==1.0.0
+respx==0.22.0
+rfc3986==2.0.0
+rich==14.3.2
+rsa==4.9.1
+ruamel.yaml==0.19.1
+ruff==0.15.5
+scikit-learn==1.8.0
+scipy==1.16.3
+SecretStorage==3.5.0
+sentry-sdk==2.54.0
+setproctitle==1.3.3
+setuptools==68.1.2
+shellingham==1.5.4
+shiboken6==6.10.1
+simplejson==3.20.2
+six==1.16.0
+slowapi==0.1.9
+smmap==5.0.2
+sniffio==1.3.1
+soupsieve==2.5
+SQLAlchemy==2.0.48
+sse-starlette==3.3.2
+starlette==0.52.1
+streamlit==1.52.2
+stripe==14.4.1
+structlog==25.5.0
+systemd-python==235
+tenacity==9.1.2
+textual==7.5.0
+threadpoolctl==3.6.0
+tinycss2==1.5.1
+toml==0.10.2
+tomli_w==1.2.0
+tomlkit==0.13.3
+tornado==6.5.4
+tqdm==4.67.3
+trash-cli==0.23.11.10
+trove-classifiers==2025.12.1.14
+twine==6.2.0
+typeguard==4.5.2
+typer==0.23.0
+typing-inspection==0.4.2
+typing_extensions==4.15.0
+tzdata==2025.2
+tzlocal==5.3.1
+ubuntu-drivers-common==0.0.0
+ubuntu-pro-client==8001
+uc-micro-py==1.0.3
+ufw==0.36.2
+unattended-upgrades==0.1
+uritemplate==4.2.0
+urllib3==2.0.7
+usb-creator==0.3.16
+userpath==1.9.1
+uvicorn==0.40.0
+uvloop==0.22.1
+virtualenv==20.35.4
+wadllib==1.3.6
+watchdog==6.0.0
+watchfiles==1.1.1
+wcmatch==10.1
+webencodings==0.5.1
+websocket-client==1.9.0
+websockets==16.0
+wheel==0.42.0
+wrapt==2.1.1
+xdg==5
+xkit==0.0.0
+xlrd==2.0.1
+xlsxwriter==3.2.9
+yara-python==4.5.4
+yarl==1.24.2
+zipp==1.0.0
+zstandard==0.25.0
+
+
+=== RUST ===
+convergent-core v0.1.0 (/home/arete/projects/animus/packages/quorum)
+├── chrono v0.4.43
+│   ├── iana-time-zone v0.1.65
+│   ├── num-traits v0.2.19
+│   │   [build-dependencies]
+│   │   └── autocfg v1.5.0
+│   └── serde v1.0.228
+│       ├── serde_core v1.0.228
+│       └── serde_derive v1.0.228 (proc-macro)
+│           ├── proc-macro2 v1.0.106
+│           │   └── unicode-ident v1.0.24
+│           ├── quote v1.0.44
+│           │   └── proc-macro2 v1.0.106 (*)
+│           └── syn v2.0.117
+│               ├── proc-macro2 v1.0.106 (*)
+│               ├── quote v1.0.44 (*)
+│               └── unicode-ident v1.0.24
+├── pyo3 v0.29.0
+│   ├── libc v0.2.182
+│   ├── once_cell v1.21.3
+│   ├── pyo3-ffi v0.29.0
+│   │   └── libc v0.2.182
+│   │   [build-dependencies]
+│   │   └── pyo3-build-config v0.29.0
+│   │       └── target-lexicon v0.13.5
+│   │       [build-dependencies]
+│   │       └── target-lexicon v0.13.5
+│   └── pyo3-macros v0.29.0 (proc-macro)
+│       ├── proc-macro2 v1.0.106 (*)
+│       ├── pyo3-macros-backend v0.29.0
+│       │   ├── heck v0.5.0
+│       │   ├── proc-macro2 v1.0.106 (*)
+│       │   ├── quote v1.0.44 (*)
+│       │   └── syn v2.0.117 (*)
+│       ├── quote v1.0.44 (*)
+│       └── syn v2.0.117 (*)
+│   [build-dependencies]
+│   └── pyo3-build-config v0.29.0 (*)
+├── rusqlite v0.38.0
+│   ├── bitflags v2.11.0
+│   ├── fallible-iterator v0.3.0
+│   ├── fallible-streaming-iterator v0.1.9
+│   ├── hashlink v0.11.0
+│   │   └── hashbrown v0.16.1
+│   │       └── foldhash v0.2.0
+│   ├── libsqlite3-sys v0.36.0
+│   │   [build-dependencies]
+│   │   ├── cc v1.2.56
+│   │   │   ├── find-msvc-tools v0.1.9
+│   │   │   └── shlex v1.3.0
+│   │   ├── pkg-config v0.3.32
+│   │   └── vcpkg v0.2.15
+│   └── smallvec v1.15.1
+├── serde v1.0.228 (*)
+├── serde_json v1.0.149
+│   ├── itoa v1.0.17
+│   ├── memchr v2.8.0
+│   ├── serde_core v1.0.228
+│   └── zmij v1.0.21
+└── uuid v1.21.0
+    └── getrandom v0.4.1
+        ├── cfg-if v1.0.4
+        └── libc v0.2.182
+[dev-dependencies]
+├── criterion v0.8.2
+│   ├── alloca v0.4.0
+│   │   [build-dependencies]
+│   │   └── cc v1.2.56 (*)
+│   ├── anes v0.1.6
+│   ├── cast v0.3.0
+│   ├── ciborium v0.2.2
+│   │   ├── ciborium-io v0.2.2
+│   │   ├── ciborium-ll v0.2.2
+│   │   │   ├── ciborium-io v0.2.2
+│   │   │   └── half v2.7.1
+│   │   │       ├── cfg-if v1.0.4
+│   │   │       └── zerocopy v0.8.39
+│   │   │           └── zerocopy-derive v0.8.39 (proc-macro)
+│   │   │               ├── proc-macro2 v1.0.106 (*)
+│   │   │               ├── quote v1.0.44 (*)
+│   │   │               └── syn v2.0.117 (*)
+│   │   └── serde v1.0.228 (*)
+│   ├── clap v4.5.60
+│   │   └── clap_builder v4.5.60
+│   │       ├── anstyle v1.0.13
+│   │       └── clap_lex v1.0.0
+│   ├── criterion-plot v0.8.2
+│   │   ├── cast v0.3.0
+│   │   └── itertools v0.13.0
+│   │       └── either v1.15.0
+│   ├── itertools v0.13.0 (*)
+│   ├── num-traits v0.2.19 (*)
+│   ├── oorandom v11.1.5
+│   ├── page_size v0.6.0
+│   │   └── libc v0.2.182
+│   ├── plotters v0.3.7
+│   │   ├── num-traits v0.2.19 (*)
+│   │   ├── plotters-backend v0.3.7
+│   │   └── plotters-svg v0.3.7
+│   │       └── plotters-backend v0.3.7
+│   ├── rayon v1.11.0
+│   │   ├── either v1.15.0
+│   │   └── rayon-core v1.13.0
+│   │       ├── crossbeam-deque v0.8.6
+│   │       │   ├── crossbeam-epoch v0.9.18
+│   │       │   │   └── crossbeam-utils v0.8.21
+│   │       │   └── crossbeam-utils v0.8.21
+│   │       └── crossbeam-utils v0.8.21
+│   ├── regex v1.12.3
+│   │   ├── regex-automata v0.4.14
+│   │   │   └── regex-syntax v0.8.9
+│   │   └── regex-syntax v0.8.9
+│   ├── serde v1.0.228 (*)
+│   ├── serde_json v1.0.149 (*)
+│   ├── tinytemplate v1.2.1
+│   │   ├── serde v1.0.228 (*)
+│   │   └── serde_json v1.0.149 (*)
+│   └── walkdir v2.5.0
+│       └── same-file v1.0.6
+└── tempfile v3.25.0
+    ├── fastrand v2.3.0
+    ├── getrandom v0.4.1 (*)
+    ├── once_cell v1.21.3
+    └── rustix v1.1.3
+        ├── bitflags v2.11.0
+        └── linux-raw-sys v0.11.0
+
+
+=== NODE ===
+{
+  "version": "0.1.0",
+  "name": "animus-pwa",
+  "dependencies": {
+    "@types/react-dom": {
+      "version": "19.2.3",
+      "resolved": "https://registry.npmjs.org/@types/react-dom/-/react-dom-19.2.3.tgz",
+      "overridden": false
+    },
+    "@types/react": {
+      "version": "19.2.14",
+      "resolved": "https://registry.npmjs.org/@types/react/-/react-19.2.14.tgz",
+      "overridden": false
+    },
+    "@vitejs/plugin-react": {
+      "version": "4.7.0",
+      "resolved": "https://registry.npmjs.org/@vitejs/plugin-react/-/plugin-react-4.7.0.tgz",
+      "overridden": false
+    },
+    "react-dom": {
+      "version": "19.2.4",
+      "resolved": "https://registry.npmjs.org/react-dom/-/react-dom-19.2.4.tgz",
+      "overridden": false
+    },
+    "react": {
+      "version": "19.2.4",
+      "resolved": "https://registry.npmjs.org/react/-/react-19.2.4.tgz",
+      "overridden": false
+    },
+    "typescript": {
+      "version": "5.9.3",
+      "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz",
+      "overridden": false
+    },
+    "vite-plugin-pwa": {
+      "version": "0.21.2",
+      "resolved": "https://registry.npmjs.org/vite-plugin-pwa/-/vite-plugin-pwa-0.21.2.tgz",
+      "overridden": false
+    },
+    "vite": {
+      "version": "6.4.1",
+      "resolved": "https://registry.npmjs.org/vite/-/vite-6.4.1.tgz",
+      "overridden": false
+    },
+    "workbox-precaching": {
+      "version": "7.4.0",
+      "resolved": "https://registry.npmjs.org/workbox-precaching/-/workbox-precaching-7.4.0.tgz",
+      "overridden": false
+    }
+  }
+}
+
+
