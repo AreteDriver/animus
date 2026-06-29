@@ -135,10 +135,13 @@ class OgmaOutput:
         if not title:
             raise OgmaParseError("missing # <title> heading")
         date_str = _extract_header_field(text, "Date")
-        try:
-            parsed_date = date.fromisoformat(date_str) if date_str else date.today()
-        except ValueError as e:
-            raise OgmaParseError(f"unparseable Date header: {date_str!r}") from e
+        # Forgiving date parse: accept ISO dates, fall back to today for unknown/N/A/placeholders
+        parsed_date = date.today()
+        if date_str and date_str not in ("N/A", "Unknown", "YYYY-MM-DD", ""):
+            try:
+                parsed_date = date.fromisoformat(date_str)
+            except ValueError:
+                pass  # keep today() as fallback
         sections = _extract_sections(text)
         gap_block = _require_section(sections, "Animus gap")
         gap_status_match = re.search(r"\*\*Status:\*\*\s*(NONE|PARTIAL|FULL)", gap_block)
@@ -152,6 +155,12 @@ class OgmaOutput:
         roi_value = _extract_bold_field(roi_block, "Value")
         roi_effort = _extract_bold_field(roi_block, "Effort")
         roi_priority = _extract_bold_field(roi_block, "Priority")
+        # Normalize roi_effort: case-insensitive, strip trailing prose after keyword
+        _raw_effort = roi_effort.lower()
+        for keyword in ("trivial", "moderate", "substantial"):
+            if _raw_effort.startswith(keyword):
+                roi_effort = keyword
+                break
         if roi_effort not in ("trivial", "moderate", "substantial"):
             raise OgmaParseError(
                 f"ROI Effort must be trivial|moderate|substantial, got {roi_effort!r}"
