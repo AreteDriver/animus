@@ -1,0 +1,47 @@
+{
+  "packages": [
+    {
+      "name": "core",
+      "collected": 0,
+      "errors": 0,
+      "status": "failed",
+      "message": "ImportError while loading conftest '/home/arete/projects/animus/packages/core/tests/conftest.py'.\ntests/conftest.py:11: in <module>\n    from animus.cognitive import CognitiveLayer, ModelConfig\nanimus/"
+    },
+    {
+      "name": "forge",
+      "collected": 9428,
+      "errors": 25,
+      "status": "errors",
+      "message": "25 collection error(s)"
+    },
+    {
+      "name": "bootstrap",
+      "collected": 1874,
+      "errors": 10,
+      "status": "errors",
+      "message": "10 collection error(s)"
+    },
+    {
+      "name": "kernel",
+      "collected": 0,
+      "errors": 0,
+      "status": "failed",
+      "message": "ImportError while loading conftest '/home/arete/projects/animus/packages/kernel/tests/conftest.py'.\ntests/conftest.py:7: in <module>\n    from animus_kernel.providers.mock_provider import MockProvider\n"
+    },
+    {
+      "name": "quorum",
+      "collected": 861,
+      "errors": 2,
+      "status": "errors",
+      "message": "2 collection error(s)"
+    },
+    {
+      "name": "types",
+      "collected": 22,
+      "errors": 3,
+      "status": "errors",
+      "message": "3 collection error(s)"
+    }
+  ],
+  "total_collected": 12185
+}

@@ -1,8 +1,8 @@
 {
   "project": "animus",
-  "timestamp": "2026-06-29T07:56:25.599870+00:00",
+  "timestamp": "2026-06-29T08:06:51.907034+00:00",
   "summary": {
-    "pass": 18,
+    "pass": 21,
     "fail": 1,
     "skip": 0,
     "error": 0
@@ -71,9 +71,9 @@
       "check_type": "test_count",
       "status": "PASS",
       "expected": 1,
-      "actual": 10434,
+      "actual": 10473,
       "claim_source": "",
-      "message": "Collected 10434 tests; expected >= 1"
+      "message": "Collected 10473 tests; expected >= 1"
     },
     {
       "name": "root_architecture_dirs",
@@ -158,7 +158,7 @@
         "types": "0.1.0"
       },
       "claim_source": "",
-      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'2.3.0', '1.2.0', '0.8.0', '1.9.0', '0.1.0'}"
+      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'0.8.0', '2.3.0', '1.9.0', '0.1.0', '1.2.0'}"
     },
     {
       "name": "compatibility_matrix",
@@ -254,6 +254,51 @@
       "status": "PASS",
       "expected": [
         "packages/kernel/src/animus_kernel/memory/stores/durable.py"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "adversarial_harness",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "packages/forge/src/animus_forge/evaluation/adversarial.py"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "governance_module",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "packages/forge/src/animus_forge/governance/__init__.py",
+        "packages/forge/src/animus_forge/governance/policy.py",
+        "packages/forge/src/animus_forge/governance/decision_point.py",
+        "packages/forge/src/animus_forge/governance/audit.py"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "evidence_bundle_releases",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "evidence/releases/evidence-2026-06-29-075813/manifest.json"
       ],
       "actual": {
         "missing": [],

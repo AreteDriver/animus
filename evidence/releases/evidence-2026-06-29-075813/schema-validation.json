@@ -1,0 +1,105 @@
+{
+  "all_valid": true,
+  "schemas": [
+    {
+      "file": "action.schema.json",
+      "valid": true,
+      "title": "Animus Action Object"
+    },
+    {
+      "file": "action_receipt.schema.json",
+      "valid": true,
+      "title": "Animus Action Receipt"
+    },
+    {
+      "file": "approval_receipt.schema.json",
+      "valid": true,
+      "title": "Animus Approval Receipt"
+    },
+    {
+      "file": "assessment.schema.json",
+      "valid": true,
+      "title": "Animus Assessment Object"
+    },
+    {
+      "file": "claim.schema.json",
+      "valid": true,
+      "title": "Animus Claim Object"
+    },
+    {
+      "file": "common.schema.json",
+      "valid": true,
+      "title": "Animus Canonical Object Envelope"
+    },
+    {
+      "file": "context_envelope.schema.json",
+      "valid": true,
+      "title": "Animus Context Envelope"
+    },
+    {
+      "file": "decision.schema.json",
+      "valid": true,
+      "title": "Animus Decision Object"
+    },
+    {
+      "file": "entity.schema.json",
+      "valid": true,
+      "title": "Animus Entity Object"
+    },
+    {
+      "file": "event.schema.json",
+      "valid": true,
+      "title": "Animus Event Object"
+    },
+    {
+      "file": "forecast.schema.json",
+      "valid": true,
+      "title": "Animus Forecast Object"
+    },
+    {
+      "file": "hypothesis.schema.json",
+      "valid": true,
+      "title": "Animus Hypothesis Object"
+    },
+    {
+      "file": "lesson.schema.json",
+      "valid": true,
+      "title": "Animus Lesson Object"
+    },
+    {
+      "file": "memory_candidate.schema.json",
+      "valid": true,
+      "title": "Animus Memory Candidate"
+    },
+    {
+      "file": "observation.schema.json",
+      "valid": true,
+      "title": "Animus Observation Object"
+    },
+    {
+      "file": "outcome.schema.json",
+      "valid": true,
+      "title": "Animus Outcome Object"
+    },
+    {
+      "file": "pattern.schema.json",
+      "valid": true,
+      "title": "Animus Pattern Object"
+    },
+    {
+      "file": "signal.schema.json",
+      "valid": true,
+      "title": "Animus Signal Object"
+    },
+    {
+      "file": "source.schema.json",
+      "valid": true,
+      "title": "Animus Source Object"
+    },
+    {
+      "file": "trace.schema.json",
+      "valid": true,
+      "title": "Animus Trace Bundle"
+    }
+  ]
+}

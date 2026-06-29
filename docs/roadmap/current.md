@@ -3,7 +3,7 @@
 **Project**: Animus — Personal AI exocortex / Mind-class system
 **Classification**: Flagship
 **Version**: 2.3.0 (core), mixed across packages (see [Build Truth](#build-truth))
-**Last updated**: 2026-06-27
+**Last updated**: 2026-06-29
 **Next review**: 2026-07-27
 
 ---
@@ -26,7 +26,7 @@
 
 **Version alignment**: ⚠️ Documented mismatch. Core 2.3.0, Forge 1.9.0, Bootstrap 0.8.0, others 0.1.0–1.2.0. See `COMPATIBILITY_MATRIX.md` for dependency graph and compatibility ranges. Unified versioning deferred to Phase 2.
 
-**Truth baseline**: ✅ Honest. **18/19 PASS**, 1 FAIL (`version_alignment` — expected and documented). Previously: 15/16 with 1 FAIL. Test infrastructure fixed: root `pyproject.toml` now sets `pythonpath` for all sibling packages.
+**Truth baseline**: ✅ Honest. **21/22 PASS**, 1 FAIL (`version_alignment` — expected and documented). Previously: 18/19 with 1 FAIL. Test infrastructure fixed: root `pyproject.toml` now sets `pythonpath` for all sibling packages.
 
 ---
 
@@ -36,7 +36,7 @@
 
 - **Core exocortex**: CLI (`python -m animus`), memory tiers (SQLite/ChromaDB), identity, proactive tasks
 - **Bootstrap**: Install daemon, onboarding wizard, FastAPI+HTMX dashboard (`localhost:7700`), Ollama health checks
-- **Forge**: Multi-agent YAML workflows, 10 archetypes, token budgets, checkpoint/resume, SQLite state
+- **Forge**: Multi-agent YAML workflows, 10 archetypes, token budgets, checkpoint/resume, SQLite state, adversarial test harness, governance plane
 - **Quorum**: Rust intent graph + Python bindings, stigmergy coordination, signal bus, triumvirate voting
 - **Kernel**: Extracted 172 files / 55K LOC from Forge, budget/executor/sandbox/resume all present, durable core wired
 - **PWA**: TypeScript frontend scaffolded with Vite, login/chat/personas/status views, service worker
@@ -52,7 +52,7 @@
 | `contracts/` (root) | ✅ Removed | Root dir deleted; `packages/contracts/` holds schemas |
 | `database/` | ✅ Migration + README | `database/README.md` + `migrations/versions/001_initial_schema.py` |
 | `infra/` | ✅ Docker Compose + README | `infra/docker-compose.yml` + `infra/.env.example` |
-| `evidence/releases/` | ✅ README only | `evidence/releases/README.md` describes bundle format |
+| `evidence/releases/` | ✅ Bundles generated | `evidence-2026-06-29-075813/` with manifest, tests, schemas, git info |
 | `adrs/` | ✅ 5 ADRs | ADR-001 through ADR-005 all committed |
 
 ---
@@ -89,12 +89,12 @@
 - [x] Populate `database/` with migration tooling
 - [x] Populate `infra/` with Docker Compose or systemd deployment manifests
 
-### Phase 3: Evidence & Governance (Q4 2026)
+### Phase 3: Evidence & Governance (Q4 2026) — COMPLETE
 
 - [x] Build `scripts/assemble_evidence_bundle.py`
-- [ ] Create release evidence bundles in `evidence/releases/`
-- [ ] Integrate adversarial test harness (property-based + fault-injection) into Forge evaluation
-- [ ] Implement policy decision point + governance plane
+- [x] Create release evidence bundles in `evidence/releases/` (evidence-2026-06-29-075813)
+- [x] Integrate adversarial test harness (`packages/forge/src/animus_forge/evaluation/adversarial.py`)
+- [x] Implement policy decision point + governance plane (`packages/forge/src/animus_forge/governance/`)
 - [x] Add ADR-002 through ADR-005 for decisions made to date
 
 ### Phase 4: Public/Private Split (Q1 2027)

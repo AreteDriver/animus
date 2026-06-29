@@ -143,3 +143,27 @@ type = "file_exists"
 name = "durable_memory_store"
 paths = ["packages/kernel/src/animus_kernel/memory/stores/durable.py"]
 should_exist = true
+
+# Phase 3: Evidence & Governance
+[[checks]]
+type = "file_exists"
+name = "adversarial_harness"
+paths = ["packages/forge/src/animus_forge/evaluation/adversarial.py"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "governance_module"
+paths = [
+    "packages/forge/src/animus_forge/governance/__init__.py",
+    "packages/forge/src/animus_forge/governance/policy.py",
+    "packages/forge/src/animus_forge/governance/decision_point.py",
+    "packages/forge/src/animus_forge/governance/audit.py",
+]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "evidence_bundle_releases"
+paths = ["evidence/releases/evidence-2026-06-29-075813/manifest.json"]
+should_exist = true

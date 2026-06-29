@@ -1,0 +1,9 @@
+{
+  "project": "animus",
+  "version": "bootstrap-v0.8.0-204-gbd95ae4",
+  "git_sha": "bd95ae42e2d041a480ddcb67b37c9aa6f2906ad6",
+  "git_branch": "main",
+  "timestamp": "2026-06-29T07:58:13.725689+00:00",
+  "builder": "arete",
+  "dirty": false
+}

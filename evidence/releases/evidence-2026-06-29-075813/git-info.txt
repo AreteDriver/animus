@@ -1,0 +1,11 @@
+Branch: main
+SHA: bd95ae42e2d041a480ddcb67b37c9aa6f2906ad6
+Status: clean
+
+Last 5 commits:
+bd95ae4 feat(kernel, database): Phase 2 Durable Core — kernel wiring + traceability
+1eabd09 chore(infra): add .env.example template for Docker Compose
+55e9dcd feat(database): Phase 2 Durable Core — initial migration + Docker Compose + tests
+ac32999 docs: add version compatibility matrix and document alignment policy
+f28ee74 fix: enable pytest to discover sibling packages across monorepo
+
