@@ -1,6 +1,6 @@
 {
   "project": "animus",
-  "timestamp": "2026-06-29T08:12:25.271894+00:00",
+  "timestamp": "2026-06-29T08:30:51.059373+00:00",
   "summary": {
     "pass": 25,
     "fail": 1,
@@ -158,7 +158,7 @@
         "types": "0.1.0"
       },
       "claim_source": "",
-      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'0.8.0', '1.2.0', '2.3.0', '0.1.0', '1.9.0'}"
+      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'0.1.0', '0.8.0', '2.3.0', '1.9.0', '1.2.0'}"
     },
     {
       "name": "compatibility_matrix",
