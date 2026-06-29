@@ -1,0 +1,84 @@
+name: Deploy Docs to Cloudflare Pages
+
+"""
+Alternative docs deployment for when the repo is private.
+
+Cloudflare Pages offers a generous free tier (unlimited requests, 500 builds/mo)
+and does not require a public repo. Use this workflow if GitHub Pages remains
+blocked due to the private repository status.
+
+Prerequisites:
+  1. Create a Cloudflare Pages project at https://dash.cloudflare.com
+  2. Add these secrets to GitHub repository settings:
+     - CLOUDFLARE_API_TOKEN  (Create at https://dash.cloudflare.com/profile/api-tokens)
+     - CLOUDFLARE_ACCOUNT_ID (Found on the right sidebar of any Cloudflare domain)
+  3. Update the project_name below to match your Cloudflare Pages project.
+
+To switch from GitHub Pages to Cloudflare Pages:
+  - Disable GitHub Pages in Settings → Pages
+  - Set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as repository secrets
+  - This workflow runs automatically on push to main
+"""
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'packages/**/README.md'
+      - '.github/workflows/docs-deploy-cloudflare.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build MkDocs Site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r docs/requirements-docs.txt
+
+      - name: Build site
+        run: mkdocs build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mkdocs-site
+          path: site/
+
+  deploy:
+    name: Deploy to Cloudflare Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: cloudflare-pages
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mkdocs-site
+          path: site/
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: animus-docs
+          directory: site
+          branch: main

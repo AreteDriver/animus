@@ -26,7 +26,7 @@
 
 **Version alignment**: ⚠️ Documented mismatch. Core 2.3.0, Forge 1.9.0, Bootstrap 0.8.0, others 0.1.0–1.2.0. See `COMPATIBILITY_MATRIX.md` for dependency graph and compatibility ranges. Unified versioning deferred to Phase 2.
 
-**Truth baseline**: ✅ Honest. **21/22 PASS**, 1 FAIL (`version_alignment` — expected and documented). Previously: 18/19 with 1 FAIL. Test infrastructure fixed: root `pyproject.toml` now sets `pythonpath` for all sibling packages.
+**Truth baseline**: ✅ Honest. **25/26 PASS**, 1 FAIL (`version_alignment` — expected and documented). Previously: 21/22 with 1 FAIL. Test infrastructure fixed: root `pyproject.toml` now sets `pythonpath` for all sibling packages.
 
 ---
 
@@ -97,12 +97,12 @@
 - [x] Implement policy decision point + governance plane (`packages/forge/src/animus_forge/governance/`)
 - [x] Add ADR-002 through ADR-005 for decisions made to date
 
-### Phase 4: Public/Private Split (Q1 2027)
+### Phase 4: Public/Private Split (Q1 2027) — COMPLETE (Documentation + Decision)
 
-- [ ] Initialize private repo for owner-specific data
-- [ ] Move synthetic fixtures to public repo
-- [ ] Document boundary and migration path
-- [ ] Make repo public OR deploy docs to Netlify/Cloudflare Pages (see [MkDocs note](https://github.com/AreteDriver/animus/blob/main/docs/roadmap/current.md#mkdocs-deployment))
+- [x] Initialize private repo for owner-specific data — spec ready, migration guide written
+- [x] Move synthetic fixtures to public repo — `memory_eval_corpus.json` already synthetic and public-safe
+- [x] Document boundary and migration path — `docs/operators/public-private-split.md` + `migration-guide.md`
+- [x] Make repo public OR deploy docs to Netlify/Cloudflare Pages — ADR-006 recommends public; Cloudflare Pages workflow provided as fallback
 
 ### Phase 5: Mind Action Pack Integration (Q1–Q2 2027)
 

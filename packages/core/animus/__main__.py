@@ -3,6 +3,7 @@
 import asyncio
 import atexit
 import os
+import sys
 from pathlib import Path
 
 from prompt_toolkit import prompt
@@ -13,6 +14,15 @@ from rich.table import Table
 
 from animus.api import APIServer
 from animus.autonomous import ActionLevel, ActionPolicy, AutonomousExecutor
+
+# Citizen Zero imports
+from animus.citizen_zero import (
+    CitizenCallMetadata,
+    CitizenZeroContextLoader,
+    CitizenZeroGuard,
+    CitizenZeroProfile,
+    CitizenZeroSession,
+)
 from animus.cognitive import (
     CognitiveLayer,
     ModelConfig,
@@ -23,6 +33,7 @@ from animus.cognitive import (
 from animus.config import AnimusConfig
 from animus.decision import DecisionFramework
 from animus.entities import EntityMemory, EntityType
+from animus.identity import AnimusIdentity
 from animus.integrations import (
     FilesystemIntegration,
     IntegrationManager,
@@ -37,17 +48,6 @@ from animus.task_outcomes import TaskOutcome, TaskOutcomeTracker
 from animus.tasks import TaskTracker
 from animus.tools import create_default_registry, create_local_think_tool, create_memory_tools
 from animus.voice import VoiceInterface
-
-# Citizen Zero imports
-from animus.citizen_zero import (
-    CitizenZeroContextLoader,
-    CitizenZeroGuard,
-    CitizenZeroProfile,
-    CitizenZeroSession,
-    CitizenCallMetadata,
-    GuardResult,
-)
-from animus.identity import AnimusIdentity
 
 # Optional sync module
 try:
@@ -421,6 +421,11 @@ def show_tags(memory: MemoryLayer):
 
 def main():
     """Main entry point for Animus CLI."""
+    # Delegate structured subcommands before entering the REPL.
+    if len(sys.argv) > 1 and sys.argv[1] == "ingest":
+        from animus.cli import main as cli_main
+        return cli_main(sys.argv[1:])
+
     # Create a persistent event loop — asyncio.run() creates and closes a new loop
     # each call, breaking httpx AsyncClient connections bound to the previous loop.
     loop = asyncio.new_event_loop()
@@ -2119,8 +2124,12 @@ def main():
 
                 # Register candidates with LearningLayer for approval
                 if learning:
-                    from animus.learning.categories import LearnedItem, LearningCategory, CATEGORY_APPROVAL
-                    from animus.learning.categories import ApprovalRequirement
+                    from animus.learning.categories import (
+                        CATEGORY_APPROVAL,
+                        ApprovalRequirement,
+                        LearnedItem,
+                        LearningCategory,
+                    )
 
                     for cand in result["candidates"]:
                         try:
@@ -2142,7 +2151,7 @@ def main():
                         if approval_req in (ApprovalRequirement.CONFIRM, ApprovalRequirement.APPROVE):
                             learning.approvals.request_approval(
                                 item,
-                                evidence_summary=f"Reflection candidate from /reflect",
+                                evidence_summary="Reflection candidate from /reflect",
                             )
                             learning.transparency.log_event("proposed", item.id)
                             console.print(

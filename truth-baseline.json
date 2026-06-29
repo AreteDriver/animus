@@ -1,8 +1,8 @@
 {
   "project": "animus",
-  "timestamp": "2026-06-29T08:06:51.907034+00:00",
+  "timestamp": "2026-06-29T08:12:25.271894+00:00",
   "summary": {
-    "pass": 21,
+    "pass": 25,
     "fail": 1,
     "skip": 0,
     "error": 0
@@ -158,7 +158,7 @@
         "types": "0.1.0"
       },
       "claim_source": "",
-      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'0.8.0', '2.3.0', '1.9.0', '0.1.0', '1.2.0'}"
+      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'0.8.0', '1.2.0', '2.3.0', '0.1.0', '1.9.0'}"
     },
     {
       "name": "compatibility_matrix",
@@ -299,6 +299,62 @@
       "status": "PASS",
       "expected": [
         "evidence/releases/evidence-2026-06-29-075813/manifest.json"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "adr_006",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "adrs/ADR-006.md"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "public_private_split_doc",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "docs/operators/public-private-split.md"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "migration_guide",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "docs/operators/migration-guide.md"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "cloudflare_deploy_workflow",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        ".github/workflows/docs-deploy-cloudflare.yml"
       ],
       "actual": {
         "missing": [],

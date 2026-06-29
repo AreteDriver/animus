@@ -167,3 +167,28 @@ type = "file_exists"
 name = "evidence_bundle_releases"
 paths = ["evidence/releases/evidence-2026-06-29-075813/manifest.json"]
 should_exist = true
+
+# Phase 4: Public/Private Split
+[[checks]]
+type = "file_exists"
+name = "adr_006"
+paths = ["adrs/ADR-006.md"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "public_private_split_doc"
+paths = ["docs/operators/public-private-split.md"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "migration_guide"
+paths = ["docs/operators/migration-guide.md"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "cloudflare_deploy_workflow"
+paths = [".github/workflows/docs-deploy-cloudflare.yml"]
+should_exist = true
