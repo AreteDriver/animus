@@ -50,6 +50,6 @@ Be direct. Be kind. Assume good intent. Disagree with the idea, not the person.
 
 ## See Also
 
-- [Root CONTRIBUTING.md](../../CONTRIBUTING.md) — Original contributor guide (being migrated here)
+- [Contributing Guidelines](guidelines.md) — Code standards and PR process
 - [Architecture → Standards](../architecture/standards.md) — Documentation and code standards
 - [Operators → Deployment](../operators/deployment.md) — How to deploy your changes

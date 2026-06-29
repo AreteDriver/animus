@@ -80,9 +80,9 @@ Each package has its own documentation lane:
 
 | File | Purpose |
 |---|---|
-| [Root README](../README.md) | Project elevator pitch and badges |
-| [CLAUDE.md](../CLAUDE.md) | Session instructions for Claude Code |
-| [Project Charter](../PROJECT_CHARTER.md) | v2.1 scope, success criteria, risks |
+| [Root README](https://github.com/AreteDriver/animus/blob/main/README.md) | Project elevator pitch and badges |
+| [CLAUDE.md](https://github.com/AreteDriver/animus/blob/main/CLAUDE.md) | Session instructions for Claude Code |
+| [Project Charter](https://github.com/AreteDriver/animus/blob/main/PROJECT_CHARTER.md) | v2.1 scope, success criteria, risks |
 
 ---
 

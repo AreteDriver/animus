@@ -1,0 +1,126 @@
+site_name: Animus Documentation
+site_url: https://aretedriver.github.io/animus/
+site_author: AreteDriver
+copyright: Copyright &copy; 2026 AreteDriver
+repo_url: https://github.com/AreteDriver/animus
+repo_name: AreteDriver/animus
+edit_uri: blob/main/docs/
+
+docs_dir: docs
+site_dir: site
+
+nav:
+  - Home: README.md
+  - Getting Started:
+    - Quickstart: getting-started/quickstart.md
+    - Installation: getting-started/installation.md
+    - Concepts: getting-started/concepts.md
+  - Architecture:
+    - Overview: architecture/overview.md
+    - Packages: architecture/packages.md
+    - Decisions:
+      - Index: architecture/decisions/README.md
+      - ADR-001: architecture/decisions/ADR-001.md
+      - ADL-20260618-001: architecture/decisions/ADL-20260618-001.md
+    - Standards: architecture/standards.md
+  - Packages:
+    - Overview: packages/README.md
+    - Core: packages/core/README.md
+    - Forge: packages/forge/README.md
+    - Quorum: packages/quorum/README.md
+    - Bootstrap: packages/bootstrap/README.md
+    - Kernel: packages/kernel/README.md
+    - Types: packages/types/README.md
+    - PWA: packages/pwa/README.md
+    - Contracts: packages/contracts/README.md
+  - Contributing:
+    - Setup: contributing/setup.md
+    - Workflow: contributing/workflow.md
+    - Debugging: contributing/debugging.md
+  - Operators:
+    - Deployment: operators/deployment.md
+    - Configuration: operators/configuration.md
+    - Monitoring: operators/monitoring.md
+    - Troubleshooting: operators/troubleshooting.md
+  - Reference:
+    - Glossary: reference/glossary.md
+    - FAQ: reference/faq.md
+    - Changelog: reference/changelog.md
+    - Security: reference/security.md
+    - Whitepapers:
+      - Index: reference/whitepapers/README.md
+  - Roadmap:
+    - Current: roadmap/current.md
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.select
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search:
+      lang:
+        - en
+      separator: '[\s\-]+'
+  - awesome-pages:
+      filename: .nav.yml
+      collapse_single_pages: false
+      strict: false
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/AreteDriver/animus
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/fdzQkrt8
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: "!!python/name:pymdownx.superfences.fence_code_format"
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - toc:
+      permalink: true
+      permalink_title: Anchor link to this section

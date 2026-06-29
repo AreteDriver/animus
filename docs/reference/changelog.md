@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Bootstrap config reference expanded** in `docs/operators/configuration.md` — full schema covering identity, ollama, gateway, intelligence, channels, self-improvement, proactive, personas
 - **Package READMEs written** for Quorum, PWA, Contracts (previously missing)
 - **Whitepaper index** populated at `docs/reference/whitepapers/README.md`
+- **MkDocs site** — Material theme, dark/light mode, search, code copy buttons. Deploys to GitHub Pages via `.github/workflows/docs-deploy.yml` on every push to `main` that touches docs
 
 ### Changed
 
