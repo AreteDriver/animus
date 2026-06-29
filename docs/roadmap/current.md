@@ -23,9 +23,9 @@
 | `pwa` | — | 19 TypeScript | 0 | Frontend scaffolded, wiring TBD |
 | `contracts` | — | 20 JSON schemas | 0 | Pure JSON, no runtime validation |
 
-**Version alignment**: ❌ Mismatch. Core 2.3.0, Forge 1.9.0, Bootstrap 0.8.0, others 0.1.0–1.2.0. No unified version scheme.
+**Version alignment**: ⚠️ Documented mismatch. Core 2.3.0, Forge 1.9.0, Bootstrap 0.8.0, others 0.1.0–1.2.0. See `COMPATIBILITY_MATRIX.md` for dependency graph and compatibility ranges. Unified versioning deferred to Phase 2.
 
-**Truth baseline**: ✅ Honest. **10/11 PASS**, 1 FAIL (`version_alignment`). Previously: 8/11 with 3 FAIL (2 were false positives, 1 was real version misalignment). Test infrastructure fixed: root `pyproject.toml` now sets `pythonpath` for all sibling packages.
+**Truth baseline**: ✅ Honest. **11/12 PASS**, 1 FAIL (`version_alignment` — expected and documented). Previously: 8/11 with 3 FAIL (2 were false positives, 1 was real version misalignment). Test infrastructure fixed: root `pyproject.toml` now sets `pythonpath` for all sibling packages.
 
 ---
 
@@ -125,8 +125,7 @@
 
 | Blocker | Impact | Resolution |
 |---|---|---|
-| Truth baseline false positives | High | Fix `truth-baseline.toml` test-count logic |
-| Schemas not importable | High | Blocks Phase 1 and all downstream validation |
+| Version misalignment | Low | Documented in `COMPATIBILITY_MATRIX.md`; unified versioning deferred to Phase 2 |
 | Kernel under-tested (99 tests for 189 files) | Medium | Add coverage before durable core integration |
 | GitHub CI billing blocked | Medium | All CI jobs fail; local-first validation only |
 | MkDocs deployment blocked | Low | Repo is private; Pages requires Pro or public repo |
@@ -136,7 +135,7 @@
 ## Definition of Done (Phase 0 Completion)
 
 - [x] Truth baseline fails on broken checks, not silently passes
-- [ ] All 8 packages have version metadata and alignment is documented
+- [x] All 8 packages have version metadata and alignment is documented (`COMPATIBILITY_MATRIX.md`)
 - [x] `packages/types/` imports at least 10 of the 20 contract schemas as Python
 - [x] Every root architecture directory has a `README.md` explaining its purpose or is removed
 - [x] `scripts/assemble_evidence_bundle.py` exists and produces a manifest

@@ -83,8 +83,16 @@ name = "adr_coverage"
 paths = ["adrs/ADR-001.md", "adrs/ADR-002.md", "adrs/ADR-003.md", "adrs/ADR-004.md", "adrs/ADR-005.md"]
 should_exist = true
 
+# NOTE: version_alignment is EXPECTED to FAIL until unified versioning
+# is adopted. See COMPATIBILITY_MATRIX.md for documented mismatches.
 [[checks]]
 type = "version_alignment"
 name = "package_version_alignment"
 [checks.exceptions]
 contracts = { has_manifest = false, reason = "pure JSON schemas, no Python package manifest" }
+
+[[checks]]
+type = "file_exists"
+name = "compatibility_matrix"
+paths = ["COMPATIBILITY_MATRIX.md"]
+should_exist = true

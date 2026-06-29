@@ -17,7 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Root `pyproject.toml`** — Added `[tool.pytest.ini_options]` with `pythonpath` covering all 8 package source directories, enabling pytest to discover sibling packages when run from repo root.
 - **`truth-baseline.toml`** — `core_tests` and `forge_tests` commands updated to run from repo root with `-c pyproject.toml` flag, bypassing per-package config files that lacked sibling package paths.
-- **Results**: core 2,832 tests (was 0), forge 10,431 tests (was 9,425 with 25 errors), kernel 99 tests (was 0), quorum 961 tests (was 861 with 2 errors), types 67 tests (was 22 with 3 errors). Truth baseline now **10/11 PASS** (only `version_alignment` remains FAIL).
+- **Results**: core 2,832 tests (was 0), forge 10,431 tests (was 9,425 with 25 errors), kernel 99 tests (was 0), quorum 961 tests (was 861 with 2 errors), types 67 tests (was 22 with 3 errors). Truth baseline now **11/12 PASS** (only `version_alignment` remains FAIL, documented).
+
+### Added — Version Compatibility Matrix (2026-06-27)
+
+- **`COMPATIBILITY_MATRIX.md`** — Documents actual versions across all 8 packages, inter-package dependencies, known incompatibilities, and verification command. Includes dependency graph and SemVer bump guidance.
+- **Truth baseline updated**: `compatibility_matrix` check added (PASS when file exists). `version_alignment` expected to FAIL until unified versioning is adopted; mismatches are now documented rather than hidden.
 
 ### Added — Schema Compiler (2026-06-27)
 
