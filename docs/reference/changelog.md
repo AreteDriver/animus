@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — Truth Baseline (2026-06-27)
+
+- **`scripts/truth-baseline.py`** — `check_test_count` now fails when the shell command exits non-zero, even when `expected` is not set in the TOML. Previously, missing `python` in the environment produced a silent false positive (0 tests reported as PASS).
+- **`truth-baseline.toml`** — added `expected = 1` and `op = ">="` to `core_tests` and `forge_tests` checks, plus `python3` fallback when `python` is unavailable.
+- **New `version_alignment` check** — reads all `packages/*/pyproject.toml` and `pwa/package.json` versions, reports mismatches. `contracts/` documented as exception (no manifest). Surfaces actual misalignment: core 2.3.0, forge 1.9.0, bootstrap 0.8.0, kernel 0.1.0, quorum 1.2.0, types 0.1.0, pwa 0.1.0.
+
 ### Added — Documentation Reorganization (2026-06)
 
 - **Audience-based docs tree** — `docs/` reorganized from flat graveyard (44 files, no index) into structured lanes:

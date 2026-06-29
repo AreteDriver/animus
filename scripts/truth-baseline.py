@@ -192,15 +192,25 @@ def check_version_consistency(cfg: dict[str, Any]) -> CheckResult:
 
 
 def check_test_count(cfg: dict[str, Any]) -> CheckResult:
-    """Run test collection command, parse count."""
+    """Run test collection command, parse count.
+
+    Fails if the command exits non-zero, even when expected is None.
+    Tries python3 fallback if python is not found.
+    """
     name = cfg["name"]
     cmd = cfg.get("command", "python -m pytest --collect-only -q")
     pattern = cfg.get("pattern", r'(\d+) tests? collected')
     expected = cfg.get("expected")
-    op = cfg.get("op", "==")
+    op = cfg.get("op", ">=")  # default: at least some tests
     cwd = cfg.get("cwd")
 
     rc, stdout, stderr = _run(cmd, cwd=cwd)
+
+    # Fallback: try python3 if python is not found (exit code 127)
+    if rc == 127 and cmd.startswith("python "):
+        cmd = "python3 " + cmd[7:]
+        rc, stdout, stderr = _run(cmd, cwd=cwd)
+
     combined = stdout + stderr
     m = re.search(pattern, combined)
     actual = int(m.group(1)) if m else 0
@@ -212,21 +222,36 @@ def check_test_count(cfg: dict[str, Any]) -> CheckResult:
         except ValueError:
             pass
 
+    # Command failure is always a failure, regardless of expected
+    if rc != 0:
+        msg = f"Collected {actual} tests (command failed: rc={rc}, {stderr[:200]})"
+        return CheckResult(
+            name=name,
+            check_type="test_count",
+            status="FAIL",
+            expected=expected,
+            actual=actual,
+            claim_source=cfg.get("claim_source", ""),
+            message=msg,
+        )
+
     passed = False
     if expected is None:
-        passed = True
+        passed = actual > 0  # at least one test expected when none specified
     elif op == "==":
         passed = actual == expected
     elif op == ">=":
         passed = actual >= expected
     elif op == "<=":
         passed = actual <= expected
+    elif op == ">":
+        passed = actual > expected
+    elif op == "<":
+        passed = actual < expected
 
     msg = f"Collected {actual} tests"
     if expected is not None:
         msg += f"; expected {op} {expected}"
-    if rc != 0 and actual == 0:
-        msg += f" (command failed: {stderr[:200]})"
 
     return CheckResult(
         name=name,
@@ -522,11 +547,89 @@ def check_markdown_claim(cfg: dict[str, Any]) -> CheckResult:
     )
 
 
+def check_version_alignment(cfg: dict[str, Any]) -> CheckResult:
+    """Read version from all package manifests and check for alignment.
+
+    Supports pyproject.toml (Poetry/PEP 621), package.json (npm), and
+    explicitly documented exceptions (directories with no manifest).
+    """
+    name = cfg["name"]
+    packages_dir = REPO_ROOT / "packages"
+    versions: dict[str, str] = {}
+    errors: list[str] = []
+    exceptions = cfg.get("exceptions", {})
+
+    for pkg_dir in sorted(packages_dir.iterdir()):
+        if not pkg_dir.is_dir() or pkg_dir.name.startswith("_"):
+            continue
+
+        pkg_name = pkg_dir.name
+        exc = exceptions.get(pkg_name)
+
+        # Explicit exception: documented no-manifest directory
+        if exc and exc.get("has_manifest") is False:
+            versions[pkg_name] = exc.get("reason", "no manifest")
+            continue
+
+        # Try pyproject.toml first
+        pyproject = pkg_dir / "pyproject.toml"
+        if pyproject.exists():
+            text = pyproject.read_text(encoding="utf-8", errors="ignore")
+            # Poetry: version = "x.y.z" under [tool.poetry]
+            m = re.search(r'^\s*version\s*=\s*"(\d+\.\d+(?:\.\d+)?)"', text, re.MULTILINE)
+            if m:
+                versions[pkg_name] = m.group(1)
+                continue
+            # PEP 621: version = "x.y.z" at top level
+            m = re.search(r'^version\s*=\s*"(\d+\.\d+(?:\.\d+)?)"', text, re.MULTILINE)
+            if m:
+                versions[pkg_name] = m.group(1)
+                continue
+
+        # Try package.json (npm/node projects like PWA)
+        package_json = pkg_dir / "package.json"
+        if package_json.exists():
+            text = package_json.read_text(encoding="utf-8", errors="ignore")
+            m = re.search(r'"version"\s*:\s*"(\d+\.\d+(?:\.\d+)?)"', text)
+            if m:
+                versions[pkg_name] = m.group(1)
+                continue
+
+        errors.append(f"{pkg_name}: no version found in pyproject.toml or package.json")
+
+    # Separate semantic versions from exceptions
+    sem_versions = {k: v for k, v in versions.items() if re.match(r"^\d+\.\d+(?:\.\d+)?$", v)}
+    unique = set(sem_versions.values())
+    passed = len(unique) <= 1
+
+    if errors:
+        passed = False
+
+    msg_parts: list[str] = []
+    if sem_versions:
+        msg_parts.append(f"versions: {sem_versions}")
+    if unique and len(unique) > 1:
+        msg_parts.append(f"mismatched: {unique}")
+    if errors:
+        msg_parts.append(f"errors: {errors}")
+
+    return CheckResult(
+        name=name,
+        check_type="version_alignment",
+        status="PASS" if passed else "FAIL",
+        expected="aligned versions across all packages",
+        actual=versions,
+        claim_source=cfg.get("claim_source", ""),
+        message="; ".join(msg_parts) if msg_parts else "No packages found",
+    )
+
+
 # ── Dispatcher ───────────────────────────────────────────────────────────────
 
 CHECK_DISPATCH = {
     "count": check_count,
     "version_consistency": check_version_consistency,
+    "version_alignment": check_version_alignment,
     "test_count": check_test_count,
     "file_exists": check_file_exists,
     "regex_match": check_regex_match,

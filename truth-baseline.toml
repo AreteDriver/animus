@@ -42,6 +42,8 @@ type = "test_count"
 name = "core_tests"
 command = "python -m pytest --collect-only -q"
 pattern = '(\d+) tests? collected'
+expected = 1
+op = ">="
 cwd = "packages/core"
 
 [[checks]]
@@ -49,6 +51,8 @@ type = "test_count"
 name = "forge_tests"
 command = "python -m pytest --collect-only -q"
 pattern = '(\d+) tests? collected'
+expected = 1
+op = ">="
 cwd = "packages/forge"
 
 [[checks]]
@@ -62,3 +66,9 @@ type = "file_exists"
 name = "evidence_directory"
 paths = ["evidence/releases/"]
 should_exist = true
+
+[[checks]]
+type = "version_alignment"
+name = "package_version_alignment"
+[checks.exceptions]
+contracts = { has_manifest = false, reason = "pure JSON schemas, no Python package manifest" }

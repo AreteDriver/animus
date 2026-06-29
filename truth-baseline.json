@@ -1,9 +1,9 @@
 {
   "project": "animus",
-  "timestamp": "2026-06-19T22:05:26.609236+00:00",
+  "timestamp": "2026-06-29T06:27:03.311262+00:00",
   "summary": {
-    "pass": 8,
-    "fail": 0,
+    "pass": 6,
+    "fail": 3,
     "skip": 0,
     "error": 0
   },
@@ -60,20 +60,20 @@
     {
       "name": "core_tests",
       "check_type": "test_count",
-      "status": "PASS",
-      "expected": null,
+      "status": "FAIL",
+      "expected": 1,
       "actual": 0,
       "claim_source": "",
-      "message": "Collected 0 tests (command failed: /bin/sh: 1: python: not found\n)"
+      "message": "Collected 0 tests (command failed: rc=4, ImportError while loading conftest '/home/arete/projects/animus/packages/core/tests/conftest.py'.\ntests/conftest.py:11: in <module>\n    from animus.cognitive import CognitiveLayer, ModelConfig\nanimus/)"
     },
     {
       "name": "forge_tests",
       "check_type": "test_count",
-      "status": "PASS",
-      "expected": null,
-      "actual": 0,
+      "status": "FAIL",
+      "expected": 1,
+      "actual": 9425,
       "claim_source": "",
-      "message": "Collected 0 tests (command failed: /bin/sh: 1: python: not found\n)"
+      "message": "Collected 9425 tests (command failed: rc=2, )"
     },
     {
       "name": "root_architecture_dirs",
@@ -106,6 +106,24 @@
       },
       "claim_source": "",
       "message": "All paths match expectation"
+    },
+    {
+      "name": "package_version_alignment",
+      "check_type": "version_alignment",
+      "status": "FAIL",
+      "expected": "aligned versions across all packages",
+      "actual": {
+        "bootstrap": "0.8.0",
+        "contracts": "pure JSON schemas, no Python package manifest",
+        "core": "2.3.0",
+        "forge": "1.9.0",
+        "kernel": "0.1.0",
+        "pwa": "0.1.0",
+        "quorum": "1.2.0",
+        "types": "0.1.0"
+      },
+      "claim_source": "",
+      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'1.2.0', '2.3.0', '0.1.0', '1.9.0', '0.8.0'}"
     }
   ]
 }
