@@ -29,6 +29,4 @@ dependencies = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/animus_contracts"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"*.schema.json" = "animus_contracts/"
+artifacts = ["*.schema.json"]

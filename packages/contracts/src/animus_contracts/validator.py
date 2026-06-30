@@ -23,22 +23,10 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError as JsonSchemaValidationError
 
-try:
-    from referencing import Registry, Resource
-
-    _HAS_REFERENCING = True
-except ImportError:  # pragma: no cover
-    _HAS_REFERENCING = False
-    from jsonschema import RefResolver  # type: ignore[attr-defined]
-
 logger = logging.getLogger(__name__)
 
 _pkg_dir = Path(__file__).resolve().parent
-SCHEMAS_DIR = (
-    _pkg_dir
-    if (_pkg_dir / "action.schema.json").exists()
-    else _pkg_dir.parent.parent
-)
+SCHEMAS_DIR = _pkg_dir.parent.parent  # canonical: next to pyproject.toml
 
 
 def _load_schemas() -> dict[str, Any]:
@@ -64,15 +52,23 @@ def _load_schemas() -> dict[str, Any]:
 # Module-level singleton — schemas are loaded once on first import.
 _SCHEMA_STORE = _load_schemas()
 
-if _HAS_REFERENCING:
-    _REGISTRY: Registry | None = Registry()  # type: ignore[no-redef]
-    for _uri, _contents in _SCHEMA_STORE.items():
-        _resource = Resource.from_contents(
-            _contents, default_specification=Draft202012Validator
-        )
-        _REGISTRY = _REGISTRY.with_resource(_uri, _resource)
-else:
-    _REGISTRY = None
+
+def _get_registry():
+    """Build a referencing.Registry for cross-schema $ref resolution."""
+    try:
+        from referencing import Registry, Resource
+        from referencing.jsonschema import DRAFT202012
+
+        registry = Registry()
+        for uri, contents in _SCHEMA_STORE.items():
+            resource = Resource(contents=contents, specification=DRAFT202012)
+            registry = registry.with_resource(uri, resource)
+        return registry
+    except ImportError:
+        return None
+
+
+_REGISTRY = _get_registry()
 
 
 class ValidationError(Exception):
@@ -91,10 +87,12 @@ class ValidationError(Exception):
 
 def _make_validator(schema_uri: str, schema: dict[str, Any]) -> Draft202012Validator:
     """Build a Draft202012Validator with cross-schema $ref resolution."""
-    if _HAS_REFERENCING and _REGISTRY is not None:
-        resolved = _REGISTRY.resolver().lookup(schema_uri)
-        return Draft202012Validator(resolved.contents, registry=_REGISTRY)
+    if _REGISTRY is not None:
+        validator_cls = Draft202012Validator
+        return validator_cls(schema, registry=_REGISTRY)
 
+    # Fallback for older jsonschema without referencing support
+    from jsonschema import RefResolver  # type: ignore[attr-defined]
     resolver = RefResolver(base_uri=schema_uri, referrer=schema, store=_SCHEMA_STORE)
     return Draft202012Validator(schema, resolver=resolver)
 

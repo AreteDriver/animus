@@ -3,6 +3,8 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
+import os
+
 from alembic import context
 
 # this is the Alembic Config object, which provides
@@ -26,6 +28,21 @@ target_metadata = None
 # ... etc.
 
 
+def _get_url() -> str:
+    """Resolve the database URL from alembic.ini or environment."""
+    url = config.get_main_option("sqlalchemy.url")
+    if url:
+        return url
+    for env_var in ("ANIMUS_DATABASE_URL", "DATABASE_URL"):
+        url = os.environ.get(env_var)
+        if url:
+            return url
+    raise RuntimeError(
+        "No database URL configured. Set sqlalchemy.url in alembic.ini "
+        "or export ANIMUS_DATABASE_URL / DATABASE_URL."
+    )
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -38,7 +55,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = _get_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -57,8 +74,9 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    url = _get_url()
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        {"sqlalchemy.url": url},
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

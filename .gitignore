@@ -107,3 +107,11 @@ id_ed25519*
 *.p12
 secrets.json
 infra/.env
+
+# Cache / generated
+.mypy_cache/
+.benchmarks/
+*.db
+gorgon-memory.db
+packages/**/gorgon-memory.db
+packages/**/gorgon-state.db

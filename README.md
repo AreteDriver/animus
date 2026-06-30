@@ -10,7 +10,9 @@
 
 Animus coordinates AI agents across complex workflows — with the operational discipline of a manufacturing line. Every agent has a token budget. Every workflow has a cost ceiling. If a pipeline fails at step 4 of 6, it restarts at step 4, not step 1. Inspired by the Toyota Production System: make cost visible, make waste impossible to ignore.
 
-Eight packages (four installable via PyPI). 16,178+ tests. Proactive engine with 6 self-healing checks and an autonomous improvement loop verified end-to-end against local inference.
+**Platform: Linux only** for the public open-source launch. macOS support is on the roadmap; Windows is out of scope.
+
+Eight packages (four installable via PyPI). ~17,000+ tests. Proactive engine with 6 self-healing checks and an autonomous improvement loop verified end-to-end against local inference.
 
 **[Architecture](docs/architecture/overview.md)** | **[Roadmap](docs/roadmap/current.md)** | **[Whitepaper](docs/whitepaper.pdf)**
 
@@ -23,18 +25,28 @@ Four-layer stack. Each layer solves exactly one problem and is independently use
 ```
 ┌─────────────────────────────────────────┐
 │           INTERFACE LAYER               │
-│   Desktop · Mobile · Wearable · API     │
+│   Bootstrap Dashboard · PWA · API       │
 ├─────────────────────────────────────────┤
 │           COGNITIVE LAYER               │
-│   Reasoning · Forge · Quorum            │
+│   Forge · Quorum · Contracts            │
 ├─────────────────────────────────────────┤
 │           MEMORY LAYER                  │
-│   Episodic · Semantic · Procedural      │
+│   Kernel · Episodic · Semantic · Procedural │
 ├─────────────────────────────────────────┤
 │           CORE LAYER                    │
 │   Identity · Security · Ethics          │
 └─────────────────────────────────────────┘
 ```
+
+**Package map**:
+- `bootstrap` → FastAPI dashboard + HTMX UI + PWA static host
+- `pwa` → React 19 + Vite PWA calling `/api/*` endpoints
+- `forge` → Workflow orchestration engine
+- `quorum` → Decentralized agent coordination (`convergent` on PyPI)
+- `contracts` → Canonical JSON schemas with runtime `jsonschema` validation
+- `kernel` → Autonomous builder engine + `MemoryLayer` with PostgreSQL/SQLite/ChromaDB backends
+- `core` → Personal AI assistant + CLI + MCP server
+- `types` → Shared cross-package type definitions
 
 ---
 
@@ -60,7 +72,7 @@ Persistent memory (episodic, semantic, procedural via ChromaDB), 40+ CLI command
 
 ### Bootstrap — System Daemon
 
-One-command install, Rich-based onboarding wizard, FastAPI+HTMX ops dashboard at localhost:7700, systemd/launchd service management. Deploys Animus on new machines with zero manual configuration.
+One-command install, Rich-based onboarding wizard, FastAPI+HTMX ops dashboard at localhost:7700, systemd/launchd service management. Serves the built PWA at `/pwa/`. Deploys Animus on new machines with zero manual configuration.
 
 [`packages/bootstrap/`](packages/bootstrap/) | `import animus_bootstrap`
 
@@ -76,18 +88,31 @@ One-command install, Rich-based onboarding wizard, FastAPI+HTMX ops dashboard at
 
 ---
 
+## Prerequisites
+
+- Python 3.11+
+- Node.js 18+ (for PWA build)
+- Docker (optional, for PostgreSQL)
+- Ollama (optional, for local LLM inference)
+
 ## Quickstart
 
 ```bash
 git clone https://github.com/AreteDriver/animus && cd animus
-pip install -e packages/core -e packages/forge -e packages/quorum
-pytest packages/core/tests/ packages/quorum/tests/ -q  # 3,800+ tests in seconds
+pip install -e packages/bootstrap/ -e packages/kernel/ -e packages/core/ -e packages/contracts/
+cd packages/pwa && npm install && npm run build && cd ../..
+animus-bootstrap serve
+# Open http://localhost:7700/pwa/ on your phone (same Wi-Fi)
 ```
 
-To run the Forge test suite (must run from its package directory):
+### PostgreSQL (optional, recommended for production)
 
 ```bash
-cd packages/forge && pytest tests/ -q  # 10,300+ tests
+cp infra/.env.example infra/.env   # fill in credentials
+docker compose -f infra/docker-compose.yml up -d
+export ANIMUS_DATABASE_URL=postgresql://...   # from your .env
+python scripts/setup_postgres.py
+animus-bootstrap serve
 ```
 
 ### Run the CLI
@@ -209,25 +234,34 @@ The self-improve pipeline: analyze → plan → safety check → sandbox test �
 ```
 animus/
 ├── packages/
+│   ├── bootstrap/               # import animus_bootstrap
+│   │   ├── src/animus_bootstrap/ # Daemon, wizard, dashboard, PWA static host
+│   │   └── tests/               # ~2,000 tests
+│   ├── contracts/               # Canonical JSON schemas (20+) + runtime validator
+│   │   ├── src/animus_contracts/
+│   │   └── *.schema.json
 │   ├── core/                    # import animus
 │   │   ├── animus/              # Identity, memory, cognitive, CLI, integrations
-│   │   └── tests/               # 2,865 tests, 97% coverage
+│   │   └── tests/               # ~2,800 tests
 │   ├── forge/                   # import animus_forge
 │   │   ├── src/animus_forge/    # Executor, agents, API, CLI, TUI, dashboard
-│   │   ├── migrations/          # 16 SQL migrations
+│   │   ├── migrations/          # SQL migrations
 │   │   ├── workflows/           # YAML workflow definitions
-│   │   └── tests/               # 10,304 tests, 97% coverage
+│   │   └── tests/               # ~10,300 tests
+│   ├── kernel/                  # import animus_kernel — Autonomous builder engine
+│   │   ├── src/animus_kernel/   # Memory layer, stores, executor
+│   │   └── tests/
+│   ├── pwa/                     # React 19 + Vite progressive web app
+│   │   ├── src/                 # Components, API client, auth, service worker
+│   │   └── dist/                # Build output mounted at /pwa/
 │   ├── quorum/                  # import convergent (PyPI: convergentAI)
 │   │   ├── python/convergent/   # Intent graph, voting, stigmergy, bridge
 │   │   ├── src/                 # Rust PyO3 (optional performance layer)
-│   │   └── tests/               # 961 tests, 97% coverage
-│   ├── bootstrap/               # import animus_bootstrap
-│   │   ├── src/animus_bootstrap/ # Daemon, wizard, dashboard
-│   │   └── tests/               # 2,048 tests, 97% coverage
-│   ├── kernel/                  # import animus_kernel — Autonomous builder engine
-│   ├── types/                   # import animus_types — Shared schemas
-│   ├── pwa/                     # Progressive web app
-│   └── contracts/               # Canonical JSON schemas (20+)
+│   │   └── tests/               # ~960 tests
+│   └── types/                   # import animus_types — Shared cross-package schemas
+├── database/                    # Alembic migrations, PostgreSQL DDL
+├── infra/                       # docker-compose.yml, .env.example
+├── scripts/                     # setup_postgres.py, automation scripts
 ├── docs/                        # Audience-based docs tree
 │   ├── getting-started/         # Install, quickstart, concepts
 │   ├── architecture/            # Overview, packages, decisions, standards
@@ -245,14 +279,32 @@ animus/
 
 Active development. Architecture stable. v2.3.0 (migrating to v2.1 baseline) released.
 
-| Component | Version | Tests | Coverage | Stage |
-|-----------|---------|------:|:--------:|-------|
-| Core | 2.3.0 | 2,865 | 97% | [Live on PyPI](https://pypi.org/project/animus-core/) — CLI, memory, MCP server |
-| Forge | 1.9.0 | 10,304 | 97% | Self-improve pipeline, workflow orchestration |
-| Quorum | 1.2.0 | 961 | 97% | [Live on PyPI](https://pypi.org/project/convergentAI/) |
-| Bootstrap | 0.8.0 | 2,048 | 97% | Daemon + wizard + dashboard + reflection |
+| Component | Version | Tests | Stage | Notes |
+|-----------|---------|------:|-------|-------|
+| Core | 2.3.0 | ~2,800 | Stable | [Live on PyPI](https://pypi.org/project/animus-core/) — CLI, memory, MCP server |
+| Forge | 1.9.0 | ~10,300 | Active dev | Self-improve pipeline, workflow orchestration |
+| Quorum | 1.2.0 | ~960 | Stable | [Live on PyPI](https://pypi.org/project/convergentAI/) |
+| Bootstrap | 0.8.0 | ~2,000 | Stable | Daemon + wizard + dashboard + reflection |
+| Kernel | 0.1.0 | — | Stable | Autonomous builder engine |
+| PWA | 0.1.0 | — | **Functional but early** | React + Vite, mounted at `/pwa/` |
+| Contracts | 0.1.0 | — | Stable | 20+ JSON schemas with runtime validation |
+| Types | 0.1.0 | — | Stable | Shared cross-package schemas |
 
-**Total: 16,178 tests across 4 packages.**
+**Total: ~17,000+ tests across 8 packages.**
+
+### What's Ready vs Experimental
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Dashboard (HTMX) | ✅ Stable | localhost:7700, full CRUD for personas, tasks, memory |
+| PWA | ⚠️ Functional but early | React 19 + Vite, calls `/api/*`, offline via service worker |
+| Web Push | ⚠️ Scaffolded | VAPID key endpoints wired, delivery not yet end-to-end tested |
+| Contracts validation | ✅ Stable | 20+ JSON schemas, runtime `jsonschema` gating via FastAPI dependency |
+| PostgreSQL backend | ✅ Stable | `DurableMemoryStore` with bitemporal event ledger, auto-selected when `ANIMUS_DATABASE_URL` is set |
+| Forge self-improve | 🔄 Active dev | Analyze → plan → sandbox → apply → PR pipeline |
+| Local LLM (Ollama) | ✅ Stable | Verified against llama3.2, qwen2.5-coder, phi4 |
+| MCP server | ✅ Stable | 10 tools exposed to Claude Code |
+| Multi-agent Quorum | ✅ Stable | Intent-graph coordination, triumvirate voting |
 
 ---
 

@@ -35,7 +35,7 @@ def _compose_url() -> str | None:
     port = os.getenv("POSTGRES_PORT", "5432")
 
     if user and pw and db:
-        return f"postgres://{user}:{pw}@{host}:{port}/{db}"
+        return f"postgresql://{user}:{pw}@{host}:{port}/{db}"
     return None
 
 

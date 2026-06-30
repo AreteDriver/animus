@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 
+import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
@@ -86,9 +87,35 @@ async def post_message(request: Request) -> JSONResponse:
         )
         try:
             response: GatewayResponse = await runtime.router.handle_message(msg)
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            if status in (401, 403):
+                logger.warning("Backend auth failed (%s) — PWA message rejected", status)
+                response = GatewayResponse(
+                    text=(
+                        "Backend authentication failed. "
+                        "Set ANTHROPIC_API_KEY or start Ollama (localhost:11434). "
+                        "See docs/getting-started/quickstart.md"
+                    ),
+                    channel="pwa",
+                )
+            elif status == 429:
+                logger.warning("Backend rate-limited (%s) — PWA message rejected", status)
+                response = GatewayResponse(
+                    text="Rate limit hit. Retry in a moment.",
+                    channel="pwa",
+                )
+            else:
+                logger.warning("Backend HTTP error (%s) — PWA message rejected", status)
+                response = GatewayResponse(
+                    text=f"Backend error ({status}). Check server logs.",
+                    channel="pwa",
+                )
         except Exception:
             logger.exception("Router failed to handle PWA message")
-            response = GatewayResponse(text="Sorry, something went wrong.", channel="pwa")
+            response = GatewayResponse(
+                text="Internal error. The team has been notified.", channel="pwa"
+            )
     else:
         response = GatewayResponse(
             text="Animus is currently offline — message queued.", channel="pwa"

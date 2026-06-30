@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 _DASHBOARD_DIR = Path(__file__).resolve().parent
 _STATIC_DIR = _DASHBOARD_DIR / "static"
 _TEMPLATE_DIR = _DASHBOARD_DIR / "templates"
-_PWA_DIR = _DASHBOARD_DIR.parent.parent.parent.parent.parent / "pwa" / "dist"
+_PWA_DIR = _DASHBOARD_DIR.parent.parent.parent.parent / "pwa" / "dist"
 
 
 @asynccontextmanager
@@ -127,7 +127,13 @@ def _wire_webchat(webchat: WebChatAdapter, runtime: AnimusRuntime) -> None:
     asyncio.ensure_future(webchat.on_message(_on_webchat_message))
 
 
-app = FastAPI(title="Animus Dashboard", version=animus_bootstrap.__version__, lifespan=lifespan)
+app = FastAPI(
+    title="Animus Dashboard",
+    version=animus_bootstrap.__version__,
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+)
 
 # Load config once for middleware/WS auth. Stored on app.state so serve()
 # can refresh it after generating the remote-access token. With the default
