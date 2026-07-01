@@ -1,10 +1,10 @@
-"""Tests for convergent.coordination_bridge integration bridge."""
+"""Tests for convergent.gorgon_bridge integration bridge."""
 
 from __future__ import annotations
 
 import pytest
 from convergent.coordination_config import CoordinationConfig
-from convergent.coordination_bridge import GorgonBridge
+from convergent.gorgon_bridge import GorgonBridge
 from convergent.protocol import DecisionOutcome
 
 
