@@ -59,7 +59,7 @@ from convergent.gates import (
     MypyGate,
     PytestGate,
 )
-from convergent.gorgon_bridge import GorgonBridge
+from convergent.coordination_bridge import GorgonBridge
 from convergent.governor import (
     AgentBranch,
     GovernorVerdict,
