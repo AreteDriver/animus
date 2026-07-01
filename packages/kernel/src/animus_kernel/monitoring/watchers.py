@@ -21,14 +21,14 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class WatchEventType(str, Enum):
+class WatchEventType(StrEnum):
     """Types of watch events."""
 
     FILE_CREATED = "file_created"
@@ -197,11 +197,7 @@ class FileWatcher(BaseWatcher):
                 return False
 
         # Check include patterns
-        for pattern in self.patterns:
-            if path.match(pattern):
-                return True
-
-        return False
+        return any(path.match(pattern) for pattern in self.patterns)
 
     def _scan_directory(self) -> tuple[dict[str, tuple[float, int]], set[str]]:
         """Scan directory for current state.
@@ -215,10 +211,7 @@ class FileWatcher(BaseWatcher):
         if not self.path.exists():
             return files, dirs
 
-        if self.recursive:
-            items = self.path.rglob("*")
-        else:
-            items = self.path.iterdir()
+        items = self.path.rglob("*") if self.recursive else self.path.iterdir()
 
         for item in items:
             if not self._matches_patterns(item):

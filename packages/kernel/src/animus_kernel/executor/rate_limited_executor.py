@@ -289,10 +289,7 @@ class RateLimitedParallelExecutor(ParallelExecutor):
             return True
 
         # Check for Anthropic/OpenAI specific errors
-        if hasattr(error, "status_code") and error.status_code == 429:
-            return True
-
-        return False
+        return bool(hasattr(error, "status_code") and error.status_code == 429)
 
     async def _adjust_rate_limit(
         self, provider: str, is_success: bool, error: Exception | None = None

@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from animus_forge.governance import DecisionPoint, Policy, PolicyRule, RuleEffect
-from animus_forge.governance.audit import AuditTrail
 
 
 class TestDecisionPoint:

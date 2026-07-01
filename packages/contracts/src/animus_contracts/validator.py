@@ -21,7 +21,6 @@ from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
-from jsonschema.exceptions import ValidationError as JsonSchemaValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +92,7 @@ def _make_validator(schema_uri: str, schema: dict[str, Any]) -> Draft202012Valid
 
     # Fallback for older jsonschema without referencing support
     from jsonschema import RefResolver  # type: ignore[attr-defined]
+
     resolver = RefResolver(base_uri=schema_uri, referrer=schema, store=_SCHEMA_STORE)
     return Draft202012Validator(schema, resolver=resolver)
 

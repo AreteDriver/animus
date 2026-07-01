@@ -7,7 +7,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -40,13 +40,13 @@ VOTER_SYSTEM_PROMPT = VOTER_PROMPTS[0]
 _VOTER_INPUT_TOKEN_ESTIMATE = 80
 
 
-class VoteDecision(str, Enum):
+class VoteDecision(StrEnum):
     APPROVE = "approve"
     REJECT = "reject"
     ABSTAIN = "abstain"
 
 
-class ConsensusLevel(str, Enum):
+class ConsensusLevel(StrEnum):
     ANY = "any"
     MAJORITY = "majority"
     UNANIMOUS = "unanimous"

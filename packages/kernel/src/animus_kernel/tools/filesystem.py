@@ -132,10 +132,7 @@ class FilesystemTools:
         total_dirs = 0
         truncated = False
 
-        if recursive:
-            iterator = resolved.rglob(pattern or "*")
-        else:
-            iterator = resolved.glob(pattern or "*")
+        iterator = resolved.rglob(pattern or "*") if recursive else resolved.glob(pattern or "*")
 
         for item in iterator:
             # Skip excluded paths

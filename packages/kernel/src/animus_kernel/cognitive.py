@@ -186,9 +186,7 @@ def should_delegate_to_gorgon(prompt: str) -> bool:
         return True
     if pattern_hits >= 1 and keyword_hits >= 2:
         return True
-    if len(prompt) > 500 and pattern_hits >= 1:
-        return True
-    return False
+    return bool(len(prompt) > 500 and pattern_hits >= 1)
 
 
 @dataclass
@@ -1404,10 +1402,7 @@ Your final answer (after TOOL: 0) should address the user's request directly."""
             Briefing text
         """
         # Gather relevant memories
-        if topic:
-            memories = memory.recall(topic, limit=limit)
-        else:
-            memories = memory.store.list_all()[:limit]
+        memories = memory.recall(topic, limit=limit) if topic else memory.store.list_all()[:limit]
 
         if not memories:
             return "No memories available for briefing."

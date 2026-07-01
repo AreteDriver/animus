@@ -4,6 +4,7 @@
 Validates that JSON schema instances can be parsed into Pydantic models
 and serialized back to JSON without data loss.
 """
+
 from __future__ import annotations
 
 import json
@@ -22,6 +23,7 @@ def _load_schema(name: str) -> dict:
 
 def test_common_model_importable():
     from animus_types import Common
+
     assert Common is not None
 
 
@@ -46,7 +48,12 @@ def test_action_round_trip():
         "security_class": "internal",
         "valid_time": {"valid_from": "2026-01-01T00:00:00Z", "valid_to": None},
         "transaction_time": {"recorded_at": "2026-01-01T00:00:00Z", "superseded_at": None},
-        "provenance": {"created_by": "test", "source_refs": [], "derived_from": [], "trace_id": None},
+        "provenance": {
+            "created_by": "test",
+            "source_refs": [],
+            "derived_from": [],
+            "trace_id": None,
+        },
         "integrity": {"content_sha256": "a" * 64},
         "payload": {
             "action_kind": "deploy",
@@ -85,7 +92,12 @@ def test_event_round_trip():
         "security_class": "public",
         "valid_time": {"valid_from": "2026-01-01T00:00:00Z", "valid_to": None},
         "transaction_time": {"recorded_at": "2026-01-01T00:00:00Z", "superseded_at": None},
-        "provenance": {"created_by": "test", "source_refs": [], "derived_from": [], "trace_id": None},
+        "provenance": {
+            "created_by": "test",
+            "source_refs": [],
+            "derived_from": [],
+            "trace_id": None,
+        },
         "integrity": {"content_sha256": "b" * 64},
         "payload": {
             "event_kind": "user_login",

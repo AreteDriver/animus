@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Any, Literal
 
@@ -13,20 +12,20 @@ from .common import Common
 
 
 class EntityKind(Enum):
-    person = 'person'
-    organization = 'organization'
-    place = 'place'
-    system = 'system'
-    concept = 'concept'
-    asset = 'asset'
-    document = 'document'
-    project = 'project'
-    other = 'other'
+    person = "person"
+    organization = "organization"
+    place = "place"
+    system = "system"
+    concept = "concept"
+    asset = "asset"
+    document = "document"
+    project = "project"
+    other = "other"
 
 
 class Payload(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     entity_kind: EntityKind
     canonical_name: constr(min_length=1)
@@ -36,6 +35,6 @@ class Payload(BaseModel):
 
 
 class AnimusEntityObject(Common):
-    artifact_type: Literal['entity'] | None = None
-    schema_id: Literal['https://animus.local/schemas/entity.schema.json'] | None = None
+    artifact_type: Literal["entity"] | None = None
+    schema_id: Literal["https://animus.local/schemas/entity.schema.json"] | None = None
     payload: Payload | None = None

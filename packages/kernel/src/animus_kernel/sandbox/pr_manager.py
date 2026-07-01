@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -28,7 +28,7 @@ class ConflictResult:
     error: str | None = None
 
 
-class PRStatus(str, Enum):
+class PRStatus(StrEnum):
     """Status of a pull request."""
 
     DRAFT = "draft"

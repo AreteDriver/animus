@@ -181,10 +181,7 @@ class SafetyChecker:
         Returns:
             True if matches any pattern.
         """
-        for pattern in patterns:
-            if fnmatch.fnmatch(file_path, pattern):
-                return True
-        return False
+        return any(fnmatch.fnmatch(file_path, pattern) for pattern in patterns)
 
     def is_allowed_category(self, category: str) -> bool:
         """Check if an improvement category is allowed.

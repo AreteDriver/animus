@@ -67,6 +67,7 @@ def mock_supervisor():
 @pytest.fixture
 def patched_run_command(monkeypatch):
     """Patch command_runner.run to avoid real subprocesses."""
+
     def _fake_run(cmd, cwd, timeout=None, env=None):
         return CommandResult(
             exit_code=0,

@@ -383,7 +383,7 @@ class PatternDetector:
             key = f"{signal.type.value}:{signal.content[:50]}"
             grouped[key].append(signal)
 
-        for key, group in grouped.items():
+        for _key, group in grouped.items():
             # Calculate aggregate metrics
             all_memory_ids = []
             total_strength = 0.0

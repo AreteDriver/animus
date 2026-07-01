@@ -298,9 +298,7 @@ class EvolutionLoop:
         # loop at 0.8% usage. Compare on the same 0-1 scale.
         if self._budget.usage_percent / 100.0 >= self._config.budget_pause_threshold:
             return False
-        if not self._budget.can_allocate(self._config.estimated_tokens_per_iteration):
-            return False
-        return True
+        return self._budget.can_allocate(self._config.estimated_tokens_per_iteration)
 
     def _iterate(self) -> IterationRecord:
         """Execute one hypothesis → experiment → evaluate cycle."""

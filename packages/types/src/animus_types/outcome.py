@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Any, Literal
 
@@ -13,15 +12,15 @@ from .common import Common
 
 
 class ExpectedComparison(Enum):
-    better = 'better'
-    as_expected = 'as_expected'
-    worse = 'worse'
-    inconclusive = 'inconclusive'
+    better = "better"
+    as_expected = "as_expected"
+    worse = "worse"
+    inconclusive = "inconclusive"
 
 
 class Payload(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     action_refs: list[str] = Field(..., min_length=1)
     description: constr(min_length=1)
@@ -31,6 +30,6 @@ class Payload(BaseModel):
 
 
 class AnimusOutcomeObject(Common):
-    artifact_type: Literal['outcome'] | None = None
-    schema_id: Literal['https://animus.local/schemas/outcome.schema.json'] | None = None
+    artifact_type: Literal["outcome"] | None = None
+    schema_id: Literal["https://animus.local/schemas/outcome.schema.json"] | None = None
     payload: Payload | None = None

@@ -11,7 +11,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -76,7 +76,7 @@ def _load_agent_prompts(
     return _agent_prompts_cache
 
 
-class AgentRole(str, Enum):
+class AgentRole(StrEnum):
     """Available agent roles for delegation."""
 
     SUPERVISOR = "supervisor"
@@ -435,7 +435,7 @@ class SupervisorAgent:
 
         # Consensus voting: for consensus-gated delegations, collect votes
         if self._bridge is not None:
-            for i, delegation in enumerate(delegations):
+            for _i, delegation in enumerate(delegations):
                 consensus_level = delegation.get("_skill_consensus")
                 if not consensus_level or consensus_level == "any":
                     continue

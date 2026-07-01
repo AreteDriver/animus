@@ -72,9 +72,7 @@ class _BuildEventCache:
                     self._active_builds[build_id]["status"] = (
                         "completed" if topic == "build.complete" else "failed"
                     )
-                    self._active_builds[build_id]["ended_at"] = getattr(
-                        msg, "timestamp", 0.0
-                    )
+                    self._active_builds[build_id]["ended_at"] = getattr(msg, "timestamp", 0.0)
 
     @property
     def active_builds(self) -> list[dict[str, Any]]:
@@ -195,9 +193,7 @@ class DiscordBot:
         if active:
             lines = []
             for b in active[:10]:
-                lines.append(
-                    f"• `{b['id']}` — {b['project']} ({b['stage']})"
-                )
+                lines.append(f"• `{b['id']}` — {b['project']} ({b['stage']})")
             embed.add_field(
                 name="Active Builds",
                 value="\n".join(lines),
@@ -230,9 +226,7 @@ class DiscordBot:
                 if isinstance(ts, datetime.datetime) and ts.date() == today:
                     from animus_kernel.budget.manager import effective_tokens
 
-                    today_et += effective_tokens(
-                        rec, self._budget.config.model_multipliers
-                    )
+                    today_et += effective_tokens(rec, self._budget.config.model_multipliers)
             embed.add_field(
                 name="ET Today",
                 value=f"{today_et:,.1f}",
@@ -252,9 +246,7 @@ class DiscordBot:
 
         await interaction.followup.send(embed=embed)
 
-    async def _cmd_approve(
-        self, interaction: discord.Interaction, job_id: str
-    ) -> None:
+    async def _cmd_approve(self, interaction: discord.Interaction, job_id: str) -> None:
         await interaction.response.defer(thinking=True)
 
         if not self._approval:
@@ -284,9 +276,7 @@ class DiscordBot:
             )
         await interaction.followup.send(embed=embed)
 
-    async def _cmd_queue(
-        self, interaction: discord.Interaction, project: str
-    ) -> None:
+    async def _cmd_queue(self, interaction: discord.Interaction, project: str) -> None:
         await interaction.response.defer(thinking=True)
 
         pending_tasks: list[dict[str, Any]] = []
@@ -304,13 +294,9 @@ class DiscordBot:
                         ):
                             pending_tasks.append(
                                 {
-                                    "id": payload.get(
-                                        "task_id", getattr(msg, "id", "unknown")
-                                    ),
+                                    "id": payload.get("task_id", getattr(msg, "id", "unknown")),
                                     "topic": topic,
-                                    "priority": str(
-                                        getattr(msg, "priority", "normal")
-                                    ).upper(),
+                                    "priority": str(getattr(msg, "priority", "normal")).upper(),
                                     "project": msg_project,
                                     "et": payload.get(
                                         "estimated_time",
@@ -333,10 +319,7 @@ class DiscordBot:
             color=discord.Color.purple(),
         )
         if unique:
-            lines = [
-                f"• `{t['id']}` — P:{t['priority']} — ET {t['et']}"
-                for t in unique[:10]
-            ]
+            lines = [f"• `{t['id']}` — P:{t['priority']} — ET {t['et']}" for t in unique[:10]]
             embed.description = "\n".join(lines)
         else:
             embed.description = "No pending tasks found."

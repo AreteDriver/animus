@@ -531,9 +531,7 @@ class OllamaProvider(Provider):
         Returns:
             True if the response is valid.
         """
-        if not response.content or not response.content.strip():
-            return False
-        return True
+        return not (not response.content or not response.content.strip())
 
     def select_model_for_tier(
         self, tier: ModelTier, available_models: list[str] | None = None

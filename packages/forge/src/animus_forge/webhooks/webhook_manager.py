@@ -402,18 +402,18 @@ class WebhookManager:
                 if not yaml_path.exists():
                     raise ValueError(f"Workflow {webhook.workflow_id} not found")
 
-                from animus_forge.workflow.loader import load_workflow
                 from animus_forge.orchestrator.workflow_engine_adapter import (
                     convert_execution_result,
                 )
+                from animus_forge.workflow.loader import load_workflow
 
                 config = load_workflow(yaml_path, validate_path=False)
                 variables = self._map_payload_to_variables(webhook, payload)
                 result = self.workflow_engine._executor.execute(config, inputs=variables)
                 status = result.status
-                workflow_result = convert_execution_result(
-                    result, webhook.workflow_id
-                ).model_dump(mode="json")
+                workflow_result = convert_execution_result(result, webhook.workflow_id).model_dump(
+                    mode="json"
+                )
 
         except Exception as e:
             logger.error(f"Webhook trigger failed: {e}")

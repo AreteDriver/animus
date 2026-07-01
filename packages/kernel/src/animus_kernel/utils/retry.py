@@ -138,10 +138,7 @@ def is_retryable_error(exc: Exception) -> bool:
 
     # Check for HTTP status in exception attributes
     status_code = getattr(exc, "status_code", None) or getattr(exc, "status", None)
-    if status_code and status_code in RETRYABLE_STATUS_CODES:
-        return True
-
-    return False
+    return bool(status_code and status_code in RETRYABLE_STATUS_CODES)
 
 
 def with_retry(

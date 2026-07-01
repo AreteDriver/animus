@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from animus_forge.governance.policy import Policy, PolicyEngine, PolicyRule, RuleEffect
 
 

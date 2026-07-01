@@ -3,33 +3,32 @@
 
 from __future__ import annotations
 
-# Re-export legacy types (preserved for backward compatibility)
-from animus_types.egress import EgressDeniedError, is_egress_allowed
-from animus_types.sensitivity import Sensitivity
-
-# Generated contract models
-from animus_types.common import (
-    Common,
-    SubjectDomain,
-    ArtifactType,
-    CognitiveRole,
-    WorkflowStatus,
-    EpistemicStatus,
-    LifecycleStatus,
-    StorageTier,
-    Presentation,
-    SecurityClass,
-    ValidTime,
-    TransactionTime,
-    Provenance,
-    Integrity,
-    Tag,
-)
-
 from animus_types.action import AnimusActionObject
 from animus_types.assessment import AnimusAssessmentObject
 from animus_types.claim import AnimusClaimObject
+
+# Generated contract models
+from animus_types.common import (
+    ArtifactType,
+    CognitiveRole,
+    Common,
+    EpistemicStatus,
+    Integrity,
+    LifecycleStatus,
+    Presentation,
+    Provenance,
+    SecurityClass,
+    StorageTier,
+    SubjectDomain,
+    Tag,
+    TransactionTime,
+    ValidTime,
+    WorkflowStatus,
+)
 from animus_types.decision import AnimusDecisionObject
+
+# Re-export legacy types (preserved for backward compatibility)
+from animus_types.egress import EgressDeniedError, is_egress_allowed
 from animus_types.entity import AnimusEntityObject
 from animus_types.event import AnimusEventObject
 from animus_types.forecast import AnimusForecastObject
@@ -38,6 +37,7 @@ from animus_types.lesson import AnimusLessonObject
 from animus_types.observation import AnimusObservationObject
 from animus_types.outcome import AnimusOutcomeObject
 from animus_types.pattern import AnimusPatternObject
+from animus_types.sensitivity import Sensitivity
 from animus_types.signal import AnimusSignalObject
 from animus_types.source import AnimusSourceObject
 
@@ -78,4 +78,3 @@ __all__ = [
     "AnimusSignalObject",
     "AnimusSourceObject",
 ]
-

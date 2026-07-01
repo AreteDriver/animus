@@ -130,7 +130,7 @@ class Policy:
         self.rules.append(rule)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Policy":
+    def from_dict(cls, data: dict[str, Any]) -> Policy:
         """Load policy from a dictionary (e.g. parsed YAML)."""
         rules = []
         for r_data in data.get("rules", []):
@@ -195,7 +195,9 @@ class PolicyEngine:
         """Retrieve a policy by name."""
         return self._policies.get(name)
 
-    def evaluate(self, policy_name: str, context: dict[str, Any]) -> tuple[RuleEffect, PolicyRule | None, str]:
+    def evaluate(
+        self, policy_name: str, context: dict[str, Any]
+    ) -> tuple[RuleEffect, PolicyRule | None, str]:
         """Evaluate context against a named policy."""
         policy = self._policies.get(policy_name)
         if policy is None:

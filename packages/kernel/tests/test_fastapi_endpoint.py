@@ -30,6 +30,7 @@ class TestChatEndpoint:
     def test_chat_stream_success(self, client, monkeypatch):
         async def _fake_stream(self, request):
             from animus_kernel.providers.base import StreamChunk
+
             yield StreamChunk(content="Hello ", model="m", provider="p")
             yield StreamChunk(content="world", model="m", provider="p")
 
@@ -92,6 +93,7 @@ class TestBudgetEndpoint:
     def test_get_budget(self, client, monkeypatch):
         # Reset budget to known state
         from animus_kernel.budget.manager import BudgetConfig, BudgetManager
+
         fresh = BudgetManager(config=BudgetConfig(total_budget=600))
         monkeypatch.setattr("animus_kernel.server.app._budget_manager", fresh)
         response = client.get("/api/budget")
@@ -130,6 +132,7 @@ class TestExceptionHandlers:
 
     def test_generic_exception(self):
         import asyncio
+
         handler = app.exception_handlers[Exception]
         response = asyncio.run(handler(None, RuntimeError("kaboom")))
         assert response.status_code == 500

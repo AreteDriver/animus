@@ -170,18 +170,22 @@ class AnimusIdentity:
                 lines.append(f"- {ev}")
         else:
             lines.append("_No founding events recorded._")
-        lines.extend([
-            "",
-            "## Capabilities",
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Capabilities",
+                "",
+            ]
+        )
         for cap in self.capabilities:
             lines.append(f"- {cap}")
-        lines.extend([
-            "",
-            "## Reflection Log",
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Reflection Log",
+                "",
+            ]
+        )
         log = cz.get("reflection_log", [])
         if log:
             for entry in log[-10:]:  # Last 10 entries
@@ -190,11 +194,13 @@ class AnimusIdentity:
                 lines.append(f"- **{ts}**: {summary}")
         else:
             lines.append("_No reflections yet._")
-        lines.extend([
-            "",
-            f"---",
-            f"*Generated from canonical AnimusIdentity at {datetime.now().isoformat()}*",
-        ])
+        lines.extend(
+            [
+                "",
+                "---",
+                f"*Generated from canonical AnimusIdentity at {datetime.now().isoformat()}*",
+            ]
+        )
         return "\n".join(lines)
 
     def to_dict(self) -> dict:

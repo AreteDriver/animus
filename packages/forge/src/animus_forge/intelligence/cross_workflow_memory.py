@@ -401,7 +401,7 @@ class CrossWorkflowMemory:
         lines: list[str] = ["## Cross-Workflow Learnings", ""]
         current_chars = sum(len(line) + 1 for line in lines)
 
-        for rank, (score, mem) in enumerate(scored, start=1):
+        for rank, (_score, mem) in enumerate(scored, start=1):
             tags = mem.metadata.get("tags", [])
             tag_str = f" [{', '.join(tags)}]" if tags else ""
             header = f"{rank}. (importance={mem.importance:.2f}){tag_str}"
@@ -498,7 +498,7 @@ class CrossWorkflowMemory:
         current_chars = sum(len(line) + 1 for line in lines)
         max_tier = Sensitivity.PUBLIC
 
-        for rank, (score, mem) in enumerate(scored, start=1):
+        for rank, (_score, mem) in enumerate(scored, start=1):
             tags = mem.metadata.get("tags", [])
             tag_str = f" [{', '.join(tags)}]" if tags else ""
             header = f"{rank}. (importance={mem.importance:.2f}){tag_str}"
