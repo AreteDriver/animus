@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Any
 
@@ -11,20 +10,20 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, constr
 
 
 class Status(Enum):
-    active = 'active'
-    consumed = 'consumed'
-    expired = 'expired'
-    revoked = 'revoked'
+    active = "active"
+    consumed = "consumed"
+    expired = "expired"
+    revoked = "revoked"
 
 
 class AnimusApprovalReceipt(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
-    approval_id: constr(pattern=r'^apr-[a-z0-9_-]+$')
+    approval_id: constr(pattern=r"^apr-[a-z0-9_-]+$")
     principal_id: constr(min_length=3)
-    owner_id: constr(pattern=r'^owner-[a-z0-9_-]+$')
-    workspace_id: constr(pattern=r'^ws-[a-z0-9_-]+$')
+    owner_id: constr(pattern=r"^owner-[a-z0-9_-]+$")
+    workspace_id: constr(pattern=r"^ws-[a-z0-9_-]+$")
     purpose: constr(min_length=1)
     resource_refs: list[str]
     action_scope: dict[str, Any]

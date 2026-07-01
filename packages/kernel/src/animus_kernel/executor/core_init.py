@@ -16,7 +16,6 @@ from animus_kernel.executor.models import (
 
 __all__ = [
     "AgentConfig",
-    "ForgeEngine",
     "ForgeError",
     "GateConfig",
     "ReviseRequestedError",

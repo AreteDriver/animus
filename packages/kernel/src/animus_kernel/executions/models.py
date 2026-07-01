@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
 
-class ExecutionStatus(str, Enum):
+class ExecutionStatus(StrEnum):
     """Status of a workflow execution."""
 
     PENDING = "pending"
@@ -21,7 +21,7 @@ class ExecutionStatus(str, Enum):
     AWAITING_APPROVAL = "awaiting_approval"
 
 
-class LogLevel(str, Enum):
+class LogLevel(StrEnum):
     """Log level for execution logs."""
 
     DEBUG = "debug"

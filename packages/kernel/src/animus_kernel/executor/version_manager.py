@@ -474,10 +474,7 @@ class WorkflowVersionManager:
         if not wv:
             raise ValueError(f"No versions found for workflow {workflow_name}")
 
-        if file_path is None:
-            file_path = Path(f"{workflow_name}.yaml")
-        else:
-            file_path = Path(file_path)
+        file_path = Path(f"{workflow_name}.yaml") if file_path is None else Path(file_path)
 
         file_path.write_text(wv.content)
         logger.info(f"Exported {workflow_name} v{wv.version} to {file_path}")

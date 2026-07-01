@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class BudgetPeriod(str, Enum):
+class BudgetPeriod(StrEnum):
     """Budget period type."""
 
     DAILY = "daily"

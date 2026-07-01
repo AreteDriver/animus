@@ -159,17 +159,14 @@ class TestParseJsonToolCall:
 
 class TestParseHermesToolCall:
     def test_standard_shape(self):
-        xml = (
-            '<tool_call><name>read_file</name>'
-            '<arguments>{"path": "a.py"}</arguments></tool_call>'
-        )
+        xml = '<tool_call><name>read_file</name><arguments>{"path": "a.py"}</arguments></tool_call>'
         name, args = parse_hermes_tool_call(xml)
         assert name == "read_file"
         assert args == {"path": "a.py"}
 
     def test_tool_name_alias(self):
         xml = (
-            '<tool_call><tool_name>read_file</tool_name>'
+            "<tool_call><tool_name>read_file</tool_name>"
             '<arguments>{"path": "a.py"}</arguments></tool_call>'
         )
         name, args = parse_hermes_tool_call(xml)
@@ -177,17 +174,13 @@ class TestParseHermesToolCall:
 
     def test_parameters_alias(self):
         xml = (
-            '<tool_call><name>read_file</name>'
-            '<parameters>{"path": "a.py"}</parameters></tool_call>'
+            '<tool_call><name>read_file</name><parameters>{"path": "a.py"}</parameters></tool_call>'
         )
         name, args = parse_hermes_tool_call(xml)
         assert args == {"path": "a.py"}
 
     def test_params_alias(self):
-        xml = (
-            '<tool_call><name>read_file</name>'
-            '<params>{"path": "a.py"}</params></tool_call>'
-        )
+        xml = '<tool_call><name>read_file</name><params>{"path": "a.py"}</params></tool_call>'
         name, args = parse_hermes_tool_call(xml)
         assert args == {"path": "a.py"}
 

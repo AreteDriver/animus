@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-
-from enum import Enum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, confloat, conint, constr
@@ -14,7 +12,7 @@ from .common import Common
 
 class Payload(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     description: constr(min_length=1)
     signal_refs: list[str] = Field(..., min_length=2)
@@ -25,6 +23,6 @@ class Payload(BaseModel):
 
 
 class AnimusPatternObject(Common):
-    artifact_type: Literal['pattern'] | None = None
-    schema_id: Literal['https://animus.local/schemas/pattern.schema.json'] | None = None
+    artifact_type: Literal["pattern"] | None = None
+    schema_id: Literal["https://animus.local/schemas/pattern.schema.json"] | None = None
     payload: Payload | None = None

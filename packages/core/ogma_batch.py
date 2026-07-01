@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # Bootstrap pathing
@@ -42,13 +42,12 @@ def main() -> int:
     items = cache.recent(limit=500)
 
     targets = [
-        i for i in items
-        if i.source_id in AI_SOURCES and i.published and i.published >= since
+        i for i in items if i.source_id in AI_SOURCES and i.published and i.published >= since
     ]
 
     # Prioritize YouTube with captions first, then HN
     yt_items = [i for i in targets if i.source_id.startswith("youtube:")]
-    hn_items = [i for i in targets if i.source_id == "hn:front_page"]
+    [i for i in targets if i.source_id == "hn:front_page"]
     # Retry only the 3 items that failed with phi4:14b
     failed_titles = {
         "The Agent Cloud: Databricks' Bet on the Future of AI",
@@ -61,6 +60,7 @@ def main() -> int:
     for idx, item in enumerate(targets_ordered, 1):
         logger.info("[%d/%d] %s — %s", idx, len(targets_ordered), item.source_id, item.title[:60])
         from animus.cognitive import ModelConfig, create_model
+
         try:
             model = create_model(ModelConfig.ollama(model="qwen2.5:32b"))
             result = synthesize(item, model=model)

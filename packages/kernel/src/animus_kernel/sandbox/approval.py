@@ -7,7 +7,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class ApprovalStatus(str, Enum):
+class ApprovalStatus(StrEnum):
     """Status of an approval request."""
 
     PENDING = "pending"
@@ -25,7 +25,7 @@ class ApprovalStatus(str, Enum):
     EXPIRED = "expired"
 
 
-class ApprovalStage(str, Enum):
+class ApprovalStage(StrEnum):
     """Stage requiring approval."""
 
     PLAN = "plan"  # Before starting work

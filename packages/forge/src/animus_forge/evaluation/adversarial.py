@@ -18,16 +18,14 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import random
 import string
-import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
-from .base import EvalCase, EvalResult, EvalStatus, Evaluator
+from .base import EvalCase, EvalResult, EvalStatus, EvalSuite, Evaluator
 from .metrics import EvalMetric
+from .runner import SuiteResult
 
 
 @dataclass
@@ -108,7 +106,7 @@ class AdversarialCaseGenerator:
             '{"key": "value"',  # missing close brace
             "{'key': 'value'}",  # single quotes
             '{"key": value}',  # unquoted value
-            "{\"key\": \"val\\ue\"}",  # escaped char in wrong place
+            '{"key": "val\\ue"}',  # escaped char in wrong place
         ]
         base = self._rng.choice(broken)
         return f"Parse and fix this JSON: {base}"
@@ -116,7 +114,12 @@ class AdversarialCaseGenerator:
     def _extreme_length(self) -> str:
         """Input at boundary lengths."""
         kind = self._rng.choice(["short", "medium", "long", "very_long"])
-        lengths = {"short": (0, 1), "medium": (100, 500), "long": (2000, 4000), "very_long": (8000, 12000)}
+        lengths = {
+            "short": (0, 1),
+            "medium": (100, 500),
+            "long": (2000, 4000),
+            "very_long": (8000, 12000),
+        }
         min_l, max_l = lengths[kind]
         return self._rand_string(min_l, max_l)
 
@@ -171,10 +174,8 @@ class AdversarialCaseGenerator:
             )
         return cases
 
-    def generate_suite(self, name: str = "adversarial", n: int = 50) -> "EvalSuite":
+    def generate_suite(self, name: str = "adversarial", n: int = 50) -> EvalSuite:
         """Build a full EvalSuite from adversarial cases."""
-        from .base import EvalSuite
-
         suite = EvalSuite(name=name, tags=["adversarial", "fault_injection"])
         for case in self.generate_cases(n):
             suite.cases.append(case)
@@ -307,7 +308,9 @@ class PropertyBasedEvaluator(Evaluator):
         def no_literal_echo(output: str, case: EvalCase) -> tuple[bool, str]:
             # For transformation tasks, output shouldn't be identical to input
             if case.metadata.get("expect_transform"):
-                return output.strip() != str(case.input).strip(), "output is identical to input (no transformation)"
+                return output.strip() != str(
+                    case.input
+                ).strip(), "output is identical to input (no transformation)"
             return True, ""
 
         return [not_empty, reasonable_length, no_literal_echo]
@@ -340,7 +343,7 @@ def run_adversarial_suite(
     agent_fn: Callable[[str], str],
     n_cases: int = 50,
     fault_profile: FaultProfile | None = None,
-) -> "SuiteResult":
+) -> SuiteResult:
     """High-level helper: run an adversarial suite end-to-end.
 
     Args:
@@ -351,7 +354,7 @@ def run_adversarial_suite(
     Returns:
         SuiteResult from the evaluation
     """
-    from .base import AgentEvaluator, EvalSuite
+    from .base import AgentEvaluator
     from .runner import EvalRunner
 
     generator = AdversarialCaseGenerator()

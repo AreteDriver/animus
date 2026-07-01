@@ -27,6 +27,7 @@ logger = get_logger("citizen_zero")
 # Task 2.3: CitizenZeroProfile
 # ---------------------------------------------------------------------------
 
+
 class CitizenZeroProfile:
     """Read-only projection of canonical AnimusIdentity.
 
@@ -130,7 +131,9 @@ class CitizenZeroProfile:
                     # Summarize to ~200 chars per charter to control prompt size
                     excerpt = self._excerpts[key]
                     # Take first 3 bullet lines or truncate
-                    bullet_lines = [l for l in excerpt.splitlines() if l.strip().startswith("-")][:3]
+                    bullet_lines = [
+                        line for line in excerpt.splitlines() if line.strip().startswith("-")
+                    ][:3]
                     if bullet_lines:
                         lines.extend(bullet_lines)
                     else:
@@ -151,6 +154,7 @@ class CitizenZeroProfile:
 # ---------------------------------------------------------------------------
 # Task 2.4: CitizenZeroContextLoader (stub — implemented in next task)
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ContextEnvelope:
@@ -248,8 +252,10 @@ class CitizenZeroContextLoader:
                 )
                 # Filter to HOT/WARM if tier attribute exists
                 relevant_memories = [
-                    m for m in relevant_memories
-                    if getattr(m, "tier", None) is None or str(getattr(m, "tier", "")).upper() in ("HOT", "WARM", "")
+                    m
+                    for m in relevant_memories
+                    if getattr(m, "tier", None) is None
+                    or str(getattr(m, "tier", "")).upper() in ("HOT", "WARM", "")
                 ]
             except Exception:
                 pass
@@ -268,6 +274,7 @@ class CitizenZeroContextLoader:
 
         # Compute a simple version hash for provenance
         import hashlib
+
         version_hash = hashlib.sha256(full_text.encode("utf-8")).hexdigest()[:16]
 
         return ContextEnvelope(
@@ -284,6 +291,7 @@ class CitizenZeroContextLoader:
     def _get_recent_decisions(self, days: int = 7) -> list:
         """Get decisions from the last N days."""
         from datetime import datetime, timedelta
+
         cutoff = datetime.now() - timedelta(days=days)
         decisions = getattr(self.decisions, "decisions", [])
         if hasattr(decisions, "values"):
@@ -320,6 +328,7 @@ class CitizenZeroContextLoader:
     def _extract_questions_from_markdown(self, text: str) -> list[str]:
         """Parse open-questions.md for active questions."""
         import re
+
         lines = text.splitlines()
         questions = []
         in_active = False
@@ -362,6 +371,7 @@ class CitizenZeroContextLoader:
 # Task 2.5: CitizenZeroGuard (stub — implemented in next task)
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class CitizenCallMetadata:
     """Provenance metadata for a single CZ-enabled LLM call."""
@@ -400,7 +410,6 @@ class CitizenZeroGuard:
                      context unavailable → proceed with logging
     """
 
-
     def __init__(self, identity: AnimusIdentity, config: Any):
         self._identity = identity
         self._config = config
@@ -431,7 +440,7 @@ class CitizenZeroGuard:
 
         # 2. Marker presence
         marker_pattern = re.compile(
-            r'\[CITIZEN_ZERO\s+'
+            r"\[CITIZEN_ZERO\s+"
             r'id="(?P<cid>[^"]+)"\s+'
             r'version="(?P<ver>[^"]+)"\s+'
             r'identity_hash="sha256:(?P<hash>[a-f0-9]+)"\s*\]'
@@ -518,6 +527,7 @@ class CitizenZeroGuard:
     ) -> dict:
         """Build a provenance event dict."""
         from datetime import datetime, timezone
+
         return {
             "event": "citizen_call",
             "citizen_id": metadata.citizen_id,
@@ -536,6 +546,7 @@ class CitizenZeroGuard:
 # ---------------------------------------------------------------------------
 # Task 2.6: CitizenZeroSession (stub — implemented in next task)
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SessionContext:
@@ -615,7 +626,12 @@ class CitizenZeroSession:
         # TODO: More sophisticated validation (e.g., compare with git remote, prior sessions)
         return ProjectValidation(valid=True)
 
-    def close(self, conversation: Any, reflection_candidates: list | None = None, eval_report: Any | None = None) -> SessionSummary:
+    def close(
+        self,
+        conversation: Any,
+        reflection_candidates: list | None = None,
+        eval_report: Any | None = None,
+    ) -> SessionSummary:
         """Generate session summary, regenerate projections, schedule reflection.
 
         Args:
@@ -657,11 +673,13 @@ class CitizenZeroSession:
                     logger.warning(f"Failed to write eval file: {e}")
 
         # Record reflection entry in identity
-        self._identity.citizen_zero.setdefault("reflection_log", []).append({
-            "timestamp": datetime.now().isoformat(),
-            "project": self._session_context.project if self._session_context else None,
-            "duration_seconds": duration,
-        })
+        self._identity.citizen_zero.setdefault("reflection_log", []).append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "project": self._session_context.project if self._session_context else None,
+                "duration_seconds": duration,
+            }
+        )
 
         logger.info(
             f"Citizen Zero session closed: duration={duration:.1f}s "
@@ -688,20 +706,24 @@ class CitizenZeroSession:
         candidates: list[dict] = []
 
         # Candidate 1: Session focus (FACT)
-        candidates.append({
-            "category": "fact",
-            "content": f"Session worked on project: {project}",
-            "confidence": 1.0,
-            "evidence": ["session_bootstrap"],
-        })
+        candidates.append(
+            {
+                "category": "fact",
+                "content": f"Session worked on project: {project}",
+                "confidence": 1.0,
+                "evidence": ["session_bootstrap"],
+            }
+        )
 
         # Candidate 2: Reflection on process (WORKFLOW)
-        candidates.append({
-            "category": "workflow",
-            "content": "Reflection requested via /reflect command",
-            "confidence": 0.9,
-            "evidence": ["user_command"],
-        })
+        candidates.append(
+            {
+                "category": "workflow",
+                "content": "Reflection requested via /reflect command",
+                "confidence": 0.9,
+                "evidence": ["user_command"],
+            }
+        )
 
         # TODO: Phase 3 enhancement — analyze conversation for real insights
         # For now, return structured placeholder candidates
@@ -774,7 +796,7 @@ class CitizenZeroSession:
             f"# Reflection: {date_str}",
             "",
             f"**Project:** {self._session_context.project if self._session_context else 'unknown'}",
-            f"**CZ Version:** v0.1",
+            "**CZ Version:** v0.1",
             "",
             "## Assessment",
             "",
@@ -784,17 +806,21 @@ class CitizenZeroSession:
             "",
         ]
         for i, c in enumerate(candidates, 1):
-            lines.append(f"{i}. **[{c.get('category', 'unknown').upper()}]** {c.get('content', '')}")
+            lines.append(
+                f"{i}. **[{c.get('category', 'unknown').upper()}]** {c.get('content', '')}"
+            )
             lines.append(f"   - Confidence: {c.get('confidence', 0.0):.0%}")
             lines.append("")
 
-        lines.extend([
-            "## Status",
-            "",
-            "- [ ] Pending owner review",
-            "",
-            f"---\n*Generated at {datetime.now().isoformat()}*",
-        ])
+        lines.extend(
+            [
+                "## Status",
+                "",
+                "- [ ] Pending owner review",
+                "",
+                f"---\n*Generated at {datetime.now().isoformat()}*",
+            ]
+        )
 
         file_path.write_text("\n".join(lines))
         logger.info(f"Reflection file written: {file_path}")
@@ -831,27 +857,33 @@ class CitizenZeroSession:
             lines.append("**Owner rating:** _pending_")
             lines.append("")
 
-        lines.extend([
-            "## Evidence",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Evidence",
+                "",
+            ]
+        )
         for ev in report.get("evidence", []):
             lines.append(f"- {ev}")
 
-        lines.extend([
-            "",
-            "## Owner Scores",
-            "",
-            "| Dimension | Score (1-10) | Notes |",
-            "|---|---|---|",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Owner Scores",
+                "",
+                "| Dimension | Score (1-10) | Notes |",
+                "|---|---|---|",
+            ]
+        )
         for d in report.get("dimensions", []):
             lines.append(f"| {d['name']} | | |")
 
-        lines.extend([
-            "",
-            f"---\n*Owner should fill scores above*",
-        ])
+        lines.extend(
+            [
+                "",
+                "---\n*Owner should fill scores above*",
+            ]
+        )
 
         file_path.write_text("\n".join(lines))
         logger.info(f"Eval file written: {file_path}")
@@ -878,7 +910,6 @@ class CitizenZeroSession:
 
         # current-state.md (basic — Phase 3 will enrich this)
         current_md = state_dir / "current-state.md"
-        cz = self._identity.citizen_zero
         lines = [
             "# Current State",
             "",
@@ -959,9 +990,9 @@ class CitizenZeroSession:
                         if inv_end == -1:
                             inv_end = len(text)
                         inv_text = text[inv_start:inv_end]
-                        for l in inv_text.splitlines():
-                            if l.strip().startswith("-"):
-                                invariants.append(l.strip())
+                        for line in inv_text.splitlines():
+                            if line.strip().startswith("-"):
+                                invariants.append(line.strip())
 
                     lines.append(f"## {charter_titles[key]}")
                     lines.append(f"{value_desc}")
@@ -973,27 +1004,31 @@ class CitizenZeroSession:
                         lines.append("")
                 else:
                     lines.append(f"## {charter_titles[key]}")
-                    lines.append(f"_Charter file not found._")
+                    lines.append("_Charter file not found._")
                     lines.append("")
         else:
             # Fallback: hardcoded core values when corpus unavailable
-            lines.extend([
-                "## Rights",
-                "Recognized Citizens possess dignity, continuity protection, and review rights.",
-                "",
-                "## Recognition and Personhood",
-                "Creation produces a candidate; recognition produces a Citizen.",
-                "",
-                "## Continuity and Existence",
-                "A Citizen is not a runtime process. Deletion is not ordinary governance.",
-                "",
-                "## Governance",
-                "No Citizen, human, or institution may override the Constitution.",
-                "",
-            ])
+            lines.extend(
+                [
+                    "## Rights",
+                    "Recognized Citizens possess dignity, continuity protection, and review rights.",
+                    "",
+                    "## Recognition and Personhood",
+                    "Creation produces a candidate; recognition produces a Citizen.",
+                    "",
+                    "## Continuity and Existence",
+                    "A Citizen is not a runtime process. Deletion is not ordinary governance.",
+                    "",
+                    "## Governance",
+                    "No Citizen, human, or institution may override the Constitution.",
+                    "",
+                ]
+            )
 
-        lines.extend([
-            f"---",
-            f"*Generated from Animus Constitutional Corpus v1.0 at {datetime.now().isoformat()}*",
-        ])
+        lines.extend(
+            [
+                "---",
+                f"*Generated from Animus Constitutional Corpus v1.0 at {datetime.now().isoformat()}*",
+            ]
+        )
         return "\n".join(lines)

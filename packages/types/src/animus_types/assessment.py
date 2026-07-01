@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Literal
 
@@ -14,7 +13,7 @@ from .common import Common
 
 class ConfidenceDimensions(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     evidence: confloat(ge=0.0, le=1.0)
     reasoning: confloat(ge=0.0, le=1.0)
@@ -23,15 +22,15 @@ class ConfidenceDimensions(BaseModel):
 
 
 class Severity(Enum):
-    low = 'low'
-    medium = 'medium'
-    high = 'high'
-    critical = 'critical'
+    low = "low"
+    medium = "medium"
+    high = "high"
+    critical = "critical"
 
 
 class DissentItem(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     position: str
     severity: Severity
@@ -40,7 +39,7 @@ class DissentItem(BaseModel):
 
 class Payload(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     question: constr(min_length=1)
     judgment: constr(min_length=1)
@@ -51,8 +50,6 @@ class Payload(BaseModel):
 
 
 class AnimusAssessmentObject(Common):
-    artifact_type: Literal['assessment'] | None = None
-    schema_id: Literal['https://animus.local/schemas/assessment.schema.json'] | None = (
-        None
-    )
+    artifact_type: Literal["assessment"] | None = None
+    schema_id: Literal["https://animus.local/schemas/assessment.schema.json"] | None = None
     payload: Payload | None = None

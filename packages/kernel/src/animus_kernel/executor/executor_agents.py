@@ -15,6 +15,7 @@ Expects the following attributes from the host class:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from dataclasses import asdict, dataclass, field
@@ -153,14 +154,12 @@ class AgentStepHandlerMixin:
 
         # Store result in workflow memory if available
         if hasattr(self, "memory_manager") and self.memory_manager is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self.memory_manager.store_output(
                     agent_id=agent_id,
                     step_id=step.id,
                     output=result.to_dict(),
                 )
-            except Exception:
-                pass
 
         # Store result in persistent agent memory
         if agent_mem is not None:
@@ -231,14 +230,12 @@ class AgentStepHandlerMixin:
 
         # Store in memory if available
         if hasattr(self, "memory_manager") and self.memory_manager is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self.memory_manager.store_output(
                     agent_id=target_agent,
                     step_id=step.id,
                     output={"handoff_from": source_agent, "result_length": len(str(source_result))},
                 )
-            except Exception:
-                pass
 
         return {
             "source_agent": source_agent,

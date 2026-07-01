@@ -323,22 +323,21 @@ class ForgeToolRegistry:
             return f"Error: Unknown tool '{tool_name}'"
 
         # Budget gate — reject if budget exhausted
-        if self._budget_manager is not None:
-            if not self._budget_manager.can_allocate(
-                self._budget_tokens_per_call,
-                agent_id=agent_id or None,
-            ):
-                self._emit_audit(
-                    tool_name,
-                    arguments,
-                    agent_id,
-                    False,
-                    "budget_exceeded",
-                )
-                return (
-                    f"Error: Budget exceeded — cannot execute {tool_name}. "
-                    f"Remaining: {self._budget_manager.remaining} tokens."
-                )
+        if self._budget_manager is not None and not self._budget_manager.can_allocate(
+            self._budget_tokens_per_call,
+            agent_id=agent_id or None,
+        ):
+            self._emit_audit(
+                tool_name,
+                arguments,
+                agent_id,
+                False,
+                "budget_exceeded",
+            )
+            return (
+                f"Error: Budget exceeded — cannot execute {tool_name}. "
+                f"Remaining: {self._budget_manager.remaining} tokens."
+            )
 
         start = time.monotonic()
         try:

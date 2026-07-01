@@ -1024,7 +1024,12 @@ When you have gathered enough information, provide your final answer."""
 
         if isinstance(self.primary, AnthropicModel):
             return self._think_with_tools_anthropic(
-                prompt, context, mode, tools, max_iterations, approval_callback,
+                prompt,
+                context,
+                mode,
+                tools,
+                max_iterations,
+                approval_callback,
                 citizen_context=citizen_context,
             )
         return self._think_with_tools_constrained(

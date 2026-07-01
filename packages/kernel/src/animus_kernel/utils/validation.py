@@ -222,10 +222,7 @@ def validate_safe_path(
         raise ValidationError(f"Absolute paths not allowed: {path}")
 
     # Resolve the full path
-    if path.is_absolute():
-        resolved = path.resolve()
-    else:
-        resolved = (base_dir / path).resolve()
+    resolved = path.resolve() if path.is_absolute() else (base_dir / path).resolve()
 
     # Check for path traversal
     try:
@@ -282,10 +279,7 @@ def validate_identifier(
         raise ValidationError(f"{name} exceeds maximum length of {max_length}: {len(value)}")
 
     # Build pattern based on options
-    if allow_dots:
-        pattern = re.compile(r"^[a-zA-Z][a-zA-Z0-9_.-]*$")
-    else:
-        pattern = SAFE_IDENTIFIER_PATTERN
+    pattern = re.compile(r"^[a-zA-Z][a-zA-Z0-9_.-]*$") if allow_dots else SAFE_IDENTIFIER_PATTERN
 
     if not pattern.match(value):
         raise ValidationError(
@@ -335,7 +329,7 @@ def validate_workflow_params(
     elif step_type == "parallel":
         # Validate sub-steps recursively
         sub_steps = params.get("steps", [])
-        for i, sub_step in enumerate(sub_steps):
+        for _i, sub_step in enumerate(sub_steps):
             if isinstance(sub_step, dict):
                 sub_type = sub_step.get("type", "")
                 sub_params = sub_step.get("params", {})

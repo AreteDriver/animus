@@ -11,7 +11,7 @@ import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import Enum, StrEnum
 
 
 class MemoryType(Enum):
@@ -31,7 +31,7 @@ class MemorySource(Enum):
     LEARNED = "learned"  # Pattern detected over time
 
 
-class MemoryTier(str, Enum):
+class MemoryTier(StrEnum):
     """Temperature-based storage tier for memory retention policy."""
 
     HOT = "hot"  # Active session context

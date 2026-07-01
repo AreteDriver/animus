@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-
-from enum import Enum
 from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, confloat, constr
@@ -14,7 +12,7 @@ from .common import Common
 
 class Payload(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     description: constr(min_length=1)
     observation_refs: list[str] = Field(..., min_length=1)
@@ -24,6 +22,6 @@ class Payload(BaseModel):
 
 
 class AnimusSignalObject(Common):
-    artifact_type: Literal['signal'] | None = None
-    schema_id: Literal['https://animus.local/schemas/signal.schema.json'] | None = None
+    artifact_type: Literal["signal"] | None = None
+    schema_id: Literal["https://animus.local/schemas/signal.schema.json"] | None = None
     payload: Payload | None = None

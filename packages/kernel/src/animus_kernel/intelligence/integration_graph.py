@@ -332,7 +332,7 @@ class IntegrationGraph:
         chain_id = f"chain-{uuid.uuid4().hex[:8]}"
         rules: list[TriggerRule] = []
 
-        for i, step_data in enumerate(steps):
+        for _i, step_data in enumerate(steps):
             trigger_id = self.register_trigger(
                 source=step_data["source"],
                 event=step_data["event"],

@@ -6,6 +6,7 @@ read → plan → edit → test → retry cycle.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import logging
 from dataclasses import dataclass, field
@@ -151,7 +152,7 @@ class TerminalAgent:
 
                 try:
                     # 1. Read relevant files
-                    structure = self.fs.get_structure()
+                    self.fs.get_structure()
                     relevant = self._find_relevant_files(current_instruction)
                     for rel_path in relevant:
                         try:
@@ -179,9 +180,7 @@ class TerminalAgent:
                     # Detect cumulative file changes against the baseline
                     current_hashes = self._hash_files(project_path, all_files)
                     files_changed = [
-                        f
-                        for f in all_files
-                        if baseline_hashes.get(f) != current_hashes.get(f)
+                        f for f in all_files if baseline_hashes.get(f) != current_hashes.get(f)
                     ]
 
                     # 4. Run tests
@@ -205,24 +204,10 @@ class TerminalAgent:
                         iteration_count=iteration,
                         files_touched=list(files_changed),
                         test_results={
-                            "exit_code": test_result.exit_code
-                            if test_result
-                            else -1,
-                            "stdout": (
-                                test_result.stdout[:2000]
-                                if test_result
-                                else ""
-                            ),
-                            "stderr": (
-                                test_result.stderr[:2000]
-                                if test_result
-                                else ""
-                            ),
-                            "duration_ms": (
-                                test_result.duration_ms
-                                if test_result
-                                else 0
-                            ),
+                            "exit_code": test_result.exit_code if test_result else -1,
+                            "stdout": (test_result.stdout[:2000] if test_result else ""),
+                            "stderr": (test_result.stderr[:2000] if test_result else ""),
+                            "duration_ms": (test_result.duration_ms if test_result else 0),
                             "passed": tests_passed,
                         },
                     )
@@ -234,9 +219,7 @@ class TerminalAgent:
                         tokens=self.budget_tokens_per_iteration,
                         operation=f"build_iteration_{iteration}",
                     )
-                    total_et += effective_tokens(
-                        record, self.budget.config.model_multipliers
-                    )
+                    total_et += effective_tokens(record, self.budget.config.model_multipliers)
 
                     iterations_used = iteration
 
@@ -245,12 +228,8 @@ class TerminalAgent:
                         break
 
                     # 7. Retry preparation
-                    stdout_snip = (
-                        test_result.stdout[:2000] if test_result else ""
-                    )
-                    stderr_snip = (
-                        test_result.stderr[:2000] if test_result else ""
-                    )
+                    stdout_snip = test_result.stdout[:2000] if test_result else ""
+                    stderr_snip = test_result.stderr[:2000] if test_result else ""
                     current_instruction = (
                         f"{instruction}\n\n"
                         f"Previous attempt (iteration {iteration}) "
@@ -323,19 +302,13 @@ class TerminalAgent:
         for rel_path in files:
             full = project_path / rel_path
             if full.is_file():
-                try:
-                    hashes[rel_path] = hashlib.sha256(
-                        full.read_bytes()
-                    ).hexdigest()
-                except Exception:
-                    pass
+                with contextlib.suppress(Exception):
+                    hashes[rel_path] = hashlib.sha256(full.read_bytes()).hexdigest()
         return hashes
 
     def _find_relevant_files(self, instruction: str) -> list[str]:
         """Heuristic search for files related to the instruction."""
-        keywords = [
-            w for w in instruction.lower().split() if len(w) > 3
-        ]
+        keywords = [w for w in instruction.lower().split() if len(w) > 3]
         seen: set[str] = set()
         for kw in keywords:
             try:

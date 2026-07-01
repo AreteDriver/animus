@@ -49,10 +49,10 @@ jobs:
         run: pip install ruff
 
       - name: Lint all packages
-        run: ruff check packages/
+        run: ruff check packages/ --exclude packages/_archive/
 
       - name: Format check
-        run: ruff format --check packages/
+        run: ruff format --check packages/ --exclude packages/_archive/
 
   test-core:
     name: Test Core (Python ${{ matrix.python-version }})

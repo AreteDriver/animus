@@ -335,7 +335,7 @@ def validate_workflow_params(
     elif step_type == "parallel":
         # Validate sub-steps recursively
         sub_steps = params.get("steps", [])
-        for i, sub_step in enumerate(sub_steps):
+        for _i, sub_step in enumerate(sub_steps):
             if isinstance(sub_step, dict):
                 sub_type = sub_step.get("type", "")
                 sub_params = sub_step.get("params", {})

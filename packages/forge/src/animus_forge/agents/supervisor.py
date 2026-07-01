@@ -435,7 +435,7 @@ class SupervisorAgent:
 
         # Consensus voting: for consensus-gated delegations, collect votes
         if self._bridge is not None:
-            for i, delegation in enumerate(delegations):
+            for _i, delegation in enumerate(delegations):
                 consensus_level = delegation.get("_skill_consensus")
                 if not consensus_level or consensus_level == "any":
                     continue

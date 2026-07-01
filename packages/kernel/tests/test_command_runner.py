@@ -89,7 +89,7 @@ class TestRun:
         assert result.duration_ms >= 0
 
     def test_stderr_capture(self, tmp_path):
-        result = run('python3 -c "import sys; sys.stderr.write(\'err\\n\')"', cwd=str(tmp_path))
+        result = run("python3 -c \"import sys; sys.stderr.write('err\\n')\"", cwd=str(tmp_path))
         assert result.exit_code == 0
         assert "err" in result.stderr
 
@@ -108,7 +108,11 @@ class TestRun:
         assert result.truncated is True
 
     def test_env_passed(self, tmp_path):
-        result = run("python3 -c \"import os; print(os.environ.get('TEST_VAR'))\"", cwd=str(tmp_path), env={"TEST_VAR": "42"})
+        result = run(
+            "python3 -c \"import os; print(os.environ.get('TEST_VAR'))\"",
+            cwd=str(tmp_path),
+            env={"TEST_VAR": "42"},
+        )
         assert "42" in result.stdout
 
 
@@ -123,7 +127,9 @@ class TestArun:
         assert result.timeout is True
 
     def test_stderr_async(self, tmp_path):
-        result = asyncio.run(arun('python3 -c "import sys; sys.stderr.write(\'err\\n\')"', cwd=str(tmp_path)))
+        result = asyncio.run(
+            arun("python3 -c \"import sys; sys.stderr.write('err\\n')\"", cwd=str(tmp_path))
+        )
         assert "err" in result.stderr
 
 

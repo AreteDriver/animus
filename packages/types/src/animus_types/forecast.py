@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Literal
 
@@ -14,23 +13,23 @@ from .common import Common
 
 class AlternativeOutcome(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     outcome: str
     probability: confloat(ge=0.0, le=1.0)
 
 
 class Resolution(Enum):
-    true = 'true'
-    false = 'false'
-    ambiguous = 'ambiguous'
-    cancelled = 'cancelled'
+    true = "true"
+    false = "false"
+    ambiguous = "ambiguous"
+    cancelled = "cancelled"
     NoneType_None = None
 
 
 class Payload(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     statement: constr(min_length=1)
     probability: confloat(ge=0.0, le=1.0)
@@ -44,8 +43,6 @@ class Payload(BaseModel):
 
 
 class AnimusForecastObject(Common):
-    artifact_type: Literal['forecast'] | None = None
-    schema_id: Literal['https://animus.local/schemas/forecast.schema.json'] | None = (
-        None
-    )
+    artifact_type: Literal["forecast"] | None = None
+    schema_id: Literal["https://animus.local/schemas/forecast.schema.json"] | None = None
     payload: Payload | None = None

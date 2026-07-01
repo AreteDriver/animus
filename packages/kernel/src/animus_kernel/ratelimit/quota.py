@@ -9,7 +9,7 @@ import logging
 import threading
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class QuotaExceeded(Exception):
         self.resets_at = resets_at
 
 
-class QuotaPeriod(str, Enum):
+class QuotaPeriod(StrEnum):
     """Quota period types."""
 
     MINUTE = "minute"
@@ -299,7 +299,7 @@ class QuotaManager:
         Returns:
             Dict of provider usage
         """
-        return {provider: self.get_usage(provider) for provider in self._quotas.keys()}
+        return {provider: self.get_usage(provider) for provider in self._quotas}
 
     def reset(self, provider: str, period: QuotaPeriod | None = None) -> None:
         """Reset quota usage for a provider.

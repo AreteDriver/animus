@@ -11,6 +11,7 @@ Usage:
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import re
 import time
@@ -255,25 +256,21 @@ class AgentTaskRunner:
         """Emit a status update via broadcaster."""
         if self.broadcaster is None:
             return
-        try:
+        with contextlib.suppress(Exception):
             self.broadcaster.on_status_change(
                 execution_id=task_id,
                 status=status,
                 current_step=kwargs.get("agent"),
                 error=kwargs.get("error"),
             )
-        except Exception:
-            pass
 
     def _emit_log(self, task_id: str, level: str, message: str) -> None:
         """Emit a log entry via broadcaster."""
         if self.broadcaster is None:
             return
-        try:
+        with contextlib.suppress(Exception):
             self.broadcaster.on_log(
                 execution_id=task_id,
                 level=level,
                 message=message,
             )
-        except Exception:
-            pass

@@ -25,7 +25,7 @@ Usage:
 
 from __future__ import annotations
 
-from .audit import AuditTrail, AuditEntry
+from .audit import AuditEntry, AuditTrail
 from .decision_point import Decision, DecisionPoint
 from .policy import Policy, PolicyEngine, PolicyRule, RuleEffect
 

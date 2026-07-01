@@ -205,12 +205,11 @@ class SkillLibrary:
                     sections.append(f"- `{p}`")
 
             # v2: verification
-            if skill.verification:
-                if skill.verification.completion_checklist:
-                    sections.append("")
-                    sections.append("### Completion checklist")
-                    for item in skill.verification.completion_checklist:
-                        sections.append(f"- [ ] {item}")
+            if skill.verification and skill.verification.completion_checklist:
+                sections.append("")
+                sections.append("### Completion checklist")
+                for item in skill.verification.completion_checklist:
+                    sections.append(f"- [ ] {item}")
 
             # v2: error handling
             if skill.error_handling and skill.error_handling.escalation:

@@ -48,7 +48,11 @@ packages = ["src/animus_kernel"]
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4"]
+ignore = ["E501", "B904"]
+per-file-ignores = { "tests/**" = ["B007", "B017"] }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -146,7 +146,7 @@ class DecisionPoint:
         return mapping.get(action, "default")
 
     @classmethod
-    def from_file(cls, path: str) -> "DecisionPoint":
+    def from_file(cls, path: str) -> DecisionPoint:
         """Create a DecisionPoint with policies loaded from a YAML file or directory.
 
         If path is a directory, loads all *.yaml files inside it.

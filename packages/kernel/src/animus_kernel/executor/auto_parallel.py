@@ -270,8 +270,7 @@ def validate_no_cycles(graph: DependencyGraph) -> bool:
         return True
 
     for node in graph.nodes:
-        if node not in visited:
-            if not dfs(node):
-                raise ValueError(f"Cycle detected involving step: {node}")
+        if node not in visited and not dfs(node):
+            raise ValueError(f"Cycle detected involving step: {node}")
 
     return True

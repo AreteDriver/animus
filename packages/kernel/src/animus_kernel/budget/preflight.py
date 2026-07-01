@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from animus_kernel.budget.manager import BudgetConfig, BudgetManager
@@ -16,7 +16,7 @@ from animus_kernel.budget.manager import BudgetConfig, BudgetManager
 logger = logging.getLogger(__name__)
 
 
-class ValidationStatus(str, Enum):
+class ValidationStatus(StrEnum):
     """Pre-flight validation status."""
 
     PASS = "pass"

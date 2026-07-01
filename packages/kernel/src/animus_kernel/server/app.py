@@ -33,7 +33,9 @@ _build_queue: list[dict] = []
 
 app = FastAPI(title="Animus Kernel Chat")
 
-_cors_origins_raw = os.environ.get("ANIMUS_CORS_ORIGINS", "http://localhost:3000,http://localhost:8080")
+_cors_origins_raw = os.environ.get(
+    "ANIMUS_CORS_ORIGINS", "http://localhost:3000,http://localhost:8080"
+)
 CORS_ORIGINS = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
 
 app.add_middleware(
@@ -98,9 +100,7 @@ async def chat(request: ChatRequest) -> StreamingResponse:
             yield 'event: done\ndata: {"status":"complete"}\n\n'
         except Exception as exc:
             logger.exception("Streaming error")
-            payload = json.dumps(
-                {"error": type(exc).__name__, "detail": str(exc)}
-            )
+            payload = json.dumps({"error": type(exc).__name__, "detail": str(exc)})
             yield f"event: error\ndata: {payload}\n\n"
         finally:
             # Rough token estimate (1 token ~ 4 characters) for budget sync
