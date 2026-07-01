@@ -88,7 +88,7 @@ class Sandbox:
             return self._sandbox_path
 
         # Create temp directory
-        self._temp_dir = Path(tempfile.mkdtemp(prefix="gorgon_sandbox_"))
+        self._temp_dir = Path(tempfile.mkdtemp(prefix="animus_forge_sandbox_"))
         self._sandbox_path = self._temp_dir / "workspace"
 
         # Copy source to sandbox

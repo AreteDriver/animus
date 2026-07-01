@@ -60,7 +60,7 @@ class StatePersistence:
 
     def __init__(
         self,
-        db_path: str = "gorgon-state.db",
+        db_path: str = "animus-kernel-state.db",
         *,
         backend: DatabaseBackend | None = None,
     ):

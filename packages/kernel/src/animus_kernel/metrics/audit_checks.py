@@ -177,7 +177,7 @@ async def check_skill_integrity(
     **_: Any,
 ) -> AuditResult:
     """Check skill file hashes against the baseline."""
-    skills_path = skills_path or Path.home() / ".gorgon" / "skills"
+    skills_path = skills_path or Path.home() / ".animus" / "skills"
     modified: list[dict[str, str]] = []
 
     if skills_path.exists() and baseline.skill_hashes:
@@ -225,7 +225,7 @@ async def check_config_drift(
     **_: Any,
 ) -> AuditResult:
     """Detect configuration drift from the documented baseline state."""
-    config_path = config_path or Path.home() / ".gorgon" / "config"
+    config_path = config_path or Path.home() / ".animus" / "config"
     drift: list[dict[str, Any]] = []
 
     if config_path.exists() and baseline.config_snapshots:

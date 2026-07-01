@@ -1,15 +1,15 @@
-"""Gorgon Error Hierarchy.
+"""Animus Kernel Error Hierarchy.
 
-Structured exception types for the orchestration framework.
+Structured exception types for the kernel orchestration framework.
 """
 
 from __future__ import annotations
 
 
-class GorgonError(Exception):
-    """Base error for all Gorgon exceptions."""
+class AnimusKernelError(Exception):
+    """Base error for all Animus Kernel exceptions."""
 
-    code = "GORGON_ERROR"
+    code = "KERNEL_ERROR"
 
     def __init__(self, message: str, details: dict = None):
         self.message = message
@@ -25,7 +25,7 @@ class GorgonError(Exception):
 
 
 # Agent Errors
-class AgentError(GorgonError):
+class AgentError(AnimusKernelError):
     """Base error for agent execution failures."""
 
     code = "AGENT_ERROR"
@@ -77,7 +77,7 @@ class ValidationError(AgentError):
 
 
 # Budget Errors
-class BudgetExceededError(GorgonError):
+class BudgetExceededError(AnimusKernelError):
     """Token budget has been exceeded."""
 
     code = "BUDGET_EXCEEDED"
@@ -90,7 +90,7 @@ class BudgetExceededError(GorgonError):
 
 
 # Workflow Errors
-class WorkflowError(GorgonError):
+class WorkflowError(AnimusKernelError):
     """Base error for workflow execution failures."""
 
     code = "WORKFLOW_ERROR"
@@ -134,7 +134,7 @@ class CheckpointError(WorkflowError):
 
 
 # State Errors
-class StateError(GorgonError):
+class StateError(AnimusKernelError):
     """Error in state management."""
 
     code = "STATE_ERROR"

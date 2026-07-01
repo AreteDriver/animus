@@ -1,4 +1,4 @@
-"""Gorgon CLI - Command-line interface for workflow orchestration."""
+"""Animus Forge CLI - Command-line interface for workflow orchestration."""
 
 from .main import app
 

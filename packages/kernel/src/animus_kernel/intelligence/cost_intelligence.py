@@ -1,7 +1,7 @@
-"""Cost intelligence and recommendation engine for Gorgon.
+"""Cost intelligence and recommendation engine for Animus Kernel.
 
 Analyzes spending patterns, recommends model switches to reduce costs,
-forecasts future spend, and quantifies the ROI of Gorgon's intelligence
+forecasts future spend, and quantifies the ROI of Animus Kernel's intelligence
 layer. Produces actionable insights like:
 
     "You spent $47 on OpenAI this week, but switching your Builder from
@@ -113,10 +113,10 @@ class SwitchImpact:
 
 @dataclass
 class ROIReport:
-    """Return-on-investment report for Gorgon's intelligence layer.
+    """Return-on-investment report for Animus Kernel's intelligence layer.
 
     Attributes:
-        total_savings_usd: Total cumulative savings attributed to Gorgon.
+        total_savings_usd: Total cumulative savings attributed to Animus Kernel.
         routing_savings_usd: Savings from intelligent provider routing.
         enforcement_savings_usd: Savings from contract enforcement preventing reruns.
         total_executions: Number of tracked executions.
@@ -354,7 +354,7 @@ class CostIntelligence:
         )
 
     def get_roi_report(self) -> ROIReport:
-        """Compute the cumulative ROI of Gorgon's intelligence layer.
+        """Compute the cumulative ROI of Animus Kernel's intelligence layer.
 
         Compares actual spending against a "naive baseline" where every call
         uses the most expensive available model. Also estimates savings from

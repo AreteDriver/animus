@@ -81,7 +81,7 @@ class RedisRateLimiter(DistributedRateLimiter):
     def __init__(
         self,
         url: str | None = None,
-        prefix: str = "gorgon:ratelimit:",
+        prefix: str = "animus-kernel:ratelimit:",
     ):
         if url is None:
             from animus_kernel.config.settings import get_settings
@@ -173,12 +173,12 @@ class SQLiteRateLimiter(DistributedRateLimiter):
     Suitable for single-machine deployments without Redis.
 
     Args:
-        db_path: Path to SQLite database (default: ~/.gorgon/rate_limits.db)
+        db_path: Path to SQLite database (default: ~/.animus/rate_limits.db)
     """
 
     def __init__(self, db_path: str | None = None):
         if db_path is None:
-            db_dir = Path.home() / ".gorgon"
+            db_dir = Path.home() / ".animus"
             db_dir.mkdir(exist_ok=True)
             db_path = str(db_dir / "rate_limits.db")
 

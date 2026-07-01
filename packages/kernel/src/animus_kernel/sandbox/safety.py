@@ -50,7 +50,7 @@ class SafetyConfig:
 
     # Sandbox
     use_branch: bool = True
-    branch_prefix: str = "gorgon-self-improve/"
+    branch_prefix: str = "animus-kernel-self-improve/"
     isolated_execution: bool = True
     sandbox_timeout: int = 300
 
@@ -106,7 +106,7 @@ class SafetyConfig:
             allowed_categories=data.get("allowed_categories", []),
             denied_categories=data.get("denied_categories", []),
             use_branch=sandbox.get("use_branch", True),
-            branch_prefix=sandbox.get("branch_prefix", "gorgon-self-improve/"),
+            branch_prefix=sandbox.get("branch_prefix", "animus-kernel-self-improve/"),
             isolated_execution=sandbox.get("isolated_execution", True),
             sandbox_timeout=sandbox.get("timeout", 300),
             max_snapshots=rollback.get("max_snapshots", 10),

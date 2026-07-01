@@ -165,15 +165,6 @@ class TestConfigLoadFullYaml:
                     "port": 8888,
                     "secret": "wh-secret",
                 },
-                "gorgon": {
-                    "enabled": True,
-                    "url": "http://gorgon:8000",
-                    "api_key": "gorgon-key",
-                    "timeout": 60.0,
-                    "poll_interval": 3.0,
-                    "max_wait": 600.0,
-                    "auto_delegate": True,
-                },
             },
             "learning": {
                 "enabled": True,
@@ -236,13 +227,6 @@ class TestConfigLoadFullYaml:
         assert config.integrations.webhooks.enabled is True
         assert config.integrations.webhooks.port == 8888
         assert config.integrations.webhooks.secret == "wh-secret"
-        assert config.integrations.gorgon.enabled is True
-        assert config.integrations.gorgon.url == "http://gorgon:8000"
-        assert config.integrations.gorgon.api_key == "gorgon-key"
-        assert config.integrations.gorgon.timeout == 60.0
-        assert config.integrations.gorgon.poll_interval == 3.0
-        assert config.integrations.gorgon.max_wait == 600.0
-        assert config.integrations.gorgon.auto_delegate is True
         assert config.learning.enabled is True
         assert config.learning.auto_scan_enabled is True
         assert config.learning.auto_scan_interval_hours == 6

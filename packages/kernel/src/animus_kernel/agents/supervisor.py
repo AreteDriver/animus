@@ -190,7 +190,7 @@ class SupervisorAgent:
             backend: Database backend for persistence.
             convergence_checker: Optional Convergent coherence checker.
             skill_library: Optional skill library for v2 routing and context.
-            coordination_bridge: Optional Convergent GorgonBridge for prompt enrichment.
+            coordination_bridge: Optional Convergent Bridge for prompt enrichment.
             budget_manager: Optional BudgetManager for token budget enforcement.
             event_log: Optional Convergent EventLog for coordination event tracking.
             tool_registry: Optional ForgeToolRegistry for tool-equipped agents.
@@ -619,7 +619,7 @@ class SupervisorAgent:
         quorum: str,
         skill_name: str,
     ) -> Any:
-        """Run consensus voting on an agent's result via GorgonBridge.
+        """Run consensus voting on an agent's result via Coordination Bridge.
 
         Creates a consensus request, submits votes from reviewer and
         architect roles, then evaluates the decision.

@@ -132,7 +132,7 @@ def is_retryable_error(exc: Exception) -> bool:
     if isinstance(exc, DEFAULT_RETRYABLE_EXCEPTIONS):
         return True
 
-    # Check for Gorgon APIError with retryable status code
+    # Check for APIError with retryable status code
     if isinstance(exc, APIError) and exc.status_code in RETRYABLE_STATUS_CODES:
         return True
 

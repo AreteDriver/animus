@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 _DEFAULT_PATHS = [
     Path("agents.yaml"),
     Path("config/agents.yaml"),
-    Path(".gorgon/agents.yaml"),
+    Path(".animus/agents.yaml"),
 ]
 
 

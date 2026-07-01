@@ -1,4 +1,4 @@
-"""Metrics data structures and storage for Gorgon monitoring."""
+"""Metrics data structures and storage for Animus Kernel monitoring."""
 
 from __future__ import annotations
 

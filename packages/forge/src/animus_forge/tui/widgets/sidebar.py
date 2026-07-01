@@ -47,7 +47,7 @@ class Sidebar(Vertical):
     files: reactive[list] = reactive(list, init=False)
 
     def compose(self):
-        yield Static("GORGON", classes="sidebar-header")
+        yield Static("FORGE", classes="sidebar-header")
         yield Static("", id="sidebar-provider", classes="sidebar-section")
         yield Static("", id="sidebar-tokens", classes="sidebar-section")
         yield Static("", id="sidebar-agent", classes="sidebar-section")

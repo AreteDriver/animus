@@ -11,7 +11,6 @@
 | [Animus Whitepaper](../../whitepapers/ANIMUS_WHITEPAPER_2026-06.md) | Markdown | Full v2.1 architecture, threat model, and gap analysis |
 | [Animus Whitepaper (PDF)](../../whitepaper.pdf) | PDF | Clickable PDF version of the above |
 | [Convergent Whitepaper](../../whitepapers/convergent-whitepaper.md) | Markdown | Quorum coordination protocol design |
-| [Gorgon Whitepaper](../../whitepapers/gorgon-whitepaper.md) | Markdown | Historical multi-agent orchestration (archived) |
 
 ---
 
