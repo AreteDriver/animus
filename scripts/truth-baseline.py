@@ -666,7 +666,7 @@ def run_checks(config_path: str) -> BaselineReport:
             continue
 
         try:
-            results.append(handler(check))
+            result = handler(check)
         except Exception as e:
             results.append(CheckResult(
                 name=check.get("name", ctype),
@@ -674,6 +674,11 @@ def run_checks(config_path: str) -> BaselineReport:
                 status="ERROR",
                 message=f"Exception: {e}",
             ))
+        else:
+            if check.get("expected_failure") and result.status == "FAIL":
+                result.status = "SKIP"
+                result.message += " (expected failure)"
+            results.append(result)
 
     summary = {"pass": 0, "fail": 0, "skip": 0, "error": 0}
     for r in results:

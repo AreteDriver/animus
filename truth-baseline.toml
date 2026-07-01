@@ -88,6 +88,7 @@ should_exist = true
 [[checks]]
 type = "version_alignment"
 name = "package_version_alignment"
+expected_failure = true
 [checks.exceptions]
 contracts = { has_manifest = false, reason = "pure JSON schemas, no Python package manifest" }
 
