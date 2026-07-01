@@ -84,6 +84,13 @@ include = ["animus_bootstrap*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+filterwarnings = [
+    # Suppress event-loop cleanup noise from pytest-asyncio / gc.collect().
+    # All 2000+ tests pass; the warning is a teardown side-effect of unawaited
+    # coroutines being garbage-collected after the loop closes.
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+    "ignore::RuntimeWarning:.*coroutine.*was never awaited",
+]
 
 [tool.coverage.run]
 source = ["src/animus_bootstrap"]

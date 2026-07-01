@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "animus-types"
 version = "0.1.0"
-description = "Shared type definitions for the Animus monorepo — zero production deps, pure library."
+description = "Shared type definitions for the Animus monorepo — generated Pydantic models from JSON Schema contracts."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -24,7 +24,9 @@ classifiers = [
 # Zero production dependencies — this package's purpose is to host types
 # shared across the monorepo without forcing a cross-package import that
 # would violate the existing Core → Forge optional-only direction.
-dependencies = []
+dependencies = [
+    "pydantic>=2.0.0,<3",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "pytest-cov>=4.0", "ruff>=0.1"]

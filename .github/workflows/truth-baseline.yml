@@ -32,6 +32,19 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install pytest and package deps for test collection
+        run: |
+          pip install pytest
+          pip install -e packages/types/
+          pip install -e "packages/core/[dev]"
+          pip install -e "packages/forge/[dev]"
+          pip install -e "packages/bootstrap/[dev]"
+          pip install -e "packages/quorum/[dev]"
+          # kernel is src-based with optional deps; install editable for test collection
+          if [ -f packages/kernel/pyproject.toml ]; then
+            pip install -e "packages/kernel/[dev]" 2>/dev/null || pip install -e packages/kernel/ 2>/dev/null || true
+          fi
+
       - name: Run truth baseline
         run: python scripts/truth-baseline.py
 

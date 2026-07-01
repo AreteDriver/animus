@@ -82,8 +82,12 @@ def client(backend, monkeypatch):
                         protection._total_blocked = 0
                         protection._total_allowed = 0
 
-                        with TestClient(app) as test_client:
-                            yield test_client
+                        with patch(
+                            "animus_forge.workflow.version_manager.WorkflowVersionManager.migrate_existing_workflows",
+                            return_value=[],
+                        ):
+                            with TestClient(app) as test_client:
+                                yield test_client
 
                         # Re-enable rate limiting after tests
                         limiter.enabled = True

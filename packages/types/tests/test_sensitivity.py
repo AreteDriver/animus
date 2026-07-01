@@ -69,4 +69,6 @@ class TestSensitivityEnum:
             "animus_types.signal",
             "animus_types.source",
         }
-        assert submods == expected, f"animus_types submodule mismatch: got {submods}, expected {expected}"
+        assert submods == expected, (
+            f"animus_types submodule mismatch: got {submods}, expected {expected}"
+        )
