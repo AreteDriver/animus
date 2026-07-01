@@ -843,13 +843,3 @@ class TestIntegrationsInitFallbacks:
             assert animus.integrations.GoogleCalendarIntegration is None
         importlib.reload(animus.integrations)
 
-    def test_gorgon_fallback(self):
-        """Lines 49-50."""
-        import importlib
-
-        import animus.integrations
-
-        with patch.dict("sys.modules", {"animus.integrations.gorgon": None}):
-            importlib.reload(animus.integrations)
-            assert animus.integrations.GorgonIntegration is None
-        importlib.reload(animus.integrations)

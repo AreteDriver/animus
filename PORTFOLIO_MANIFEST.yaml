@@ -105,15 +105,6 @@ projects:
     last_commit: 2026-05-28
     description: EVE Online authentication and security
 
-  - name: gorgon
-    path: ~/projects/gorgon
-    language: python
-    type: product
-    status: active
-    priority: medium
-    last_commit: 2026-04-20
-    description: AI-assisted development workflow orchestrator
-
   - name: herald
     path: ~/projects/herald
     language: python

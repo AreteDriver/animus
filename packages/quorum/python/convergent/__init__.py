@@ -33,6 +33,7 @@ from convergent.contract import (
     content_hash_intents,
     validate_publish,
 )
+from convergent.coordination_bridge import GorgonBridge
 
 # Phase 3: Coordination Protocol
 from convergent.coordination_config import CoordinationConfig
@@ -59,7 +60,6 @@ from convergent.gates import (
     MypyGate,
     PytestGate,
 )
-from convergent.gorgon_bridge import GorgonBridge
 from convergent.governor import (
     AgentBranch,
     GovernorVerdict,

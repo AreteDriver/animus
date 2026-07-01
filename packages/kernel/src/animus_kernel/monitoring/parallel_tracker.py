@@ -1,4 +1,4 @@
-"""Parallel Execution Metrics for Gorgon Workflows.
+"""Parallel Execution Metrics for Animus Kernel Workflows.
 
 Tracks fan-out, fan-in, map-reduce, and auto-parallel execution patterns
 with real-time visibility into concurrent operations.

@@ -39,11 +39,11 @@ class RollbackManager:
         """Initialize rollback manager.
 
         Args:
-            storage_path: Where to store snapshots. Defaults to .gorgon/snapshots
+            storage_path: Where to store snapshots. Defaults to .animus_kernel/snapshots
             max_snapshots: Maximum snapshots to keep.
         """
         if storage_path is None:
-            storage_path = Path(".gorgon/snapshots")
+            storage_path = Path(".animus_kernel/snapshots")
         self.storage_path = Path(storage_path)
         self.max_snapshots = max_snapshots
         self._snapshots: list[Snapshot] = []

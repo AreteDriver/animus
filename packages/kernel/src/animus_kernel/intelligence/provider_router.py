@@ -1,4 +1,4 @@
-"""Intelligent provider routing for the Gorgon multi-agent orchestration framework.
+"""Intelligent provider routing for the Animus Kernel multi-agent orchestration framework.
 
 Selects the optimal AI provider and model for each task based on historical
 outcomes, cost efficiency, and latency. Makes providers interchangeable

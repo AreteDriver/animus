@@ -1,4 +1,4 @@
-"""Gorgon utility modules."""
+"""Animus Kernel utility modules."""
 
 from animus_kernel.utils.circuit_breaker import (
     CircuitBreaker,

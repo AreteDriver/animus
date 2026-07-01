@@ -1,4 +1,4 @@
-"""Execution Tracker for Gorgon Workflows.
+"""Execution Tracker for Animus Kernel Workflows.
 
 Provides context manager and decorators for automatic metrics collection.
 """

@@ -434,7 +434,7 @@ class WorkflowMemoryManager:
 
 def create_workflow_memory(
     workflow_id: str | None = None,
-    db_path: str = "gorgon-memory.db",
+    db_path: str = "animus-kernel-memory.db",
     config: MemoryConfig | None = None,
 ) -> WorkflowMemoryManager:
     """Create a workflow memory manager with a fresh memory backend.

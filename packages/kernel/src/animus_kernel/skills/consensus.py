@@ -1,4 +1,4 @@
-"""Triumvirate consensus voting for Gorgon agent operations."""
+"""Triumvirate consensus voting for Animus Kernel agent operations."""
 
 from __future__ import annotations
 

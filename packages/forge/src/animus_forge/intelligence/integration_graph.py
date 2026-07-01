@@ -1,4 +1,4 @@
-"""Cross-integration event routing for Gorgon.
+"""Cross-integration event routing for Animus Forge.
 
 Wires services together: a GitHub PR triggers a workflow that runs tests,
 writes a Notion page, Slacks the team, and emails the stakeholder. The
@@ -119,7 +119,7 @@ def _apply_transform(transform: dict[str, str], payload: dict) -> dict[str, Any]
 
 
 class IntegrationGraph:
-    """Event-driven routing between external services and Gorgon workflows.
+    """Event-driven routing between external services and Animus Forge workflows.
 
     Manages trigger rules that map source events to workflow executions,
     with optional payload transformations and conditional filtering.
