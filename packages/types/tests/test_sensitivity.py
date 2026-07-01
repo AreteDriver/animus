@@ -49,8 +49,24 @@ class TestSensitivityEnum:
         # egress imports secrets (the credential scanner) — three first-party,
         # zero-dependency submodules. Assert no external packages crept in.
         submods = {m for m in sys.modules if m.startswith("animus_types") and "." in m}
-        assert submods <= {
-            "animus_types.sensitivity",
+        expected = {
+            "animus_types.action",
+            "animus_types.assessment",
+            "animus_types.claim",
+            "animus_types.common",
+            "animus_types.decision",
             "animus_types.egress",
+            "animus_types.entity",
+            "animus_types.event",
+            "animus_types.forecast",
+            "animus_types.hypothesis",
+            "animus_types.lesson",
+            "animus_types.observation",
+            "animus_types.outcome",
+            "animus_types.pattern",
+            "animus_types.sensitivity",
             "animus_types.secrets",
-        }, f"unexpected animus_types submodule import: {submods}"
+            "animus_types.signal",
+            "animus_types.source",
+        }
+        assert submods == expected, f"animus_types submodule mismatch: got {submods}, expected {expected}"
