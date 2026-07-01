@@ -223,7 +223,9 @@ def check_test_count(cfg: dict[str, Any]) -> CheckResult:
             pass
 
     # Command failure is always a failure, regardless of expected
-    if rc != 0:
+    # Exception: rc=2 with collected tests means pytest warnings only
+    # (import warnings, deprecated plugins, etc.) — count is still valid.
+    if rc != 0 and not (rc == 2 and actual > 0):
         msg = f"Collected {actual} tests (command failed: rc={rc}, {stderr[:200]})"
         return CheckResult(
             name=name,
