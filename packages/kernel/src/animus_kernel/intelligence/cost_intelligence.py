@@ -453,10 +453,7 @@ class CostIntelligence:
         if budget_limit is not None and daily_rate > 0:
             monthly_used = self._cost_tracker.get_monthly_cost()
             remaining = budget_limit - monthly_used
-            if remaining > 0:
-                days_until_budget = int(remaining / daily_rate)
-            else:
-                days_until_budget = 0
+            days_until_budget = int(remaining / daily_rate) if remaining > 0 else 0
 
         logger.info(
             "Spend forecast: $%.2f/day, $%.2f projected %dd",

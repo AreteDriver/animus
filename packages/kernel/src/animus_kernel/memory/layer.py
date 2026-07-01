@@ -7,7 +7,7 @@ import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from animus_kernel.logger import get_logger
 from animus_kernel.memory.redaction import redact
@@ -460,9 +460,8 @@ class MemoryLayer:
     def remove_tag(self, memory_id: str, tag: str) -> bool:
         """Remove a tag from a memory."""
         memory = self.get_memory(memory_id)
-        if memory:
-            if memory.remove_tag(tag):
-                return self.update_memory(memory)
+        if memory and memory.remove_tag(tag):
+            return self.update_memory(memory)
         return False
 
     def get_all_tags(self) -> dict[str, int]:

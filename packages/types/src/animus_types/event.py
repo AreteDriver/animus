@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-
-from enum import Enum
 from typing import Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, constr
@@ -14,7 +12,7 @@ from .common import Common
 
 class Payload(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     event_kind: constr(min_length=1)
     occurred_at: AwareDatetime
@@ -25,6 +23,6 @@ class Payload(BaseModel):
 
 
 class AnimusEventObject(Common):
-    artifact_type: Literal['event'] | None = None
-    schema_id: Literal['https://animus.local/schemas/event.schema.json'] | None = None
+    artifact_type: Literal["event"] | None = None
+    schema_id: Literal["https://animus.local/schemas/event.schema.json"] | None = None
     payload: Payload | None = None

@@ -285,8 +285,8 @@ class CitizenZeroConfig:
     """Configuration for Citizen Zero overlay."""
 
     enabled: bool = True
-    citizen_dir: str = ""           # auto-discovered if empty
-    shared_dir: str = ""            # auto-discovered if empty
+    citizen_dir: str = ""  # auto-discovered if empty
+    shared_dir: str = ""  # auto-discovered if empty
     constitutional_corpus_dir: str = ""  # auto-discovered if empty
     context_budget_tokens: int = 2000
     default_failure_mode: str = "interactive"  # "strict" | "interactive" | "degraded"
@@ -669,11 +669,17 @@ class AnimusConfig:
                 if "shared_dir" in citizen_zero_data:
                     config.citizen_zero.shared_dir = citizen_zero_data["shared_dir"]
                 if "constitutional_corpus_dir" in citizen_zero_data:
-                    config.citizen_zero.constitutional_corpus_dir = citizen_zero_data["constitutional_corpus_dir"]
+                    config.citizen_zero.constitutional_corpus_dir = citizen_zero_data[
+                        "constitutional_corpus_dir"
+                    ]
                 if "context_budget_tokens" in citizen_zero_data:
-                    config.citizen_zero.context_budget_tokens = citizen_zero_data["context_budget_tokens"]
+                    config.citizen_zero.context_budget_tokens = citizen_zero_data[
+                        "context_budget_tokens"
+                    ]
                 if "default_failure_mode" in citizen_zero_data:
-                    config.citizen_zero.default_failure_mode = citizen_zero_data["default_failure_mode"]
+                    config.citizen_zero.default_failure_mode = citizen_zero_data[
+                        "default_failure_mode"
+                    ]
 
             # Re-apply environment overrides
             config.__post_init__()

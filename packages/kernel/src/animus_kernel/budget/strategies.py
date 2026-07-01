@@ -115,7 +115,7 @@ class PriorityAllocation(AllocationStrategy):
         # Allocate remaining based on priority
         allocations = {}
         notes = []
-        for agent, priority in zip(agents, priorities):
+        for agent, priority in zip(agents, priorities, strict=False):
             agent_id = agent["id"]
             priority_share = (
                 int((priority / total_priority) * remaining) if total_priority > 0 else 0

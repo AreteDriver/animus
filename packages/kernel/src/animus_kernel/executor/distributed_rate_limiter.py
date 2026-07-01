@@ -345,10 +345,7 @@ class MemoryRateLimiter(DistributedRateLimiter):
 
         with self._lock:
             existing = self._counts.get(key)
-            if existing and existing[1] == window_start:
-                current = existing[0] + 1
-            else:
-                current = 1
+            current = existing[0] + 1 if existing and existing[1] == window_start else 1
             self._counts[key] = (current, window_start)
 
         allowed = current <= limit

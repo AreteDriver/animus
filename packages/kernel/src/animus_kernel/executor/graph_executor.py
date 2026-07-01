@@ -7,7 +7,7 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from .graph_models import GraphNode, WorkflowGraph
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class NodeStatus(str, Enum):
+class NodeStatus(StrEnum):
     """Status of a node during execution."""
 
     PENDING = "pending"

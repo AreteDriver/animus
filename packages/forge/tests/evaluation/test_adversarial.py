@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from animus_forge.evaluation.adversarial import (
     AdversarialCaseGenerator,
     FaultInjectingEvaluator,
@@ -11,7 +9,7 @@ from animus_forge.evaluation.adversarial import (
     PropertyBasedEvaluator,
     run_adversarial_suite,
 )
-from animus_forge.evaluation.base import AgentEvaluator, EvalCase, EvalResult, EvalStatus
+from animus_forge.evaluation.base import AgentEvaluator, EvalCase, EvalStatus
 from animus_forge.evaluation.metrics import ExactMatchMetric
 
 
@@ -88,7 +86,9 @@ class TestFaultInjectingEvaluator:
 
     def test_no_fault_when_rates_zero(self):
         base = AgentEvaluator(_dummy_agent)
-        profile = FaultProfile(network_error_rate=0.0, timeout_rate=0.0, corrupt_output_rate=0.0, delay_ms=0.0)
+        profile = FaultProfile(
+            network_error_rate=0.0, timeout_rate=0.0, corrupt_output_rate=0.0, delay_ms=0.0
+        )
         evaluator = FaultInjectingEvaluator(base, profile=profile, seed=1)
 
         case = EvalCase(input="hello", expected="processed: hello")

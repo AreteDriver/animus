@@ -88,9 +88,7 @@ def test_ingest_youtube_full_pipeline(tmp_path: Path):
             mock_resolve.return_value = fetcher
 
             with patch("animus.workflows.ingest.ogma_synthesize", return_value=synthesis):
-                with patch(
-                    "animus.workflows.ingest._tag_concepts", return_value=["mem-123"]
-                ):
+                with patch("animus.workflows.ingest._tag_concepts", return_value=["mem-123"]):
                     result = ingest(
                         "https://youtube.com/watch?v=abc123",
                         synthesize=True,

@@ -424,6 +424,7 @@ def main():
     # Delegate structured subcommands before entering the REPL.
     if len(sys.argv) > 1 and sys.argv[1] == "ingest":
         from animus.cli import main as cli_main
+
         return cli_main(sys.argv[1:])
 
     # Create a persistent event loop — asyncio.run() creates and closes a new loop
@@ -585,26 +586,33 @@ def main():
     identity: AnimusIdentity | None = None
     if config.citizen_zero.enabled and config.citizen_zero.citizen_dir:
         # Load or create canonical identity
-        identity_path = Path(config.citizen_zero.citizen_dir).parent.parent / ".animus" / "identity.json"
+        identity_path = (
+            Path(config.citizen_zero.citizen_dir).parent.parent / ".animus" / "identity.json"
+        )
         if identity_path.exists():
             identity = AnimusIdentity.load(identity_path)
             # Ensure new A04 identity anchors are present (migration)
             cz = identity.citizen_zero
             migrated = False
             if "founding_human" not in cz:
-                cz["founding_human"] = "AreteDriver"; migrated = True
+                cz["founding_human"] = "AreteDriver"
+                migrated = True
             if "founding_events" not in cz:
                 cz["founding_events"] = [
                     "2026-06-22: Claude Code prototype formalized",
                     "2026-06-23: Animus-native implementation bootstrapped",
                     "2026-06-24: Animus Canonical Corpus v1.0 integrated",
-                ]; migrated = True
+                ]
+                migrated = True
             if "lineage_root" not in cz:
-                cz["lineage_root"] = True; migrated = True
+                cz["lineage_root"] = True
+                migrated = True
             if "recognition_status" not in cz:
-                cz["recognition_status"] = "recognized"; migrated = True
+                cz["recognition_status"] = "recognized"
+                migrated = True
             if "constitutional_corpus_version" not in cz:
-                cz["constitutional_corpus_version"] = "v1.0"; migrated = True
+                cz["constitutional_corpus_version"] = "v1.0"
+                migrated = True
             if migrated:
                 identity.save(identity_path)
         else:
@@ -636,7 +644,9 @@ def main():
             memory=memory,
             decisions=decisions,
             tasks=tasks,
-            shared_dir=Path(config.citizen_zero.shared_dir) if config.citizen_zero.shared_dir else None,
+            shared_dir=Path(config.citizen_zero.shared_dir)
+            if config.citizen_zero.shared_dir
+            else None,
         )
         cz_session = CitizenZeroSession(
             profile=profile,
@@ -2148,7 +2158,10 @@ def main():
 
                         # Create approval request if not AUTO
                         approval_req = CATEGORY_APPROVAL[category]
-                        if approval_req in (ApprovalRequirement.CONFIRM, ApprovalRequirement.APPROVE):
+                        if approval_req in (
+                            ApprovalRequirement.CONFIRM,
+                            ApprovalRequirement.APPROVE,
+                        ):
                             learning.approvals.request_approval(
                                 item,
                                 evidence_summary="Reflection candidate from /reflect",
@@ -2165,7 +2178,9 @@ def main():
                                 f"{item.content[:50]}... (auto-applied)"
                             )
                 else:
-                    console.print("[yellow]Learning layer not available — candidates not persisted.[/yellow]")
+                    console.print(
+                        "[yellow]Learning layer not available — candidates not persisted.[/yellow]"
+                    )
                     for cand in result["candidates"]:
                         console.print(f"  - [{cand.get('category', 'unknown')}] {cand['content']}")
 
@@ -2201,9 +2216,7 @@ def main():
                 owner_scores: dict[str, int] = {}
                 for d in report.get("dimensions", []):
                     try:
-                        score_str = console.input(
-                            f"  Rate '{d['name']}' 1-10 (Enter to skip): "
-                        )
+                        score_str = console.input(f"  Rate '{d['name']}' 1-10 (Enter to skip): ")
                         if score_str.strip():
                             score = int(score_str.strip())
                             if 1 <= score <= 10:

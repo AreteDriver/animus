@@ -215,9 +215,7 @@ class TierRouter:
 
         Returns True if the response contains meaningful content.
         """
-        if not response.content or not response.content.strip():
-            return False
-        return True
+        return not (not response.content or not response.content.strip())
 
     # -- Private routing logic --
 

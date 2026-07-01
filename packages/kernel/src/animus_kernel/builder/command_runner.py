@@ -70,9 +70,7 @@ def _validate_command(cmd: str) -> list[str]:
 
     for seq in _BLOCKED_SEQUENCES:
         if seq in tokens:
-            raise SecurityError(
-                f"Command contains forbidden shell sequence: {seq!r}"
-            )
+            raise SecurityError(f"Command contains forbidden shell sequence: {seq!r}")
 
     try:
         validate_shell_command(cmd, allow_dangerous=False)
@@ -81,9 +79,7 @@ def _validate_command(cmd: str) -> list[str]:
 
     for pattern in _EXTRA_DANGEROUS_PATTERNS:
         if pattern.search(cmd):
-            raise SecurityError(
-                f"Dangerous command blocked: matches {pattern.pattern!r}"
-            )
+            raise SecurityError(f"Dangerous command blocked: matches {pattern.pattern!r}")
 
     return tokens
 
@@ -184,9 +180,7 @@ def run(
     )
 
 
-async def _read_limited(
-    reader: asyncio.StreamReader, limit: int
-) -> tuple[bytes, bool]:
+async def _read_limited(reader: asyncio.StreamReader, limit: int) -> tuple[bytes, bool]:
     """Read from an async stream up to *limit* bytes.
 
     Args:

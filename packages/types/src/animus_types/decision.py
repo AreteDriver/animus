@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Literal
 
@@ -13,14 +12,14 @@ from .common import Common
 
 
 class Authority(Enum):
-    owner = 'owner'
-    standing_policy = 'standing_policy'
-    delegated = 'delegated'
+    owner = "owner"
+    standing_policy = "standing_policy"
+    delegated = "delegated"
 
 
 class Payload(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     question: constr(min_length=1)
     chosen_option: constr(min_length=1)
@@ -32,8 +31,6 @@ class Payload(BaseModel):
 
 
 class AnimusDecisionObject(Common):
-    artifact_type: Literal['decision'] | None = None
-    schema_id: Literal['https://animus.local/schemas/decision.schema.json'] | None = (
-        None
-    )
+    artifact_type: Literal["decision"] | None = None
+    schema_id: Literal["https://animus.local/schemas/decision.schema.json"] | None = None
     payload: Payload | None = None

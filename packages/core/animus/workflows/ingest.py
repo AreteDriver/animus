@@ -164,9 +164,7 @@ class _ArxivFetcher:
         published: datetime | None = None
         if published_match:
             try:
-                published = datetime.fromisoformat(
-                    published_match.group(1).replace("Z", "+00:00")
-                )
+                published = datetime.fromisoformat(published_match.group(1).replace("Z", "+00:00"))
             except ValueError:
                 pass
         return SourceItem(
@@ -387,9 +385,7 @@ def ingest(
         try:
             cache.store(item)
         except Exception as e:
-            errors.append(
-                WorkflowError("lugh", type(e).__name__, f"cache.store failed: {e}")
-            )
+            errors.append(WorkflowError("lugh", type(e).__name__, f"cache.store failed: {e}"))
             return IngestResult(item=None, errors=errors, success=False)
 
     # ---- Ogma synthesis ---------------------------------------------------

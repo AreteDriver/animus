@@ -8,7 +8,6 @@ a live PostgreSQL instance.
 from __future__ import annotations
 
 import os
-from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -31,7 +30,6 @@ def store(tmp_path: Path):
 
     # Create tables manually (Alembic isn't run in test)
     from animus_kernel.memory.stores.durable import (
-        _EventLedgerRow,
         _ObjectRegistryRow,
     )
 

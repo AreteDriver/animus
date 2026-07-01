@@ -134,7 +134,7 @@ def full_health_check() -> dict:
         health["database"] = {"status": "disconnected", "error": str(e)}
         health["status"] = "degraded"
 
-    for name, stats in health["circuit_breakers"].items():
+    for _name, stats in health["circuit_breakers"].items():
         if stats["state"] == "open":
             health["status"] = "degraded"
             break

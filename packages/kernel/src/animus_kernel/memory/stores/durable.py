@@ -26,11 +26,10 @@ logger = get_logger("memory.durable")
 # can be parsed even when sqlalchemy is not installed.
 try:
     from sqlalchemy import (
-        BigInteger,
+        JSON,
         Column,
         DateTime,
         Integer,
-        JSON,
         String,
         create_engine,
         func,
@@ -311,9 +310,7 @@ class DurableMemoryStore(MemoryStore):
         allowed_tiers: set[Sensitivity] | None = None,
     ) -> list[Memory]:
         with self._session_factory() as session:
-            stmt = select(_ObjectRegistryRow).where(
-                _ObjectRegistryRow.superseded_at.is_(None)
-            )
+            stmt = select(_ObjectRegistryRow).where(_ObjectRegistryRow.superseded_at.is_(None))
 
             if memory_type:
                 # Filter by artifact_type (mapped from memory_type)
@@ -370,9 +367,7 @@ class DurableMemoryStore(MemoryStore):
 
     def list_all(self, memory_type: MemoryType | None = None) -> list[Memory]:
         with self._session_factory() as session:
-            stmt = select(_ObjectRegistryRow).where(
-                _ObjectRegistryRow.superseded_at.is_(None)
-            )
+            stmt = select(_ObjectRegistryRow).where(_ObjectRegistryRow.superseded_at.is_(None))
             rows = session.execute(stmt).scalars().all()
             memories = [self._payload_to_memory(r.payload) for r in rows]
             if memory_type:

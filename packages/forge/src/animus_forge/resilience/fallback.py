@@ -243,7 +243,7 @@ class FallbackChain:
                 else:
                     # Run sync handler in thread pool
                     result = await asyncio.get_event_loop().run_in_executor(
-                        None, lambda: handler.handler(*args, **kwargs)
+                        None, lambda h=handler: h.handler(*args, **kwargs)
                     )
 
                 self._successful_executions += 1

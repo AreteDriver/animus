@@ -8,7 +8,7 @@ import os
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class WorkflowStage(str, Enum):
+class WorkflowStage(StrEnum):
     """Stages of the self-improvement workflow."""
 
     IDLE = "idle"

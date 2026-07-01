@@ -17,7 +17,12 @@ Phase 1: Structured memory with types, tags, confidence, and export/import.
 from __future__ import annotations
 
 from animus_kernel.memory.layer import MemoryLayer
-from animus_kernel.memory.stores import ChromaMemoryStore, DurableMemoryStore, LocalMemoryStore, MemoryStore
+from animus_kernel.memory.stores import (
+    ChromaMemoryStore,
+    DurableMemoryStore,
+    LocalMemoryStore,
+    MemoryStore,
+)
 from animus_kernel.memory.tier import TierManager
 from animus_kernel.memory.types import (
     Conversation,

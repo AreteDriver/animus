@@ -305,9 +305,7 @@ class Settings(BaseSettings):
         """
         if self.secret_key == _INSECURE_SECRET_KEY:
             return False
-        if len(self.secret_key) < _MIN_SECRET_KEY_LENGTH:
-            return False
-        return True
+        return not len(self.secret_key) < _MIN_SECRET_KEY_LENGTH
 
     @property
     def has_secure_database(self) -> bool:
@@ -370,10 +368,7 @@ class Settings(BaseSettings):
                 return secrets.compare_digest(stored, password_hash)
 
         # Fall back to demo auth if allowed
-        if self.allow_demo_auth and password == "demo":
-            return True
-
-        return False
+        return bool(self.allow_demo_auth and password == "demo")
 
     def model_post_init(self, __context) -> None:
         """Ensure directories exist and validate production config."""

@@ -7,7 +7,7 @@ import logging
 import re
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class ImprovementCategory(str, Enum):
+class ImprovementCategory(StrEnum):
     """Categories of code improvements."""
 
     REFACTORING = "refactoring"

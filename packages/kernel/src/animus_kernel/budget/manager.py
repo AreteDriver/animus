@@ -408,10 +408,7 @@ class BudgetManager:
                 return False
 
         # Check per-step limit
-        if self.config.per_step_limit and tokens > self.config.per_step_limit:
-            return False
-
-        return True
+        return not (self.config.per_step_limit and tokens > self.config.per_step_limit)
 
     def can_allocate(
         self, tokens: int, agent_id: str = None, effective: float | None = None

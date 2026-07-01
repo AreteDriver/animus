@@ -254,10 +254,7 @@ class PathValidator:
         # Normalize path separators
         normalized = rel_path.replace(os.sep, "/")
 
-        for pattern in self.exclude_patterns:
-            if pattern.search(normalized):
-                return True
-        return False
+        return any(pattern.search(normalized) for pattern in self.exclude_patterns)
 
     def get_project_root(self) -> Path:
         """Return the validated project root path."""

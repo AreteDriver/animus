@@ -52,9 +52,7 @@ def _prop_to_type(prop: dict[str, Any], path: str) -> type[Any]:
         item_type = _prop_to_type(prop.get("items", {}), f"{path}_item")
         return list[item_type]
     if js_type == "string":
-        if enum_vals and all(
-            isinstance(v, (str, int, bool, type(None))) for v in enum_vals
-        ):
+        if enum_vals and all(isinstance(v, (str, int, bool, type(None))) for v in enum_vals):
             return Literal[*enum_vals]  # type: ignore[return-value]
         return str
     if js_type == "integer":
@@ -68,9 +66,7 @@ def _prop_to_type(prop: dict[str, Any], path: str) -> type[Any]:
     return Any
 
 
-def _schema_to_fields(
-    schema: dict[str, Any], prefix: str = ""
-) -> dict[str, tuple[type[Any], Any]]:
+def _schema_to_fields(schema: dict[str, Any], prefix: str = "") -> dict[str, tuple[type[Any], Any]]:
     """Convert JSON Schema ``properties`` into ``create_model`` kwargs."""
     props = schema.get("properties", {})
     required = set(schema.get("required", []))
@@ -247,7 +243,6 @@ class ValidatingToolRegistry:
 
 
 if __name__ == "__main__":
-
     from animus_kernel.tools.registry import ForgeToolRegistry
 
     registry = ForgeToolRegistry(project_root="/tmp", enable_shell=True)
@@ -277,14 +272,12 @@ if __name__ == "__main__":
         print(f"Bad type caught: {e.field} -> {e}")
 
     # JSON parser
-    jname, jargs = parse_json_tool_call(
-        {"name": "search_code", "input": {"pattern": "def"}}
-    )
+    jname, jargs = parse_json_tool_call({"name": "search_code", "input": {"pattern": "def"}})
     validate_tool_call(jname, jargs, registry)
 
     # Hermes XML parser
     xname, xargs = parse_hermes_tool_call(
-        '<tool_call><name>run_command</name>'
+        "<tool_call><name>run_command</name>"
         '<arguments>{"command": "echo hi"}</arguments></tool_call>'
     )
     validate_tool_call(xname, xargs, registry)

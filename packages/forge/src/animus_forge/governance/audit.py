@@ -52,7 +52,7 @@ class AuditEntry:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AuditEntry":
+    def from_dict(cls, data: dict[str, Any]) -> AuditEntry:
         return cls(
             timestamp=datetime.fromisoformat(data["timestamp"]),
             decision_type=data["decision_type"],

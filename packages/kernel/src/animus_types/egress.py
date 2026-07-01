@@ -110,6 +110,4 @@ def is_egress_allowed(
         return False
     # Tier permits egress — now inspect content. Never let a credential cross
     # the wire to a cloud endpoint regardless of how it was tagged.
-    if content and scan_for_secrets(content):
-        return False
-    return True
+    return not (content and scan_for_secrets(content))
