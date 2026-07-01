@@ -22,7 +22,6 @@ from animus.register import RegisterTranslator
 
 if TYPE_CHECKING:
     from animus.entities import EntityMemory
-    from animus.integrations.gorgon import GorgonClient
     from animus.learning import LearningLayer
     from animus.memory import MemoryLayer
     from animus.proactive import ProactiveEngine
@@ -142,53 +141,6 @@ def detect_mode(prompt: str) -> ReasoningMode:
     return ReasoningMode.QUICK
 
 
-# Patterns that suggest a task should be delegated to Gorgon
-_DELEGATION_PATTERNS = [
-    r"write\s+tests?",
-    r"refactor",
-    r"implement",
-    r"build\s+(?:a|the|out)",
-    r"review\s+(?:code|the\s+code|this)",
-    r"debug",
-    r"audit",
-    r"benchmark",
-    r"create\s+(?:a\s+)?(?:test|module|class|function|endpoint)",
-    r"migrate",
-    r"optimize\s+(?:the|this|code|query|queries)",
-]
-
-_DELEGATION_KEYWORDS = [
-    "codebase",
-    "repository",
-    "architecture",
-    "security audit",
-    "test suite",
-    "pipeline",
-    "pull request",
-    "code review",
-    "refactoring",
-    "integration test",
-]
-
-
-def should_delegate_to_gorgon(prompt: str) -> bool:
-    """Detect whether a prompt describes a task better suited for Gorgon.
-
-    Heuristic: 2+ pattern matches, or 1 pattern + 2 keywords, or long
-    (>500 char) technical prompt with at least 1 pattern match.
-    """
-    prompt_lower = prompt.lower()
-
-    pattern_hits = sum(1 for pat in _DELEGATION_PATTERNS if re.search(pat, prompt_lower))
-    keyword_hits = sum(1 for kw in _DELEGATION_KEYWORDS if kw in prompt_lower)
-
-    if pattern_hits >= 2:
-        return True
-    if pattern_hits >= 1 and keyword_hits >= 2:
-        return True
-    if len(prompt) > 500 and pattern_hits >= 1:
-        return True
-    return False
 
 
 @dataclass
@@ -763,7 +715,6 @@ class CognitiveLayer:
         learning: "LearningLayer | None" = None,
         entity_memory: "EntityMemory | None" = None,
         proactive: "ProactiveEngine | None" = None,
-        gorgon_client: "GorgonClient | None" = None,
     ):
         self.primary_config = primary_config or ModelConfig.ollama()
         self.fallback_config = fallback_config
@@ -771,7 +722,6 @@ class CognitiveLayer:
         self.entity_memory = entity_memory
         self.proactive = proactive
         self.register_translator = RegisterTranslator()
-        self.gorgon_client: GorgonClient | None = gorgon_client
 
         self.primary: IntelligenceProvider = create_model(self.primary_config)
         self.fallback: IntelligenceProvider | None = (
@@ -1459,58 +1409,3 @@ Provide a clear, structured briefing."""
 
         return self.think(prompt, mode=ReasoningMode.QUICK)
 
-    async def delegate_to_gorgon(
-        self,
-        prompt: str,
-        priority: int = 5,
-        wait: bool = False,
-        workflow_id: str | None = None,
-        variables: dict[str, Any] | None = None,
-        on_approval: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
-    ) -> dict[str, Any]:
-        """Delegate a complex task to Gorgon's agent pipeline.
-
-        When *workflow_id* is provided, uses the execution API
-        (``/v1/workflows/{id}/execute``) instead of the legacy task queue.
-        If *on_approval* is supplied, approval gates are handled
-        automatically via the callback.
-
-        Falls back to ``self.think()`` on any error or if the client is
-        not configured.
-
-        Returns:
-            Task/execution result dict from Gorgon, or a synthetic dict
-            with the local ``think()`` response as fallback.
-        """
-        if not self.gorgon_client:
-            logger.debug("No Gorgon client, falling back to local think")
-            return {"fallback": True, "response": self.think(prompt)}
-
-        try:
-            if workflow_id:
-                if wait:
-                    return await self.gorgon_client.execute_and_wait(
-                        workflow_id,
-                        variables=variables,
-                        on_approval=on_approval,
-                    )
-                return await self.gorgon_client.execute_workflow(
-                    workflow_id,
-                    variables=variables,
-                )
-
-            title = prompt[:80]
-            if wait:
-                return await self.gorgon_client.submit_and_wait(
-                    title=title,
-                    description=prompt,
-                    priority=priority,
-                )
-            return await self.gorgon_client.submit_task(
-                title=title,
-                description=prompt,
-                priority=priority,
-            )
-        except (ConnectionError, RuntimeError, ValueError, TimeoutError, OSError) as e:
-            logger.warning(f"Gorgon delegation failed, falling back: {e}")
-            return {"fallback": True, "response": self.think(prompt)}
