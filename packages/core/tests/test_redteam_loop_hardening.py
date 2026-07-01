@@ -94,8 +94,9 @@ class TestMcpToolInvocationContract:
         We verify this by asserting the orchestrator's run() is never invoked
         when auto_approve is True but the env gate is absent.
         """
-        # This test documents the contract without requiring a full FastMCP
-        # integration, which is brittle in a headless test environment.
+        # Skip when animus_forge is not installed (core test job does not
+        # include the forge sibling package).
+        pytest.importorskip("animus_forge")
         import os
 
         from animus_forge.self_improve.orchestrator import SelfImproveOrchestrator

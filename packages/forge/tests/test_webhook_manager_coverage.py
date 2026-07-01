@@ -2,6 +2,7 @@
 
 import json
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -17,6 +18,7 @@ def _make_manager():
         patch("animus_forge.webhooks.webhook_manager.WorkflowEngineAdapter") as mock_engine,
     ):
         settings = MagicMock()
+        settings.workflows_dir = Path("/nonexistent/workflows")
         mock_settings.return_value = settings
         backend = MagicMock()
         backend.fetchall.return_value = []

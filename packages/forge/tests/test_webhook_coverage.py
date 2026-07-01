@@ -5,6 +5,7 @@ import hmac
 import sys
 from contextlib import contextmanager
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, "src")
@@ -41,10 +42,12 @@ def _mock_backend():
 def _make_webhook_manager(backend=None):
     """Construct a WebhookManager with mocked dependencies."""
     backend = backend or _mock_backend()
+    settings = MagicMock()
+    settings.workflows_dir = Path("/nonexistent/workflows")
     with (
         patch(
             "animus_forge.webhooks.webhook_manager.get_settings",
-            return_value=MagicMock(),
+            return_value=settings,
         ),
         patch(
             "animus_forge.webhooks.webhook_manager.get_database",

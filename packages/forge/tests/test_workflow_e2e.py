@@ -64,25 +64,11 @@ class TestWorkflowYAMLLoading:
         assert len(wf.steps) >= 1, f"{workflow_path.name}: no steps"
 
     def test_all_step_types_recognized(self, workflow_path: Path):
-        valid_types = {
-            "claude_code",
-            "openai",
-            "ollama",
-            "shell",
-            "parallel",
-            "checkpoint",
-            "fan_out",
-            "fan_in",
-            "map_reduce",
-            "signal_audit",
-            "autopsy_analyze",
-            "verdict_capture",
-            "autonomy",
-            "handoff",
-        }
+        from animus_forge.workflow.loader import VALID_STEP_TYPES
+
         wf = load_workflow(workflow_path, trusted_dir=WORKFLOWS_DIR)
         for step in wf.steps:
-            assert step.type in valid_types, (
+            assert step.type in VALID_STEP_TYPES, (
                 f"{workflow_path.name}: step '{step.id}' has unknown type '{step.type}'"
             )
 
