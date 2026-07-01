@@ -31,14 +31,14 @@ from enum import Enum
 from functools import wraps
 from typing import Any, TypeVar
 
-from animus_forge.errors import AnimusForgeError
+from animus_forge.errors import GorgonError
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
 
-class CircuitBreakerError(AnimusForgeError):
+class CircuitBreakerError(GorgonError):
     """Raised when circuit breaker is open."""
 
     pass

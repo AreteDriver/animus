@@ -48,7 +48,7 @@ class AgentMemory:
         ON agent_memories(accessed_at DESC);
     """
 
-    def __init__(self, backend: DatabaseBackend | None = None, db_path: str = "animus-kernel-memory.db"):
+    def __init__(self, backend: DatabaseBackend | None = None, db_path: str = "gorgon-memory.db"):
         """Initialize agent memory.
 
         Args:

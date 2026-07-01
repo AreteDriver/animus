@@ -358,8 +358,8 @@ class SystemAuditor:
         self.baseline = baseline
         self.checks = checks or list(DEFAULT_AUDIT_CHECKS)
         self.debt_registry = TechnicalDebtRegistry(backend)
-        self.skills_path = skills_path or Path.home() / ".animus" / "skills"
-        self.config_path = config_path or Path.home() / ".animus" / "config"
+        self.skills_path = skills_path or Path.home() / ".gorgon" / "skills"
+        self.config_path = config_path or Path.home() / ".gorgon" / "config"
         self._check_functions: dict[str, Callable[..., Coroutine[Any, Any, AuditResult]]] = {}
 
     def register_check(
@@ -561,7 +561,7 @@ class SystemAuditor:
         now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
         lines: list[str] = [
             "=" * 63,
-            "  ANIMUS KERNEL SYSTEM AUDIT - Zorya Polunochnaya",
+            "  GORGON SYSTEM AUDIT - Zorya Polunochnaya",
             f"  {now}",
             "=" * 63,
             "",
@@ -621,8 +621,8 @@ def capture_baseline(
     Returns:
         A SystemBaseline snapshot.
     """
-    skills_path = skills_path or Path.home() / ".animus" / "skills"
-    config_path = config_path or Path.home() / ".animus" / "config"
+    skills_path = skills_path or Path.home() / ".gorgon" / "skills"
+    config_path = config_path or Path.home() / ".gorgon" / "config"
 
     # Hash skill files
     skill_hashes: dict[str, str] = {}

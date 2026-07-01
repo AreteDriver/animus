@@ -67,7 +67,7 @@ class DatabaseBackend(ABC):
 class SQLiteBackend(DatabaseBackend):
     """SQLite database backend."""
 
-    def __init__(self, db_path: str = "animus-kernel-state.db"):
+    def __init__(self, db_path: str = "gorgon-state.db"):
         """Initialize SQLite backend.
 
         Args:
@@ -144,8 +144,8 @@ class PostgresBackend(DatabaseBackend):
         self,
         host: str = "localhost",
         port: int = 5432,
-        database: str = "animus_kernel",
-        user: str = "animus_kernel",
+        database: str = "gorgon",
+        user: str = "gorgon",
         password: str = "",
         connection_string: str | None = None,
     ):
@@ -176,8 +176,8 @@ class PostgresBackend(DatabaseBackend):
             self._conn_params = {
                 "host": parsed.hostname or "localhost",
                 "port": parsed.port or 5432,
-                "database": parsed.path.lstrip("/") or "animus_kernel",
-                "user": parsed.username or "animus_kernel",
+                "database": parsed.path.lstrip("/") or "gorgon",
+                "user": parsed.username or "gorgon",
                 "password": parsed.password or "",
             }
         else:
@@ -286,9 +286,9 @@ def create_backend(url: str | None = None, **kwargs) -> DatabaseBackend:
         Configured DatabaseBackend instance
 
     Examples:
-        >>> backend = create_backend("sqlite:///animus-kernel.db")
-        >>> backend = create_backend("postgresql://user:pass@localhost/animus_kernel")
-        >>> backend = create_backend(db_path="animus-kernel.db")  # SQLite default
+        >>> backend = create_backend("sqlite:///gorgon.db")
+        >>> backend = create_backend("postgresql://user:pass@localhost/gorgon")
+        >>> backend = create_backend(db_path="gorgon.db")  # SQLite default
     """
     if url:
         parsed = urlparse(url)
@@ -300,7 +300,7 @@ def create_backend(url: str | None = None, **kwargs) -> DatabaseBackend:
                 path = path[3:]
             elif path.startswith("/"):
                 path = path[1:]
-            return SQLiteBackend(db_path=path or "animus-kernel-state.db")
+            return SQLiteBackend(db_path=path or "gorgon-state.db")
 
         elif scheme in ("postgres", "postgresql"):
             return PostgresBackend(connection_string=url)

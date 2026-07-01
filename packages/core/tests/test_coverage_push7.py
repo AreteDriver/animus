@@ -1,4 +1,4 @@
-"""Coverage push round 7 — guardrails, voice, sync/client, sync/protocol, webhooks."""
+"""Coverage push round 7 — guardrails, voice, sync/client, sync/protocol, webhooks, gorgon."""
 
 from __future__ import annotations
 
@@ -552,3 +552,121 @@ class TestWebhookCallbackErrors:
         failing_cb.assert_called_once()
 
 
+# ---------------------------------------------------------------------------
+# Gorgon — execution tool error paths (lines 560-561, 630-631, 638, 643-644,
+#           654-655, 679-680)
+# ---------------------------------------------------------------------------
+
+
+class TestGorgonToolErrors:
+    """Gorgon integration tool error paths — not-connected + exceptions."""
+
+    def _make_integration(self):
+        from animus.integrations.gorgon import GorgonIntegration
+
+        gi = GorgonIntegration()
+        return gi
+
+    def test_tool_stats_not_connected(self):
+        gi = self._make_integration()
+        gi._client = None
+        result = asyncio.run(gi._tool_stats())
+        assert result.success is False
+
+    def test_tool_stats_exception(self):
+        gi = self._make_integration()
+        gi._client = AsyncMock()
+        gi._client.get_stats.side_effect = RuntimeError("fail")
+        result = asyncio.run(gi._tool_stats())
+        assert result.success is False
+
+    def test_tool_check_not_connected(self):
+        gi = self._make_integration()
+        gi._client = None
+        result = asyncio.run(gi._tool_check(task_id="t1"))
+        assert result.success is False
+
+    def test_tool_check_exception(self):
+        gi = self._make_integration()
+        gi._client = AsyncMock()
+        gi._client.get_task.side_effect = RuntimeError("fail")
+        result = asyncio.run(gi._tool_check(task_id="t1"))
+        assert result.success is False
+
+    def test_tool_list_not_connected(self):
+        gi = self._make_integration()
+        gi._client = None
+        result = asyncio.run(gi._tool_list())
+        assert result.success is False
+
+    def test_tool_list_exception(self):
+        gi = self._make_integration()
+        gi._client = AsyncMock()
+        gi._client.list_tasks.side_effect = RuntimeError("fail")
+        result = asyncio.run(gi._tool_list())
+        assert result.success is False
+
+    def test_tool_cancel_not_connected(self):
+        gi = self._make_integration()
+        gi._client = None
+        result = asyncio.run(gi._tool_cancel(task_id="t1"))
+        assert result.success is False
+
+    def test_tool_cancel_exception(self):
+        gi = self._make_integration()
+        gi._client = AsyncMock()
+        gi._client.cancel_task.side_effect = RuntimeError("fail")
+        result = asyncio.run(gi._tool_cancel(task_id="t1"))
+        assert result.success is False
+
+    def test_tool_execution_status_not_connected(self):
+        gi = self._make_integration()
+        gi._client = None
+        result = asyncio.run(gi._tool_execution_status(execution_id="e1"))
+        assert result.success is False
+
+    def test_tool_execution_status_exception(self):
+        gi = self._make_integration()
+        gi._client = AsyncMock()
+        gi._client.get_execution.side_effect = RuntimeError("fail")
+        result = asyncio.run(gi._tool_execution_status(execution_id="e1"))
+        assert result.success is False
+
+    def test_tool_executions_not_connected(self):
+        gi = self._make_integration()
+        gi._client = None
+        result = asyncio.run(gi._tool_executions())
+        assert result.success is False
+
+    def test_tool_executions_exception(self):
+        gi = self._make_integration()
+        gi._client = AsyncMock()
+        gi._client.list_executions.side_effect = RuntimeError("fail")
+        result = asyncio.run(gi._tool_executions())
+        assert result.success is False
+
+    def test_tool_approvals_not_connected(self):
+        gi = self._make_integration()
+        gi._client = None
+        result = asyncio.run(gi._tool_approvals(execution_id="e1"))
+        assert result.success is False
+
+    def test_tool_approvals_exception(self):
+        gi = self._make_integration()
+        gi._client = AsyncMock()
+        gi._client.get_approval_status.side_effect = RuntimeError("fail")
+        result = asyncio.run(gi._tool_approvals(execution_id="e1"))
+        assert result.success is False
+
+    def test_tool_approve_not_connected(self):
+        gi = self._make_integration()
+        gi._client = None
+        result = asyncio.run(gi._tool_approve(execution_id="e1", token="tok"))
+        assert result.success is False
+
+    def test_tool_approve_exception(self):
+        gi = self._make_integration()
+        gi._client = AsyncMock()
+        gi._client.resume_execution.side_effect = RuntimeError("fail")
+        result = asyncio.run(gi._tool_approve(execution_id="e1", token="tok"))
+        assert result.success is False

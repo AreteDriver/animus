@@ -83,6 +83,17 @@ class TestConfigEnvOverrides:
         assert cfg.enabled is True
         assert cfg.port == 8888
 
+    def test_gorgon_config_env_overrides(self, monkeypatch):
+        """Lines 173-176: GorgonConfig env overrides."""
+        monkeypatch.setenv("GORGON_TIMEOUT", "60.0")
+        monkeypatch.setenv("GORGON_AUTO_DELEGATE", "yes")
+
+        from animus.config import GorgonConfig
+
+        cfg = GorgonConfig()
+        assert cfg.timeout == 60.0
+        assert cfg.auto_delegate is True
+
     def test_learning_config_env_overrides(self, monkeypatch):
         """Lines 239-242: LearningConfig env overrides."""
         monkeypatch.setenv("ANIMUS_LEARNING_ENABLED", "false")
@@ -195,6 +206,15 @@ class TestAnimusConfigLoad:
                     "port": 8888,
                     "secret": "wh-secret",
                 },
+                "gorgon": {
+                    "enabled": True,
+                    "url": "http://gorgon:8000",
+                    "api_key": "g-key",
+                    "timeout": 45,
+                    "poll_interval": 10,
+                    "max_wait": 600,
+                    "auto_delegate": True,
+                },
             },
             "learning": {
                 "enabled": False,
@@ -261,6 +281,12 @@ class TestAnimusConfigLoad:
         assert cfg.integrations.webhooks.enabled is True
         assert cfg.integrations.webhooks.port == 8888
         assert cfg.integrations.webhooks.secret == "wh-secret"
+        assert cfg.integrations.gorgon.enabled is True
+        assert cfg.integrations.gorgon.url == "http://gorgon:8000"
+        assert cfg.integrations.gorgon.timeout == 45.0
+        assert cfg.integrations.gorgon.poll_interval == 10.0
+        assert cfg.integrations.gorgon.max_wait == 600.0
+        assert cfg.integrations.gorgon.auto_delegate is True
 
         # Verify learning
         assert cfg.learning.enabled is False

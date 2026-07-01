@@ -1,4 +1,4 @@
-"""Feedback loop engine for the Animus Kernel intelligence layer.
+"""Feedback loop engine for the Gorgon intelligence layer.
 
 Closes the loop between execution outcomes and future agent behavior by
 analyzing step and workflow results, detecting notable events, generating

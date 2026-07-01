@@ -51,7 +51,7 @@ class CheckpointManager:
         elif backend:
             self.persistence = StatePersistence(backend=backend)
         else:
-            self.persistence = StatePersistence(db_path=db_path or "animus-kernel-state.db")
+            self.persistence = StatePersistence(db_path=db_path or "gorgon-state.db")
 
         self._current_workflow: str | None = None
         self._current_stage: StageContext | None = None

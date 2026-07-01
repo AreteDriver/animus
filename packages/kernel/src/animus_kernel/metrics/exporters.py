@@ -45,7 +45,7 @@ class PrometheusExporter(MetricsExporter):
     Compatible with Prometheus scraping and OpenMetrics.
     """
 
-    def __init__(self, prefix: str = "animus_kernel"):
+    def __init__(self, prefix: str = "gorgon"):
         """Initialize Prometheus exporter.
 
         Args:
@@ -147,10 +147,10 @@ class LogExporter(MetricsExporter):
         """Initialize log exporter.
 
         Args:
-            logger: Logger instance (default: animus_kernel.metrics)
+            logger: Logger instance (default: gorgon.metrics)
             level: Log level for metrics
         """
-        self.logger = logger or logging.getLogger("animus_kernel.metrics")
+        self.logger = logger or logging.getLogger("gorgon.metrics")
         self.level = level
 
     def export(self, collector: MetricsCollector) -> str:

@@ -1,7 +1,7 @@
-"""Intelligence layer — application-layer dominance for Animus Kernel.
+"""Intelligence layer — application-layer dominance for Gorgon.
 
 Provides feedback loops, outcome tracking, cross-workflow learning,
-and intelligent provider routing that make Animus Kernel's orchestration
+and intelligent provider routing that make Gorgon's orchestration
 irreplaceable.
 
 Modules:

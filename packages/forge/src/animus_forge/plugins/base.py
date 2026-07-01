@@ -84,7 +84,7 @@ StepHandler = Callable[[dict, PluginContext], dict]
 
 
 class Plugin(ABC):
-    """Base class for Animus Forge plugins.
+    """Base class for Gorgon plugins.
 
     Plugins can:
     - Register custom step handlers

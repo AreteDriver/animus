@@ -104,7 +104,7 @@ class SelfImproveOrchestrator:
             config: Safety configuration.
             tool_registry: Optional ForgeToolRegistry for tool-equipped generation.
             db_path: Path to SQLite database for persistent approvals and
-                checkpoints. Defaults to ``<codebase>/.animus_kernel/self_improve.db``.
+                checkpoints. Defaults to ``<codebase>/.gorgon/self_improve.db``.
         """
         self.codebase_path = Path(codebase_path)
         self.provider = provider
@@ -112,7 +112,7 @@ class SelfImproveOrchestrator:
         self.tool_registry = tool_registry
 
         # Persistent state
-        self._db_path = Path(db_path) if db_path else self.codebase_path / ".animus_kernel/self_improve.db"
+        self._db_path = Path(db_path) if db_path else self.codebase_path / ".gorgon/self_improve.db"
         approval_backend = self._create_backend()
 
         # Initialize components
@@ -120,7 +120,7 @@ class SelfImproveOrchestrator:
         self.analyzer = CodebaseAnalyzer(provider, self.codebase_path)
         self.approval_gate = ApprovalGate(backend=approval_backend)
         self.rollback_manager = RollbackManager(
-            self.codebase_path / ".animus_kernel/snapshots",
+            self.codebase_path / ".gorgon/snapshots",
             self.config.max_snapshots,
         )
         self.pr_manager = PRManager(self.codebase_path, self.config.branch_prefix)

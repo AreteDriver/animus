@@ -1,6 +1,6 @@
-"""Adapter between Convergent's IntentResolver and Animus Kernel delegation.
+"""Adapter between Convergent's IntentResolver and Gorgon's delegation pipeline.
 
-Optional integration — works without Convergent installed.
+Optional integration — Gorgon works without Convergent installed.
 When available, checks delegations for coherence before parallel execution:
 overlapping tasks, conflicting agents, redundant work.
 """
@@ -105,7 +105,7 @@ class DelegationConvergenceChecker:
 
     @staticmethod
     def _delegation_to_intent(delegation: dict[str, str]) -> Any:
-        """Convert a delegation dict to a Convergent Intent."""
+        """Convert a Gorgon delegation dict to a Convergent Intent."""
         agent = delegation.get("agent", "unknown")
         task = delegation.get("task", "")
 
@@ -174,7 +174,7 @@ def format_convergence_alert(result: ConvergenceResult) -> str:
 
 
 def create_bridge(db_path: str | None = None) -> Any:
-    """Create a Coordination Bridge for coordination protocol features.
+    """Create a GorgonBridge for coordination protocol features.
 
     Returns None if Convergent is not installed.
     """
@@ -187,7 +187,7 @@ def create_bridge(db_path: str | None = None) -> Any:
         from convergent import CoordinationConfig, GorgonBridge
 
         if db_path is None:
-            db_dir = Path.home() / ".animus"
+            db_dir = Path.home() / ".gorgon"
             db_dir.mkdir(parents=True, exist_ok=True)
             db_path = str(db_dir / "coordination.db")
 
@@ -205,7 +205,7 @@ def create_event_log(db_path: str | None = None) -> Any:
     Returns None if Convergent is not installed.
 
     Args:
-        db_path: Path to SQLite database. Defaults to ~/.animus/coordination.events.db.
+        db_path: Path to SQLite database. Defaults to ~/.gorgon/coordination.events.db.
 
     Returns:
         EventLog instance or None.
@@ -219,7 +219,7 @@ def create_event_log(db_path: str | None = None) -> Any:
         from convergent import EventLog
 
         if db_path is None:
-            db_dir = Path.home() / ".animus"
+            db_dir = Path.home() / ".gorgon"
             db_dir.mkdir(parents=True, exist_ok=True)
             db_path = str(db_dir / "coordination.events.db")
 
@@ -235,7 +235,7 @@ def get_coordination_health(bridge: Any) -> dict[str, Any]:
     """Run a coordination health check via Convergent's HealthChecker.
 
     Args:
-        bridge: A Coordination Bridge instance.
+        bridge: A GorgonBridge instance.
 
     Returns:
         Dict with grade, issues, and subsystem metrics. Empty dict on failure.

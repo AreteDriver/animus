@@ -217,7 +217,7 @@ class IntegrationHandlersMixin:
         elif action == "commit_file":
             file_path = step.params.get("file_path", "")
             content = step.params.get("body", "")
-            message = step.params.get("message", "Update file via Animus Kernel")
+            message = step.params.get("message", "Update file via Gorgon")
             branch = step.params.get("branch", "main")
 
             for key, value in context.items():

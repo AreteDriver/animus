@@ -1,4 +1,4 @@
-"""Animus Forge Error Hierarchy.
+"""Gorgon Error Hierarchy.
 
 Structured exception types for the orchestration framework.
 """
@@ -6,10 +6,10 @@ Structured exception types for the orchestration framework.
 from __future__ import annotations
 
 
-class AnimusForgeError(Exception):
-    """Base error for all Animus Forge exceptions."""
+class GorgonError(Exception):
+    """Base error for all Gorgon exceptions."""
 
-    code = "FORGE_ERROR"
+    code = "GORGON_ERROR"
 
     def __init__(self, message: str, details: dict = None):
         self.message = message
@@ -25,7 +25,7 @@ class AnimusForgeError(Exception):
 
 
 # Agent Errors
-class AgentError(AnimusForgeError):
+class AgentError(GorgonError):
     """Base error for agent execution failures."""
 
     code = "AGENT_ERROR"
@@ -77,7 +77,7 @@ class ValidationError(AgentError):
 
 
 # Budget Errors
-class BudgetExceededError(AnimusForgeError):
+class BudgetExceededError(GorgonError):
     """Token budget has been exceeded."""
 
     code = "BUDGET_EXCEEDED"
@@ -90,7 +90,7 @@ class BudgetExceededError(AnimusForgeError):
 
 
 # Workflow Errors
-class WorkflowError(AnimusForgeError):
+class WorkflowError(GorgonError):
     """Base error for workflow execution failures."""
 
     code = "WORKFLOW_ERROR"
@@ -134,7 +134,7 @@ class CheckpointError(WorkflowError):
 
 
 # State Errors
-class StateError(AnimusForgeError):
+class StateError(GorgonError):
     """Error in state management."""
 
     code = "STATE_ERROR"

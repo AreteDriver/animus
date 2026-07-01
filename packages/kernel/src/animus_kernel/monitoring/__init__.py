@@ -1,4 +1,4 @@
-"""Monitoring and Metrics Collection for Animus Kernel.
+"""Monitoring and Metrics Collection for Gorgon Orchestrator.
 
 Provides real-time tracking of workflow executions, agent activity,
 and system metrics. Also includes proactive monitoring watchers for

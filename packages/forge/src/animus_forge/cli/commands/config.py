@@ -39,7 +39,7 @@ def config_show(
         print(json.dumps(masked, indent=2, default=str))
         return
 
-    console.print(Panel("[bold]Animus Forge Configuration[/bold]", border_style="blue"))
+    console.print(Panel("[bold]Gorgon Configuration[/bold]", border_style="blue"))
 
     table = Table(show_header=True)
     table.add_column("Setting", style="cyan")
@@ -64,12 +64,12 @@ def config_path() -> None:
 
     console.print("[bold]Configuration Sources[/bold]\n")
 
-    # animus-forge.yaml
+    # gorgon.yaml
     yaml_path = _find_yaml_config()
     if yaml_path:
-        console.print(f"[green]✓[/green] animus-forge.yaml: {yaml_path.absolute()}")
+        console.print(f"[green]✓[/green] gorgon.yaml: {yaml_path.absolute()}")
     else:
-        console.print("[yellow]○[/yellow] animus-forge.yaml: not found")
+        console.print("[yellow]○[/yellow] gorgon.yaml: not found")
 
     # .env file
     env_path = Path(".env")
@@ -79,13 +79,13 @@ def config_path() -> None:
         console.print("[yellow]○[/yellow] .env: not found")
 
     # Environment variables
-    forge_vars = {k: v for k, v in os.environ.items() if k.startswith("FORGE_")}
-    if forge_vars:
-        console.print(f"\n[bold]Environment Variables ({len(forge_vars)}):[/bold]")
-        for key in sorted(forge_vars.keys()):
+    gorgon_vars = {k: v for k, v in os.environ.items() if k.startswith("GORGON_")}
+    if gorgon_vars:
+        console.print(f"\n[bold]Environment Variables ({len(gorgon_vars)}):[/bold]")
+        for key in sorted(gorgon_vars.keys()):
             console.print(f"  {key}")
     else:
-        console.print("\n[dim]No FORGE_* environment variables set[/dim]")
+        console.print("\n[dim]No GORGON_* environment variables set[/dim]")
 
     # YAML search paths
     console.print("\n[bold]YAML Search Paths:[/bold]")
@@ -102,9 +102,9 @@ def config_env() -> None:
         ("OPENAI_API_KEY", "OpenAI API key", True),
         ("GITHUB_TOKEN", "GitHub personal access token", False),
         ("NOTION_TOKEN", "Notion API token", False),
-        ("FORGE_LOG_LEVEL", "Log level (DEBUG, INFO, WARNING, ERROR)", False),
-        ("FORGE_BUDGET_LIMIT", "Token budget limit", False),
-        ("FORGE_WORKFLOWS_DIR", "Workflows directory path", False),
+        ("GORGON_LOG_LEVEL", "Log level (DEBUG, INFO, WARNING, ERROR)", False),
+        ("GORGON_BUDGET_LIMIT", "Token budget limit", False),
+        ("GORGON_WORKFLOWS_DIR", "Workflows directory path", False),
     ]
 
     import os

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Insecure default values that should not be used in production
 _INSECURE_SECRET_KEY = "change-me-in-production"
-_INSECURE_DATABASE_URL = "sqlite:///animus-kernel-state.db"
+_INSECURE_DATABASE_URL = "sqlite:///gorgon-state.db"
 
 # Minimum requirements for secure configuration
 _MIN_SECRET_KEY_LENGTH = 32
@@ -33,14 +33,14 @@ _ENV_VAR_PLACEHOLDER_RE = re.compile(r"^\$\{[A-Z_][A-Z0-9_]*\}$")
 
 # YAML config search paths (checked in order, first found wins)
 _YAML_SEARCH_PATHS = [
-    Path("kernel.yaml"),
-    Path("config/kernel.yaml"),
-    Path.home() / ".config" / "animus" / "kernel.yaml",
+    Path("gorgon.yaml"),
+    Path("config/gorgon.yaml"),
+    Path.home() / ".config" / "gorgon" / "gorgon.yaml",
 ]
 
 
 def _find_yaml_config() -> Path | None:
-    """Find the first kernel.yaml in search paths."""
+    """Find the first gorgon.yaml in search paths."""
     for path in _YAML_SEARCH_PATHS:
         if path.is_file():
             return path
@@ -50,7 +50,7 @@ def _find_yaml_config() -> Path | None:
 class Settings(BaseSettings):
     """Application settings.
 
-    Priority chain: init kwargs > env vars > .env file > kernel.yaml > defaults
+    Priority chain: init kwargs > env vars > .env file > gorgon.yaml > defaults
     """
 
     # NOTE: the YAML source is wired manually in settings_customise_sources
@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         """Customise settings source priority.
 
-        Priority: init kwargs > env vars > .env file > kernel.yaml > file secrets > defaults
+        Priority: init kwargs > env vars > .env file > gorgon.yaml > file secrets > defaults
         """
         sources: list[PydanticBaseSettingsSource] = [
             init_settings,
@@ -132,7 +132,7 @@ class Settings(BaseSettings):
     claude_mode: str = Field("api", description="Claude invocation mode: 'api' or 'cli'")
 
     # Application Settings
-    app_name: str = Field("AnimusKernel", description="Application name")
+    app_name: str = Field("Gorgon", description="Application name")
     debug: bool = Field(False, description="Debug mode")
     production: bool = Field(
         False,
@@ -248,7 +248,7 @@ class Settings(BaseSettings):
 
     # Distributed Tracing
     tracing_enabled: bool = Field(True, description="Enable distributed tracing")
-    tracing_service_name: str = Field("animus-kernel-api", description="Service name for tracing")
+    tracing_service_name: str = Field("gorgon-api", description="Service name for tracing")
     tracing_sample_rate: float = Field(
         1.0, description="Trace sampling rate (0.0-1.0, default: trace all)"
     )

@@ -1,4 +1,4 @@
-"""Monitoring and Metrics Dashboard Pages for Animus Forge.
+"""Monitoring and Metrics Dashboard Pages for Gorgon.
 
 Provides real-time monitoring UI for orchestrator status,
 agent coordination visualization, and metrics dashboards.

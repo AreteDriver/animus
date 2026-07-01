@@ -1,6 +1,6 @@
-"""Self-Improvement system for Animus Kernel.
+"""Self-Improvement system for Gorgon.
 
-This module allows Animus Kernel to analyze and improve its own codebase
+This module allows Gorgon to analyze and improve its own codebase
 under strict safety constraints.
 
 Safety Features:

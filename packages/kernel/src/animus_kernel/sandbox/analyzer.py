@@ -54,7 +54,7 @@ class AnalysisResult:
 
 
 class CodebaseAnalyzer:
-    """Analyzes the Animus Kernel codebase for improvement opportunities."""
+    """Analyzes the Gorgon codebase for improvement opportunities."""
 
     def __init__(
         self,

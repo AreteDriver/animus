@@ -1,4 +1,4 @@
-"""Animus Forge utility modules."""
+"""Gorgon utility modules."""
 
 from animus_forge.utils.circuit_breaker import (
     CircuitBreaker,

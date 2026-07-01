@@ -13,7 +13,7 @@ import pytest
 
 pytest.importorskip("pytest_benchmark")
 
-from animus.cognitive import detect_mode
+from animus.cognitive import detect_mode, should_delegate_to_gorgon
 from animus.entities import Entity, EntityMemory, EntityType
 from animus.memory import Conversation, LocalMemoryStore, Memory, MemoryType
 
@@ -114,6 +114,32 @@ class TestDetectModeBenchmark:
             for _ in range(100):
                 for p in prompts:
                     detect_mode(p)
+
+        benchmark(detect_all)
+
+
+class TestDelegationDetectionBenchmark:
+    """Delegation heuristic throughput."""
+
+    def test_delegation_detection_500(self, benchmark):
+        """Benchmark: should_delegate_to_gorgon x500 mixed prompts."""
+        prompts = [
+            "write tests for the authentication module in the codebase",
+            "refactor the database layer to use async operations",
+            "implement a new API endpoint for user management",
+            "what is python",
+            "hello world",
+            "analyze the repository architecture and refactor",
+            "deploy the application to production servers",
+            "simple question about syntax",
+            "build a CI pipeline for the project repository",
+            "tell me a joke",
+        ]
+
+        def detect_all():
+            for _ in range(50):
+                for p in prompts:
+                    should_delegate_to_gorgon(p)
 
         benchmark(detect_all)
 
