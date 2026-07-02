@@ -6982,12 +6982,12 @@ class TestApiErrorsBatch9:
     async def test_gorgon_exception_handler(self):
         """Lines 222-223: async exception handler."""
         from animus_forge.api_errors import gorgon_exception_handler
-        from animus_forge.errors import GorgonError
+        from animus_forge.errors import AnimusForgeError
 
         mock_request = MagicMock()
         mock_request.headers = {"X-Request-ID": "req-123"}
 
-        exc = GorgonError("test error")
+        exc = AnimusForgeError("test error")
         response = await gorgon_exception_handler(mock_request, exc)
         assert response.status_code >= 400
 

@@ -13,19 +13,19 @@ from animus_forge.api_errors import (
     RateLimitErrorResponse,
     ValidationErrorItem,
     ValidationErrorResponse,
+    animus_forge_error_to_response,
     bad_request,
     conflict,
     get_status_code,
-    gorgon_error_to_response,
-    http_error_to_gorgon,
+    http_error_to_animus_forge,
     internal_error,
     not_found,
     responses,
     unauthorized,
 )
 from animus_forge.errors import (
+    AnimusForgeError,
     BudgetExceededError,
-    GorgonError,
     ValidationError,
     WorkflowNotFoundError,
 )
@@ -202,13 +202,13 @@ class TestErrorStatusMapping:
 # =============================================================================
 
 
-class TestGorgonErrorConversion:
-    """Tests for converting GorgonError to response."""
+class TestAnimusForgeErrorConversion:
+    """Tests for converting AnimusForgeError to response."""
 
     def test_convert_gorgon_error(self):
-        """Test converting a GorgonError to JSON response."""
-        error = GorgonError("Something went wrong", {"context": "test"})
-        response = gorgon_error_to_response(error)
+        """Test converting a AnimusForgeError to JSON response."""
+        error = AnimusForgeError("Something went wrong", {"context": "test"})
+        response = animus_forge_error_to_response(error)
 
         assert isinstance(response, JSONResponse)
         assert response.status_code == 500
@@ -216,28 +216,28 @@ class TestGorgonErrorConversion:
     def test_convert_validation_error(self):
         """Test converting ValidationError."""
         error = ValidationError("Invalid input")
-        response = gorgon_error_to_response(error)
+        response = animus_forge_error_to_response(error)
 
         assert response.status_code == 400
 
     def test_convert_workflow_not_found(self):
         """Test converting WorkflowNotFoundError."""
         error = WorkflowNotFoundError("Workflow 'xyz' not found")
-        response = gorgon_error_to_response(error)
+        response = animus_forge_error_to_response(error)
 
         assert response.status_code == 404
 
     def test_convert_budget_exceeded(self):
         """Test converting BudgetExceededError."""
         error = BudgetExceededError("Budget exceeded", budget=1000, used=1500)
-        response = gorgon_error_to_response(error)
+        response = animus_forge_error_to_response(error)
 
         assert response.status_code == 429
 
     def test_convert_with_request_id(self):
         """Test conversion includes request ID."""
-        error = GorgonError("Error")
-        response = gorgon_error_to_response(error, request_id="req123")
+        error = AnimusForgeError("Error")
+        response = animus_forge_error_to_response(error, request_id="req123")
 
         # The response body should include the request_id
         assert response.status_code == 500
@@ -253,22 +253,22 @@ class TestHttpErrorConversion:
 
     def test_convert_401(self):
         """Test converting 401 error."""
-        response = http_error_to_gorgon(401, "Unauthorized")
+        response = http_error_to_animus_forge(401, "Unauthorized")
         assert response.error.error_code == "AUTH_FAILED"
 
     def test_convert_404(self):
         """Test converting 404 error."""
-        response = http_error_to_gorgon(404, "Not found")
+        response = http_error_to_animus_forge(404, "Not found")
         assert response.error.error_code == "NOT_FOUND"
 
     def test_convert_500(self):
         """Test converting 500 error."""
-        response = http_error_to_gorgon(500, "Internal error")
+        response = http_error_to_animus_forge(500, "Internal error")
         assert response.error.error_code == "INTERNAL_ERROR"
 
     def test_convert_with_custom_code(self):
         """Test conversion with custom error code."""
-        response = http_error_to_gorgon(
+        response = http_error_to_animus_forge(
             400,
             "Invalid request",
             error_code="CUSTOM_ERROR",
@@ -277,7 +277,7 @@ class TestHttpErrorConversion:
 
     def test_convert_with_details(self):
         """Test conversion with details."""
-        response = http_error_to_gorgon(
+        response = http_error_to_animus_forge(
             400,
             "Invalid request",
             details={"field": "email"},

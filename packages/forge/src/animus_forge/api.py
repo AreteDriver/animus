@@ -22,11 +22,11 @@ from animus_forge import api_state as state
 from animus_forge.api_errors import (
     APIException,
     RateLimitErrorResponse,
+    animus_forge_exception_handler,
     api_exception_handler,
-    gorgon_exception_handler,
 )
 from animus_forge.config import configure_logging, get_settings
-from animus_forge.errors import GorgonError
+from animus_forge.errors import AnimusForgeError
 from animus_forge.security import (
     AuditLogMiddleware,
     BruteForceConfig,
@@ -550,7 +550,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONRe
     )
 
 
-app.add_exception_handler(GorgonError, gorgon_exception_handler)
+app.add_exception_handler(AnimusForgeError, animus_forge_exception_handler)
 app.add_exception_handler(APIException, api_exception_handler)
 
 
