@@ -787,7 +787,12 @@ def main():
                 perf_mode = "--perf" in user_input.lower()
                 if perf_mode:
                     console.print("\n[bold]Performance Summary[/bold]\n")
-                    phases = ["model_generate", "tool_execute", "memory_recall", "conversation_save"]
+                    phases = [
+                        "model_generate",
+                        "tool_execute",
+                        "memory_recall",
+                        "conversation_save",
+                    ]
                     for phase in phases:
                         stats = get_summary(phase=phase, window=100)
                         if stats["count"] > 0:
@@ -800,9 +805,7 @@ def main():
                             )
                         else:
                             console.print(f"  [dim]{phase:20}[/dim] no data yet")
-                    console.print(
-                        "\n  [dim]Log file: ~/.animus/logs/performance.log[/dim]"
-                    )
+                    console.print("\n  [dim]Log file: ~/.animus/logs/performance.log[/dim]")
                 else:
                     show_stats(memory)
                     # Also show task outcome stats

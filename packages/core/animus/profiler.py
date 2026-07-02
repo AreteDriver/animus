@@ -34,6 +34,7 @@ MAX_LOG_AGE_DAYS = 7
 
 # In-memory buffer for real-time stats (last N entries)
 import threading
+
 _MAX_BUFFER = 1000
 _perf_buffer: list[dict[str, Any]] = []
 _perf_lock = threading.Lock()
@@ -160,9 +161,18 @@ def perf_log(
             success=ctx.get("success"),
             context_tokens=context_tokens or ctx.get("context_tokens"),
             response_tokens=ctx.get("response_tokens"),
-            extra={k: v for k, v in ctx.items() if k not in {
-                "tool_name", "model_provider", "success", "context_tokens", "response_tokens"
-            }},
+            extra={
+                k: v
+                for k, v in ctx.items()
+                if k
+                not in {
+                    "tool_name",
+                    "model_provider",
+                    "success",
+                    "context_tokens",
+                    "response_tokens",
+                }
+            },
         )
 
 
