@@ -2521,14 +2521,29 @@ def main():
                 streamed = True
                 console.print(token, end="", soft_wrap=True)
 
-            logger.debug(f"Agent loop with mode={mode.value}")
-            response = cognitive.think_with_tools(
-                prompt=user_input,
-                context=context,
-                mode=mode,
-                tools=tools,
-                max_iterations=MAX_AGENT_LOOPS,
-                approval_callback=_approval_callback,
+            # P5: Local models cannot reliably follow the constrained agent loop.
+            # Skip agentic tool-use for Ollama; Anthropic/OpenAI get native tool_use.
+            is_ollama = cognitive.primary_config.provider.value == "ollama"
+            if is_ollama:
+                console.print(
+                    "[dim]Tip: Use /tool <name> for tool execution with local models.[/dim]",
+                )
+                logger.debug("Ollama provider — skipping agent loop, using basic think()")
+                response = cognitive.think(
+                    user_input,
+                    context=context,
+                    mode=mode,
+                    citizen_context=citizen_context,
+                )
+            else:
+                logger.debug(f"Agent loop with mode={mode.value}")
+                response = cognitive.think_with_tools(
+                    prompt=user_input,
+                    context=context,
+                    mode=mode,
+                    tools=tools,
+                    max_iterations=MAX_AGENT_LOOPS,
+                    approval_callback=_approval_callback,
                     stream_callback=_stream_token,
                     citizen_context=citizen_context,
                 )
