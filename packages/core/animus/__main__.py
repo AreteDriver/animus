@@ -801,7 +801,7 @@ def main():
                         else:
                             console.print(f"  [dim]{phase:20}[/dim] no data yet")
                     console.print(
-                        f"\n  [dim]Log file: ~/.animus/logs/performance.log[/dim]"
+                        "\n  [dim]Log file: ~/.animus/logs/performance.log[/dim]"
                     )
                 else:
                     show_stats(memory)
