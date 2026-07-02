@@ -14,7 +14,7 @@ Animus coordinates AI agents across complex workflows — with the operational d
 
 Eight packages (four installable via PyPI). ~17,000+ tests. Proactive engine with 6 self-healing checks and an autonomous improvement loop verified end-to-end against local inference.
 
-**[Architecture](docs/architecture/overview.md)** | **[Roadmap](docs/roadmap/current.md)** | **[Whitepaper](docs/whitepaper.pdf)**
+**[Architecture](docs/architecture/overview.md)** | **[Roadmap](docs/roadmap/current.md)** | **[Whitepaper](docs/whitepaper.pdf)** | **[Tools Reference](docs/reference/tools.md)**
 
 ---
 
