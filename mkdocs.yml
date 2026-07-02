@@ -43,6 +43,7 @@ nav:
     - Monitoring: operators/monitoring.md
     - Troubleshooting: operators/troubleshooting.md
   - Reference:
+    - Tools: reference/tools.md
     - Glossary: reference/glossary.md
     - FAQ: reference/faq.md
     - Changelog: reference/changelog.md
