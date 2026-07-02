@@ -941,3 +941,128 @@ class TestHeadSynthesizer:
         multi = synth.synthesize_multi(results)
         assert "a.py" in multi.summary
         assert "b.py" in multi.summary
+
+
+# ------------------------------------------------------------------
+# Phase 6: Session daemon (JSON-RPC)
+# ------------------------------------------------------------------
+
+class TestHeadDaemon:
+    def test_daemon_initializes_session(self) -> None:
+        from animus_kernel.head.daemon import HeadDaemon
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            daemon = HeadDaemon(checkpoint_dir=Path(tmpdir) / "ckpt")
+            result = daemon._rpc_initialize({"project_root": tmpdir})
+            assert "session_id" in result
+            assert result["status"] == "initializing"
+            sid = result["session_id"]
+
+            # Verify session exists
+            list_result = daemon._rpc_list_sessions({})
+            assert sid in list_result["sessions"]
+            assert list_result["total"] == 1
+
+            # Clean up
+            daemon._rpc_shutdown({"session_id": sid})
+            list_after = daemon._rpc_list_sessions({})
+            assert list_after["total"] == 0
+
+    def test_daemon_dispatch_unknown_method(self) -> None:
+        from animus_kernel.head.daemon import HeadDaemon
+
+        daemon = HeadDaemon()
+        resp = daemon._dispatch({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "nonexistent_method",
+            "params": {},
+        })
+        assert resp is not None
+        assert resp["id"] == 1
+        assert resp["error"]["code"] == -32601
+        assert "not found" in resp["error"]["message"]
+
+    def test_daemon_dispatch_invalid_request(self) -> None:
+        from animus_kernel.head.daemon import HeadDaemon
+
+        daemon = HeadDaemon()
+        resp = daemon._dispatch({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": 123,  # invalid type
+            "params": {},
+        })
+        assert resp is not None
+        assert resp["error"]["code"] == -32600
+
+    def test_daemon_get_status(self) -> None:
+        from animus_kernel.head.daemon import HeadDaemon
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            daemon = HeadDaemon(checkpoint_dir=Path(tmpdir) / "ckpt")
+            init = daemon._rpc_initialize({"project_root": tmpdir})
+            sid = init["session_id"]
+
+            status = daemon._rpc_get_status({"session_id": sid})
+            assert status["session_id"] == sid
+            assert status["turns"] == 0
+            assert status["error"] is None
+
+            daemon._rpc_shutdown({"session_id": sid})
+
+    def test_daemon_unknown_session_errors(self) -> None:
+        from animus_kernel.head.daemon import HeadDaemon
+
+        daemon = HeadDaemon()
+        with pytest.raises(ValueError, match="Unknown session"):
+            daemon._rpc_get_status({"session_id": "nonexistent"})
+
+        with pytest.raises(ValueError, match="Unknown session"):
+            daemon._rpc_shutdown({"session_id": "nonexistent"})
+
+    def test_daemon_process_message_requires_params(self) -> None:
+        from animus_kernel.head.daemon import HeadDaemon
+
+        daemon = HeadDaemon()
+        with pytest.raises(ValueError, match="session_id and message are required"):
+            daemon._rpc_process_message({"session_id": "abc"})
+
+        with pytest.raises(ValueError, match="session_id and message are required"):
+            daemon._rpc_process_message({"message": "hello"})
+
+    def test_daemon_initializes_with_custom_session_id(self) -> None:
+        from animus_kernel.head.daemon import HeadDaemon
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            daemon = HeadDaemon(checkpoint_dir=Path(tmpdir) / "ckpt")
+            result = daemon._rpc_initialize({
+                "project_root": tmpdir,
+                "session_id": "my_custom_session",
+            })
+            assert result["session_id"] == "my_custom_session"
+            daemon._rpc_shutdown({"session_id": "my_custom_session"})
+
+    def test_daemon_duplicate_session_id(self) -> None:
+        from animus_kernel.head.daemon import HeadDaemon
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            daemon = HeadDaemon(checkpoint_dir=Path(tmpdir) / "ckpt")
+            daemon._rpc_initialize({
+                "project_root": tmpdir,
+                "session_id": "dup_session",
+            })
+            result = daemon._rpc_initialize({
+                "project_root": tmpdir,
+                "session_id": "dup_session",
+            })
+            assert result["status"] == "already_exists"
+            daemon._rpc_shutdown({"session_id": "dup_session"})
+
+    def test_daemon_sigterm_sets_shutdown_flag(self) -> None:
+        from animus_kernel.head.daemon import HeadDaemon
+
+        daemon = HeadDaemon()
+        assert daemon._shutdown is False
+        daemon._on_sigterm(15, None)
+        assert daemon._shutdown is True

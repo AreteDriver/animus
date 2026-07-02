@@ -39,11 +39,22 @@ def main() -> None:
         help="Checkpoint SQLite path (default: ~/.animus/sessions/head.db)",
     )
     parser.add_argument(
+        "--daemon",
+        action="store_true",
+        help="Run as JSON-RPC daemon (stdio) instead of interactive REPL",
+    )
+    parser.add_argument(
         "-v", "--verbose",
         action="store_true",
         help="Enable debug logging",
     )
     args = parser.parse_args()
+
+    if args.daemon:
+        from animus_kernel.head.daemon import HeadDaemon
+        daemon = HeadDaemon(model=args.model)
+        daemon.run()
+        return
 
     level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(

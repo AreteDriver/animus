@@ -454,6 +454,39 @@ class HeadREPL:
             f"Ask the user for clarification if the request is ambiguous.]"
         )
 
+    def process_message(self, user_input: str) -> dict:
+        """Process a message programmatically and return structured results.
+
+        Used by the daemon and other programmatic consumers. Captures
+        printed output and returns it along with metadata.
+
+        Returns:
+            Dict with keys: response, tokens_used, fallback_used, turns
+        """
+        import io
+        import sys
+
+        old_stdout = sys.stdout
+        buf = io.StringIO()
+        sys.stdout = buf
+
+        fb_before = self._fallback.status.fallbacks_this_session
+        try:
+            self._turn(user_input)
+            self.turns += 1
+            if self.turns % self.checkpoint_every == 0:
+                self._checkpoint()
+        finally:
+            sys.stdout = old_stdout
+
+        fb_after = self._fallback.status.fallbacks_this_session
+        return {
+            "response": buf.getvalue(),
+            "tokens_used": self.total_tokens,
+            "fallback_used": fb_after > fb_before,
+            "turns": self.turns,
+        }
+
     def _call_model(self, tools: list[dict] | None = None) -> Any | None:
         """Call the Ollama model with current messages and optional tools."""
         try:
