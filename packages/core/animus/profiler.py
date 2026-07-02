@@ -45,13 +45,16 @@ def _rotate_if_needed() -> None:
     """Rotate log file if it exceeds max size."""
     if not LOG_FILE.exists():
         return
-    if LOG_FILE.stat().st_size < MAX_LOG_SIZE_BYTES:
-        return
-    # Simple rotation: rename existing to .1
-    rotated = LOG_FILE.with_suffix(".log.1")
-    if rotated.exists():
-        rotated.unlink()
-    LOG_FILE.rename(rotated)
+    try:
+        if LOG_FILE.stat().st_size < MAX_LOG_SIZE_BYTES:
+            return
+        # Simple rotation: rename existing to .1
+        rotated = LOG_FILE.with_suffix(".log.1")
+        if rotated.exists():
+            rotated.unlink()
+        LOG_FILE.rename(rotated)
+    except OSError as e:
+        logger.warning(f"Failed to rotate performance log: {e}")
 
 
 def _cleanup_old_logs() -> None:
