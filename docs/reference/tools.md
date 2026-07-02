@@ -310,7 +310,7 @@ Clone and index a repository for monitoring.
 | `url` | string | **Yes** | Git remote URL |
 | `branch` | string | No | Branch to checkout (default: default branch) |
 
-### `watchlist_add`
+### `animus_watchlist_add`
 
 Add a repository to the watchlist.
 
@@ -319,7 +319,7 @@ Add a repository to the watchlist.
 | `url` | string | **Yes** | Repository URL |
 | `name` | string | **Yes** | Human-readable name |
 
-### `watchlist_remove`
+### `animus_watchlist_remove`
 
 Remove a repository from the watchlist.
 
@@ -327,13 +327,13 @@ Remove a repository from the watchlist.
 |---|---|---|---|
 | `name` | string | **Yes** | Name of watched repo |
 
-### `watchlist_list`
+### `animus_watchlist_list`
 
 List all watched repositories.
 
 (No parameters.)
 
-### `watchlist_scan`
+### `animus_watchlist_scan`
 
 Scan watched repos for new commits/issues.
 
