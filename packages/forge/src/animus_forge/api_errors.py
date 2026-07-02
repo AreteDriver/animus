@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from animus_forge.errors import (
-    GorgonError,
+    AnimusForgeError,
 )
 
 # =============================================================================
@@ -149,7 +149,7 @@ class RateLimitErrorResponse(BaseModel):
 # =============================================================================
 
 
-# Map GorgonError codes to HTTP status codes
+# Map AnimusForgeError codes to HTTP status codes
 ERROR_STATUS_MAP: dict[str, int] = {
     # Authentication/Authorization (401, 403)
     "AUTH_FAILED": 401,
@@ -192,11 +192,11 @@ def get_status_code(error_code: str) -> int:
 # =============================================================================
 
 
-def gorgon_error_to_response(
-    error: GorgonError,
+def animus_forge_error_to_response(
+    error: AnimusForgeError,
     request_id: str | None = None,
 ) -> JSONResponse:
-    """Convert a GorgonError to a structured JSON response."""
+    """Convert a AnimusForgeError to a structured JSON response."""
     status_code = get_status_code(error.code)
 
     content = ErrorResponse(
@@ -214,16 +214,16 @@ def gorgon_error_to_response(
     )
 
 
-async def gorgon_exception_handler(
+async def animus_forge_exception_handler(
     request: Request,
-    exc: GorgonError,
+    exc: AnimusForgeError,
 ) -> JSONResponse:
-    """FastAPI exception handler for GorgonError."""
+    """FastAPI exception handler for AnimusForgeError."""
     request_id = request.headers.get("X-Request-ID")
-    return gorgon_error_to_response(exc, request_id)
+    return animus_forge_error_to_response(exc, request_id)
 
 
-def http_error_to_gorgon(
+def http_error_to_animus_forge(
     status_code: int,
     detail: str,
     error_code: str | None = None,

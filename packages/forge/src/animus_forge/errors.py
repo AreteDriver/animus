@@ -144,3 +144,6 @@ class ResumeError(StateError):
     """Cannot resume workflow from checkpoint."""
 
     code = "RESUME_ERROR"
+
+# Backwards-compatible alias
+GorgonError = AnimusForgeError

@@ -248,17 +248,17 @@ class TestErrors:
     """Tests for errors.py — error hierarchy and to_dict()."""
 
     def test_gorgon_error_basic(self):
-        from animus_forge.errors import GorgonError
+        from animus_forge.errors import AnimusForgeError
 
-        err = GorgonError("something broke")
+        err = AnimusForgeError("something broke")
         assert err.message == "something broke"
         assert err.details == {}
         assert str(err) == "something broke"
 
     def test_gorgon_error_to_dict(self):
-        from animus_forge.errors import GorgonError
+        from animus_forge.errors import AnimusForgeError
 
-        err = GorgonError("fail", details={"key": "val"})
+        err = AnimusForgeError("fail", details={"key": "val"})
         d = err.to_dict()
         assert d["error"] == "GORGON_ERROR"
         assert d["message"] == "fail"
@@ -353,14 +353,14 @@ class TestErrors:
     def test_error_inheritance(self):
         from animus_forge.errors import (
             AgentError,
+            AnimusForgeError,
             BudgetExceededError,
-            GorgonError,
             WorkflowError,
         )
 
-        assert issubclass(AgentError, GorgonError)
-        assert issubclass(WorkflowError, GorgonError)
-        assert issubclass(BudgetExceededError, GorgonError)
+        assert issubclass(AgentError, AnimusForgeError)
+        assert issubclass(WorkflowError, AnimusForgeError)
+        assert issubclass(BudgetExceededError, AnimusForgeError)
 
 
 # =============================================================================

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from convergent.coordination_config import CoordinationConfig
 from convergent.coordination_bridge import GorgonBridge
+from convergent.coordination_config import CoordinationConfig
 from convergent.protocol import DecisionOutcome
 
 
