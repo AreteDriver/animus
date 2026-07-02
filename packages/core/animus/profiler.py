@@ -16,6 +16,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import threading
 import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -33,8 +34,6 @@ MAX_LOG_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 MAX_LOG_AGE_DAYS = 7
 
 # In-memory buffer for real-time stats (last N entries)
-import threading
-
 _MAX_BUFFER = 1000
 _perf_buffer: list[dict[str, Any]] = []
 _perf_lock = threading.Lock()
