@@ -127,7 +127,7 @@ class HeadToolValidator:
                 tool_name=tool_name,
                 arguments=arguments,
                 valid=False,
-                error=f"{exc.field}: {exc.message}",
+                error=f"{exc.field}: {str(exc)}",
             )
 
     def build_retry_prompt(self, invalid_calls: list[ToolCallResult]) -> str:

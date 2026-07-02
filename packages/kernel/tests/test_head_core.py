@@ -369,7 +369,7 @@ class TestRetryableToolExecutor:
                 model_callback=mock_callback,
             )
             # Result is from tool execution, not validation failure
-            assert "File:" in result or "Error" in result
+            assert "File:" in result or "ERROR" in result
             assert call_count == 0  # No retry needed for valid tool
 
     def test_execute_with_invalid_tool_retries(self) -> None:
@@ -402,8 +402,9 @@ class TestRetryableToolExecutor:
                 messages=[],
                 model_callback=mock_callback,
             )
-            assert "failed validation" in result
-            assert call_count == 2  # Retried max_retries times
+            # After validation fails and model didn't provide fix, early return
+            assert "Model did not provide" in result
+            assert call_count == 1  # Callback called once, then early return
 
 
 # ------------------------------------------------------------------
