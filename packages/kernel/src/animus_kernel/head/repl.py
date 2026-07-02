@@ -16,8 +16,11 @@ from typing import Any
 from animus_kernel.head.checkpoint import HeadCheckpoint, HeadCheckpointStore
 from animus_kernel.head.context_manager import HeadContextManager
 from animus_kernel.head.fallback_controller import HeadFallbackController
+from animus_kernel.head.intent_parser import HeadIntentParser, IntentType
+from animus_kernel.head.planner import HeadPlanner
 from animus_kernel.head.quality_gate import HeadQualityGate
 from animus_kernel.head.session_bootstrap import SessionBootstrap
+from animus_kernel.head.synthesizer import HeadSynthesizer
 from animus_kernel.head.tool_orchestrator import HeadToolOrchestrator
 from animus_kernel.head.tool_validator import RetryableToolExecutor
 from animus_kernel.providers.base import CompletionRequest, ToolCall
@@ -41,6 +44,7 @@ class HeadREPL:
         fallback_enabled: Allow cloud fallback on quality failures (default: False)
         fallback_provider: Cloud provider name for fallback (default: anthropic)
         max_fallbacks_per_session: Hard cap on cloud calls per session
+        auto_execute_direct: Whether to fast-path direct commands without model call
     """
 
     def __init__(
@@ -55,12 +59,14 @@ class HeadREPL:
         fallback_enabled: bool = False,
         fallback_provider: str = "anthropic",
         max_fallbacks_per_session: int = 10,
+        auto_execute_direct: bool = True,
     ) -> None:
         self.model = model
         self.project_root = Path(project_root) if project_root else Path.cwd()
         self.session_id = self._generate_session_id()
         self.max_turns = max_turns
         self.checkpoint_every = checkpoint_every
+        self.auto_execute_direct = auto_execute_direct
 
         # Provider
         self.provider = OllamaProvider(model=model)
@@ -101,6 +107,11 @@ class HeadREPL:
             enabled=fallback_enabled,
             max_fallbacks_per_session=max_fallbacks_per_session,
         )
+
+        # Phase 5: Natural language interface
+        self._intent_parser = HeadIntentParser()
+        self._planner = HeadPlanner()
+        self._synthesizer = HeadSynthesizer()
 
         # Load or build system prompt
         if system_prompt is None:
@@ -164,6 +175,7 @@ class HeadREPL:
             print(f"   Fallback: {fb_status} ({self._fallback.fallback_provider})")
         else:
             print(f"   Fallback: disabled (local-only)")
+        print(f"   Auto-execute direct: {'on' if self.auto_execute_direct else 'off'}")
         print(f"   Type 'exit', 'quit', or Ctrl+D to leave.")
         print(f"   Type '!!' to see available tools.")
         print()
@@ -217,9 +229,46 @@ class HeadREPL:
                 self._checkpoint()
 
     def _turn(self, user_input: str) -> None:
-        """Process one user turn with validation, retry, and optional fallback."""
-        # Add user message
+        """Process one user turn with intent parsing, planning, and synthesis."""
+        # Parse intent
+        intent = self._intent_parser.parse(user_input)
+
+        # Handle clarification needed immediately
+        if intent.intent_type == IntentType.CLARIFICATION_NEEDED:
+            plan = self._planner.plan(intent, str(self.project_root))
+            if plan.requires_clarification:
+                print(f"\n🤔 {plan.clarification_prompt}\n")
+                return
+
+        # Handle conversational input immediately
+        if intent.intent_type == IntentType.CONVERSATIONAL:
+            self.context.add_message({"role": "user", "content": user_input})
+            response = self._call_model()
+            if response:
+                self.context.add_message({"role": "assistant", "content": response.content or ""})
+                print(f"\n{response.content}\n")
+            return
+
+        # Generate plan from intent
+        plan = self._planner.plan(intent, str(self.project_root))
+
+        # Fast-path: auto-execute direct commands with high confidence
+        if (
+            self.auto_execute_direct
+            and intent.intent_type == IntentType.DIRECT_COMMAND
+            and plan.confidence >= 0.75
+            and plan.steps
+        ):
+            self._execute_plan(user_input, plan)
+            return
+
+        # Standard path: add user message, let model decide tool calls
         self.context.add_message({"role": "user", "content": user_input})
+
+        # For vague requests, inject a planning hint
+        if intent.intent_type == IntentType.VAGUE_REQUEST and plan.steps:
+            hint = self._build_planning_hint(plan)
+            self.context.add_message({"role": "system", "content": hint})
 
         # Get available tools
         tools = self.tools.list_tools()
@@ -230,10 +279,53 @@ class HeadREPL:
             print("   [Model returned no response]")
             return
 
-        # Handle tool_calls loop
+        # Handle tool_calls loop with synthesis
+        self._handle_tool_loop(user_input, response, tools)
+
+    def _execute_plan(self, user_input: str, plan) -> None:
+        """Fast-path execution of a direct-command plan without model involvement."""
+        self.context.add_message({"role": "user", "content": user_input})
+        print(f"   ⚡ Executing plan ({len(plan.steps)} step{'s' if len(plan.steps) > 1 else ''})...")
+
+        results: list[tuple[str, dict, str]] = []
+        for i, step in enumerate(plan.steps, 1):
+            print(f"   → Step {i}: {step.tool_name}")
+            result = self.tools.execute(step.tool_name, step.arguments)
+            results.append((step.tool_name, step.arguments, result))
+
+            # Add to context as tool result (simulating assistant + tool exchange)
+            tool_call_id = f"fastpath-{i}"
+            self.context.add_message({
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [{
+                    "id": tool_call_id,
+                    "type": "function",
+                    "function": {"name": step.tool_name, "arguments": json.dumps(step.arguments)},
+                }],
+            })
+            self.context.add_message({
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "name": step.tool_name,
+                "content": result,
+            })
+
+        # Synthesize results
+        synthesis = self._synthesizer.synthesize_multi(results)
+        summary = synthesis.summary
+        if synthesis.detail:
+            summary += f"\n\n```\n{synthesis.detail[:1000]}\n```"
+
+        self.context.add_message({"role": "assistant", "content": summary})
+        print(f"\n{summary}\n")
+
+    def _handle_tool_loop(self, user_input: str, response, tools: list[dict] | None) -> None:
+        """Handle the tool-calls loop with validation, retry, fallback, and synthesis."""
         max_tool_rounds = 10
         invalid_calls_history: list = []
         valid_calls_history: list = []
+        tool_results: list[tuple[str, dict, str]] = []
 
         for _ in range(max_tool_rounds):
             if not response.tool_calls:
@@ -306,9 +398,16 @@ class HeadREPL:
             }
             self.context.add_message(assistant_msg)
 
-            # Execute each validated tool
+            # Execute each validated tool with synthesis
             for tc in valid_calls:
                 result = self.tools.execute(tc.name, tc.arguments)
+                tool_results.append((tc.name, tc.arguments, result))
+
+                # Synthesize for display
+                synth = self._synthesizer.synthesize(tc.name, tc.arguments, result)
+                if synth.summary:
+                    print(f"   {synth.summary}")
+
                 tool_msg = {
                     "role": "tool",
                     "tool_call_id": tc.id,
@@ -344,6 +443,16 @@ class HeadREPL:
             "content": response.content or "",
         })
         print(f"\n{response.content}\n")
+
+    @staticmethod
+    def _build_planning_hint(plan) -> str:
+        """Build a system hint for vague requests based on the heuristic plan."""
+        steps = " → ".join(s.tool_name for s in plan.steps[:5])
+        return (
+            f"[Planner hint: The user made a vague request. "
+            f"Consider starting with: {steps}. "
+            f"Ask the user for clarification if the request is ambiguous.]"
+        )
 
     def _call_model(self, tools: list[dict] | None = None) -> Any | None:
         """Call the Ollama model with current messages and optional tools."""
@@ -435,6 +544,15 @@ class HeadREPL:
                 fb = self._fallback.status
                 print(f"   Fallback provider: {fb.provider_name}")
                 print(f"   Configured: {fb.configured}")
+        elif cmd == "auto":
+            if arg == "on":
+                self.auto_execute_direct = True
+                print("   Auto-execute direct commands: on")
+            elif arg == "off":
+                self.auto_execute_direct = False
+                print("   Auto-execute direct commands: off")
+            else:
+                print(f"   Auto-execute direct commands: {'on' if self.auto_execute_direct else 'off'}")
         elif cmd == "remember":
             if arg:
                 result = self.tools.execute("remember", {"content": arg, "tags": ["manual"]})

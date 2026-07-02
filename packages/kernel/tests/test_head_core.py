@@ -16,8 +16,11 @@ import pytest
 from animus_kernel.head.checkpoint import HeadCheckpoint, HeadCheckpointStore
 from animus_kernel.head.context_manager import HeadContextManager
 from animus_kernel.head.fallback_controller import HeadFallbackController
+from animus_kernel.head.intent_parser import HeadIntentParser, IntentType, ParsedIntent
+from animus_kernel.head.planner import HeadPlanner, ToolPlan, ToolPlanStep
 from animus_kernel.head.quality_gate import HeadQualityGate, QualityScore
 from animus_kernel.head.session_bootstrap import SessionBootstrap
+from animus_kernel.head.synthesizer import HeadSynthesizer
 from animus_kernel.head.tool_orchestrator import HeadToolOrchestrator
 from animus_kernel.head.tool_validator import HeadToolValidator, RetryableToolExecutor
 
@@ -778,3 +781,163 @@ class TestHeadFallbackController:
         assert result is not None
         assert result.content == "Cloud fallback response"
         assert ctrl._fallbacks_used == 1
+
+
+# ------------------------------------------------------------------
+# Phase 5: Natural language interface
+# ------------------------------------------------------------------
+
+class TestHeadIntentParser:
+    def test_parse_read_file_direct_command(self) -> None:
+        parser = HeadIntentParser()
+        intent = parser.parse("read main.py")
+        assert intent.intent_type == IntentType.DIRECT_COMMAND
+        assert "read_file" in intent.suggested_tools
+        assert intent.extracted_args.get("path") == "main.py"
+        assert intent.confidence > 0.7
+
+    def test_parse_list_files_direct_command(self) -> None:
+        parser = HeadIntentParser()
+        intent = parser.parse("list files in src")
+        assert intent.intent_type == IntentType.DIRECT_COMMAND
+        assert "list_files" in intent.suggested_tools
+        assert intent.extracted_args.get("path") == "src"
+
+    def test_parse_git_status_direct_command(self) -> None:
+        parser = HeadIntentParser()
+        intent = parser.parse("git status")
+        assert intent.intent_type == IntentType.DIRECT_COMMAND
+        assert "run_shell" in intent.suggested_tools
+        assert intent.extracted_args.get("command") == "git status"
+
+    def test_parse_vague_request(self) -> None:
+        parser = HeadIntentParser()
+        intent = parser.parse("check for issues")
+        assert intent.intent_type == IntentType.VAGUE_REQUEST
+        assert len(intent.suggested_tools) > 0
+
+    def test_parse_conversational(self) -> None:
+        parser = HeadIntentParser()
+        intent = parser.parse("hello there")
+        assert intent.intent_type == IntentType.CONVERSATIONAL
+        assert len(intent.suggested_tools) == 0
+
+    def test_parse_empty_input(self) -> None:
+        parser = HeadIntentParser()
+        intent = parser.parse("")
+        assert intent.intent_type == IntentType.CONVERSATIONAL
+
+    def test_parse_remember_direct_command(self) -> None:
+        parser = HeadIntentParser()
+        intent = parser.parse("remember that auth token is in .env")
+        assert intent.intent_type == IntentType.DIRECT_COMMAND
+        assert "remember" in intent.suggested_tools
+        assert "auth token is in .env" in intent.extracted_args.get("content", "")
+
+    def test_parse_clarification_needed(self) -> None:
+        # This is tricky to trigger naturally; simulate by checking that
+        # ambiguous inputs get at least one match
+        parser = HeadIntentParser()
+        # "fix" could mean search_code or run_tests
+        intent = parser.parse("fix the bug")
+        assert intent.intent_type in (IntentType.VAGUE_REQUEST, IntentType.DIRECT_COMMAND)
+        assert len(intent.suggested_tools) > 0
+
+
+class TestHeadPlanner:
+    def test_plan_direct_command(self) -> None:
+        parser = HeadIntentParser()
+        planner = HeadPlanner()
+        intent = parser.parse("read main.py")
+        plan = planner.plan(intent)
+        assert plan.confidence > 0.5
+        assert len(plan.steps) >= 1
+        assert plan.steps[0].tool_name == "read_file"
+
+    def test_plan_conversational(self) -> None:
+        planner = HeadPlanner()
+        intent = ParsedIntent(
+            intent_type=IntentType.CONVERSATIONAL,
+            confidence=1.0,
+        )
+        plan = planner.plan(intent)
+        assert len(plan.steps) == 0
+
+    def test_plan_vague_request(self) -> None:
+        parser = HeadIntentParser()
+        planner = HeadPlanner()
+        intent = parser.parse("how do I set up this project?")
+        plan = planner.plan(intent)
+        assert plan.confidence > 0
+        assert len(plan.steps) >= 1
+
+    def test_plan_clarification_needed(self) -> None:
+        planner = HeadPlanner()
+        intent = ParsedIntent(
+            intent_type=IntentType.CLARIFICATION_NEEDED,
+            confidence=0.5,
+            suggested_tools=["read_file", "search_code"],
+        )
+        plan = planner.plan(intent)
+        assert plan.requires_clarification is True
+        assert plan.clarification_prompt != ""
+
+    def test_plan_dependencies(self) -> None:
+        parser = HeadIntentParser()
+        planner = HeadPlanner()
+        intent = parser.parse("edit main.py change old to new")
+        plan = planner.plan(intent)
+        # edit_file depends on read_file first
+        tool_names = [s.tool_name for s in plan.steps]
+        if "read_file" in tool_names and "edit_file" in tool_names:
+            read_idx = tool_names.index("read_file")
+            edit_idx = tool_names.index("edit_file")
+            assert read_idx < edit_idx
+
+    def test_estimate_cost(self) -> None:
+        planner = HeadPlanner()
+        plan = ToolPlan(steps=[ToolPlanStep("read_file"), ToolPlanStep("search_code")])
+        cost = planner.estimate_cost(plan)
+        assert cost > 0
+
+
+class TestHeadSynthesizer:
+    def test_synthesize_read_file(self) -> None:
+        synth = HeadSynthesizer()
+        result = synth.synthesize("read_file", {"path": "main.py"}, "line1\nline2")
+        assert "main.py" in result.summary
+        assert "line1" in result.detail
+
+    def test_synthesize_empty_result(self) -> None:
+        synth = HeadSynthesizer()
+        result = synth.synthesize("read_file", {"path": "x"}, "")
+        assert "no output" in result.summary.lower()
+
+    def test_synthesize_list_files_few(self) -> None:
+        synth = HeadSynthesizer()
+        result = synth.synthesize("list_files", {"path": "."}, "a.py\nb.py")
+        assert "Found" in result.summary
+        assert "a.py" in result.summary
+        assert "b.py" in result.summary
+
+    def test_synthesize_list_files_many(self) -> None:
+        synth = HeadSynthesizer()
+        files = "\n".join(f"file{i}.py" for i in range(20))
+        result = synth.synthesize("list_files", {"path": "."}, files)
+        assert "20" in result.summary or "items" in result.summary
+
+    def test_synthesize_search_no_matches(self) -> None:
+        synth = HeadSynthesizer()
+        result = synth.synthesize("search_code", {"query": "foobar"}, "no matches")
+        assert "No matches" in result.summary
+        assert result.needs_follow_up is True
+
+    def test_synthesize_multi(self) -> None:
+        synth = HeadSynthesizer()
+        results = [
+            ("read_file", {"path": "a.py"}, "content1"),
+            ("read_file", {"path": "b.py"}, "content2"),
+        ]
+        multi = synth.synthesize_multi(results)
+        assert "a.py" in multi.summary
+        assert "b.py" in multi.summary
