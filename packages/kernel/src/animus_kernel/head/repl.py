@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from animus_kernel.head.checkpoint import HeadCheckpoint, HeadCheckpointStore
+from animus_kernel.head.context_manager import HeadContextManager
 from animus_kernel.head.session_bootstrap import SessionBootstrap
 from animus_kernel.head.tool_orchestrator import HeadToolOrchestrator
 from animus_kernel.head.tool_validator import RetryableToolExecutor
@@ -80,6 +81,9 @@ class HeadREPL:
             max_retries=3,
         )
 
+        # Context manager with token budgeting
+        self.context = HeadContextManager(model=model)
+
         # Load or build system prompt
         if system_prompt is None:
             prompt_path = Path(__file__).parent / "prompts" / "system_repl.md"
@@ -90,10 +94,8 @@ class HeadREPL:
         self.system_prompt = system_prompt
 
         # Conversation state
-        self.messages: list[dict] = []
         self.turns = 0
         self.total_tokens = 0
-        self.summary = ""
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -114,17 +116,23 @@ class HeadREPL:
         # Check for previous session
         prev = context.get("previous_session")
         if prev and isinstance(prev, dict) and prev.get("messages"):
-            self.messages = self._filter_messages(prev["messages"])
+            filtered = self._filter_messages(prev["messages"])
             self.turns = prev.get("turns", 0)
             self.total_tokens = prev.get("total_tokens", 0)
-            self.summary = prev.get("summary", "")
+            # Restore summary if present
+            if prev.get("summary"):
+                self.context.set_summary(prev["summary"])
+
             # Replace the first system message with fresh context
-            if self.messages and self.messages[0].get("role") == "system":
-                self.messages[0] = {"role": "system", "content": full_system}
+            if filtered and filtered[0].get("role") == "system":
+                filtered[0] = {"role": "system", "content": full_system}
             else:
-                self.messages.insert(0, {"role": "system", "content": full_system})
+                filtered.insert(0, {"role": "system", "content": full_system})
+
+            for msg in filtered:
+                self.context.add_message(msg)
         else:
-            self.messages = [{"role": "system", "content": full_system}]
+            self.context.add_message({"role": "system", "content": full_system})
 
     def start(self) -> None:
         """Bootstrap and enter the REPL loop."""
@@ -132,14 +140,14 @@ class HeadREPL:
         print(f"   Model: {self.model}")
         print(f"   Project: {self.project_root}")
         print(f"   Session: {self.session_id}")
+        print(f"   Context window: {self.context.max_tokens:,} tokens")
         print(f"   Type 'exit', 'quit', or Ctrl+D to leave.")
         print(f"   Type '!!' to see available tools.")
         print()
 
         self.bootstrap()
-        if len(self.messages) > 1 or any(
-            m.get("role") != "system" for m in self.messages
-        ):
+        msgs = self.context.get_messages()
+        if len(msgs) > 1 or any(m.get("role") != "system" for m in msgs):
             print("   📥 Restored previous session context.")
 
         # REPL loop
@@ -188,7 +196,7 @@ class HeadREPL:
     def _turn(self, user_input: str) -> None:
         """Process one user turn with validation and retry."""
         # Add user message
-        self.messages.append({"role": "user", "content": user_input})
+        self.context.add_message({"role": "user", "content": user_input})
 
         # Get available tools
         tools = self.tools.list_tools()
@@ -222,7 +230,7 @@ class HeadREPL:
                     [c.tool_name for c in invalid_calls],
                 )
                 retry_prompt = self._retryable.validator.build_retry_prompt(invalid_calls)
-                self.messages.append({"role": "user", "content": retry_prompt})
+                self.context.add_message({"role": "user", "content": retry_prompt})
 
                 # Re-call model for corrected calls
                 response = self._call_model(tools=tools if tools else None)
@@ -251,7 +259,7 @@ class HeadREPL:
                     for tc in valid_calls
                 ],
             }
-            self.messages.append(assistant_msg)
+            self.context.add_message(assistant_msg)
 
             # Execute each validated tool
             for tc in valid_calls:
@@ -262,7 +270,7 @@ class HeadREPL:
                     "name": tc.name,
                     "content": result,
                 }
-                self.messages.append(tool_msg)
+                self.context.add_message(tool_msg)
 
             # Call model again with tool results
             response = self._call_model(tools=tools if tools else None)
@@ -271,7 +279,7 @@ class HeadREPL:
                 return
 
         # Final assistant response
-        self.messages.append({
+        self.context.add_message({
             "role": "assistant",
             "content": response.content or "",
         })
@@ -282,7 +290,7 @@ class HeadREPL:
         try:
             request = CompletionRequest(
                 prompt="",  # Not used when messages provided
-                messages=self.messages,
+                messages=self.context.get_messages(),
                 model=self.model,
                 temperature=0.7,
                 tools=tools,
@@ -321,9 +329,26 @@ class HeadREPL:
         elif cmd == "project":
             print(f"   Project root: {self.project_root}")
         elif cmd == "session":
+            stats = self.context.get_stats()
             print(f"   Session: {self.session_id}")
             print(f"   Turns: {self.turns}")
-            print(f"   Tokens: {self.total_tokens}")
+            print(f"   Total tokens (provider): {self.total_tokens:,}")
+            print(f"   Context window: {stats.max_tokens:,} tokens")
+            print(f"   Utilization: {stats.utilization_percent}%")
+            print(f"   Messages: {stats.message_count} ({stats.user_messages} user, {stats.assistant_messages} assistant, {stats.tool_messages} tool)")
+            print(f"   Available: {stats.available_tokens:,} tokens")
+            if stats.dropped_messages:
+                print(f"   Pruned: {stats.dropped_messages} messages")
+        elif cmd == "context":
+            stats = self.context.get_stats()
+            print(f"   Context window: {stats.max_tokens:,} tokens")
+            print(f"   Reserve: {stats.reserve_tokens:,} tokens")
+            print(f"   Used: {stats.total_tokens:,} tokens")
+            print(f"   Available: {stats.available_tokens:,} tokens")
+            print(f"   Utilization: {stats.utilization_percent}%")
+            print(f"   Messages: {stats.message_count}")
+            if self.context._summary:
+                print(f"   Summary: {self.context._summary[:120]}...")
         elif cmd == "remember":
             if arg:
                 result = self.tools.execute("remember", {"content": arg, "tags": ["manual"]})
@@ -339,9 +364,10 @@ class HeadREPL:
             print("   Checkpoint saved.")
         elif cmd == "clear":
             # Keep system message, reset rest
-            if self.messages:
-                system = self.messages[0]
-                self.messages = [system]
+            system = self.context._system_message()
+            self.context.clear()
+            if system:
+                self.context.add_message(system)
             self.turns = 0
             print("   Context cleared.")
         else:
@@ -358,8 +384,8 @@ class HeadREPL:
             started_at=datetime.now(UTC),
             last_active_at=datetime.now(UTC),
             project_root=str(self.project_root),
-            messages=self._filter_messages(self.messages),
-            summary=self.summary,
+            messages=self._filter_messages(self.context.get_messages()),
+            summary=self.context._summary,
             total_tokens=self.total_tokens,
             turns=self.turns,
         )

@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from animus_kernel.head.checkpoint import HeadCheckpoint, HeadCheckpointStore
+from animus_kernel.head.context_manager import HeadContextManager
 from animus_kernel.head.session_bootstrap import SessionBootstrap
 from animus_kernel.head.tool_orchestrator import HeadToolOrchestrator
 from animus_kernel.head.tool_validator import HeadToolValidator, RetryableToolExecutor
@@ -260,8 +261,9 @@ class TestHeadREPLLifecycle:
                 repl.bootstrap()
                 assert repl.project_root == project
                 assert repl.model == "llama3.1:8b"
-                assert len(repl.messages) >= 1
-                assert repl.messages[0]["role"] == "system"
+                msgs = repl.context.get_messages()
+                assert len(msgs) >= 1
+                assert msgs[0]["role"] == "system"
             except RuntimeError as exc:
                 if "Ollama is not running" in str(exc):
                     pytest.skip("Ollama not available")
@@ -467,3 +469,127 @@ class TestAutonomyBenchmark:
             assert "accuracy" in report
             assert "results" in report
             assert len(report["results"]) == 20
+
+
+# ------------------------------------------------------------------
+# Phase 3: Session persistence polish (context manager)
+# ------------------------------------------------------------------
+
+class TestHeadContextManager:
+    def test_add_message_increases_count(self) -> None:
+        mgr = HeadContextManager(model="llama3.1:8b")
+        mgr.add_message({"role": "system", "content": "You are a test assistant."})
+        mgr.add_message({"role": "user", "content": "Hello"})
+        assert len(mgr.get_messages()) == 2
+
+    def test_system_message_first(self) -> None:
+        mgr = HeadContextManager(model="llama3.1:8b")
+        mgr.add_message({"role": "system", "content": "You are a test assistant."})
+        mgr.add_message({"role": "user", "content": "Hello"})
+        msgs = mgr.get_messages()
+        assert msgs[0]["role"] == "system"
+        assert msgs[1]["role"] == "user"
+
+    def test_model_limit_resolution(self) -> None:
+        assert HeadContextManager("qwen2.5:32b").max_tokens == 32768
+        assert HeadContextManager("llama3.1:8b").max_tokens == 8192
+        assert HeadContextManager("unknown-model").max_tokens == 8192  # default
+
+    def test_pruning_drops_oldest_messages(self) -> None:
+        # Very small window to force pruning
+        mgr = HeadContextManager(model="llama3.1:8b", reserve_tokens=7000)
+        mgr.add_message({"role": "system", "content": "System prompt"})
+
+        # Fill with large messages
+        for i in range(20):
+            mgr.add_message({"role": "user", "content": "x" * 1000})
+            mgr.add_message({"role": "assistant", "content": "y" * 1000})
+
+        stats = mgr.get_stats()
+        assert stats.message_count < 40  # Some messages were pruned
+        assert stats.dropped_messages > 0
+        assert stats.available_tokens >= 0
+
+    def test_pruning_preserves_tool_call_pairs(self) -> None:
+        mgr = HeadContextManager(model="llama3.1:8b", reserve_tokens=6000)
+        mgr.add_message({"role": "system", "content": "System prompt"})
+
+        # Add a tool-call round
+        mgr.add_message({"role": "user", "content": "Run test"})
+        mgr.add_message({
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [{"id": "tc1", "type": "function", "function": {"name": "run_shell", "arguments": "{}"}}],
+        })
+        mgr.add_message({"role": "tool", "tool_call_id": "tc1", "name": "run_shell", "content": "ok"})
+
+        # Fill to trigger pruning
+        for i in range(30):
+            mgr.add_message({"role": "user", "content": "filler " * 500})
+            mgr.add_message({"role": "assistant", "content": "response " * 500})
+
+        # Ensure the tool pair is either fully present or fully absent
+        # (it should be absent because it was added early)
+        raw = mgr._messages
+        tool_assist = [m for m in raw if m.get("role") == "assistant" and m.get("tool_calls")]
+        tool_resp = [m for m in raw if m.get("role") == "tool"]
+        # If any assistant tool_calls remain, their responses must also remain
+        for ta in tool_assist:
+            tc_id = ta["tool_calls"][0]["id"]
+            assert any(m.get("tool_call_id") == tc_id for m in tool_resp)
+
+    def test_summary_set_and_retrieve(self) -> None:
+        mgr = HeadContextManager(model="llama3.1:8b")
+        mgr.set_summary("The user asked about Python async patterns.")
+        msgs = mgr.get_messages()
+        summary_msg = [m for m in msgs if m["role"] == "system" and "Previous conversation" in m.get("content", "")]
+        assert len(summary_msg) == 1
+        assert "Python async" in summary_msg[0]["content"]
+
+    def test_stats_format(self) -> None:
+        mgr = HeadContextManager(model="llama3.1:8b")
+        mgr.add_message({"role": "system", "content": "System"})
+        mgr.add_message({"role": "user", "content": "Hello"})
+        mgr.add_message({"role": "assistant", "content": "Hi there"})
+
+        stats = mgr.get_stats()
+        assert stats.max_tokens == 8192
+        assert stats.reserve_tokens == 2048
+        assert stats.message_count == 3
+        assert stats.user_messages == 1
+        assert stats.assistant_messages == 1
+        assert stats.available_tokens > 0
+        assert 0 <= stats.utilization_percent <= 100
+
+    def test_clear_keeps_summary(self) -> None:
+        mgr = HeadContextManager(model="llama3.1:8b")
+        mgr.add_message({"role": "system", "content": "System"})
+        mgr.add_message({"role": "user", "content": "Hello"})
+        mgr.set_summary("Prior context")
+
+        mgr.clear()
+        assert len(mgr._messages) == 0
+        assert mgr._summary == "Prior context"
+        # get_messages should only contain summary system message
+        msgs = mgr.get_messages()
+        assert len(msgs) == 1
+        assert "Prior context" in msgs[0]["content"]
+
+    def test_invalid_message_skipped(self) -> None:
+        mgr = HeadContextManager(model="llama3.1:8b")
+        mgr.add_message({"role": "system", "content": "System"})
+        mgr.add_message({"role": "user", "content": "Hello"})
+        mgr.add_message({"not_a_role": "bad"})  # type: ignore[arg-type]
+        assert len(mgr.get_messages()) == 2  # system + user only, invalid skipped
+
+    def test_pruning_keeps_minimum_user_turns(self) -> None:
+        mgr = HeadContextManager(model="llama3.1:8b", reserve_tokens=7500)
+        mgr.add_message({"role": "system", "content": "System prompt"})
+
+        for i in range(5):
+            mgr.add_message({"role": "user", "content": "x" * 2000})
+            mgr.add_message({"role": "assistant", "content": "y" * 2000})
+
+        stats = mgr.get_stats()
+        # Should preserve at least 2 user turns
+        assert stats.user_messages >= 2
