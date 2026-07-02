@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any
 
 from animus_kernel.providers.base import CompletionRequest, CompletionResponse, ProviderError
 from animus_kernel.providers.manager import ProviderManager
@@ -102,8 +101,12 @@ class HeadFallbackController:
             CompletionResponse from cloud provider, or None
         """
         if not self.can_fallback():
-            logger.debug("Fallback not available: enabled=%s, used=%d/%d",
-                        self.enabled, self._fallbacks_used, self.max_fallbacks)
+            logger.debug(
+                "Fallback not available: enabled=%s, used=%d/%d",
+                self.enabled,
+                self._fallbacks_used,
+                self.max_fallbacks,
+            )
             return None
 
         self._last_reason = reason

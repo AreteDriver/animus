@@ -16,7 +16,6 @@ from typing import Any
 from animus_kernel.memory.stores.local import LocalMemoryStore
 from animus_kernel.memory.types import Memory, MemoryTier, MemoryType
 from animus_kernel.tools.registry import ForgeToolRegistry, ToolDefinition
-from animus_kernel.tools.safety import PathValidator
 
 logger = logging.getLogger(__name__)
 
@@ -168,15 +167,15 @@ class HeadToolOrchestrator:
         tools: list[dict] = []
 
         # Forge filesystem tools
-        for name, tool_def in self._forge._tools.items():
+        for _name, tool_def in self._forge._tools.items():
             tools.append(tool_def.to_ollama())
 
         # Head custom tools
-        for name, tool_def in self._head_tools.items():
+        for _name, tool_def in self._head_tools.items():
             tools.append(tool_def.to_ollama())
 
         # MCP tools
-        for name, tool_def in self._mcp_tools.items():
+        for _name, tool_def in self._mcp_tools.items():
             tools.append(tool_def.to_ollama())
 
         return tools

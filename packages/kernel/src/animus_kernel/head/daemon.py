@@ -23,6 +23,7 @@ Protocol (JSON-RPC 2.0 over stdio, one request per line):
 
 For notification-style (no response) use `"id": null`.
 """
+
 from __future__ import annotations
 
 import json
@@ -43,6 +44,7 @@ from animus_kernel.head.repl import HeadREPL
 @dataclass
 class SessionState:
     """Runtime state for a daemon-managed session."""
+
     session_id: str
     project_root: Path
     repl: HeadREPL | None = None
@@ -123,7 +125,10 @@ class HeadDaemon:
 
         handler = getattr(self, f"_rpc_{method}", None)
         if handler is None:
-            return {"id": req_id, "error": {"code": -32601, "message": f"Method not found: {method}"}}
+            return {
+                "id": req_id,
+                "error": {"code": -32601, "message": f"Method not found: {method}"},
+            }
 
         try:
             result = handler(params)

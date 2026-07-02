@@ -6,7 +6,6 @@ and REPL lifecycle without requiring a live Ollama instance.
 
 from __future__ import annotations
 
-import json
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
@@ -24,10 +23,10 @@ from animus_kernel.head.synthesizer import HeadSynthesizer
 from animus_kernel.head.tool_orchestrator import HeadToolOrchestrator
 from animus_kernel.head.tool_validator import HeadToolValidator, RetryableToolExecutor
 
-
 # ------------------------------------------------------------------
 # Checkpoint tests
 # ------------------------------------------------------------------
+
 
 class TestHeadCheckpointStore:
     def test_save_and_load(self) -> None:
@@ -96,6 +95,7 @@ class TestHeadCheckpointStore:
 # Tool orchestrator tests
 # ------------------------------------------------------------------
 
+
 class TestHeadToolOrchestrator:
     def test_list_tools_includes_filesystem_and_head(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -151,7 +151,7 @@ class TestHeadToolOrchestrator:
             )
             store_result = orchestrator.execute(
                 "remember",
-                {"content": "SQLite WAL deadlock under async load", "tags": ["sqlite", "bug"]}
+                {"content": "SQLite WAL deadlock under async load", "tags": ["sqlite", "bug"]},
             )
             assert "Stored memory" in store_result
 
@@ -185,6 +185,7 @@ class TestHeadToolOrchestrator:
 # ------------------------------------------------------------------
 # Session bootstrap tests
 # ------------------------------------------------------------------
+
 
 class TestSessionBootstrap:
     def test_bootstrap_collects_context(self) -> None:
@@ -246,6 +247,7 @@ class TestSessionBootstrap:
 # Integration: full flow (mock provider)
 # ------------------------------------------------------------------
 
+
 class TestHeadREPLLifecycle:
     def test_repl_initializes_with_context(self) -> None:
         """Verify REPL can be created and bootstraps context."""
@@ -278,6 +280,7 @@ class TestHeadREPLLifecycle:
 # ------------------------------------------------------------------
 # Phase 2: Tool validation and retry
 # ------------------------------------------------------------------
+
 
 class TestHeadToolValidator:
     def test_validate_known_tool(self) -> None:
@@ -325,7 +328,7 @@ class TestHeadToolValidator:
     def test_extract_hermes_xml_tool_call(self) -> None:
         validator = HeadToolValidator()
         results = validator.extract_tool_calls(
-            '<tool_call><name>read_file</name>'
+            "<tool_call><name>read_file</name>"
             '<arguments>{"path": "main.py"}</arguments></tool_call>'
         )
         assert len(results) == 1
@@ -357,10 +360,12 @@ class TestRetryableToolExecutor:
 
             # Mock model callback that returns a valid tool call
             call_count = 0
+
             def mock_callback():
                 nonlocal call_count
                 call_count += 1
                 from animus_kernel.providers.base import CompletionResponse, ToolCall
+
                 return CompletionResponse(
                     content="",
                     model="test",
@@ -392,10 +397,12 @@ class TestRetryableToolExecutor:
             )
 
             call_count = 0
+
             def mock_callback():
                 nonlocal call_count
                 call_count += 1
                 from animus_kernel.providers.base import CompletionResponse
+
                 # Return no tool_calls (simulates model not responding with fix)
                 return CompletionResponse(
                     content="I don't know",
@@ -417,6 +424,7 @@ class TestRetryableToolExecutor:
 # ------------------------------------------------------------------
 # Phase 2: MCP tool discovery (graceful degradation)
 # ------------------------------------------------------------------
+
 
 class TestMCPToolDiscovery:
     def test_mcp_discovery_gracefully_degrades(self) -> None:
@@ -440,6 +448,7 @@ class TestMCPToolDiscovery:
 # ------------------------------------------------------------------
 # Phase 2: Autonomy benchmark
 # ------------------------------------------------------------------
+
 
 class TestAutonomyBenchmark:
     def test_benchmark_runs(self) -> None:
@@ -479,6 +488,7 @@ class TestAutonomyBenchmark:
 # ------------------------------------------------------------------
 # Phase 3: Session persistence polish (context manager)
 # ------------------------------------------------------------------
+
 
 class TestHeadContextManager:
     def test_add_message_increases_count(self) -> None:
@@ -521,12 +531,22 @@ class TestHeadContextManager:
 
         # Add a tool-call round
         mgr.add_message({"role": "user", "content": "Run test"})
-        mgr.add_message({
-            "role": "assistant",
-            "content": "",
-            "tool_calls": [{"id": "tc1", "type": "function", "function": {"name": "run_shell", "arguments": "{}"}}],
-        })
-        mgr.add_message({"role": "tool", "tool_call_id": "tc1", "name": "run_shell", "content": "ok"})
+        mgr.add_message(
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {
+                        "id": "tc1",
+                        "type": "function",
+                        "function": {"name": "run_shell", "arguments": "{}"},
+                    }
+                ],
+            }
+        )
+        mgr.add_message(
+            {"role": "tool", "tool_call_id": "tc1", "name": "run_shell", "content": "ok"}
+        )
 
         # Fill to trigger pruning
         for i in range(30):
@@ -547,7 +567,11 @@ class TestHeadContextManager:
         mgr = HeadContextManager(model="llama3.1:8b")
         mgr.set_summary("The user asked about Python async patterns.")
         msgs = mgr.get_messages()
-        summary_msg = [m for m in msgs if m["role"] == "system" and "Previous conversation" in m.get("content", "")]
+        summary_msg = [
+            m
+            for m in msgs
+            if m["role"] == "system" and "Previous conversation" in m.get("content", "")
+        ]
         assert len(summary_msg) == 1
         assert "Python async" in summary_msg[0]["content"]
 
@@ -604,6 +628,7 @@ class TestHeadContextManager:
 # Phase 4: Quality gates and cloud fallback
 # ------------------------------------------------------------------
 
+
 class TestHeadQualityGate:
     def test_score_empty_response_low(self) -> None:
         gate = HeadQualityGate()
@@ -618,7 +643,9 @@ class TestHeadQualityGate:
         gate = HeadQualityGate()
         from animus_kernel.providers.base import CompletionResponse
 
-        response = CompletionResponse(content="I cannot help with that.", model="test", provider="test")
+        response = CompletionResponse(
+            content="I cannot help with that.", model="test", provider="test"
+        )
         score = gate.evaluate("Do something", response, [], [])
         # Refusals score below average but not catastrophic
         assert score.overall < 50
@@ -648,6 +675,7 @@ class TestHeadQualityGate:
         from animus_kernel.providers.base import CompletionResponse
 
         response = CompletionResponse(content="", model="test", provider="test")
+
         # Mock invalid call result
         class FakeInvalid:
             tool_name = "bad_tool"
@@ -786,6 +814,7 @@ class TestHeadFallbackController:
 # ------------------------------------------------------------------
 # Phase 5: Natural language interface
 # ------------------------------------------------------------------
+
 
 class TestHeadIntentParser:
     def test_parse_read_file_direct_command(self) -> None:
@@ -947,6 +976,7 @@ class TestHeadSynthesizer:
 # Phase 6: Session daemon (JSON-RPC)
 # ------------------------------------------------------------------
 
+
 class TestHeadDaemon:
     def test_daemon_initializes_session(self) -> None:
         from animus_kernel.head.daemon import HeadDaemon
@@ -972,12 +1002,14 @@ class TestHeadDaemon:
         from animus_kernel.head.daemon import HeadDaemon
 
         daemon = HeadDaemon()
-        resp = daemon._dispatch({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "nonexistent_method",
-            "params": {},
-        })
+        resp = daemon._dispatch(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "nonexistent_method",
+                "params": {},
+            }
+        )
         assert resp is not None
         assert resp["id"] == 1
         assert resp["error"]["code"] == -32601
@@ -987,12 +1019,14 @@ class TestHeadDaemon:
         from animus_kernel.head.daemon import HeadDaemon
 
         daemon = HeadDaemon()
-        resp = daemon._dispatch({
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": 123,  # invalid type
-            "params": {},
-        })
+        resp = daemon._dispatch(
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": 123,  # invalid type
+                "params": {},
+            }
+        )
         assert resp is not None
         assert resp["error"]["code"] == -32600
 
@@ -1036,10 +1070,12 @@ class TestHeadDaemon:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             daemon = HeadDaemon(checkpoint_dir=Path(tmpdir) / "ckpt")
-            result = daemon._rpc_initialize({
-                "project_root": tmpdir,
-                "session_id": "my_custom_session",
-            })
+            result = daemon._rpc_initialize(
+                {
+                    "project_root": tmpdir,
+                    "session_id": "my_custom_session",
+                }
+            )
             assert result["session_id"] == "my_custom_session"
             daemon._rpc_shutdown({"session_id": "my_custom_session"})
 
@@ -1048,14 +1084,18 @@ class TestHeadDaemon:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             daemon = HeadDaemon(checkpoint_dir=Path(tmpdir) / "ckpt")
-            daemon._rpc_initialize({
-                "project_root": tmpdir,
-                "session_id": "dup_session",
-            })
-            result = daemon._rpc_initialize({
-                "project_root": tmpdir,
-                "session_id": "dup_session",
-            })
+            daemon._rpc_initialize(
+                {
+                    "project_root": tmpdir,
+                    "session_id": "dup_session",
+                }
+            )
+            result = daemon._rpc_initialize(
+                {
+                    "project_root": tmpdir,
+                    "session_id": "dup_session",
+                }
+            )
             assert result["status"] == "already_exists"
             daemon._rpc_shutdown({"session_id": "dup_session"})
 

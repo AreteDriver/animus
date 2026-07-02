@@ -147,7 +147,6 @@ class HeadIntentParser:
             ["list_tasks"],
             {},
         ),
-
         # Vague requests — goal described but no specific tool
         (
             r"\b(check|audit|review|scan)\s+(?:for\s+)?(?:issues|problems|errors|bugs|lint)\b",
@@ -185,7 +184,6 @@ class HeadIntentParser:
             ["project_structure", "list_files", "read_file"],
             {},
         ),
-
         # Conversational / meta
         (
             r"^(hi|hello|hey|greetings|howdy)\b",
@@ -283,7 +281,9 @@ class HeadIntentParser:
         return best
 
     @staticmethod
-    def _compute_confidence(text: str, pattern: str, intent_type: IntentType, extracted: dict) -> float:
+    def _compute_confidence(
+        text: str, pattern: str, intent_type: IntentType, extracted: dict
+    ) -> float:
         """Compute confidence score for a match."""
         base = 0.7
 

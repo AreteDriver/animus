@@ -44,7 +44,8 @@ def main() -> None:
         help="Run as JSON-RPC daemon (stdio) instead of interactive REPL",
     )
     parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="Enable debug logging",
     )
@@ -52,6 +53,7 @@ def main() -> None:
 
     if args.daemon:
         from animus_kernel.head.daemon import HeadDaemon
+
         daemon = HeadDaemon(model=args.model)
         daemon.run()
         return
@@ -65,6 +67,7 @@ def main() -> None:
     system_prompt = None
     if args.system_prompt:
         import pathlib
+
         system_prompt = pathlib.Path(args.system_prompt).read_text()
 
     try:

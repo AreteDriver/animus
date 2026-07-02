@@ -7,13 +7,11 @@ the routing logic without requiring a live Ollama instance.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import Any
 
 from animus_kernel.head.tool_orchestrator import HeadToolOrchestrator
 from animus_kernel.head.tool_validator import HeadToolValidator
-from animus_kernel.providers.base import CompletionResponse, ToolCall
 
 
 @dataclass
@@ -194,9 +192,7 @@ class AutonomyBenchmark:
             tool_names = [t["function"]["name"] for t in available_tools]
 
             # Check if expected tool is available
-            expected_available = any(
-                exp in tool_names for exp in case.expected_tools
-            )
+            expected_available = any(exp in tool_names for exp in case.expected_tools)
 
             # Simulate: does the expected tool exist in the registry?
             # In a real benchmark, this would call the model and check

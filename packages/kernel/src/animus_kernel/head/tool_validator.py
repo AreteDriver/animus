@@ -71,17 +71,13 @@ class HeadToolValidator:
                 # Single tool call
                 if "name" in data or "function" in data:
                     name, args = parse_json_tool_call(data)
-                    results.append(
-                        ToolCallResult(tool_name=name, arguments=args, raw=data)
-                    )
+                    results.append(ToolCallResult(tool_name=name, arguments=args, raw=data))
                 # Multiple tool calls
                 elif isinstance(data, list):
                     for item in data:
                         if isinstance(item, dict):
                             name, args = parse_json_tool_call(item)
-                            results.append(
-                                ToolCallResult(tool_name=name, arguments=args, raw=item)
-                            )
+                            results.append(ToolCallResult(tool_name=name, arguments=args, raw=item))
             except json.JSONDecodeError:
                 pass
 

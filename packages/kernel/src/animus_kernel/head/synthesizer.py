@@ -6,7 +6,6 @@ so the user gets a human-friendly answer, not raw JSON or shell output.
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass
 
@@ -49,9 +48,7 @@ class HeadSynthesizer:
         handler = getattr(self, f"_synthesize_{tool_name}", self._synthesize_generic)
         return handler(arguments, result)
 
-    def synthesize_multi(
-        self, tool_results: list[tuple[str, dict, str]]
-    ) -> SynthesisResult:
+    def synthesize_multi(self, tool_results: list[tuple[str, dict, str]]) -> SynthesisResult:
         """Synthesize multiple tool results into a unified summary.
 
         Args:
@@ -105,12 +102,12 @@ class HeadSynthesizer:
 
     def _synthesize_list_files(self, arguments: dict, result: str) -> SynthesisResult:
         path = arguments.get("path", ".")
-        lines = [l for l in result.strip().splitlines() if l.strip()]
+        lines = [line for line in result.strip().splitlines() if line.strip()]
         count = len(lines)
         if count == 0:
             return SynthesisResult(summary=f"Directory *{path}* is empty.")
         if count <= 10:
-            files = ", ".join(f"`{l}`" for l in lines[:10])
+            files = ", ".join(f"`{line}`" for line in lines[:10])
             return SynthesisResult(summary=f"Found in *{path}*: {files}")
         return SynthesisResult(
             summary=f"Found {count} items in *{path}*.",

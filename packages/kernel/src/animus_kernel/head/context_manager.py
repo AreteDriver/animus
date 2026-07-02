@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -137,10 +137,12 @@ class HeadContextManager:
 
         # Summary as a secondary system message
         if self._summary:
-            result.append({
-                "role": "system",
-                "content": f"Previous conversation summary:\n{self._summary}",
-            })
+            result.append(
+                {
+                    "role": "system",
+                    "content": f"Previous conversation summary:\n{self._summary}",
+                }
+            )
 
         # Conversation messages — skip the first system message if we already added it
         start = 1 if self._messages and self._messages[0].get("role") == "system" else 0
@@ -166,7 +168,9 @@ class HeadContextManager:
         assistant_count = sum(1 for m in self._messages if m.get("role") == "assistant")
         tool_count = sum(1 for m in self._messages if m.get("role") == "tool")
 
-        total = sys_tokens + self._summary_tokens + self._total_message_tokens() + self.reserve_tokens
+        total = (
+            sys_tokens + self._summary_tokens + self._total_message_tokens() + self.reserve_tokens
+        )
         utilization = (total / self.max_tokens) * 100 if self.max_tokens > 0 else 0.0
 
         return ContextStats(
@@ -367,7 +371,9 @@ class HeadContextManager:
 
         # Prefix match (e.g., "qwen2.5:32b" might be pulled as "qwen2.5:32b-latest")
         for key, limit in self.MODEL_LIMITS.items():
-            if model.startswith(key) or key.startswith(model.split(":")[0] if ":" in model else model):
+            if model.startswith(key) or key.startswith(
+                model.split(":")[0] if ":" in model else model
+            ):
                 return limit
 
         # Wildcard family match

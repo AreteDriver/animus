@@ -23,7 +23,7 @@ from animus_kernel.head.session_bootstrap import SessionBootstrap
 from animus_kernel.head.synthesizer import HeadSynthesizer
 from animus_kernel.head.tool_orchestrator import HeadToolOrchestrator
 from animus_kernel.head.tool_validator import RetryableToolExecutor
-from animus_kernel.providers.base import CompletionRequest, ToolCall
+from animus_kernel.providers.base import CompletionRequest
 from animus_kernel.providers.manager import ProviderManager
 from animus_kernel.providers.ollama_provider import OllamaProvider
 
@@ -165,7 +165,7 @@ class HeadREPL:
 
     def start(self) -> None:
         """Bootstrap and enter the REPL loop."""
-        print(f"\n🧠 Animus Head — local-first agentic loop")
+        print("\n🧠 Animus Head — local-first agentic loop")
         print(f"   Model: {self.model}")
         print(f"   Project: {self.project_root}")
         print(f"   Session: {self.session_id}")
@@ -174,10 +174,10 @@ class HeadREPL:
             fb_status = "enabled" if self._fallback.is_configured() else "enabled (not configured)"
             print(f"   Fallback: {fb_status} ({self._fallback.fallback_provider})")
         else:
-            print(f"   Fallback: disabled (local-only)")
+            print("   Fallback: disabled (local-only)")
         print(f"   Auto-execute direct: {'on' if self.auto_execute_direct else 'off'}")
-        print(f"   Type 'exit', 'quit', or Ctrl+D to leave.")
-        print(f"   Type '!!' to see available tools.")
+        print("   Type 'exit', 'quit', or Ctrl+D to leave.")
+        print("   Type '!!' to see available tools.")
         print()
 
         self.bootstrap()
@@ -192,7 +192,7 @@ class HeadREPL:
             print("\n\nInterrupted. Saving checkpoint...")
         finally:
             self._checkpoint()
-            print(f"\n   💾 Checkpoint saved. Goodbye.\n")
+            print("\n   💾 Checkpoint saved. Goodbye.\n")
 
     # ------------------------------------------------------------------
     # Core loop
@@ -285,7 +285,9 @@ class HeadREPL:
     def _execute_plan(self, user_input: str, plan) -> None:
         """Fast-path execution of a direct-command plan without model involvement."""
         self.context.add_message({"role": "user", "content": user_input})
-        print(f"   ⚡ Executing plan ({len(plan.steps)} step{'s' if len(plan.steps) > 1 else ''})...")
+        print(
+            f"   ⚡ Executing plan ({len(plan.steps)} step{'s' if len(plan.steps) > 1 else ''})..."
+        )
 
         results: list[tuple[str, dict, str]] = []
         for i, step in enumerate(plan.steps, 1):
@@ -295,21 +297,30 @@ class HeadREPL:
 
             # Add to context as tool result (simulating assistant + tool exchange)
             tool_call_id = f"fastpath-{i}"
-            self.context.add_message({
-                "role": "assistant",
-                "content": "",
-                "tool_calls": [{
-                    "id": tool_call_id,
-                    "type": "function",
-                    "function": {"name": step.tool_name, "arguments": json.dumps(step.arguments)},
-                }],
-            })
-            self.context.add_message({
-                "role": "tool",
-                "tool_call_id": tool_call_id,
-                "name": step.tool_name,
-                "content": result,
-            })
+            self.context.add_message(
+                {
+                    "role": "assistant",
+                    "content": "",
+                    "tool_calls": [
+                        {
+                            "id": tool_call_id,
+                            "type": "function",
+                            "function": {
+                                "name": step.tool_name,
+                                "arguments": json.dumps(step.arguments),
+                            },
+                        }
+                    ],
+                }
+            )
+            self.context.add_message(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call_id,
+                    "name": step.tool_name,
+                    "content": result,
+                }
+            )
 
         # Synthesize results
         synthesis = self._synthesizer.synthesize_multi(results)
@@ -354,9 +365,7 @@ class HeadREPL:
                 self.context.add_message({"role": "user", "content": retry_prompt})
 
                 # Evaluate whether to trigger fallback mid-turn
-                score = self._quality_gate.evaluate(
-                    user_input, response, [], invalid_calls
-                )
+                score = self._quality_gate.evaluate(user_input, response, [], invalid_calls)
                 if self._quality_gate.should_fallback(score) and self._fallback.can_fallback():
                     fb_response = self._fallback.try_fallback(
                         messages=self.context.get_messages(),
@@ -438,10 +447,12 @@ class HeadREPL:
                 self.total_tokens += response.tokens_used
 
         # Final assistant response
-        self.context.add_message({
-            "role": "assistant",
-            "content": response.content or "",
-        })
+        self.context.add_message(
+            {
+                "role": "assistant",
+                "content": response.content or "",
+            }
+        )
         print(f"\n{response.content}\n")
 
     @staticmethod
@@ -537,13 +548,17 @@ class HeadREPL:
             print(f"   Total tokens (provider): {self.total_tokens:,}")
             print(f"   Context window: {stats.max_tokens:,} tokens")
             print(f"   Utilization: {stats.utilization_percent}%")
-            print(f"   Messages: {stats.message_count} ({stats.user_messages} user, {stats.assistant_messages} assistant, {stats.tool_messages} tool)")
+            print(
+                f"   Messages: {stats.message_count} ({stats.user_messages} user, {stats.assistant_messages} assistant, {stats.tool_messages} tool)"
+            )
             print(f"   Available: {stats.available_tokens:,} tokens")
             if stats.dropped_messages:
                 print(f"   Pruned: {stats.dropped_messages} messages")
             fb = self._fallback.status
             if fb.enabled:
-                print(f"   Fallback: {fb.fallbacks_this_session}/{fb.max_fallbacks} used ({fb.provider_name})")
+                print(
+                    f"   Fallback: {fb.fallbacks_this_session}/{fb.max_fallbacks} used ({fb.provider_name})"
+                )
         elif cmd == "context":
             stats = self.context.get_stats()
             print(f"   Context window: {stats.max_tokens:,} tokens")
@@ -562,13 +577,19 @@ class HeadREPL:
                 self._fallback.enabled = True
                 configured = self._fallback.is_configured()
                 if configured:
-                    print(f"   Mode: hybrid. Cloud fallback enabled ({self._fallback.fallback_provider}).")
+                    print(
+                        f"   Mode: hybrid. Cloud fallback enabled ({self._fallback.fallback_provider})."
+                    )
                 else:
-                    print(f"   Mode: hybrid requested, but {self._fallback.fallback_provider} is not configured.")
+                    print(
+                        f"   Mode: hybrid requested, but {self._fallback.fallback_provider} is not configured."
+                    )
                     print("   Set your ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable.")
             elif arg == "cloud":
                 self._fallback.enabled = True
-                print("   Mode: cloud-preferred. (Note: Head is local-first; cloud-preferred is for testing.)")
+                print(
+                    "   Mode: cloud-preferred. (Note: Head is local-first; cloud-preferred is for testing.)"
+                )
             elif arg:
                 print(f"   Unknown mode: {arg}. Use local, hybrid, or cloud.")
             else:
@@ -585,7 +606,9 @@ class HeadREPL:
                 self.auto_execute_direct = False
                 print("   Auto-execute direct commands: off")
             else:
-                print(f"   Auto-execute direct commands: {'on' if self.auto_execute_direct else 'off'}")
+                print(
+                    f"   Auto-execute direct commands: {'on' if self.auto_execute_direct else 'off'}"
+                )
         elif cmd == "remember":
             if arg:
                 result = self.tools.execute("remember", {"content": arg, "tags": ["manual"]})

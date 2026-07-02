@@ -14,7 +14,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from animus_kernel.head.checkpoint import HeadCheckpoint, HeadCheckpointStore
+from animus_kernel.head.checkpoint import HeadCheckpointStore
 from animus_kernel.memory.stores.local import LocalMemoryStore
 
 logger = logging.getLogger(__name__)
@@ -100,15 +100,17 @@ class SessionBootstrap:
                 lines.append(f"  Summary: {prev['summary']}")
             lines.append(f"  Turns: {prev.get('turns', 0)}")
 
-        lines.extend([
-            "",
-            "INSTRUCTIONS:",
-            "1. Use tools to read files, search code, run tests, or execute commands.",
-            "2. Use 'remember' to save important discoveries.",
-            "3. Use 'recall' to retrieve prior knowledge.",
-            "4. Use 'create_task' to track new work items.",
-            "5. When writing files, prefer small, focused edits.",
-        ])
+        lines.extend(
+            [
+                "",
+                "INSTRUCTIONS:",
+                "1. Use tools to read files, search code, run tests, or execute commands.",
+                "2. Use 'remember' to save important discoveries.",
+                "3. Use 'recall' to retrieve prior knowledge.",
+                "4. Use 'create_task' to track new work items.",
+                "5. When writing files, prefer small, focused edits.",
+            ]
+        )
 
         return "\n".join(lines)
 

@@ -144,7 +144,7 @@ class HeadPlanner:
                     ToolPlanStep(
                         tool_name=tool_name,
                         arguments=args,
-                        reason=f"discover context for vague request",
+                        reason="discover context for vague request",
                     )
                 )
 
@@ -157,7 +157,7 @@ class HeadPlanner:
                     ToolPlanStep(
                         tool_name=tool_name,
                         arguments=args,
-                        reason=f"execute based on discovered context",
+                        reason="execute based on discovered context",
                     )
                 )
 
