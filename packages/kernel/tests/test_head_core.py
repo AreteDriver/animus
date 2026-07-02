@@ -15,6 +15,8 @@ import pytest
 
 from animus_kernel.head.checkpoint import HeadCheckpoint, HeadCheckpointStore
 from animus_kernel.head.context_manager import HeadContextManager
+from animus_kernel.head.fallback_controller import HeadFallbackController
+from animus_kernel.head.quality_gate import HeadQualityGate, QualityScore
 from animus_kernel.head.session_bootstrap import SessionBootstrap
 from animus_kernel.head.tool_orchestrator import HeadToolOrchestrator
 from animus_kernel.head.tool_validator import HeadToolValidator, RetryableToolExecutor
@@ -593,3 +595,186 @@ class TestHeadContextManager:
         stats = mgr.get_stats()
         # Should preserve at least 2 user turns
         assert stats.user_messages >= 2
+
+
+# ------------------------------------------------------------------
+# Phase 4: Quality gates and cloud fallback
+# ------------------------------------------------------------------
+
+class TestHeadQualityGate:
+    def test_score_empty_response_low(self) -> None:
+        gate = HeadQualityGate()
+        from animus_kernel.providers.base import CompletionResponse
+
+        response = CompletionResponse(content="", model="test", provider="test")
+        score = gate.evaluate("Do something", response, [], [])
+        assert score.overall < 40
+        assert score.response_completeness <= 10
+
+    def test_score_refusal_low(self) -> None:
+        gate = HeadQualityGate()
+        from animus_kernel.providers.base import CompletionResponse
+
+        response = CompletionResponse(content="I cannot help with that.", model="test", provider="test")
+        score = gate.evaluate("Do something", response, [], [])
+        # Refusals score below average but not catastrophic
+        assert score.overall < 50
+        assert score.response_completeness <= 10
+
+    def test_score_good_response_high(self) -> None:
+        gate = HeadQualityGate()
+        from animus_kernel.providers.base import CompletionResponse
+
+        response = CompletionResponse(
+            content="Here is the file content you requested.", model="test", provider="test"
+        )
+        score = gate.evaluate("Read main.py", response, [], [])
+        assert score.overall >= 60
+        assert score.response_completeness == 40
+
+    def test_score_valid_tool_calls_high(self) -> None:
+        gate = HeadQualityGate()
+        from animus_kernel.providers.base import CompletionResponse
+
+        response = CompletionResponse(content="", model="test", provider="test")
+        score = gate.evaluate("Read main.py", response, [{"name": "read_file"}], [])
+        assert score.tool_call_quality == 40
+
+    def test_score_invalid_tool_calls_low(self) -> None:
+        gate = HeadQualityGate()
+        from animus_kernel.providers.base import CompletionResponse
+
+        response = CompletionResponse(content="", model="test", provider="test")
+        # Mock invalid call result
+        class FakeInvalid:
+            tool_name = "bad_tool"
+            error = "unknown tool"
+
+        score = gate.evaluate("Run test", response, [], [FakeInvalid()])
+        assert score.tool_call_quality == 0
+        assert score.structure_quality <= 15  # penalized for invalid structure
+
+    def test_failure_streak_increments(self) -> None:
+        gate = HeadQualityGate()
+        from animus_kernel.providers.base import CompletionResponse
+
+        class FakeInvalid:
+            tool_name = "bad_tool"
+            error = "unknown tool"
+
+        for i in range(3):
+            response = CompletionResponse(content="", model="test", provider="test")
+            score = gate.evaluate("Do something", response, [], [FakeInvalid()])
+            assert score.failure_streak == i + 1
+
+    def test_should_fallback_on_low_score(self) -> None:
+        gate = HeadQualityGate()
+        score = QualityScore(overall=30, failure_streak=1)
+        assert gate.should_fallback(score)
+
+    def test_should_fallback_on_streak(self) -> None:
+        gate = HeadQualityGate(max_failure_streak=2)
+        score = QualityScore(overall=50, failure_streak=3)
+        assert gate.should_fallback(score)
+
+    def test_should_not_fallback_on_good_score(self) -> None:
+        gate = HeadQualityGate()
+        score = QualityScore(overall=80, failure_streak=0)
+        assert not gate.should_fallback(score)
+
+    def test_reset_clears_streak(self) -> None:
+        gate = HeadQualityGate()
+        from animus_kernel.providers.base import CompletionResponse
+
+        class FakeInvalid:
+            tool_name = "bad_tool"
+            error = "unknown tool"
+
+        for _ in range(3):
+            response = CompletionResponse(content="", model="test", provider="test")
+            gate.evaluate("x", response, [], [FakeInvalid()])
+        assert gate._failure_streak == 3
+
+        gate.reset()
+        assert gate._failure_streak == 0
+
+
+class TestHeadFallbackController:
+    def test_fallback_disabled_by_default(self) -> None:
+        ctrl = HeadFallbackController()
+        assert ctrl.enabled is False
+        assert ctrl.can_fallback() is False
+
+    def test_fallback_not_configured_when_provider_missing(self) -> None:
+        ctrl = HeadFallbackController(enabled=True)
+        assert ctrl.is_configured() is False
+        assert ctrl.can_fallback() is False
+
+    def test_fallback_status_format(self) -> None:
+        ctrl = HeadFallbackController(
+            fallback_provider="anthropic",
+            enabled=True,
+            max_fallbacks_per_session=5,
+        )
+        status = ctrl.status
+        assert status.enabled is True
+        assert status.provider_name == "anthropic"
+        assert status.max_fallbacks == 5
+        assert status.fallbacks_this_session == 0
+
+    def test_try_fallback_when_disabled_returns_none(self) -> None:
+        ctrl = HeadFallbackController(enabled=False)
+        result = ctrl.try_fallback(messages=[], reason="test")
+        assert result is None
+
+    def test_try_fallback_when_not_configured_returns_none(self) -> None:
+        ctrl = HeadFallbackController(enabled=True)
+        result = ctrl.try_fallback(messages=[], reason="test")
+        assert result is None
+
+    def test_fallback_respects_max_fallbacks(self) -> None:
+        ctrl = HeadFallbackController(enabled=True, max_fallbacks_per_session=1)
+        ctrl._fallbacks_used = 1  # Simulate one already used
+        assert ctrl.can_fallback() is False
+
+    def test_reset_clears_counters(self) -> None:
+        ctrl = HeadFallbackController(enabled=True, max_fallbacks_per_session=5)
+        ctrl._fallbacks_used = 3
+        ctrl._last_reason = "test"
+        ctrl.reset()
+        assert ctrl._fallbacks_used == 0
+        assert ctrl._last_reason == ""
+
+    def test_try_fallback_with_mock_provider(self) -> None:
+        from animus_kernel.providers.base import CompletionResponse
+        from animus_kernel.providers.manager import ProviderManager
+
+        # Create a mock provider
+        class MockProvider:
+            name = "mock"
+            provider_type = "mock"
+
+            def is_configured(self):
+                return True
+
+            def complete(self, request):
+                return CompletionResponse(
+                    content="Cloud fallback response",
+                    model="mock-model",
+                    provider="mock",
+                    tokens_used=100,
+                )
+
+        pm = ProviderManager()
+        pm._providers["mock_cloud"] = MockProvider()
+
+        ctrl = HeadFallbackController(
+            provider_manager=pm,
+            fallback_provider="mock_cloud",
+            enabled=True,
+            max_fallbacks_per_session=5,
+        )
+        result = ctrl.try_fallback(messages=[], reason="test")
+        assert result is not None
+        assert result.content == "Cloud fallback response"
+        assert ctrl._fallbacks_used == 1

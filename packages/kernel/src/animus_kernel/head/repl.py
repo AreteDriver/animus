@@ -15,10 +15,13 @@ from typing import Any
 
 from animus_kernel.head.checkpoint import HeadCheckpoint, HeadCheckpointStore
 from animus_kernel.head.context_manager import HeadContextManager
+from animus_kernel.head.fallback_controller import HeadFallbackController
+from animus_kernel.head.quality_gate import HeadQualityGate
 from animus_kernel.head.session_bootstrap import SessionBootstrap
 from animus_kernel.head.tool_orchestrator import HeadToolOrchestrator
 from animus_kernel.head.tool_validator import RetryableToolExecutor
 from animus_kernel.providers.base import CompletionRequest, ToolCall
+from animus_kernel.providers.manager import ProviderManager
 from animus_kernel.providers.ollama_provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
@@ -35,6 +38,9 @@ class HeadREPL:
         system_prompt: Override system prompt (default: loaded from prompts/)
         max_turns: Safety limit per session (default: 1000)
         checkpoint_every: Turns between auto-checkpoints (default: 5)
+        fallback_enabled: Allow cloud fallback on quality failures (default: False)
+        fallback_provider: Cloud provider name for fallback (default: anthropic)
+        max_fallbacks_per_session: Hard cap on cloud calls per session
     """
 
     def __init__(
@@ -46,6 +52,9 @@ class HeadREPL:
         system_prompt: str | None = None,
         max_turns: int = 1000,
         checkpoint_every: int = 5,
+        fallback_enabled: bool = False,
+        fallback_provider: str = "anthropic",
+        max_fallbacks_per_session: int = 10,
     ) -> None:
         self.model = model
         self.project_root = Path(project_root) if project_root else Path.cwd()
@@ -83,6 +92,15 @@ class HeadREPL:
 
         # Context manager with token budgeting
         self.context = HeadContextManager(model=model)
+
+        # Quality gate and cloud fallback
+        self._quality_gate = HeadQualityGate(max_failure_streak=3)
+        self._fallback = HeadFallbackController(
+            provider_manager=ProviderManager(),
+            fallback_provider=fallback_provider,
+            enabled=fallback_enabled,
+            max_fallbacks_per_session=max_fallbacks_per_session,
+        )
 
         # Load or build system prompt
         if system_prompt is None:
@@ -141,6 +159,11 @@ class HeadREPL:
         print(f"   Project: {self.project_root}")
         print(f"   Session: {self.session_id}")
         print(f"   Context window: {self.context.max_tokens:,} tokens")
+        if self._fallback.enabled:
+            fb_status = "enabled" if self._fallback.is_configured() else "enabled (not configured)"
+            print(f"   Fallback: {fb_status} ({self._fallback.fallback_provider})")
+        else:
+            print(f"   Fallback: disabled (local-only)")
         print(f"   Type 'exit', 'quit', or Ctrl+D to leave.")
         print(f"   Type '!!' to see available tools.")
         print()
@@ -194,7 +217,7 @@ class HeadREPL:
                 self._checkpoint()
 
     def _turn(self, user_input: str) -> None:
-        """Process one user turn with validation and retry."""
+        """Process one user turn with validation, retry, and optional fallback."""
         # Add user message
         self.context.add_message({"role": "user", "content": user_input})
 
@@ -209,6 +232,9 @@ class HeadREPL:
 
         # Handle tool_calls loop
         max_tool_rounds = 10
+        invalid_calls_history: list = []
+        valid_calls_history: list = []
+
         for _ in range(max_tool_rounds):
             if not response.tool_calls:
                 break
@@ -223,6 +249,9 @@ class HeadREPL:
                 else:
                     invalid_calls.append(val_result)
 
+            invalid_calls_history.extend(invalid_calls)
+            valid_calls_history.extend(valid_calls)
+
             # If any invalid, inform model and retry once per round
             if invalid_calls:
                 logger.warning(
@@ -231,6 +260,22 @@ class HeadREPL:
                 )
                 retry_prompt = self._retryable.validator.build_retry_prompt(invalid_calls)
                 self.context.add_message({"role": "user", "content": retry_prompt})
+
+                # Evaluate whether to trigger fallback mid-turn
+                score = self._quality_gate.evaluate(
+                    user_input, response, [], invalid_calls
+                )
+                if self._quality_gate.should_fallback(score) and self._fallback.can_fallback():
+                    fb_response = self._fallback.try_fallback(
+                        messages=self.context.get_messages(),
+                        tools=tools if tools else None,
+                        reason=f"tool validation failed ({score.reason})",
+                    )
+                    if fb_response:
+                        print("   ☁️ Escalated to cloud model for this turn.")
+                        response = fb_response
+                        self.total_tokens += response.tokens_used
+                        break
 
                 # Re-call model for corrected calls
                 response = self._call_model(tools=tools if tools else None)
@@ -277,6 +322,21 @@ class HeadREPL:
             if not response:
                 print("   [Model returned no response after tool execution]")
                 return
+
+        # Final quality evaluation before presenting to user
+        score = self._quality_gate.evaluate(
+            user_input, response, valid_calls_history, invalid_calls_history
+        )
+        if self._quality_gate.should_fallback(score) and self._fallback.can_fallback():
+            fb_response = self._fallback.try_fallback(
+                messages=self.context.get_messages(),
+                tools=tools if tools else None,
+                reason=f"final response quality low ({score.reason})",
+            )
+            if fb_response:
+                print("   ☁️ Escalated to cloud model for this turn.")
+                response = fb_response
+                self.total_tokens += response.tokens_used
 
         # Final assistant response
         self.context.add_message({
@@ -339,6 +399,9 @@ class HeadREPL:
             print(f"   Available: {stats.available_tokens:,} tokens")
             if stats.dropped_messages:
                 print(f"   Pruned: {stats.dropped_messages} messages")
+            fb = self._fallback.status
+            if fb.enabled:
+                print(f"   Fallback: {fb.fallbacks_this_session}/{fb.max_fallbacks} used ({fb.provider_name})")
         elif cmd == "context":
             stats = self.context.get_stats()
             print(f"   Context window: {stats.max_tokens:,} tokens")
@@ -349,6 +412,29 @@ class HeadREPL:
             print(f"   Messages: {stats.message_count}")
             if self.context._summary:
                 print(f"   Summary: {self.context._summary[:120]}...")
+        elif cmd == "mode":
+            if arg == "local":
+                self._fallback.enabled = False
+                print("   Mode: local-only. Cloud fallback disabled.")
+            elif arg == "hybrid":
+                self._fallback.enabled = True
+                configured = self._fallback.is_configured()
+                if configured:
+                    print(f"   Mode: hybrid. Cloud fallback enabled ({self._fallback.fallback_provider}).")
+                else:
+                    print(f"   Mode: hybrid requested, but {self._fallback.fallback_provider} is not configured.")
+                    print("   Set your ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable.")
+            elif arg == "cloud":
+                self._fallback.enabled = True
+                print("   Mode: cloud-preferred. (Note: Head is local-first; cloud-preferred is for testing.)")
+            elif arg:
+                print(f"   Unknown mode: {arg}. Use local, hybrid, or cloud.")
+            else:
+                mode = "hybrid" if self._fallback.enabled else "local"
+                print(f"   Current mode: {mode}")
+                fb = self._fallback.status
+                print(f"   Fallback provider: {fb.provider_name}")
+                print(f"   Configured: {fb.configured}")
         elif cmd == "remember":
             if arg:
                 result = self.tools.execute("remember", {"content": arg, "tags": ["manual"]})
@@ -369,6 +455,8 @@ class HeadREPL:
             if system:
                 self.context.add_message(system)
             self.turns = 0
+            self._quality_gate.reset()
+            self._fallback.reset()
             print("   Context cleared.")
         else:
             print(f"   Unknown command: /{cmd}")
