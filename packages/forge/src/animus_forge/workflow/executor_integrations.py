@@ -95,6 +95,13 @@ class IntegrationHandlersMixin:
             command, context, escape=escape_variables, var_dir=var_dir
         )
 
+        if self.dry_run:
+            return {
+                "output": f"[dry_run] Would execute: {command[:200]}",
+                "exit_code": 0,
+                "dry_run": True,
+            }
+
         # Determine timeout: use step timeout if set, otherwise use global setting
         timeout = step.timeout_seconds or settings.shell_timeout_seconds
 
