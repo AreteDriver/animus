@@ -145,5 +145,6 @@ class ResumeError(StateError):
 
     code = "RESUME_ERROR"
 
+
 # Backwards-compatible alias
 GorgonError = AnimusForgeError

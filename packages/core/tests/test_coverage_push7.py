@@ -550,5 +550,3 @@ class TestWebhookCallbackErrors:
         )
         wi._receive_event(event)
         failing_cb.assert_called_once()
-
-

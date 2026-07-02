@@ -842,4 +842,3 @@ class TestIntegrationsInitFallbacks:
             importlib.reload(animus.integrations)
             assert animus.integrations.GoogleCalendarIntegration is None
         importlib.reload(animus.integrations)
-

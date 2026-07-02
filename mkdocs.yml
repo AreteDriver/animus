@@ -17,6 +17,10 @@ nav:
     - Concepts: getting-started/concepts.md
   - Architecture:
     - Overview: architecture/overview.md
+    - Memory Layer: architecture/memory.md
+    - Learning Layer: architecture/learning.md
+    - Proactive Engine: architecture/proactive.md
+    - Citizen Zero: architecture/citizen-zero.md
     - Packages: architecture/packages.md
     - Decisions:
       - Index: architecture/decisions/README.md
@@ -46,6 +50,7 @@ nav:
     - Performance: operators/performance.md
   - Reference:
     - CLI Commands: reference/cli-commands.md
+    - API Reference: reference/api.md
     - Memory System: reference/memory.md
     - Tools: reference/tools.md
     - Glossary: reference/glossary.md

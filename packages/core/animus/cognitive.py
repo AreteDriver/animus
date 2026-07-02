@@ -141,8 +141,6 @@ def detect_mode(prompt: str) -> ReasoningMode:
     return ReasoningMode.QUICK
 
 
-
-
 @dataclass
 class ModelConfig:
     """Configuration for a model."""
@@ -1408,4 +1406,3 @@ Memories:
 Provide a clear, structured briefing."""
 
         return self.think(prompt, mode=ReasoningMode.QUICK)
-

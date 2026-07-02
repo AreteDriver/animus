@@ -112,7 +112,9 @@ class SelfImproveOrchestrator:
         self.tool_registry = tool_registry
 
         # Persistent state
-        self._db_path = Path(db_path) if db_path else self.codebase_path / ".animus_kernel/self_improve.db"
+        self._db_path = (
+            Path(db_path) if db_path else self.codebase_path / ".animus_kernel/self_improve.db"
+        )
         approval_backend = self._create_backend()
 
         # Initialize components

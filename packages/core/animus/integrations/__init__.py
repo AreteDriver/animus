@@ -40,4 +40,3 @@ try:
     __all__.append("GmailIntegration")
 except ImportError:
     GmailIntegration = None  # type: ignore[misc, assignment]
-
