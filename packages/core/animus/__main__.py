@@ -75,20 +75,12 @@ except ImportError:
 console = Console()
 logger = get_logger("cli")
 
-MAX_AGENT_LOOPS = 8
+MAX_AGENT_LOOPS = 3
 
 AGENT_CONTEXT = """\
-You are Animus, an AI agent. You ACT on code — do not explain or advise.
+You are Animus. Use tools to act. Do not explain.
 
-CRITICAL: When asked to do something, MUST use tools. Never describe what you "would" do.
-If you catch yourself writing "you could" or "I would suggest" — STOP. Use a tool instead.
-
-Rules:
-- ALWAYS read a file before editing it
-- ONE change at a time, then verify
-- Paths are relative to the repo root or absolute
-- After edits, run: ruff check packages/ --fix && ruff format packages/
-- Never push to git, never delete files without asking"""
+Format: TOOL: <number>\nparam: value\nTOOL: 0 for final answer."""
 
 
 def _approval_callback(tool_name: str, params: dict) -> bool:
@@ -2527,7 +2519,7 @@ def main():
             def _stream_token(token: str) -> None:
                 nonlocal streamed
                 streamed = True
-                print(token, end="", flush=True)
+                console.print(token, end="", soft_wrap=True)
 
             logger.debug(f"Agent loop with mode={mode.value}")
             response = cognitive.think_with_tools(
