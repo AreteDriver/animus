@@ -6976,19 +6976,19 @@ class TestMetricsCollectorBatch9:
 
 
 class TestApiErrorsBatch9:
-    """Cover api_errors.py lines 222-223: gorgon_exception_handler."""
+    """Cover api_errors.py lines 222-223: animus_forge_exception_handler."""
 
     @pytest.mark.asyncio
-    async def test_gorgon_exception_handler(self):
+    async def test_animus_forge_exception_handler(self):
         """Lines 222-223: async exception handler."""
-        from animus_forge.api_errors import gorgon_exception_handler
+        from animus_forge.api_errors import animus_forge_exception_handler
         from animus_forge.errors import AnimusForgeError
 
         mock_request = MagicMock()
         mock_request.headers = {"X-Request-ID": "req-123"}
 
         exc = AnimusForgeError("test error")
-        response = await gorgon_exception_handler(mock_request, exc)
+        response = await animus_forge_exception_handler(mock_request, exc)
         assert response.status_code >= 400
 
 
