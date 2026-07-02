@@ -260,7 +260,7 @@ class TestErrors:
 
         err = AnimusForgeError("fail", details={"key": "val"})
         d = err.to_dict()
-        assert d["error"] == "GORGON_ERROR"
+        assert d["error"] == "FORGE_ERROR"
         assert d["message"] == "fail"
         assert d["details"] == {"key": "val"}
 

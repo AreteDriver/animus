@@ -171,7 +171,7 @@ ERROR_STATUS_MAP: dict[str, int] = {
     "CONFLICT": 409,
     "CHECKPOINT_ERROR": 409,
     # Server Errors (500, 502, 503)
-    "GORGON_ERROR": 500,
+    "FORGE_ERROR": 500,
     "AGENT_ERROR": 500,
     "WORKFLOW_ERROR": 500,
     "STATE_ERROR": 500,
