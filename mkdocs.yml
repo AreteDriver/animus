@@ -42,7 +42,10 @@ nav:
     - Configuration: operators/configuration.md
     - Monitoring: operators/monitoring.md
     - Troubleshooting: operators/troubleshooting.md
+    - Working with Local Models: operators/local-models.md
   - Reference:
+    - CLI Commands: reference/cli-commands.md
+    - Memory System: reference/memory.md
     - Tools: reference/tools.md
     - Glossary: reference/glossary.md
     - FAQ: reference/faq.md

@@ -360,10 +360,10 @@ if cognitive.primary_config.provider.value == "ollama":
 5. **Commit:** Conventional commit, `docs:` prefix
    ```
    docs: add CLI commands reference
-   
+
    Documents all 40+ REPL commands with parameters and examples.
    Verified against packages/core/animus/__main__.py.
-   
+
    Co-Authored-By: Claude <noreply@anthropic.com>
    ```
 
@@ -542,10 +542,10 @@ Follow-up items: [list]
 5. **Commit:** Conventional commit, `docs:` prefix
    ```
    docs: add CLI commands reference
-   
+
    Documents all 40+ REPL commands with parameters and examples.
    Verified against packages/core/animus/__main__.py.
-   
+
    Co-Authored-By: Claude <noreply@anthropic.com>
    ```
 
