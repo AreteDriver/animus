@@ -123,9 +123,10 @@ def log_event(
         logger.warning(f"Failed to write performance log: {e}")
 
     # Buffer for real-time queries
-    _perf_buffer.append(entry)
-    if len(_perf_buffer) > _MAX_BUFFER:
-        _perf_buffer.pop(0)
+    with _perf_lock:
+        _perf_buffer.append(entry)
+        if len(_perf_buffer) > _MAX_BUFFER:
+            _perf_buffer.pop(0)
 
 
 @contextmanager
