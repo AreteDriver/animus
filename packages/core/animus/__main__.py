@@ -43,6 +43,7 @@ from animus.learning import LearningLayer
 from animus.logging import get_logger, setup_logging
 from animus.memory import Conversation, MemoryLayer, MemoryType
 from animus.proactive import ProactiveEngine
+from animus.profiler import get_summary, perf_log
 from animus.task_outcomes import TaskOutcome, TaskOutcomeTracker
 from animus.tasks import TaskTracker
 from animus.tools import create_default_registry, create_local_think_tool, create_memory_tools
@@ -782,17 +783,37 @@ def main():
                 show_status(config, memory)
                 continue
 
-            if user_input.lower() == "/stats":
-                show_stats(memory)
-                # Also show task outcome stats
-                oc_stats = outcome_tracker.get_success_rate()
-                if oc_stats["total"] > 0:
-                    rate = oc_stats["rate"] * 100
+            if user_input.lower() == "/stats" or user_input.lower().startswith("/stats "):
+                perf_mode = "--perf" in user_input.lower()
+                if perf_mode:
+                    console.print("\n[bold]Performance Summary[/bold]\n")
+                    phases = ["model_generate", "tool_execute", "memory_recall", "conversation_save"]
+                    for phase in phases:
+                        stats = get_summary(phase=phase, window=100)
+                        if stats["count"] > 0:
+                            console.print(
+                                f"  [cyan]{phase:20}[/cyan] "
+                                f"n={stats['count']}  "
+                                f"mean={stats['mean_ms']:.1f}ms  "
+                                f"p95={stats['p95_ms']:.1f}ms  "
+                                f"max={stats['max_ms']:.1f}ms"
+                            )
+                        else:
+                            console.print(f"  [dim]{phase:20}[/dim] no data yet")
                     console.print(
-                        f"\n[bold]Task Outcomes:[/bold] {oc_stats['total']} tasks, "
-                        f"{rate:.0f}% success ({oc_stats['successes']} ok, "
-                        f"{oc_stats['failures']} failed)"
+                        f"\n  [dim]Log file: ~/.animus/logs/performance.log[/dim]"
                     )
+                else:
+                    show_stats(memory)
+                    # Also show task outcome stats
+                    oc_stats = outcome_tracker.get_success_rate()
+                    if oc_stats["total"] > 0:
+                        rate = oc_stats["rate"] * 100
+                        console.print(
+                            f"\n[bold]Task Outcomes:[/bold] {oc_stats['total']} tasks, "
+                            f"{rate:.0f}% success ({oc_stats['successes']} ok, "
+                            f"{oc_stats['failures']} failed)"
+                        )
                 continue
 
             if user_input.lower() == "/model":
@@ -1099,7 +1120,9 @@ def main():
                         console.print("[yellow]Tool execution cancelled.[/yellow]")
                         continue
 
-                result = tools.execute(tool_name, params)
+                with perf_log("tool_execute", tool_name=tool_name) as _tctx:
+                    result = tools.execute(tool_name, params)
+                    _tctx["success"] = result.success
                 if result.success:
                     console.print(f"[green]Tool output:[/green]\n{result.output}")
                 else:
@@ -2466,7 +2489,9 @@ def main():
             context_parts = [AGENT_CONTEXT]
             if last_session_context:
                 context_parts.append(f"\nLast session summary:\n{last_session_context}")
-            context_memories = memory.recall(user_input, limit=3)
+            with perf_log("memory_recall") as _mctx:
+                context_memories = memory.recall(user_input, limit=3)
+                _mctx["success"] = True
             if context_memories:
                 context_parts.append(
                     "\nRelevant memories:\n" + "\n".join(f"- {m.content}" for m in context_memories)
@@ -2524,29 +2549,34 @@ def main():
             # P5: Local models cannot reliably follow the constrained agent loop.
             # Skip agentic tool-use for Ollama; Anthropic/OpenAI get native tool_use.
             is_ollama = cognitive.primary_config.provider.value == "ollama"
+            provider_name = cognitive.primary_config.provider.value
             if is_ollama:
                 console.print(
                     "[dim]Tip: Use /tool <name> for tool execution with local models.[/dim]",
                 )
                 logger.debug("Ollama provider — skipping agent loop, using basic think()")
-                response = cognitive.think(
-                    user_input,
-                    context=context,
-                    mode=mode,
-                    citizen_context=citizen_context,
-                )
+                with perf_log("model_generate", model_provider=provider_name) as _gctx:
+                    response = cognitive.think(
+                        user_input,
+                        context=context,
+                        mode=mode,
+                        citizen_context=citizen_context,
+                    )
+                    _gctx["success"] = True
             else:
                 logger.debug(f"Agent loop with mode={mode.value}")
-                response = cognitive.think_with_tools(
-                    prompt=user_input,
-                    context=context,
-                    mode=mode,
-                    tools=tools,
-                    max_iterations=MAX_AGENT_LOOPS,
-                    approval_callback=_approval_callback,
-                    stream_callback=_stream_token,
-                    citizen_context=citizen_context,
-                )
+                with perf_log("model_generate", model_provider=provider_name) as _gctx:
+                    response = cognitive.think_with_tools(
+                        prompt=user_input,
+                        context=context,
+                        mode=mode,
+                        tools=tools,
+                        max_iterations=MAX_AGENT_LOOPS,
+                        approval_callback=_approval_callback,
+                        stream_callback=_stream_token,
+                        citizen_context=citizen_context,
+                    )
+                    _gctx["success"] = True
 
             # Record assistant response
             conversation.add_message("assistant", response)
@@ -2576,7 +2606,9 @@ def main():
 
             # Auto-save every 10 messages
             if len(conversation.messages) % 10 == 0:
-                memory.save_conversation(conversation)
+                with perf_log("conversation_save") as _sctx:
+                    memory.save_conversation(conversation)
+                    _sctx["success"] = True
                 conversation = Conversation.new()
                 logger.debug("Auto-saved conversation, started new one")
 

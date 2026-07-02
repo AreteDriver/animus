@@ -43,6 +43,7 @@ nav:
     - Monitoring: operators/monitoring.md
     - Troubleshooting: operators/troubleshooting.md
     - Working with Local Models: operators/local-models.md
+    - Performance: operators/performance.md
   - Reference:
     - CLI Commands: reference/cli-commands.md
     - Memory System: reference/memory.md
