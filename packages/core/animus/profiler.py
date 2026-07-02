@@ -68,8 +68,8 @@ def _cleanup_old_logs() -> None:
         try:
             if path.stat().st_mtime < cutoff:
                 path.unlink()
-        except OSError:
-            pass
+        except OSError as e:
+            logger.debug(f"Failed to cleanup old performance log '{path}': {e}")
 
 
 def log_event(
