@@ -144,8 +144,13 @@ class TestAnimusConfigLoad:
         cfg = AnimusConfig.load(tmp_path / "nonexistent.yaml")
         assert cfg.log_level == "INFO"
 
+    @patch.dict("os.environ", {}, clear=False)
     def test_load_full_yaml(self, tmp_path: Path):
         """Lines 465-626: load from YAML with all sections."""
+        import os
+
+        os.environ.pop("OPENAI_BASE_URL", None)
+
         from animus.config import AnimusConfig
 
         data = {

@@ -5,7 +5,7 @@ Enables CI/CD testing of cognitive features without a live LLM backend.
 """
 
 import asyncio
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from animus.cognitive import (
     CognitiveLayer,
@@ -342,8 +342,13 @@ class TestModelProviders:
 class TestConfigProviderWiring:
     """Test that AnimusConfig properly maps to cognitive ModelConfig."""
 
+    @patch.dict("os.environ", {}, clear=False)
     def test_config_openai_base_url_field(self):
         from animus.config import ModelConfig as CfgModelConfig
+
+        # Ensure OPENAI_BASE_URL env var does not override constructor value
+        import os
+        os.environ.pop("OPENAI_BASE_URL", None)
 
         cfg = CfgModelConfig(
             provider="openai",
@@ -360,11 +365,15 @@ class TestConfigProviderWiring:
         d = config.to_dict()
         assert d["model"]["openai_base_url"] == "http://custom:8080/v1"
 
+    @patch.dict("os.environ", {}, clear=False)
     def test_config_roundtrip_openai_base_url(self):
+        import os
         import tempfile
         from pathlib import Path
 
         from animus.config import AnimusConfig
+
+        os.environ.pop("OPENAI_BASE_URL", None)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = AnimusConfig(data_dir=Path(tmpdir))

@@ -114,7 +114,12 @@ class TestManagerFernetSaveLoad:
 class TestConfigLoadFullYaml:
     """Cover all the `if "key" in data:` branches in AnimusConfig.load."""
 
+    @patch.dict("os.environ", {}, clear=False)
     def test_load_full_config_yaml(self, tmp_path):
+        import os
+
+        os.environ.pop("OPENAI_BASE_URL", None)
+
         from animus.config import AnimusConfig
 
         config_file = tmp_path / "config.yaml"
