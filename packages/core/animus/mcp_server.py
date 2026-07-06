@@ -14,6 +14,7 @@ import os
 from datetime import datetime
 
 from animus.audit import EgressAuditLog
+from animus.citizens import ImprovementProposal
 from animus.config import AnimusConfig
 from animus.logging import get_logger
 from animus.memory import MemoryLayer, MemoryType
@@ -746,6 +747,179 @@ def create_mcp_server():
             lines.append(f"Tests: {passed}")
         if result.pull_request:
             lines.append(f"PR: {result.pull_request.url or result.pull_request.branch}")
+        return "\n".join(lines)
+
+    # -----------------------------------------------------------------------
+    # Architect Citizen tools (Mind Foundation)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_architect_scan(
+        focus: str = "codebase",
+        store_proposal: bool = True,
+        api_key: str = "",
+    ) -> str:
+        """Run the Architect Citizen observation and analysis cycle.
+
+        The Architect observes system behavior, analyzes findings, and produces
+        an evidence-backed improvement proposal. It NEVER modifies code directly.
+
+        Args:
+            focus: Observation focus — 'codebase', 'conversation', 'evaluation', or 'all'.
+            store_proposal: Whether to store the generated proposal in memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration. Set citizens.enabled=true to use the Architect."
+
+        from animus.citizens import ArchitectCitizen
+
+        # Resolve paths from config
+        cb_path = config.citizens.codebase_path or str(config.data_dir.parent)
+        log_dir = config.citizens.conversation_log_dir or None
+        evidence_dir = config.citizens.evidence_dir or None
+
+        architect = ArchitectCitizen(
+            codebase_path=cb_path,
+            memory_layer=memory if store_proposal else None,
+            conversation_log_dir=log_dir,
+            evidence_dir=evidence_dir,
+        )
+
+        lines = ["# Architect Citizen Scan Report", ""]
+        observations: list = []
+
+        # Run focused observations
+        if focus in ("codebase", "all"):
+            lines.append("## Codebase Observations")
+            obs = architect.observe_codebase()
+            observations.extend(obs)
+            if obs:
+                for o in obs:
+                    lines.append(f"- **[{o.severity.upper()}]** {o.description}")
+            else:
+                lines.append("- No codebase observations found.")
+            lines.append("")
+
+        if focus in ("conversation", "all"):
+            lines.append("## Conversation Observations")
+            obs = architect.observe_conversations()
+            observations.extend(obs)
+            if obs:
+                for o in obs:
+                    lines.append(f"- **[{o.severity.upper()}]** {o.description}")
+            else:
+                lines.append("- No conversation observations found.")
+            lines.append("")
+
+        if focus in ("evaluation", "all"):
+            lines.append("## Evaluation Observations")
+            obs = architect.observe_evaluations()
+            observations.extend(obs)
+            if obs:
+                for o in obs:
+                    lines.append(f"- **[{o.severity.upper()}]** {o.description}")
+            else:
+                lines.append("- No evaluation observations found.")
+            lines.append("")
+
+        # Analysis and proposal generation
+        lines.append("## Analysis")
+        report = architect.analyze()
+        if report.technical_debt_items:
+            lines.append(f"- Technical debt items: {len(report.technical_debt_items)}")
+        if report.friction_points:
+            lines.append(f"- Friction points: {len(report.friction_points)}")
+        if report.findings:
+            lines.append(f"- Critical findings: {len(report.findings)}")
+        if not (report.technical_debt_items or report.friction_points or report.findings):
+            lines.append("- No actionable findings.")
+        lines.append("")
+
+        proposal = architect.generate_proposal(report)
+        if proposal:
+            lines.append("## Improvement Proposal Generated")
+            lines.append(f"**ID:** `{proposal.id}`")
+            lines.append(f"**Title:** {proposal.title}")
+            lines.append(f"**Problem:** {proposal.problem}")
+            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(f"**Effort estimate:** {proposal.estimated_effort_hours}h")
+            lines.append(f"**Affected components:** {', '.join(proposal.affected_components)}")
+            lines.append(f"**Recommendation:** {proposal.recommendation}")
+            if proposal.potential_risks:
+                lines.append("**Risks:**")
+                for r in proposal.potential_risks:
+                    lines.append(f"  - {r.description} ({r.severity}) — mitigation: {r.mitigation}")
+            lines.append("")
+
+            if store_proposal:
+                stored = architect.store_proposal(proposal)
+                if stored:
+                    lines.append(f"✅ Proposal stored in memory for review.")
+                else:
+                    lines.append("⚠️ Memory layer unavailable — proposal not persisted.")
+        else:
+            lines.append("## No Proposal Generated")
+            lines.append("No actionable findings were identified in this scan.")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_architect_list_proposals(
+        status: str = "pending",
+        api_key: str = "",
+    ) -> str:
+        """List improvement proposals from the Architect Citizen.
+
+        Args:
+            status: Filter by status — 'pending', 'all', etc.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.citizens import ArchitectCitizen
+
+        cb_path = config.citizens.codebase_path or str(config.data_dir.parent)
+        architect = ArchitectCitizen(codebase_path=cb_path, memory_layer=memory)
+
+        if status == "pending":
+            proposals = architect.list_pending_proposals()
+        else:
+            # Fall back to searching memory directly
+            try:
+                from animus.memory import MemoryType
+                results = memory.search(
+                    query="architect proposal",
+                    memory_type=MemoryType.PROCEDURAL,
+                    limit=50,
+                )
+                proposals = []
+                for mem in results:
+                    meta = mem.get("metadata", {})
+                    if meta.get("id"):
+                        proposals.append(ImprovementProposal.from_dict(meta))
+            except Exception as e:
+                return f"Failed to list proposals: {e}"
+
+        if not proposals:
+            return f"No {status} proposals found."
+
+        lines = [f"# Architect Proposals ({status})", ""]
+        for p in proposals:
+            lines.append(f"## {p.id}")
+            lines.append(f"**Title:** {p.title}")
+            lines.append(f"**Status:** {p.status.value}")
+            lines.append(f"**Confidence:** {p.confidence.value} ({p.confidence_score:.0%})")
+            lines.append(f"**Problem:** {p.problem[:200]}...")
+            lines.append(f"**Recommendation:** {p.recommendation[:200]}...")
+            lines.append("")
+
         return "\n".join(lines)
 
     return mcp

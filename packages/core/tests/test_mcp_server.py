@@ -788,6 +788,144 @@ class TestBriefMemoryType:
         )
 
 
+class TestArchitectTools:
+    """Test Architect Citizen MCP tools."""
+
+    def test_tools_exist(self, server):
+        tools = server._tool_manager.list_tools()
+        tool_names = {t.name for t in tools}
+        assert "animus_architect_scan" in tool_names
+        assert "animus_architect_list_proposals" in tool_names
+
+    def test_architect_scan_disabled(self, server, mock_config):
+        mock_config.citizens.enabled = False
+        result = _run(
+            server.call_tool("animus_architect_scan", {})
+        )
+        assert "Citizens are disabled" in result[0][0].text
+
+    def test_architect_scan_codebase(self, server, mock_config, tmp_path):
+        mock_config.citizens.enabled = True
+        mock_config.citizens.codebase_path = str(tmp_path)
+        mock_config.citizens.auto_store_proposals = False
+
+        with patch("animus.mcp_server.ArchitectCitizen") as mock_cls:
+            mock_architect = MagicMock()
+            mock_cls.return_value = mock_architect
+
+            from animus.citizens.architect import Observation
+
+            mock_architect.observe_codebase.return_value = [
+                Observation(source="codebase", description="High complexity", severity="high"),
+            ]
+            mock_architect.observe_conversations.return_value = []
+            mock_architect.observe_evaluations.return_value = []
+
+            report = MagicMock()
+            report.technical_debt_items = ["High complexity"]
+            report.friction_points = []
+            report.findings = []
+            report.observations = mock_architect.observe_codebase.return_value
+            mock_architect.analyze.return_value = report
+
+            proposal = MagicMock()
+            proposal.id = "ADL-20260705-001"
+            proposal.title = "Refactor complex module"
+            proposal.problem = "High complexity in parser.py"
+            proposal.confidence_score = 0.75
+            proposal.confidence.value = "high"
+            proposal.estimated_effort_hours = 4.0
+            proposal.affected_components = ["Factory"]
+            proposal.recommendation = "Split into smaller functions"
+            proposal.potential_risks = [
+                MagicMock(description="Regressions", severity="medium", mitigation="Tests"),
+            ]
+            mock_architect.generate_proposal.return_value = proposal
+            mock_architect.store_proposal.return_value = True
+
+            result = _run(
+                server.call_tool("animus_architect_scan", {"focus": "codebase"})
+            )
+            text = result[0][0].text
+            assert "Architect Citizen Scan Report" in text
+            assert "Refactor complex module" in text
+            assert "High complexity" in text
+            mock_architect.observe_codebase.assert_called_once()
+
+    def test_architect_scan_no_findings(self, server, mock_config, tmp_path):
+        mock_config.citizens.enabled = True
+        mock_config.citizens.codebase_path = str(tmp_path)
+
+        with patch("animus.mcp_server.ArchitectCitizen") as mock_cls:
+            mock_architect = MagicMock()
+            mock_cls.return_value = mock_architect
+            mock_architect.observe_codebase.return_value = []
+            mock_architect.observe_conversations.return_value = []
+            mock_architect.observe_evaluations.return_value = []
+
+            report = MagicMock()
+            report.technical_debt_items = []
+            report.friction_points = []
+            report.findings = []
+            report.observations = []
+            mock_architect.analyze.return_value = report
+            mock_architect.generate_proposal.return_value = None
+
+            result = _run(
+                server.call_tool("animus_architect_scan", {"focus": "all"})
+            )
+            text = result[0][0].text
+            assert "No Proposal Generated" in text
+            assert "No actionable findings" in text
+
+    def test_architect_scan_auth_blocked(self, server, tmp_path):
+        with patch("animus.mcp_server._MCP_API_KEY", "secret"):
+            result = _run(
+                server.call_tool("animus_architect_scan", {})
+            )
+            assert "Authentication required" in result[0][0].text
+
+    def test_architect_list_proposals_empty(self, server, mock_config, mock_memory):
+        mock_config.citizens.enabled = True
+        mock_config.citizens.codebase_path = "/tmp/test"
+
+        with patch("animus.mcp_server.ArchitectCitizen") as mock_cls:
+            mock_architect = MagicMock()
+            mock_cls.return_value = mock_architect
+            mock_architect.list_pending_proposals.return_value = []
+
+            result = _run(
+                server.call_tool("animus_architect_list_proposals", {"status": "pending"})
+            )
+            assert "No pending proposals found" in result[0][0].text
+
+    def test_architect_list_proposals_with_results(self, server, mock_config):
+        mock_config.citizens.enabled = True
+        mock_config.citizens.codebase_path = "/tmp/test"
+
+        with patch("animus.mcp_server.ArchitectCitizen") as mock_cls:
+            mock_architect = MagicMock()
+            mock_cls.return_value = mock_architect
+
+            proposal = MagicMock()
+            proposal.id = "ADL-001"
+            proposal.title = "Fix parser"
+            proposal.status.value = "draft"
+            proposal.confidence.value = "medium"
+            proposal.confidence_score = 0.6
+            proposal.problem = "Parser is too complex"
+            proposal.recommendation = "Split it up"
+            mock_architect.list_pending_proposals.return_value = [proposal]
+
+            result = _run(
+                server.call_tool("animus_architect_list_proposals", {"status": "pending"})
+            )
+            text = result[0][0].text
+            assert "ADL-001" in text
+            assert "Fix parser" in text
+            assert "medium" in text
+
+
 class TestMcpImportError:
     """Test create_mcp_server when mcp is not installed."""
 

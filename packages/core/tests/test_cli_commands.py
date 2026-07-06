@@ -7,6 +7,9 @@ without requiring an interactive terminal.
 from __future__ import annotations
 
 import os
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from animus.cognitive import CognitiveLayer, ModelConfig, ReasoningMode, detect_mode
 
@@ -180,6 +183,64 @@ class TestStreamingWiring:
             stream_callback=lambda t: None,
         )
         assert isinstance(result, str)
+
+
+class TestArchitectCommand:
+    """Test the `animus architect` CLI command."""
+
+    def test_architect_disabled(self):
+        from animus.cli import main
+
+        with patch.dict("os.environ", {"ANIMUS_CITIZENS_ENABLED": "false"}):
+            result = main(["architect"])
+            assert result == 1
+
+    def test_architect_help(self, capsys):
+        from animus.cli import main
+
+        with pytest.raises(SystemExit) as exc_info:
+            main(["architect", "--help"])
+        assert exc_info.value.code == 0
+        captured = capsys.readouterr()
+        assert "--focus" in captured.out
+        assert "--store" in captured.out
+
+    def test_architect_scan_produces_output(self, tmp_path, capsys):
+        from animus.cli import _cmd_architect
+
+        args = MagicMock()
+        args.focus = "codebase"
+        args.store = False
+
+        with patch("animus.config.get_config") as mock_get_config:
+            cfg = MagicMock()
+            cfg.citizens.enabled = True
+            cfg.citizens.codebase_path = str(tmp_path)
+            cfg.citizens.conversation_log_dir = None
+            cfg.citizens.evidence_dir = None
+            cfg.data_dir = tmp_path / ".animus"
+            cfg.memory.backend = "json"
+            mock_get_config.return_value = cfg
+
+            with patch("animus.citizens.ArchitectCitizen") as mock_cls:
+                mock_architect = MagicMock()
+                mock_cls.return_value = mock_architect
+                mock_architect.observe_codebase.return_value = []
+                mock_architect.observe_conversations.return_value = []
+                mock_architect.observe_evaluations.return_value = []
+
+                report = MagicMock()
+                report.technical_debt_items = []
+                report.friction_points = []
+                report.findings = []
+                report.observations = []
+                mock_architect.analyze.return_value = report
+                mock_architect.generate_proposal.return_value = None
+
+                result = _cmd_architect(args)
+                assert result == 0
+                captured = capsys.readouterr()
+                assert "No actionable findings" in captured.out
 
 
 class TestApprovalCallback:

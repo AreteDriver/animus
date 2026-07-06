@@ -1,0 +1,35 @@
+"""Animus Citizens — Mind Foundation layer.
+
+Long-lived specialist citizens that improve the Animus Mind itself
+before any domain-specialist citizens are built.
+
+Phase 0 Citizens:
+- Architect (Citizen 001): observes, analyzes, proposes improvements
+- Conversation Designer (Citizen 002): reduces cognitive effort
+- Knowledge Curator (Citizen 003): maintains knowledge accuracy
+
+Every citizen operates under the Constitution layer:
+- No autonomous architectural changes
+- No autonomous memory changes
+- No autonomous deployment
+- Evidence before action
+- Human approval required for all commissions
+"""
+
+from __future__ import annotations
+
+from animus.citizens.architect import ArchitectCitizen
+from animus.citizens.commissioner import ForgeCommissioner
+from animus.citizens.proposal import (
+    ImprovementProposal,
+    ProposalConfidence,
+    ProposalStatus,
+)
+
+__all__ = [
+    "ArchitectCitizen",
+    "ForgeCommissioner",
+    "ImprovementProposal",
+    "ProposalConfidence",
+    "ProposalStatus",
+]

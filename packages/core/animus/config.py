@@ -298,6 +298,36 @@ class CitizenZeroConfig:
 
 
 @dataclass
+class CitizensConfig:
+    """Configuration for the Mind Foundation citizens (Architect, etc.)."""
+
+    enabled: bool = True
+    codebase_path: str = ""
+    conversation_log_dir: str = ""
+    evidence_dir: str = ""
+    forge_host: str = "localhost"
+    forge_port: int = 7700
+    auto_store_proposals: bool = True  # Store proposals in memory automatically
+
+    def __post_init__(self):
+        if env_enabled := os.environ.get("ANIMUS_CITIZENS_ENABLED"):
+            self.enabled = env_enabled.lower() in ("true", "1", "yes")
+        if env_path := os.environ.get("ANIMUS_CITIZENS_CODEBASE_PATH"):
+            self.codebase_path = env_path
+        if env_logs := os.environ.get("ANIMUS_CITIZENS_CONVERSATION_LOG_DIR"):
+            self.conversation_log_dir = env_logs
+        if env_evidence := os.environ.get("ANIMUS_CITIZENS_EVIDENCE_DIR"):
+            self.evidence_dir = env_evidence
+        if env_host := os.environ.get("ANIMUS_CITIZENS_FORGE_HOST"):
+            self.forge_host = env_host
+        if env_port := os.environ.get("ANIMUS_CITIZENS_FORGE_PORT"):
+            try:
+                self.forge_port = int(env_port)
+            except ValueError:
+                pass
+
+
+@dataclass
 class AutonomousConfig:
     """Configuration for the autonomous action system.
 
@@ -348,6 +378,7 @@ class AnimusConfig:
     entities: EntityConfig = field(default_factory=EntityConfig)
     autonomous: AutonomousConfig = field(default_factory=AutonomousConfig)
     citizen_zero: CitizenZeroConfig = field(default_factory=CitizenZeroConfig)
+    citizens: CitizensConfig = field(default_factory=CitizensConfig)
 
     def __post_init__(self):
         # Convert string to Path if needed
@@ -460,6 +491,15 @@ class AnimusConfig:
                 "constitutional_corpus_dir": self.citizen_zero.constitutional_corpus_dir,
                 "context_budget_tokens": self.citizen_zero.context_budget_tokens,
                 "default_failure_mode": self.citizen_zero.default_failure_mode,
+            },
+            "citizens": {
+                "enabled": self.citizens.enabled,
+                "codebase_path": self.citizens.codebase_path,
+                "conversation_log_dir": self.citizens.conversation_log_dir,
+                "evidence_dir": self.citizens.evidence_dir,
+                "forge_host": self.citizens.forge_host,
+                "forge_port": self.citizens.forge_port,
+                "auto_store_proposals": self.citizens.auto_store_proposals,
             },
         }
 
@@ -633,6 +673,22 @@ class AnimusConfig:
                         "default_failure_mode"
                     ]
 
+            if citizens_data := data.get("citizens"):
+                if "enabled" in citizens_data:
+                    config.citizens.enabled = citizens_data["enabled"]
+                if "codebase_path" in citizens_data:
+                    config.citizens.codebase_path = citizens_data["codebase_path"]
+                if "conversation_log_dir" in citizens_data:
+                    config.citizens.conversation_log_dir = citizens_data["conversation_log_dir"]
+                if "evidence_dir" in citizens_data:
+                    config.citizens.evidence_dir = citizens_data["evidence_dir"]
+                if "forge_host" in citizens_data:
+                    config.citizens.forge_host = citizens_data["forge_host"]
+                if "forge_port" in citizens_data:
+                    config.citizens.forge_port = citizens_data["forge_port"]
+                if "auto_store_proposals" in citizens_data:
+                    config.citizens.auto_store_proposals = citizens_data["auto_store_proposals"]
+
             # Re-apply environment overrides
             config.__post_init__()
             config.model.__post_init__()
@@ -648,6 +704,7 @@ class AnimusConfig:
             config.entities.__post_init__()
             config.autonomous.__post_init__()
             config.citizen_zero.__post_init__()
+            config.citizens.__post_init__()
 
         return config
 
