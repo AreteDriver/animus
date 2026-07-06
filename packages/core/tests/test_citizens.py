@@ -3,13 +3,23 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from animus.citizens import ArchitectCitizen, ForgeCommissioner, ImprovementProposal, ProposalStatus
+from animus.citizens import (
+    ArchitectCitizen,
+    CitizenCouncil,
+    ConversationDesignerCitizen,
+    ForgeCommissioner,
+    ImprovementProposal,
+    KnowledgeCuratorCitizen,
+    ProposalQueue,
+    ProposalStatus,
+    TestOracleCitizen,
+)
 from animus.citizens.commissioner import CommissionResult
 from animus.citizens.proposal import EvidenceItem, ProposalConfidence, RiskAssessment
 
@@ -587,3 +597,438 @@ class TestForgeCommissioner:
         assert result.tests_passed is True
         assert result.benchmark_results == {"tokens_used": 1500}
         mock_engine.run.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# ConversationDesignerCitizen tests
+# ---------------------------------------------------------------------------
+
+
+class TestConversationDesignerCitizen:
+    def test_observe_repeated_prompts(self, tmp_path):
+        log_dir = tmp_path / "conversations"
+        log_dir.mkdir()
+        log_file = log_dir / "session.jsonl"
+        entries = [
+            json.dumps({"prompt": "How do I configure the API?"}),
+            json.dumps({"prompt": "Help me debug this error"}),
+            json.dumps({"prompt": "How do I configure the API?"}),
+            json.dumps({"prompt": "How do I configure the API?"}),
+        ]
+        log_file.write_text("\n".join(entries))
+
+        designer = ConversationDesignerCitizen(conversation_log_dir=log_dir)
+        observations = designer.observe_repeated_prompts()
+        assert len(observations) >= 1
+        assert observations[0].source == "conversation"
+        assert "Repeated prompt detected" in observations[0].description
+        assert observations[0].context["count"] >= 3
+
+    def test_observe_vague_requests(self, tmp_path):
+        log_dir = tmp_path / "conversations"
+        log_dir.mkdir()
+        log_file = log_dir / "session.jsonl"
+        entries = [
+            json.dumps({"prompt": "help"}),
+            json.dumps({"prompt": "help"}),
+            json.dumps({"prompt": "fix this"}),
+        ]
+        log_file.write_text("\n".join(entries))
+
+        designer = ConversationDesignerCitizen(conversation_log_dir=log_dir)
+        observations = designer.observe_vague_requests()
+        assert len(observations) >= 1
+        assert observations[0].source == "conversation"
+        assert "Vague request detected" in observations[0].description
+        assert observations[0].context["pattern_type"] == "vague_request"
+
+    def test_observe_correction_loops(self, tmp_path):
+        log_dir = tmp_path / "conversations"
+        log_dir.mkdir()
+        log_file = log_dir / "session.jsonl"
+        entries = [
+            json.dumps({"prompt": "no, that's wrong"}),
+            json.dumps({"prompt": "actually, I meant something else"}),
+            json.dumps({"prompt": "not quite right"}),
+        ]
+        log_file.write_text("\n".join(entries))
+
+        designer = ConversationDesignerCitizen(conversation_log_dir=log_dir)
+        observations = designer.observe_correction_loops()
+        assert len(observations) >= 1
+        assert observations[0].source == "conversation"
+        assert "Correction loop detected" in observations[0].description
+        assert observations[0].context["pattern_type"] == "correction_loop"
+
+    def test_generate_proposal(self, tmp_path):
+        log_dir = tmp_path / "conversations"
+        log_dir.mkdir()
+        log_file = log_dir / "session.jsonl"
+        entries = [
+            json.dumps({"prompt": "How do I configure the API?"}),
+            json.dumps({"prompt": "How do I configure the API?"}),
+            json.dumps({"prompt": "How do I configure the API?"}),
+        ]
+        log_file.write_text("\n".join(entries))
+
+        designer = ConversationDesignerCitizen(conversation_log_dir=log_dir)
+        proposal = designer.generate_proposal()
+        assert proposal is not None
+        assert isinstance(proposal, ImprovementProposal)
+        assert proposal.status == ProposalStatus.DRAFT
+        assert len(proposal.evidence) >= 1
+
+    def test_generate_proposal_no_findings(self, tmp_path):
+        designer = ConversationDesignerCitizen(conversation_log_dir=tmp_path / "empty")
+        proposal = designer.generate_proposal()
+        assert proposal is None
+
+    def test_store_proposal_with_memory(self, tmp_path):
+        mock_memory = MagicMock()
+        designer = ConversationDesignerCitizen(memory_layer=mock_memory)
+        proposal = ImprovementProposal(id="1", title="Test", problem="P", recommendation="R")
+        assert designer.store_proposal(proposal) is True
+        mock_memory.remember.assert_called_once()
+
+    def test_store_proposal_without_memory(self, tmp_path):
+        designer = ConversationDesignerCitizen()
+        proposal = ImprovementProposal(id="1", title="Test", problem="P", recommendation="R")
+        assert designer.store_proposal(proposal) is False
+
+
+# ---------------------------------------------------------------------------
+# KnowledgeCuratorCitizen tests
+# ---------------------------------------------------------------------------
+
+
+class TestKnowledgeCuratorCitizen:
+    def test_observe_stale_references_no_memory(self, tmp_path):
+        curator = KnowledgeCuratorCitizen(codebase_path=tmp_path)
+        observations = curator.observe_stale_references()
+        assert len(observations) == 1
+        assert "Memory layer not available" in observations[0].description
+
+    def test_observe_stale_references_with_mock(self, tmp_path):
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = [
+            {"content": "See main.py for details", "id": "mem1"},
+        ]
+        curator = KnowledgeCuratorCitizen(codebase_path=tmp_path, memory_layer=mock_memory)
+        observations = curator.observe_stale_references()
+        assert len(observations) >= 1
+        assert observations[0].source == "knowledge"
+        assert observations[0].context["pattern_type"] == "stale_reference"
+
+    def test_observe_contradictions(self, tmp_path):
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = [
+            {"content": "ModuleA is fast and improves performance", "id": "mem1"},
+            {"content": "ModuleA is slow and breaks things", "id": "mem2"},
+        ]
+        curator = KnowledgeCuratorCitizen(memory_layer=mock_memory)
+        observations = curator.observe_contradictions()
+        assert len(observations) >= 1
+        assert observations[0].source == "knowledge"
+        assert "Contradictory claims" in observations[0].description
+        assert observations[0].context["pattern_type"] == "contradiction"
+
+    def test_observe_outdated_claims(self, tmp_path):
+        mock_memory = MagicMock()
+        old_date = (datetime.now() - timedelta(days=100)).isoformat()
+        mock_memory.search.return_value = [
+            {"content": "CCP recently changed the SSO scopes", "id": "mem1", "created_at": old_date},
+        ]
+        curator = KnowledgeCuratorCitizen(memory_layer=mock_memory)
+        observations = curator.observe_outdated_claims()
+        assert len(observations) >= 1
+        assert observations[0].source == "knowledge"
+        assert observations[0].context["pattern_type"] == "outdated_claim"
+
+    def test_observe_orphan_topics(self, tmp_path):
+        topics_dir = tmp_path / "topics"
+        topics_dir.mkdir()
+        orphan = topics_dir / "orphan.md"
+        linked = topics_dir / "linked.md"
+        index = topics_dir / "index.md"
+        orphan.write_text("# Orphan Topic\n")
+        linked.write_text("# Linked Topic\n[index](index.md)\n")
+        index.write_text("[Linked Topic](linked.md)\n")
+
+        curator = KnowledgeCuratorCitizen(codebase_path=tmp_path)
+        observations = curator.observe_orphan_topics()
+        assert len(observations) == 1
+        assert observations[0].context["pattern_type"] == "orphan_topic"
+        assert "orphan.md" in observations[0].description
+
+    def test_generate_proposal(self, tmp_path):
+        mock_memory = MagicMock()
+        old_date = (datetime.now() - timedelta(days=100)).isoformat()
+        mock_memory.search.return_value = [
+            {"content": "CCP recently changed the SSO scopes", "id": "mem1", "created_at": old_date},
+        ]
+        curator = KnowledgeCuratorCitizen(memory_layer=mock_memory)
+        proposal = curator.generate_proposal()
+        assert proposal is not None
+        assert isinstance(proposal, ImprovementProposal)
+        assert proposal.status == ProposalStatus.DRAFT
+        assert len(proposal.evidence) >= 1
+
+    def test_generate_proposal_no_findings(self, tmp_path):
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = []
+        curator = KnowledgeCuratorCitizen(codebase_path=tmp_path, memory_layer=mock_memory)
+        proposal = curator.generate_proposal()
+        assert proposal is None
+
+    def test_store_proposal_with_memory(self, tmp_path):
+        mock_memory = MagicMock()
+        curator = KnowledgeCuratorCitizen(memory_layer=mock_memory)
+        proposal = ImprovementProposal(id="1", title="Test", problem="P", recommendation="R")
+        assert curator.store_proposal(proposal) is True
+        mock_memory.remember.assert_called_once()
+
+    def test_store_proposal_without_memory(self, tmp_path):
+        curator = KnowledgeCuratorCitizen()
+        proposal = ImprovementProposal(id="1", title="Test", problem="P", recommendation="R")
+        assert curator.store_proposal(proposal) is False
+
+
+# ---------------------------------------------------------------------------
+# TestOracleCitizen tests
+# ---------------------------------------------------------------------------
+
+
+class TestTestOracleCitizen:
+    def test_observe_test_failures(self, tmp_path):
+        pytest_output = (
+            "test_foo.py::test_a PASSED\n"
+            "FAILED test_foo.py::test_b\n"
+            "FAILED test_bar.py::test_c\n"
+            "2 failed, 1 passed in 0.5s\n"
+        )
+        oracle = TestOracleCitizen(codebase_path=tmp_path)
+        observations = oracle.observe_test_failures(pytest_output=pytest_output)
+        assert len(observations) >= 1
+        assert any(o.context.get("pattern_type") == "test_failure" for o in observations)
+
+    def test_observe_coverage_gaps(self, tmp_path):
+        coverage_report = (
+            "Name         Stmts   Miss  Cover\n"
+            "--------------------------------\n"
+            "main.py         10      0     0%\n"
+            "utils.py         5      0   100%\n"
+            "--------------------------------\n"
+            "TOTAL           15     10    33%\n"
+        )
+        oracle = TestOracleCitizen(codebase_path=tmp_path)
+        observations = oracle.observe_coverage_gaps(coverage_report=coverage_report)
+        assert len(observations) >= 1
+        assert any(
+            o.context.get("pattern_type") in ("coverage_drop", "missing_coverage")
+            for o in observations
+        )
+
+    def test_observe_eval_drift(self, tmp_path):
+        eval_results = [
+            {"suite": "suite_a", "score": 0.9, "timestamp": "2026-01-01T00:00:00Z"},
+            {"suite": "suite_a", "score": 0.7, "timestamp": "2026-01-02T00:00:00Z"},
+        ]
+        oracle = TestOracleCitizen(codebase_path=tmp_path)
+        observations = oracle.observe_eval_drift(eval_results=eval_results)
+        assert len(observations) == 1
+        assert observations[0].context["pattern_type"] == "eval_drift"
+        assert observations[0].context["delta"] == pytest.approx(-0.2)
+
+    def test_generate_proposal(self, tmp_path):
+        (tmp_path / "pytest-output.txt").write_text(
+            "test_foo.py::test_a FAILED\n"
+            "1 failed, 0 passed in 0.5s\n"
+        )
+        (tmp_path / "coverage.txt").write_text(
+            "Name         Stmts   Miss  Cover\n"
+            "--------------------------------\n"
+            "main.py         10      0     0%\n"
+            "--------------------------------\n"
+            "TOTAL           15     10    33%\n"
+        )
+        oracle = TestOracleCitizen(codebase_path=tmp_path)
+        proposal = oracle.generate_proposal()
+        assert proposal is not None
+        assert isinstance(proposal, ImprovementProposal)
+        assert proposal.status == ProposalStatus.DRAFT
+
+    def test_generate_proposal_no_findings(self, tmp_path):
+        oracle = TestOracleCitizen(codebase_path=tmp_path)
+        proposal = oracle.generate_proposal()
+        assert proposal is None
+
+    def test_store_proposal_with_memory(self, tmp_path):
+        mock_memory = MagicMock()
+        oracle = TestOracleCitizen(codebase_path=tmp_path, memory_layer=mock_memory)
+        proposal = ImprovementProposal(id="1", title="Test", problem="P", recommendation="R")
+        assert oracle.store_proposal(proposal) is True
+        mock_memory.remember.assert_called_once()
+
+    def test_store_proposal_without_memory(self, tmp_path):
+        oracle = TestOracleCitizen(codebase_path=tmp_path)
+        proposal = ImprovementProposal(id="1", title="Test", problem="P", recommendation="R")
+        assert oracle.store_proposal(proposal) is False
+
+
+# ---------------------------------------------------------------------------
+# ProposalQueue tests
+# ---------------------------------------------------------------------------
+
+
+class TestProposalQueue:
+    def test_submit_approve_commission_complete_lifecycle(self, tmp_path):
+        queue = ProposalQueue(storage_path=str(tmp_path / "queue.json"))
+        proposal = ImprovementProposal(id="ADL-001", title="T", problem="P")
+
+        qp = queue.submit(proposal)
+        assert qp.current_status == ProposalStatus.SUBMITTED
+        assert queue.stats()["total"] == 1
+
+        approved = queue.approve("ADL-001", actor="human", reason="LGTM")
+        assert approved.current_status == ProposalStatus.APPROVED
+        assert approved.proposal.approved_by == "human"
+
+        commissioned = queue.commission("ADL-001", actor="forge")
+        assert commissioned.current_status == ProposalStatus.COMMISSIONED
+
+        completed = queue.complete("ADL-001", actor="forge")
+        assert completed.current_status == ProposalStatus.COMPLETE
+        assert queue.stats()["complete"] == 1
+
+    def test_reject_path(self, tmp_path):
+        queue = ProposalQueue(storage_path=str(tmp_path / "queue.json"))
+        proposal = ImprovementProposal(id="ADL-002", title="T", problem="P")
+        queue.submit(proposal)
+
+        rejected = queue.reject("ADL-002", actor="human", reason="Not now")
+        assert rejected.current_status == ProposalStatus.REJECTED
+        assert queue.stats()["rejected"] == 1
+
+        # Rejecting again should be no-op
+        rejected_again = queue.reject("ADL-002", actor="human", reason="Still no")
+        assert rejected_again.current_status == ProposalStatus.REJECTED
+
+    def test_persistence_roundtrip(self, tmp_path):
+        storage = tmp_path / "queue.json"
+        queue = ProposalQueue(storage_path=str(storage))
+        proposal = ImprovementProposal(
+            id="ADL-003", title="T", problem="P", recommendation="R"
+        )
+        queue.submit(proposal, priority=3, tags=["architect", "urgent"])
+        queue.approve("ADL-003")
+
+        # Load into fresh queue
+        queue2 = ProposalQueue(storage_path=str(storage))
+        queue2.load_from_memory()
+        loaded = queue2.get("ADL-003")
+        assert loaded is not None
+        assert loaded.current_status == ProposalStatus.APPROVED
+        assert loaded.priority == 3
+        assert "architect" in loaded.tags
+
+    def test_stats(self, tmp_path):
+        queue = ProposalQueue(storage_path=str(tmp_path / "queue.json"))
+        p1 = ImprovementProposal(id="p1", title="T1", problem="P1")
+        p2 = ImprovementProposal(id="p2", title="T2", problem="P2")
+        p3 = ImprovementProposal(id="p3", title="T3", problem="P3")
+
+        queue.submit(p1)
+        queue.submit(p2)
+        queue.approve("p2")
+        queue.submit(p3)
+        queue.complete("p3")
+
+        stats = queue.stats()
+        assert stats["total"] == 3
+        assert stats["pending"] == 1
+        assert stats["approved"] == 1
+        assert stats["complete"] == 1
+        assert stats["rejected"] == 0
+
+
+# ---------------------------------------------------------------------------
+# CitizenCouncil tests
+# ---------------------------------------------------------------------------
+
+
+class TestCitizenCouncil:
+    def test_collect_from_memory(self, tmp_path):
+        mock_memory = MagicMock()
+        proposal_dict = ImprovementProposal(
+            id="ADL-001",
+            title="T1",
+            problem="P1",
+            recommendation="R1",
+            affected_components=["Factory"],
+        ).to_dict()
+        mock_memory.search.return_value = [
+            {
+                "content": "proposal 1",
+                "metadata": proposal_dict,
+            }
+        ]
+
+        council = CitizenCouncil(memory_layer=mock_memory)
+        count = council.collect_from_memory(citizen_names=["architect"])
+        assert count == 1
+        assert "ADL-001" in council._proposals
+
+    def test_rank_backlog_scoring(self, tmp_path):
+        council = CitizenCouncil()
+        p1 = ImprovementProposal(
+            id="p1",
+            title="High severity",
+            problem="P1",
+            confidence_score=0.9,
+            estimated_effort_hours=2.0,
+            affected_components=["Factory"],
+            evidence=[
+                EvidenceItem(source="test", description="Critical issue")
+            ],
+        )
+        p2 = ImprovementProposal(
+            id="p2",
+            title="Low severity",
+            problem="P2",
+            confidence_score=0.3,
+            estimated_effort_hours=8.0,
+            affected_components=["Kernel"],
+        )
+        council._add_proposal(p1, source="architect")
+        council._add_proposal(p2, source="test_oracle")
+
+        ranked = council.rank_backlog(deduplicate=False)
+        assert len(ranked) == 2
+        assert ranked[0].proposal.id == "p1"
+        assert ranked[0].rank == 1
+        assert ranked[0].priority_score > ranked[1].priority_score
+
+    def test_deduplication_by_component_overlap(self, tmp_path):
+        council = CitizenCouncil()
+        p1 = ImprovementProposal(
+            id="p1",
+            title="First",
+            problem="P1",
+            confidence_score=0.9,
+            estimated_effort_hours=1.0,
+            affected_components=["Factory", "Kernel"],
+        )
+        p2 = ImprovementProposal(
+            id="p2",
+            title="Second",
+            problem="P2",
+            confidence_score=0.8,
+            estimated_effort_hours=1.0,
+            affected_components=["Factory", "Mind"],
+        )
+        council._add_proposal(p1, source="architect")
+        council._add_proposal(p2, source="conversation_designer")
+
+        ranked = council.rank_backlog(deduplicate=True)
+        assert len(ranked) == 1
+        assert ranked[0].duplicates == ["p2"]

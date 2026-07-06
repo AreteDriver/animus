@@ -123,8 +123,10 @@ class TestMcpServerCreation:
     def test_tool_count(self, server):
         tools = server._tool_manager.list_tools()
         # 4 memory + 2 versioning + 3 task + 1 brief + 1 workflow + 1 harvest
-        # + 4 watchlist + 3 transcripts + 1 self-improve = 20
-        assert len(tools) == 20
+        # + 4 watchlist + 3 transcripts + 1 self-improve
+        # + 2 architect + 2 conversation_designer + 2 knowledge_curator
+        # + 2 test_oracle + 4 proposal_queue + 2 citizen_council = 34
+        assert len(tools) == 34
 
 
 class TestMemoryTools:
@@ -809,7 +811,7 @@ class TestArchitectTools:
         mock_config.citizens.codebase_path = str(tmp_path)
         mock_config.citizens.auto_store_proposals = False
 
-        with patch("animus.mcp_server.ArchitectCitizen") as mock_cls:
+        with patch("animus.citizens.ArchitectCitizen") as mock_cls:
             mock_architect = MagicMock()
             mock_cls.return_value = mock_architect
 
@@ -856,7 +858,7 @@ class TestArchitectTools:
         mock_config.citizens.enabled = True
         mock_config.citizens.codebase_path = str(tmp_path)
 
-        with patch("animus.mcp_server.ArchitectCitizen") as mock_cls:
+        with patch("animus.citizens.ArchitectCitizen") as mock_cls:
             mock_architect = MagicMock()
             mock_cls.return_value = mock_architect
             mock_architect.observe_codebase.return_value = []
@@ -889,7 +891,7 @@ class TestArchitectTools:
         mock_config.citizens.enabled = True
         mock_config.citizens.codebase_path = "/tmp/test"
 
-        with patch("animus.mcp_server.ArchitectCitizen") as mock_cls:
+        with patch("animus.citizens.ArchitectCitizen") as mock_cls:
             mock_architect = MagicMock()
             mock_cls.return_value = mock_architect
             mock_architect.list_pending_proposals.return_value = []
@@ -903,7 +905,7 @@ class TestArchitectTools:
         mock_config.citizens.enabled = True
         mock_config.citizens.codebase_path = "/tmp/test"
 
-        with patch("animus.mcp_server.ArchitectCitizen") as mock_cls:
+        with patch("animus.citizens.ArchitectCitizen") as mock_cls:
             mock_architect = MagicMock()
             mock_cls.return_value = mock_architect
 
@@ -924,6 +926,407 @@ class TestArchitectTools:
             assert "ADL-001" in text
             assert "Fix parser" in text
             assert "medium" in text
+
+
+class TestConversationDesignerTools:
+    """Test Conversation Designer Citizen MCP tools."""
+
+    def test_tools_exist(self, server):
+        tools = server._tool_manager.list_tools()
+        tool_names = {t.name for t in tools}
+        assert "animus_conversation_designer_scan" in tool_names
+        assert "animus_conversation_designer_list_proposals" in tool_names
+
+    def test_conversation_designer_scan(self, server, mock_config):
+        mock_config.citizens.enabled = True
+
+        with patch("animus.citizens.ConversationDesignerCitizen") as mock_cls:
+            mock_designer = MagicMock()
+            mock_cls.return_value = mock_designer
+
+            mock_obs = MagicMock()
+            mock_obs.severity = "high"
+            mock_obs.description = "Repeated 'explain this' prompts"
+
+            mock_designer.observe_repeated_prompts.return_value = [mock_obs]
+            mock_designer.observe_vague_requests.return_value = []
+            mock_designer.observe_correction_loops.return_value = []
+
+            proposal = MagicMock()
+            proposal.id = "CD-001"
+            proposal.title = "Add reusable prompt templates"
+            proposal.confidence.value = "high"
+            proposal.confidence_score = 0.85
+            mock_designer.generate_proposal.return_value = proposal
+            mock_designer.store_proposal.return_value = True
+
+            result = _run(
+                server.call_tool("animus_conversation_designer_scan", {})
+            )
+            text = result[0][0].text
+            assert "Conversation Designer Scan Report" in text
+            assert "Add reusable prompt templates" in text
+            assert "Repeated 'explain this' prompts" in text
+            assert "Proposal stored in memory for review" in text
+
+    def test_conversation_designer_scan_no_findings(self, server, mock_config):
+        mock_config.citizens.enabled = True
+
+        with patch("animus.citizens.ConversationDesignerCitizen") as mock_cls:
+            mock_designer = MagicMock()
+            mock_cls.return_value = mock_designer
+
+            mock_designer.observe_repeated_prompts.return_value = []
+            mock_designer.observe_vague_requests.return_value = []
+            mock_designer.observe_correction_loops.return_value = []
+            mock_designer.generate_proposal.return_value = None
+
+            result = _run(
+                server.call_tool("animus_conversation_designer_scan", {})
+            )
+            text = result[0][0].text
+            assert "No actionable conversation patterns found" in text
+
+    def test_conversation_designer_list_proposals_empty(self, server, mock_config, mock_memory):
+        mock_config.citizens.enabled = True
+        mock_config.citizens.conversation_log_dir = "/tmp/logs"
+
+        with patch("animus.citizens.ConversationDesignerCitizen") as mock_cls:
+            mock_designer = MagicMock()
+            mock_cls.return_value = mock_designer
+
+            result = _run(
+                server.call_tool("animus_conversation_designer_list_proposals", {"status": "pending"})
+            )
+            assert "No pending proposals found" in result[0][0].text
+
+
+class TestKnowledgeCuratorTools:
+    """Test Knowledge Curator Citizen MCP tools."""
+
+    def test_tools_exist(self, server):
+        tools = server._tool_manager.list_tools()
+        tool_names = {t.name for t in tools}
+        assert "animus_knowledge_curator_scan" in tool_names
+        assert "animus_knowledge_curator_list_proposals" in tool_names
+
+    def test_knowledge_curator_scan(self, server, mock_config, tmp_path):
+        mock_config.citizens.enabled = True
+        mock_config.citizens.codebase_path = str(tmp_path)
+
+        with patch("animus.citizens.KnowledgeCuratorCitizen") as mock_cls:
+            mock_curator = MagicMock()
+            mock_cls.return_value = mock_curator
+
+            mock_obs = MagicMock()
+            mock_obs.severity = "medium"
+            mock_obs.description = "Stale reference to old API"
+
+            mock_curator.observe_stale_references.return_value = [mock_obs]
+            mock_curator.observe_contradictions.return_value = []
+            mock_curator.observe_outdated_claims.return_value = []
+            mock_curator.observe_orphan_topics.return_value = []
+
+            proposal = MagicMock()
+            proposal.id = "KC-001"
+            proposal.title = "Update API references"
+            proposal.confidence.value = "medium"
+            proposal.confidence_score = 0.7
+            mock_curator.generate_proposal.return_value = proposal
+            mock_curator.store_proposal.return_value = True
+
+            result = _run(
+                server.call_tool("animus_knowledge_curator_scan", {})
+            )
+            text = result[0][0].text
+            assert "Knowledge Curator Scan Report" in text
+            assert "Update API references" in text
+            assert "Stale reference to old API" in text
+            assert "Proposal stored in memory for review" in text
+
+    def test_knowledge_curator_scan_no_findings(self, server, mock_config, tmp_path):
+        mock_config.citizens.enabled = True
+        mock_config.citizens.codebase_path = str(tmp_path)
+
+        with patch("animus.citizens.KnowledgeCuratorCitizen") as mock_cls:
+            mock_curator = MagicMock()
+            mock_cls.return_value = mock_curator
+
+            mock_curator.observe_stale_references.return_value = []
+            mock_curator.observe_contradictions.return_value = []
+            mock_curator.observe_outdated_claims.return_value = []
+            mock_curator.observe_orphan_topics.return_value = []
+            mock_curator.generate_proposal.return_value = None
+
+            result = _run(
+                server.call_tool("animus_knowledge_curator_scan", {})
+            )
+            text = result[0][0].text
+            assert "No actionable knowledge drift found" in text
+
+    def test_knowledge_curator_list_proposals_empty(self, server, mock_config, mock_memory):
+        mock_config.citizens.enabled = True
+        mock_config.citizens.codebase_path = "/tmp/test"
+
+        with patch("animus.citizens.KnowledgeCuratorCitizen") as mock_cls:
+            mock_curator = MagicMock()
+            mock_cls.return_value = mock_curator
+
+            result = _run(
+                server.call_tool("animus_knowledge_curator_list_proposals", {"status": "pending"})
+            )
+            assert "No pending proposals found" in result[0][0].text
+
+
+class TestTestOracleTools:
+    """Test Test Oracle Citizen MCP tools."""
+
+    def test_tools_exist(self, server):
+        tools = server._tool_manager.list_tools()
+        tool_names = {t.name for t in tools}
+        assert "animus_test_oracle_scan" in tool_names
+        assert "animus_test_oracle_list_proposals" in tool_names
+
+    def test_test_oracle_scan(self, server, mock_config, tmp_path):
+        mock_config.citizens.enabled = True
+        mock_config.citizens.codebase_path = str(tmp_path)
+
+        with patch("animus.citizens.TestOracleCitizen") as mock_cls:
+            mock_oracle = MagicMock()
+            mock_cls.return_value = mock_oracle
+
+            mock_failure = MagicMock()
+            mock_failure.severity = "high"
+            mock_failure.description = "test_foo_bar fails intermittently"
+
+            mock_gap = MagicMock()
+            mock_gap.severity = "medium"
+            mock_gap.description = "core/app.py has 30% coverage"
+
+            mock_drift = MagicMock()
+            mock_drift.severity = "low"
+            mock_drift.description = "Eval score dropped 5%"
+
+            mock_oracle.observe_test_failures.return_value = [mock_failure]
+            mock_oracle.observe_coverage_gaps.return_value = [mock_gap]
+            mock_oracle.observe_eval_drift.return_value = [mock_drift]
+
+            proposal = MagicMock()
+            proposal.id = "TO-001"
+            proposal.title = "Improve test reliability"
+            proposal.confidence.value = "high"
+            proposal.confidence_score = 0.9
+            mock_oracle.generate_proposal.return_value = proposal
+            mock_oracle.store_proposal.return_value = True
+
+            result = _run(
+                server.call_tool("animus_test_oracle_scan", {})
+            )
+            text = result[0][0].text
+            assert "Test Oracle Scan Report" in text
+            assert "Improve test reliability" in text
+            assert "test_foo_bar fails intermittently" in text
+            assert "core/app.py has 30% coverage" in text
+            assert "Proposal stored in memory for review" in text
+
+    def test_test_oracle_scan_no_findings(self, server, mock_config, tmp_path):
+        mock_config.citizens.enabled = True
+        mock_config.citizens.codebase_path = str(tmp_path)
+
+        with patch("animus.citizens.TestOracleCitizen") as mock_cls:
+            mock_oracle = MagicMock()
+            mock_cls.return_value = mock_oracle
+
+            mock_oracle.observe_test_failures.return_value = []
+            mock_oracle.observe_coverage_gaps.return_value = []
+            mock_oracle.observe_eval_drift.return_value = []
+            mock_oracle.generate_proposal.return_value = None
+
+            result = _run(
+                server.call_tool("animus_test_oracle_scan", {})
+            )
+            text = result[0][0].text
+            assert "No actionable quality regressions found" in text
+
+    def test_test_oracle_list_proposals_empty(self, server, mock_config, mock_memory):
+        mock_config.citizens.enabled = True
+        mock_config.citizens.codebase_path = "/tmp/test"
+
+        with patch("animus.citizens.TestOracleCitizen") as mock_cls:
+            mock_oracle = MagicMock()
+            mock_cls.return_value = mock_oracle
+
+            result = _run(
+                server.call_tool("animus_test_oracle_list_proposals", {"status": "pending"})
+            )
+            assert "No pending proposals found" in result[0][0].text
+
+
+class TestProposalQueueTools:
+    """Test Proposal Queue MCP tools."""
+
+    def test_tools_exist(self, server):
+        tools = server._tool_manager.list_tools()
+        tool_names = {t.name for t in tools}
+        assert "animus_proposal_queue_list" in tool_names
+        assert "animus_proposal_queue_approve" in tool_names
+        assert "animus_proposal_queue_reject" in tool_names
+        assert "animus_proposal_queue_stats" in tool_names
+
+    def test_proposal_queue_list_pending(self, server, mock_memory):
+        mock_qp = MagicMock()
+        mock_qp.proposal.id = "PROP-001"
+        mock_qp.proposal.title = "Fix flaky tests"
+        mock_qp.current_status.value = "pending"
+        mock_qp.priority = 3
+        mock_qp.tags = ["testing", "urgent"]
+        mock_qp.proposal.confidence.value = "high"
+        mock_qp.proposal.confidence_score = 0.85
+        mock_qp.proposal.estimated_effort_hours = 4.0
+        mock_qp.proposal.problem = "Tests fail randomly"
+        mock_qp.proposal.recommendation = "Add retries and isolation"
+        mock_qp.transitions = [
+            MagicMock(from_status=MagicMock(value="submitted"), to_status=MagicMock(value="pending"), actor="citizen")
+        ]
+
+        with patch("animus.citizens.ProposalQueue") as mock_cls:
+            mock_queue = MagicMock()
+            mock_cls.return_value = mock_queue
+            mock_queue.list_pending.return_value = [mock_qp]
+
+            result = _run(
+                server.call_tool("animus_proposal_queue_list", {"status": "pending"})
+            )
+            text = result[0][0].text
+            assert "Proposal Queue (pending)" in text
+            assert "PROP-001" in text
+            assert "Fix flaky tests" in text
+            assert "submitted → pending by citizen" in text
+
+    def test_proposal_queue_list_empty(self, server, mock_memory):
+        with patch("animus.citizens.ProposalQueue") as mock_cls:
+            mock_queue = MagicMock()
+            mock_cls.return_value = mock_queue
+            mock_queue.list_pending.return_value = []
+
+            result = _run(
+                server.call_tool("animus_proposal_queue_list", {"status": "pending"})
+            )
+            assert "No proposals with status 'pending' found" in result[0][0].text
+
+    def test_proposal_queue_approve(self, server, mock_memory):
+        mock_qp = MagicMock()
+        mock_qp.current_status.value = "approved"
+
+        with patch("animus.citizens.ProposalQueue") as mock_cls:
+            mock_queue = MagicMock()
+            mock_cls.return_value = mock_queue
+            mock_queue.approve.return_value = mock_qp
+
+            result = _run(
+                server.call_tool("animus_proposal_queue_approve", {"proposal_id": "PROP-001", "reason": "LGTM"})
+            )
+            text = result[0][0].text
+            assert "PROP-001 approved" in text
+            assert "approved" in text
+
+    def test_proposal_queue_reject(self, server, mock_memory):
+        mock_qp = MagicMock()
+        mock_qp.current_status.value = "rejected"
+
+        with patch("animus.citizens.ProposalQueue") as mock_cls:
+            mock_queue = MagicMock()
+            mock_cls.return_value = mock_queue
+            mock_queue.reject.return_value = mock_qp
+
+            result = _run(
+                server.call_tool("animus_proposal_queue_reject", {"proposal_id": "PROP-001", "reason": "Not feasible"})
+            )
+            text = result[0][0].text
+            assert "PROP-001 rejected" in text
+            assert "rejected" in text
+
+    def test_proposal_queue_stats(self, server, mock_memory):
+        stats = {"total": 5, "pending": 2, "approved": 1, "commissioned": 1, "complete": 1, "rejected": 0}
+
+        with patch("animus.citizens.ProposalQueue") as mock_cls:
+            mock_queue = MagicMock()
+            mock_cls.return_value = mock_queue
+            mock_queue.stats.return_value = stats
+
+            result = _run(
+                server.call_tool("animus_proposal_queue_stats", {})
+            )
+            data = json.loads(result[0][0].text)
+            assert data["total"] == 5
+            assert data["pending"] == 2
+
+
+class TestCitizenCouncilTools:
+    """Test Citizen Council MCP tools."""
+
+    def test_tools_exist(self, server):
+        tools = server._tool_manager.list_tools()
+        tool_names = {t.name for t in tools}
+        assert "animus_citizen_council_backlog" in tool_names
+        assert "animus_citizen_council_summary" in tool_names
+
+    def test_citizen_council_backlog(self, server, mock_config, mock_memory):
+        mock_config.citizens.enabled = True
+
+        mock_rp = MagicMock()
+        mock_rp.proposal.id = "CC-001"
+        mock_rp.proposal.title = "Unified backlog item"
+        mock_rp.proposal.confidence.value = "high"
+        mock_rp.proposal.confidence_score = 0.9
+        mock_rp.proposal.estimated_effort_hours = 3.0
+        mock_rp.proposal.affected_components = ["core/app.py"]
+        mock_rp.proposal.problem = "Multiple citizens flagged this"
+        mock_rp.proposal.recommendation = "Fix it once"
+        mock_rp.rank = 1
+        mock_rp.priority_score = 2.5
+        mock_rp.severity_score = 3
+        mock_rp.source_citizens = ["architect", "test_oracle"]
+        mock_rp.duplicates = []
+
+        with patch("animus.citizens.CitizenCouncil") as mock_cls:
+            mock_council = MagicMock()
+            mock_cls.return_value = mock_council
+            mock_council.collect_from_memory.return_value = 1
+            mock_council.rank_backlog.return_value = [mock_rp]
+            mock_council.summary.return_value = {"unique_components": 1}
+
+            result = _run(
+                server.call_tool("animus_citizen_council_backlog", {})
+            )
+            text = result[0][0].text
+            assert "Citizen Council — Unified Ranked Backlog" in text
+            assert "Unified backlog item" in text
+            assert "architect" in text
+
+    def test_citizen_council_summary(self, server, mock_config, mock_memory):
+        mock_config.citizens.enabled = True
+
+        summary = {
+            "total_proposals": 3,
+            "unique_components": 2,
+            "total_estimated_effort_hours": 12.5,
+            "sources": {"architect": 2, "test_oracle": 1},
+        }
+
+        with patch("animus.citizens.CitizenCouncil") as mock_cls:
+            mock_council = MagicMock()
+            mock_cls.return_value = mock_council
+            mock_council.collect_from_memory.return_value = 3
+            mock_council.summary.return_value = summary
+
+            result = _run(
+                server.call_tool("animus_citizen_council_summary", {})
+            )
+            data = json.loads(result[0][0].text)
+            assert data["total_proposals"] == 3
+            assert data["unique_components"] == 2
+            assert data["sources"]["architect"] == 2
 
 
 class TestMcpImportError:
