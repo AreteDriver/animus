@@ -17,10 +17,12 @@ class ProposalStatus(str, Enum):
 
     DRAFT = "draft"
     SUBMITTED = "submitted"
+    PENDING_REVIEW = "pending_review"
     UNDER_REVIEW = "under_review"
     APPROVED = "approved"
     REJECTED = "rejected"
     DEFERRED = "deferred"
+    COMMISSIONED = "commissioned"
     IMPLEMENTING = "implementing"
     IMPLEMENTED = "implemented"
     EVALUATING = "evaluating"
@@ -115,11 +117,25 @@ class ImprovementProposal:
         """Serialize to dictionary for storage and transmission."""
         from dataclasses import asdict
 
-        return asdict(self)
+        data = asdict(self)
+
+        # Convert datetime objects to ISO strings for JSON serialization
+        def _serialize(obj):
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            if isinstance(obj, list):
+                return [_serialize(i) for i in obj]
+            if isinstance(obj, dict):
+                return {k: _serialize(v) for k, v in obj.items()}
+            return obj
+
+        return _serialize(data)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ImprovementProposal:
         """Deserialize from dictionary."""
+        from datetime import datetime as _dt
+
         # Handle nested dataclasses
         evidence = [EvidenceItem(**e) for e in data.get("evidence", [])]
         risks = [RiskAssessment(**r) for r in data.get("potential_risks", [])]
@@ -127,6 +143,15 @@ class ImprovementProposal:
         # Handle enums
         status = ProposalStatus(data.get("status", "draft"))
         confidence_label = ProposalConfidence(data.get("confidence_label", "medium"))
+
+        # Parse ISO datetime strings back to datetime objects
+        datetime_fields = {"created_at", "updated_at", "approved_at", "implemented_at", "timestamp"}
+        for field_name in datetime_fields:
+            if field_name in data and isinstance(data[field_name], str):
+                try:
+                    data[field_name] = _dt.fromisoformat(data[field_name])
+                except ValueError:
+                    pass
 
         # Filter out handled keys
         filtered = {

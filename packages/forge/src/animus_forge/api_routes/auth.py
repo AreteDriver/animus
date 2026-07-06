@@ -45,12 +45,21 @@ def login(request: Request, login_request: LoginRequest):
     """Login endpoint. Rate limited to 5 requests/minute per IP.
 
     Authentication methods (in priority order):
-    1. Configured credentials via API_CREDENTIALS env var
-    2. Demo auth (password='demo') if ALLOW_DEMO_AUTH=true (default in dev)
+    1. Configured credentials via API_CREDENTIALS env var (production)
+    2. Demo auth (password='demo') if ALLOW_DEMO_AUTH=true (development only)
 
-    Configure credentials (bcrypt preferred):
-        API_CREDENTIALS='user1:$2b$12$...,user2:$2b$12$...'
-        Generate hash: python -c "import bcrypt; print(bcrypt.hashpw(b'password', bcrypt.gensalt()).decode())"
+    Production setup:
+        1. Generate bcrypt hash:
+           python -c "import bcrypt; print(bcrypt.hashpw(b'your_password', bcrypt.gensalt()).decode())"
+        2. Set env var:
+           API_CREDENTIALS='user1:$2b$12$...'
+        3. Commissioner env vars:
+           FORGE_API_USER=user1
+           FORGE_API_PASS=your_password
+
+    Development setup (insecure):
+        ALLOW_DEMO_AUTH=true
+        Then login with any user_id and password 'demo'.
     """
     settings = get_settings()
 

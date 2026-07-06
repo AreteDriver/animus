@@ -19,6 +19,15 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from animus.citizens import (
+    ArchitectCitizen,
+    ConversationDesignerCitizen,
+    ForgeCommissioner,
+    KnowledgeCuratorCitizen,
+    ProposalQueue,
+    TestOracleCitizen,
+)
+from animus.citizens.proposal import ProposalStatus
 from animus.cognitive import CognitiveLayer, ModelConfig
 from animus.forge.engine import ForgeEngine
 from animus.forge.models import AgentConfig, GateConfig, WorkflowConfig, WorkflowState
@@ -56,6 +65,8 @@ class BootstrapResult:
     consensus: ConsensusResult | None
     improvements_written: bool
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    citizen_proposals: list[dict] = field(default_factory=list)
+    commission_results: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -66,6 +77,8 @@ class BootstrapResult:
             "consensus_approved": self.consensus.approved if self.consensus else None,
             "improvements_written": self.improvements_written,
             "timestamp": self.timestamp,
+            "citizen_proposals": self.citizen_proposals,
+            "commission_results": self.commission_results,
         }
 
 
@@ -280,10 +293,20 @@ class BootstrapLoop:
         data_dir: Path | None = None,
         provider: str = "mock",
         model: str = "mock",
+        enable_architect: bool = True,
+        enable_conversation_designer: bool = True,
+        enable_knowledge_curator: bool = True,
+        enable_test_oracle: bool = True,
+        use_local_forge: bool = False,
     ):
         self.identity = identity
         self.provider = provider
         self.model = model
+        self._enable_architect = enable_architect
+        self._enable_conversation_designer = enable_conversation_designer
+        self._enable_knowledge_curator = enable_knowledge_curator
+        self._enable_test_oracle = enable_test_oracle
+        self._use_local_forge = use_local_forge
 
         # Initialize cognitive layer (default to mock for bootstrap)
         if cognitive is not None:
@@ -324,12 +347,70 @@ class BootstrapLoop:
             mem_dir = data_dir or (identity.root / ".animus")
             self.memory = MemoryLayer(data_dir=mem_dir, backend="json")
 
+        # Proposal queue for tracking approval lifecycle
+        queue_path = data_dir / "proposal_queue.json" if data_dir else identity.root / ".animus" / "proposal_queue.json"
+        self.proposal_queue = ProposalQueue(
+            memory_layer=self.memory,
+            storage_path=str(queue_path),
+        )
+        self.proposal_queue.load_from_memory()
+
+        # Forge commissioner for executing approved proposals
+        self.forge_commissioner = ForgeCommissioner(
+            codebase_path=identity.root,
+            forge_host="localhost",
+            forge_port=8000,
+            use_local_engine=self._use_local_forge,
+            cognitive=self.cognitive if self._use_local_forge else None,
+        )
+
         # Forge engine for workflow execution
         checkpoint_dir = (data_dir or identity.root / ".animus") / "checkpoints"
         self.forge = ForgeEngine(
             cognitive=self.cognitive,
             checkpoint_dir=checkpoint_dir,
         )
+
+        # Architect citizen for continuous observation
+        if self._enable_architect:
+            self.architect = ArchitectCitizen(
+                codebase_path=identity.root,
+                memory_layer=self.memory,
+            )
+            logger.info("Architect Citizen enabled for bootstrap loop")
+        else:
+            self.architect = None
+
+        # Conversation Designer citizen for NL interface improvements
+        if self._enable_conversation_designer:
+            self.conversation_designer = ConversationDesignerCitizen(
+                conversation_log_dir=data_dir / "conversations" if data_dir else identity.root / ".animus" / "conversations",
+                memory_layer=self.memory,
+            )
+            logger.info("Conversation Designer Citizen enabled for bootstrap loop")
+        else:
+            self.conversation_designer = None
+
+        # Knowledge Curator citizen for knowledge accuracy
+        if self._enable_knowledge_curator:
+            self.knowledge_curator = KnowledgeCuratorCitizen(
+                codebase_path=identity.root,
+                memory_layer=self.memory,
+            )
+            logger.info("Knowledge Curator Citizen enabled for bootstrap loop")
+        else:
+            self.knowledge_curator = None
+
+        # Test Oracle citizen for test and eval health
+        if self._enable_test_oracle:
+            self.test_oracle = TestOracleCitizen(
+                codebase_path=identity.root,
+                memory_layer=self.memory,
+                eval_results_dir=data_dir / ".animus" / "eval_results" if data_dir else identity.root / ".animus" / "eval_results",
+            )
+            logger.info("Test Oracle Citizen enabled for bootstrap loop")
+        else:
+            self.test_oracle = None
 
         self._cycle_count = identity.reflection_count
         self._results: list[BootstrapResult] = []
@@ -415,13 +496,88 @@ class BootstrapLoop:
         )
         self._results.append(result)
 
+        # ------------------------------------------------------------------
+        # Phase 0 Citizen observation cycles
+        # ------------------------------------------------------------------
+        citizen_proposals: list[dict] = []
+
+        architect_result = self.run_architect_cycle()
+        if architect_result:
+            citizen_proposals.append({"citizen": "architect", "proposal": architect_result})
+
+        designer_result = self.run_conversation_designer_cycle()
+        if designer_result:
+            citizen_proposals.append({"citizen": "conversation_designer", "proposal": designer_result})
+
+        curator_result = self.run_knowledge_curator_cycle()
+        if curator_result:
+            citizen_proposals.append({"citizen": "knowledge_curator", "proposal": curator_result})
+
+        oracle_result = self.run_test_oracle_cycle()
+        if oracle_result:
+            citizen_proposals.append({"citizen": "test_oracle", "proposal": oracle_result})
+
+        result.citizen_proposals = citizen_proposals
+
+        # ------------------------------------------------------------------
+        # Auto-execute approved proposals via Forge Commissioner
+        # ------------------------------------------------------------------
+        commission_results = self._commission_approved_proposals()
+        result.commission_results = [r.to_dict() for r in commission_results]
+
         logger.info(
             f"Bootstrap cycle #{self._cycle_count} complete: "
             f"reviewed {len(files)} files, "
-            f"consensus={'approved' if consensus.approved else 'rejected'}"
+            f"consensus={'approved' if consensus.approved else 'rejected'}, "
+            f"citizen_proposals={len(citizen_proposals)}, "
+            f"commissions={len(commission_results)}"
         )
 
         return result
+
+    def _commission_approved_proposals(self) -> list:
+        """Commission all APPROVED proposals via Forge.
+
+        Reloads the queue from memory, finds proposals in APPROVED status,
+        commissions them via ForgeCommissioner, and transitions them to
+        COMMISSIONED → COMPLETE on success.
+
+        Returns:
+            List of CommissionResult objects.
+        """
+        self.proposal_queue.load_from_memory()
+        approved = self.proposal_queue.list_approved()
+        if not approved:
+            return []
+
+        results = []
+        for qp in approved:
+            proposal = qp.proposal
+            logger.info(
+                f"Commissioning approved proposal {proposal.id}: {proposal.title}"
+            )
+
+            # Execute via Forge Commissioner
+            commission_result = self.forge_commissioner.commission(proposal)
+            results.append(commission_result)
+
+            if commission_result.success:
+                self.proposal_queue.commission(
+                    proposal.id, actor="forge", reason="Auto-executed at end of bootstrap cycle"
+                )
+                self.proposal_queue.complete(
+                    proposal.id, actor="forge", reason=f"Forge execution succeeded: {commission_result.stage_reached}"
+                )
+                logger.info(
+                    f"Proposal {proposal.id} commissioned successfully. Stage: {commission_result.stage_reached}"
+                )
+            else:
+                logger.warning(
+                    f"Proposal {proposal.id} commission failed: {commission_result.error}"
+                )
+                # Leave in APPROVED state for retry next cycle
+
+        return results
 
     def _read_files(self, files: list[str]) -> str:
         """Read and concatenate source files."""
@@ -477,6 +633,153 @@ class BootstrapLoop:
             subtype="self-reflection",
             sensitivity=Sensitivity.PERSONAL,
         )
+
+    def run_architect_cycle(self) -> dict | None:
+        """Run an Architect Citizen observation cycle.
+
+        This is called automatically at the end of each bootstrap cycle
+        when enable_architect=True. It observes the codebase, generates
+        an improvement proposal, and stores it in memory for human review.
+
+        Returns:
+            Proposal dict if one was generated, None otherwise.
+        """
+        if self.architect is None:
+            return None
+
+        logger.info("Running Architect observation cycle...")
+
+        try:
+            # Focus on the animus package during bootstrap (relative to codebase root)
+            focus = ["animus"]
+            self.architect.observe_codebase(focus_paths=focus)
+            report = self.architect.analyze()
+            proposal = self.architect.generate_proposal(report)
+
+            if proposal:
+                self.architect.store_proposal(proposal)
+                self.proposal_queue.submit(
+                    proposal, priority=1, tags=["architect", "auto-generated"]
+                )
+                logger.info(
+                    f"Architect generated proposal {proposal.id}: {proposal.title}"
+                )
+                return proposal.to_dict()
+            else:
+                logger.info("Architect found no actionable findings this cycle")
+                return None
+
+        except Exception as e:
+            logger.error(f"Architect cycle failed: {e}")
+            return None
+
+    def run_conversation_designer_cycle(self) -> dict | None:
+        """Run a Conversation Designer observation cycle.
+
+        Called automatically at the end of each bootstrap cycle when
+        enable_conversation_designer=True. It analyzes conversation logs
+        for repeated prompts, vague requests, and correction loops, then
+        generates an improvement proposal for NL interface improvements.
+
+        Returns:
+            Proposal dict if one was generated, None otherwise.
+        """
+        if self.conversation_designer is None:
+            return None
+
+        logger.info("Running Conversation Designer observation cycle...")
+
+        try:
+            proposal = self.conversation_designer.generate_proposal()
+
+            if proposal:
+                self.conversation_designer.store_proposal(proposal)
+                self.proposal_queue.submit(
+                    proposal, priority=2, tags=["conversation_designer", "auto-generated"]
+                )
+                logger.info(
+                    f"Conversation Designer generated proposal {proposal.id}: {proposal.title}"
+                )
+                return proposal.to_dict()
+            else:
+                logger.info("Conversation Designer found no actionable patterns this cycle")
+                return None
+
+        except Exception as e:
+            logger.error(f"Conversation Designer cycle failed: {e}")
+            return None
+
+    def run_knowledge_curator_cycle(self) -> dict | None:
+        """Run a Knowledge Curator observation cycle.
+
+        Called automatically at the end of each bootstrap cycle when
+        enable_knowledge_curator=True. It scans memory for stale references,
+        contradictions, outdated claims, and orphan topics, then generates
+        an improvement proposal for knowledge maintenance.
+
+        Returns:
+            Proposal dict if one was generated, None otherwise.
+        """
+        if self.knowledge_curator is None:
+            return None
+
+        logger.info("Running Knowledge Curator observation cycle...")
+
+        try:
+            proposal = self.knowledge_curator.generate_proposal()
+
+            if proposal:
+                self.knowledge_curator.store_proposal(proposal)
+                self.proposal_queue.submit(
+                    proposal, priority=2, tags=["knowledge_curator", "auto-generated"]
+                )
+                logger.info(
+                    f"Knowledge Curator generated proposal {proposal.id}: {proposal.title}"
+                )
+                return proposal.to_dict()
+            else:
+                logger.info("Knowledge Curator found no actionable drift this cycle")
+                return None
+
+        except Exception as e:
+            logger.error(f"Knowledge Curator cycle failed: {e}")
+            return None
+
+    def run_test_oracle_cycle(self) -> dict | None:
+        """Run a Test Oracle observation cycle.
+
+        Called automatically at the end of each bootstrap cycle when
+        enable_test_oracle=True. It analyzes test suite health, eval
+        results, and coverage trends, then generates an improvement
+        proposal for quality maintenance.
+
+        Returns:
+            Proposal dict if one was generated, None otherwise.
+        """
+        if self.test_oracle is None:
+            return None
+
+        logger.info("Running Test Oracle observation cycle...")
+
+        try:
+            proposal = self.test_oracle.generate_proposal()
+
+            if proposal:
+                self.test_oracle.store_proposal(proposal)
+                self.proposal_queue.submit(
+                    proposal, priority=1, tags=["test_oracle", "auto-generated"]
+                )
+                logger.info(
+                    f"Test Oracle generated proposal {proposal.id}: {proposal.title}"
+                )
+                return proposal.to_dict()
+            else:
+                logger.info("Test Oracle found no actionable regressions this cycle")
+                return None
+
+        except Exception as e:
+            logger.error(f"Test Oracle cycle failed: {e}")
+            return None
 
     @property
     def cycle_count(self) -> int:

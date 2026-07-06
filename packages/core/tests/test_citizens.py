@@ -135,8 +135,8 @@ class TestArchitectCitizen:
             conversation_log_dir=tmp_path / "nonexistent",
         )
         observations = architect.observe_conversations()
-        assert len(observations) == 1
-        assert "not configured" in observations[0].description
+        # No logs configured — gracefully returns empty, not a false-positive finding.
+        assert len(observations) == 0
 
     def test_analyze_empty_observations(self, tmp_path):
         architect = ArchitectCitizen(codebase_path=tmp_path)
@@ -187,11 +187,14 @@ class TestArchitectCitizen:
         proposal = architect.generate_proposal(report)
         assert proposal is not None
         assert proposal.status == ProposalStatus.DRAFT
-        assert proposal.confidence_score == 0.6
+        # Confidence is now dynamically scored from evidence quality
+        assert 0.25 <= proposal.confidence_score <= 1.0
         assert "parser.py" in proposal.problem
         assert proposal.affected_components == ["Factory", "Kernel"]
-        assert len(proposal.evidence) == 1
-        assert len(proposal.potential_risks) == 2
+        assert len(proposal.evidence) >= 1
+        assert len(proposal.potential_risks) >= 2
+        # Senior skillsets should enrich the recommendation
+        assert "Trade-off analysis" in proposal.recommendation or "Estimated effort" in proposal.recommendation
 
     def test_store_proposal_without_memory(self, tmp_path):
         architect = ArchitectCitizen(codebase_path=tmp_path)
@@ -204,8 +207,8 @@ class TestArchitectCitizen:
         proposal = ImprovementProposal(id="1", title="Test", problem="P", recommendation="R")
 
         assert architect.store_proposal(proposal) is True
-        mock_memory.store.assert_called_once()
-        call_kwargs = mock_memory.store.call_args.kwargs
+        mock_memory.remember.assert_called_once()
+        call_kwargs = mock_memory.remember.call_args.kwargs
         assert "architect" in call_kwargs["tags"]
         assert "proposal" in call_kwargs["tags"]
 
@@ -264,6 +267,129 @@ class TestArchitectCitizen:
         assert observations[0].severity == "high"
 
 
+    def test_senior_dependency_analysis_tight_coupling(self, tmp_path):
+        # Create a module that imports many others (>10 threshold)
+        pkg = tmp_path / "core"
+        pkg.mkdir()
+        main = pkg / "main.py"
+        main.write_text(
+            "import os\nimport sys\nimport json\nimport re\nimport ast\n"
+            "import typing\nimport collections\nimport itertools\nimport functools\n"
+            "import pathlib\nimport datetime\nimport hashlib\nimport uuid\nimport logging\n"
+            "\ndef hello(): pass\n"
+        )
+        architect = ArchitectCitizen(codebase_path=tmp_path)
+        obs = architect._analyze_dependencies()
+        assert len(obs) >= 1
+        assert any(o.context.get("pattern_type") == "tight_coupling" for o in obs)
+
+    def test_senior_dependency_analysis_circular_import(self, tmp_path):
+        pkg = tmp_path / "core"
+        pkg.mkdir()
+        a = pkg / "a.py"
+        b = pkg / "b.py"
+        a.write_text("from . import b\n")
+        b.write_text("from . import a\n")
+        architect = ArchitectCitizen(codebase_path=tmp_path)
+        obs = architect._analyze_dependencies()
+        assert any(o.context.get("pattern_type") == "circular_import" for o in obs)
+
+    def test_senior_detect_god_class(self, tmp_path):
+        pkg = tmp_path / "core"
+        pkg.mkdir()
+        f = pkg / "big.py"
+        methods = "\n".join(f"    def method_{i}(self): pass" for i in range(20))
+        f.write_text(f"class GodClass:\n{methods}\n")
+        architect = ArchitectCitizen(codebase_path=tmp_path)
+        obs = architect._detect_architectural_patterns()
+        assert any(o.context.get("pattern_type") == "god_class" for o in obs)
+
+    def test_senior_detect_singleton_abuse(self, tmp_path):
+        pkg = tmp_path / "core"
+        pkg.mkdir()
+        f = pkg / "singleton.py"
+        f.write_text("class MySingleton:\n    def __new__(cls): pass\n")
+        architect = ArchitectCitizen(codebase_path=tmp_path)
+        obs = architect._detect_architectural_patterns()
+        assert any(o.context.get("pattern_type") == "singleton_abuse" for o in obs)
+
+    def test_senior_constraint_check_blocks_direct_modification(self, tmp_path):
+        architect = ArchitectCitizen(codebase_path=tmp_path)
+        proposal = ImprovementProposal(
+            id="1",
+            title="T",
+            problem="P",
+            recommendation="Modify directly the source code",
+            evaluation_plan="Run tests",
+            rollback_plan="Revert",
+            affected_components=["Mind"],
+        )
+        violations = architect._check_architectural_constraints(proposal)
+        assert any("modify directly" in v.lower() for v in violations)
+
+    def test_senior_constraint_check_requires_evaluation_plan(self, tmp_path):
+        architect = ArchitectCitizen(codebase_path=tmp_path)
+        proposal = ImprovementProposal(
+            id="1",
+            title="T",
+            problem="P",
+            recommendation="Refactor parser",
+            rollback_plan="Revert",
+            affected_components=["Mind"],
+        )
+        violations = architect._check_architectural_constraints(proposal)
+        assert any("evaluation plan" in v.lower() for v in violations)
+
+    def test_senior_impact_estimation_empty(self, tmp_path):
+        architect = ArchitectCitizen(codebase_path=tmp_path)
+        impact = architect._estimate_impact([])
+        assert impact["component_count"] == 0
+        assert impact["impact_score"] == 0.0
+
+    def test_senior_impact_estimation_with_files(self, tmp_path):
+        architect = ArchitectCitizen(codebase_path=tmp_path)
+        impact = architect._estimate_impact(["packages/core/animus/identity.py"])
+        assert impact["component_count"] >= 1
+        assert 0 < impact["impact_score"] <= 1.0
+
+    def test_senior_evidence_quality_score_no_evidence(self, tmp_path):
+        architect = ArchitectCitizen(codebase_path=tmp_path)
+        score = architect._score_evidence_quality([])
+        assert score == 0.3
+
+    def test_senior_evidence_quality_score_with_evidence(self, tmp_path):
+        from datetime import datetime
+        from animus.citizens.proposal import EvidenceItem
+
+        architect = ArchitectCitizen(codebase_path=tmp_path)
+        evidence = [
+            EvidenceItem(source="codebase", description="Issue in parser.py", data={"file": "parser.py"}),
+            EvidenceItem(source="evaluation", description="Low score", data={"score": 0.5}),
+        ]
+        score = architect._score_evidence_quality(evidence)
+        assert 0.4 < score <= 1.0
+
+    def test_senior_trade_off_analysis(self, tmp_path):
+        from animus.citizens.proposal import RiskAssessment
+
+        architect = ArchitectCitizen(codebase_path=tmp_path)
+        proposal = ImprovementProposal(
+            id="1",
+            title="T",
+            problem="P",
+            estimated_effort_hours=6.0,
+            affected_components=["Factory", "Kernel"],
+            potential_risks=[
+                RiskAssessment(description="Might break tests", severity="medium", mitigation="Run suite", probability=0.3),
+            ],
+            alternatives_considered=["Status quo"],
+        )
+        trade_offs = architect._build_trade_off_analysis(proposal)
+        assert "6.0 hours" in trade_offs
+        assert "Factory" in trade_offs
+        assert "Status quo" in trade_offs
+
+
 # ---------------------------------------------------------------------------
 # ForgeCommissioner tests
 # ---------------------------------------------------------------------------
@@ -274,7 +400,7 @@ class TestForgeCommissioner:
         commissioner = ForgeCommissioner(codebase_path="/tmp/test")
         assert commissioner.codebase_path == Path("/tmp/test")
         assert commissioner.forge_host == "localhost"
-        assert commissioner.forge_port == 7700
+        assert commissioner.forge_port == 8000
 
     def test_commission_rejects_unapproved_proposal(self, tmp_path):
         commissioner = ForgeCommissioner(codebase_path=tmp_path)
@@ -395,3 +521,69 @@ class TestForgeCommissioner:
 
         commissioner = ForgeCommissioner(codebase_path=tmp_path)
         assert commissioner._check_forge() is False
+
+    def test_commission_local_engine_bypasses_http(self, tmp_path):
+        commissioner = ForgeCommissioner(codebase_path=tmp_path, use_local_engine=True)
+
+        # Mock _execute_local to avoid import errors
+        mock_result = CommissionResult(
+            success=True,
+            proposal_id="1",
+            stage_reached="complete",
+            tests_passed=True,
+        )
+        commissioner._execute_local = MagicMock(return_value=mock_result)
+
+        proposal = ImprovementProposal(
+            id="1",
+            title="T",
+            problem="P",
+            status=ProposalStatus.APPROVED,
+            affected_components=["Mind"],
+        )
+
+        result = commissioner.commission(proposal)
+        assert result.success is True
+        assert result.stage_reached == "complete"
+        commissioner._execute_local.assert_called_once_with(proposal)
+
+    def test_execute_local_engine_unavailable(self, tmp_path):
+        commissioner = ForgeCommissioner(codebase_path=tmp_path, use_local_engine=True)
+        commissioner._get_local_engine = MagicMock(return_value=None)
+
+        proposal = ImprovementProposal(
+            id="1",
+            title="T",
+            problem="P",
+            status=ProposalStatus.APPROVED,
+            affected_components=["Mind"],
+        )
+
+        result = commissioner._execute_local(proposal)
+        assert result.success is False
+        assert "Local ForgeEngine not available" in result.error
+
+    def test_execute_local_success(self, tmp_path):
+        commissioner = ForgeCommissioner(codebase_path=tmp_path, use_local_engine=True)
+
+        mock_engine = MagicMock()
+        mock_engine.run.return_value = {
+            "status": "success",
+            "metrics": {"tokens_used": 1500},
+        }
+        commissioner._get_local_engine = MagicMock(return_value=mock_engine)
+
+        proposal = ImprovementProposal(
+            id="ADL-001",
+            title="Refactor parser",
+            problem="Parser is too complex",
+            status=ProposalStatus.APPROVED,
+            affected_components=["Factory"],
+        )
+
+        result = commissioner._execute_local(proposal)
+        assert result.success is True
+        assert result.stage_reached == "success"
+        assert result.tests_passed is True
+        assert result.benchmark_results == {"tokens_used": 1500}
+        mock_engine.run.assert_called_once()

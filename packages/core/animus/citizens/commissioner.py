@@ -68,12 +68,18 @@ class ForgeCommissioner:
         self,
         codebase_path: Path | str = "~/projects/animus",
         forge_host: str = "localhost",
-        forge_port: int = 7700,
+        forge_port: int = 8000,
+        use_local_engine: bool = False,
+        cognitive: Any = None,
     ):
         self.codebase_path = Path(codebase_path).expanduser()
         self.forge_host = forge_host
         self.forge_port = forge_port
+        self.use_local_engine = use_local_engine
+        self._cognitive = cognitive
         self._forge_available: bool | None = None
+        self._cached_token: str | None = None
+        self._local_engine: Any | None = None
 
     def _check_forge(self) -> bool:
         """Check if Forge is available.
@@ -107,6 +113,7 @@ class ForgeCommissioner:
             Workflow configuration dictionary.
         """
         return {
+            "id": f"architect-{proposal.id}",
             "name": f"architect-{proposal.id}",
             "description": proposal.title,
             "agents": [
@@ -191,6 +198,10 @@ class ForgeCommissioner:
                 error=f"Proposal status is {proposal.status.value}, not approved",
             )
 
+        if self.use_local_engine:
+            logger.info("Using local ForgeEngine for commission (bypassing HTTP)")
+            return self._execute_local(proposal)
+
         if not self._check_forge():
             logger.warning("Forge not available — returning simulated commission result")
             return self._simulate_commission(proposal)
@@ -205,8 +216,120 @@ class ForgeCommissioner:
                 error=str(e),
             )
 
+    def _get_local_engine(self) -> Any:
+        if self._local_engine is not None:
+            return self._local_engine
+        try:
+            from animus_forge.engine import ForgeEngine
+            from animus_forge.state import AppState
+
+            state = AppState()
+            if self._cognitive:
+                state.cognitive = self._cognitive
+            self._local_engine = ForgeEngine(state=state)
+            return self._local_engine
+        except Exception:
+            logger.exception("Failed to initialise local ForgeEngine")
+            self._local_engine = None
+            return None
+
+    def _execute_local(self, proposal: ImprovementProposal) -> CommissionResult:
+        """Execute a proposal using the local ForgeEngine (bypasses HTTP)."""
+        engine = self._get_local_engine()
+        if not engine:
+            return CommissionResult(
+                success=False,
+                proposal_id=proposal.id,
+                error="Local ForgeEngine not available",
+            )
+
+        workflow = self._create_workflow_config(proposal)
+        try:
+            result = engine.run(workflow)
+            success = result.get("status") in ("complete", "success")
+            evidence = {
+                "workflow_name": workflow["name"],
+                "workflow_id": workflow["id"],
+                "forge_response": result,
+                "affected_components": proposal.affected_components,
+            }
+            return CommissionResult(
+                success=success,
+                proposal_id=proposal.id,
+                stage_reached=result.get("status", "unknown"),
+                evidence_bundle=evidence,
+                tests_passed=success,
+                benchmark_results=result.get("metrics", {}),
+            )
+        except Exception as e:
+            logger.exception("Local ForgeEngine execution failed")
+            return CommissionResult(
+                success=False,
+                proposal_id=proposal.id,
+                error=f"Local execution failed: {e}",
+            )
+
+    def _auth_header(self) -> dict[str, str]:
+        """Build Authorization header.
+
+        Priority:
+        1. Cached token from previous login
+        2. ANIMUS_FORGE_API_TOKEN env var
+        3. Login with FORGE_API_USER + FORGE_API_PASS
+        """
+        if self._cached_token:
+            return {"Authorization": f"Bearer {self._cached_token}"}
+
+        token = __import__("os").environ.get("ANIMUS_FORGE_API_TOKEN", "")
+        if token:
+            self._cached_token = token
+            return {"Authorization": f"Bearer {token}"}
+
+        # Attempt login with credentials
+        cred_token = self._login_with_credentials()
+        if cred_token:
+            self._cached_token = cred_token
+            return {"Authorization": f"Bearer {cred_token}"}
+
+        return {}
+
+    def _login_with_credentials(self) -> str | None:
+        """Login to Forge using FORGE_API_USER + FORGE_API_PASS env vars.
+
+        Returns:
+            Access token string, or None if credentials not configured.
+        """
+        import os
+
+        user = os.environ.get("FORGE_API_USER", "")
+        pw = os.environ.get("FORGE_API_PASS", "")
+        if not user or not pw:
+            return None
+
+        try:
+            import httpx
+
+            resp = httpx.post(
+                f"http://{self.forge_host}:{self.forge_port}/v1/auth/login",
+                json={"user_id": user, "password": pw},
+                timeout=10.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            token = data.get("access_token")
+            if token:
+                logger.info(f"Forge login succeeded for user '{user}'")
+                return token
+        except Exception as e:
+            logger.warning(f"Forge login failed for user '{user}': {e}")
+        return None
+
     def _execute_commission(self, proposal: ImprovementProposal) -> CommissionResult:
         """Execute commission via Forge API.
+
+        Two-step process:
+        1. POST workflow config to /workflows → receive workflow_id
+        2. POST {workflow_id} to /workflows/execute → receive execution result
 
         Args:
             proposal: Approved proposal.
@@ -217,37 +340,71 @@ class ForgeCommissioner:
         import httpx
 
         workflow = self._create_workflow_config(proposal)
+        headers = self._auth_header()
+        base_url = f"http://{self.forge_host}:{self.forge_port}/v1"
 
-        # Submit workflow to Forge
+        # Step 1: Register workflow
         try:
-            response = httpx.post(
-                f"http://{self.forge_host}:{self.forge_port}/workflows/execute",
+            register_resp = httpx.post(
+                f"{base_url}/workflows",
                 json=workflow,
-                timeout=300.0,
+                headers=headers,
+                timeout=30.0,
             )
-            response.raise_for_status()
-            result = response.json()
+            register_resp.raise_for_status()
+            register_data = register_resp.json()
+            workflow_id = register_data.get("workflow_id") or register_data.get("id")
+            if not workflow_id:
+                return CommissionResult(
+                    success=False,
+                    proposal_id=proposal.id,
+                    error=f"Forge did not return workflow_id. Response: {register_data}",
+                )
         except httpx.HTTPStatusError as e:
             return CommissionResult(
                 success=False,
                 proposal_id=proposal.id,
-                error=f"Forge HTTP error: {e.response.status_code} — {e.response.text}",
+                error=f"Forge register error: {e.response.status_code} — {e.response.text}",
             )
         except Exception as e:
             return CommissionResult(
                 success=False,
                 proposal_id=proposal.id,
-                error=f"Forge communication failed: {e}",
+                error=f"Forge register failed: {e}",
+            )
+
+        # Step 2: Execute workflow by ID
+        try:
+            exec_resp = httpx.post(
+                f"{base_url}/workflows/execute",
+                json={"workflow_id": workflow_id},
+                headers=headers,
+                timeout=300.0,
+            )
+            exec_resp.raise_for_status()
+            result = exec_resp.json()
+        except httpx.HTTPStatusError as e:
+            return CommissionResult(
+                success=False,
+                proposal_id=proposal.id,
+                error=f"Forge execute error: {e.response.status_code} — {e.response.text}",
+            )
+        except Exception as e:
+            return CommissionResult(
+                success=False,
+                proposal_id=proposal.id,
+                error=f"Forge execute failed: {e}",
             )
 
         # Parse result
         evidence = {
             "workflow_name": workflow["name"],
+            "workflow_id": workflow_id,
             "forge_response": result,
             "affected_components": proposal.affected_components,
         }
 
-        tests_passed = result.get("status") == "complete" and not result.get("errors")
+        tests_passed = result.get("status") in ("complete", "success") and not result.get("errors")
         stage = result.get("status", "unknown")
 
         return CommissionResult(

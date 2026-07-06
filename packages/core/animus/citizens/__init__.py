@@ -20,16 +20,32 @@ from __future__ import annotations
 
 from animus.citizens.architect import ArchitectCitizen
 from animus.citizens.commissioner import ForgeCommissioner
+from animus.citizens.citizen_council import CitizenCouncil, RankedProposal
+from animus.citizens.conversation_designer import ConversationDesignerCitizen
+from animus.citizens.knowledge_curator import KnowledgeCuratorCitizen
 from animus.citizens.proposal import (
+    EvidenceItem,
     ImprovementProposal,
     ProposalConfidence,
     ProposalStatus,
+    RiskAssessment,
 )
+from animus.citizens.proposal_queue import ProposalQueue, QueuedProposal
+from animus.citizens.test_oracle import TestOracleCitizen
 
 __all__ = [
     "ArchitectCitizen",
+    "CitizenCouncil",
+    "ConversationDesignerCitizen",
     "ForgeCommissioner",
+    "KnowledgeCuratorCitizen",
+    "ProposalQueue",
+    "QueuedProposal",
+    "RankedProposal",
+    "TestOracleCitizen",
+    "EvidenceItem",
     "ImprovementProposal",
     "ProposalConfidence",
     "ProposalStatus",
+    "RiskAssessment",
 ]

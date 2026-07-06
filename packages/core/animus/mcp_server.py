@@ -922,6 +922,677 @@ def create_mcp_server():
 
         return "\n".join(lines)
 
+    # -----------------------------------------------------------------------
+    # Conversation Designer Citizen tools (Mind Foundation)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_conversation_designer_scan(
+        log_dir: str = "",
+        store_proposal: bool = True,
+        api_key: str = "",
+    ) -> str:
+        """Run the Conversation Designer observation and analysis cycle.
+
+        The Conversation Designer observes conversation logs for repeated
+        prompts, vague requests, and correction loops. It NEVER modifies code
+        or conversation history directly — it only produces proposals.
+
+        Args:
+            log_dir: Directory containing conversation JSONL logs. If empty,
+                uses config.citizens.conversation_log_dir.
+            store_proposal: Whether to store the generated proposal in memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration. Set citizens.enabled=true to use the Conversation Designer."
+
+        from animus.citizens import ConversationDesignerCitizen
+
+        resolved_log_dir = log_dir or config.citizens.conversation_log_dir or None
+
+        designer = ConversationDesignerCitizen(
+            conversation_log_dir=resolved_log_dir,
+            memory_layer=memory if store_proposal else None,
+        )
+
+        lines = ["# Conversation Designer Scan Report", ""]
+
+        # Observation counts
+        repeated = designer.observe_repeated_prompts()
+        vague = designer.observe_vague_requests()
+        corrections = designer.observe_correction_loops()
+
+        lines.append("## Repeated Prompts")
+        if repeated:
+            for o in repeated:
+                lines.append(f"- **[{o.severity.upper()}]** {o.description}")
+        else:
+            lines.append("- No repeated prompts detected.")
+        lines.append("")
+
+        lines.append("## Vague Requests")
+        if vague:
+            for o in vague:
+                lines.append(f"- **[{o.severity.upper()}]** {o.description}")
+        else:
+            lines.append("- No vague requests detected.")
+        lines.append("")
+
+        lines.append("## Correction Loops")
+        if corrections:
+            for o in corrections:
+                lines.append(f"- **[{o.severity.upper()}]** {o.description}")
+        else:
+            lines.append("- No correction loops detected.")
+        lines.append("")
+
+        # Analysis and proposal
+        lines.append("## Analysis")
+        proposal = designer.generate_proposal()
+        if proposal:
+            lines.append(f"- Generated proposal: `{proposal.id}`")
+            lines.append(f"- Title: {proposal.title}")
+            lines.append(f"- Confidence: {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append("")
+
+            if store_proposal:
+                stored = designer.store_proposal(proposal)
+                if stored:
+                    lines.append("✅ Proposal stored in memory for review.")
+                else:
+                    lines.append("⚠️ Memory layer unavailable — proposal not persisted.")
+        else:
+            lines.append("- No actionable conversation patterns found.")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_conversation_designer_list_proposals(
+        status: str = "pending",
+        api_key: str = "",
+    ) -> str:
+        """List improvement proposals from the Conversation Designer Citizen.
+
+        Args:
+            status: Filter by status — 'pending', 'all', etc.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.citizens import ConversationDesignerCitizen
+
+        cb_path = config.citizens.codebase_path or str(config.data_dir.parent)
+        log_dir = config.citizens.conversation_log_dir or None
+        designer = ConversationDesignerCitizen(
+            conversation_log_dir=log_dir,
+            memory_layer=memory,
+        )
+
+        if status == "pending":
+            try:
+                from animus.memory import MemoryType
+                results = memory.search(
+                    query="conversation_designer proposal",
+                    memory_type=MemoryType.PROCEDURAL,
+                    limit=50,
+                )
+                proposals = []
+                for mem in results:
+                    meta = mem.get("metadata", {})
+                    if meta.get("id"):
+                        proposals.append(ImprovementProposal.from_dict(meta))
+            except Exception as e:
+                return f"Failed to list proposals: {e}"
+        else:
+            proposals = []
+
+        if not proposals:
+            return f"No {status} proposals found."
+
+        lines = [f"# Conversation Designer Proposals ({status})", ""]
+        for p in proposals:
+            lines.append(f"## {p.id}")
+            lines.append(f"**Title:** {p.title}")
+            lines.append(f"**Status:** {p.status.value}")
+            lines.append(f"**Confidence:** {p.confidence.value} ({p.confidence_score:.0%})")
+            lines.append(f"**Problem:** {p.problem[:200]}...")
+            lines.append(f"**Recommendation:** {p.recommendation[:200]}...")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    # -----------------------------------------------------------------------
+    # Knowledge Curator Citizen tools (Mind Foundation)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_knowledge_curator_scan(
+        codebase_path: str = "",
+        store_proposal: bool = True,
+        api_key: str = "",
+    ) -> str:
+        """Run the Knowledge Curator observation and analysis cycle.
+
+        The Knowledge Curator scans memory for stale references, contradictions,
+        outdated claims, and orphan topics. It NEVER modifies code or memory
+        directly — it only produces proposals.
+
+        Args:
+            codebase_path: Path to the codebase for cross-reference checks.
+                If empty, uses config.citizens.codebase_path.
+            store_proposal: Whether to store the generated proposal in memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration. Set citizens.enabled=true to use the Knowledge Curator."
+
+        from animus.citizens import KnowledgeCuratorCitizen
+
+        resolved_path = codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+
+        curator = KnowledgeCuratorCitizen(
+            codebase_path=resolved_path,
+            memory_layer=memory if store_proposal else None,
+        )
+
+        lines = ["# Knowledge Curator Scan Report", ""]
+
+        # Observations
+        stale = curator.observe_stale_references()
+        contradictions = curator.observe_contradictions()
+        outdated = curator.observe_outdated_claims()
+        orphans = curator.observe_orphan_topics()
+
+        lines.append("## Stale References")
+        if stale:
+            for o in stale:
+                lines.append(f"- **[{o.severity.upper()}]** {o.description}")
+        else:
+            lines.append("- No stale references detected.")
+        lines.append("")
+
+        lines.append("## Contradictions")
+        if contradictions:
+            for o in contradictions:
+                lines.append(f"- **[{o.severity.upper()}]** {o.description}")
+        else:
+            lines.append("- No contradictions detected.")
+        lines.append("")
+
+        lines.append("## Outdated Claims")
+        if outdated:
+            for o in outdated:
+                lines.append(f"- **[{o.severity.upper()}]** {o.description}")
+        else:
+            lines.append("- No outdated claims detected.")
+        lines.append("")
+
+        lines.append("## Orphan Topics")
+        if orphans:
+            for o in orphans:
+                lines.append(f"- **[{o.severity.upper()}]** {o.description}")
+        else:
+            lines.append("- No orphan topics detected.")
+        lines.append("")
+
+        # Analysis and proposal
+        lines.append("## Analysis")
+        proposal = curator.generate_proposal()
+        if proposal:
+            lines.append(f"- Generated proposal: `{proposal.id}`")
+            lines.append(f"- Title: {proposal.title}")
+            lines.append(f"- Confidence: {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append("")
+
+            if store_proposal:
+                stored = curator.store_proposal(proposal)
+                if stored:
+                    lines.append("✅ Proposal stored in memory for review.")
+                else:
+                    lines.append("⚠️ Memory layer unavailable — proposal not persisted.")
+        else:
+            lines.append("- No actionable knowledge drift found.")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_knowledge_curator_list_proposals(
+        status: str = "pending",
+        api_key: str = "",
+    ) -> str:
+        """List improvement proposals from the Knowledge Curator Citizen.
+
+        Args:
+            status: Filter by status — 'pending', 'all', etc.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.citizens import KnowledgeCuratorCitizen
+
+        cb_path = config.citizens.codebase_path or str(config.data_dir.parent)
+        curator = KnowledgeCuratorCitizen(
+            codebase_path=cb_path,
+            memory_layer=memory,
+        )
+
+        if status == "pending":
+            try:
+                from animus.memory import MemoryType
+                results = memory.search(
+                    query="knowledge_curator proposal",
+                    memory_type=MemoryType.PROCEDURAL,
+                    limit=50,
+                )
+                proposals = []
+                for mem in results:
+                    meta = mem.get("metadata", {})
+                    if meta.get("id"):
+                        proposals.append(ImprovementProposal.from_dict(meta))
+            except Exception as e:
+                return f"Failed to list proposals: {e}"
+        else:
+            proposals = []
+
+        if not proposals:
+            return f"No {status} proposals found."
+
+        lines = [f"# Knowledge Curator Proposals ({status})", ""]
+        for p in proposals:
+            lines.append(f"## {p.id}")
+            lines.append(f"**Title:** {p.title}")
+            lines.append(f"**Status:** {p.status.value}")
+            lines.append(f"**Confidence:** {p.confidence.value} ({p.confidence_score:.0%})")
+            lines.append(f"**Problem:** {p.problem[:200]}...")
+            lines.append(f"**Recommendation:** {p.recommendation[:200]}...")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    # -----------------------------------------------------------------------
+    # Test Oracle Citizen tools (Mind Foundation)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_test_oracle_scan(
+        pytest_output: str = "",
+        coverage_report: str = "",
+        store_proposal: bool = True,
+        api_key: str = "",
+    ) -> str:
+        """Run the Test Oracle observation and analysis cycle.
+
+        The Test Oracle analyzes test suite health, eval results, and coverage
+        trends. It NEVER modifies code or tests directly — it only produces
+        proposals.
+
+        Args:
+            pytest_output: Raw pytest output text. If empty, reads from known log locations.
+            coverage_report: Coverage report text. If empty, reads from known locations.
+            store_proposal: Whether to store the generated proposal in memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration. Set citizens.enabled=true to use the Test Oracle."
+
+        from animus.citizens import TestOracleCitizen
+
+        cb_path = config.citizens.codebase_path or str(config.data_dir.parent)
+        oracle = TestOracleCitizen(
+            codebase_path=cb_path,
+            memory_layer=memory if store_proposal else None,
+        )
+
+        lines = ["# Test Oracle Scan Report", ""]
+
+        # Test failures
+        failures = oracle.observe_test_failures(pytest_output)
+        if failures:
+            lines.append("## Test Failures")
+            for o in failures:
+                lines.append(f"- **[{o.severity.upper()}]** {o.description}")
+            lines.append("")
+
+        # Coverage gaps
+        gaps = oracle.observe_coverage_gaps(coverage_report)
+        if gaps:
+            lines.append("## Coverage Gaps")
+            for o in gaps:
+                lines.append(f"- **[{o.severity.upper()}]** {o.description}")
+            lines.append("")
+
+        # Eval drift
+        drift = oracle.observe_eval_drift()
+        if drift:
+            lines.append("## Eval Drift")
+            for o in drift:
+                lines.append(f"- **[{o.severity.upper()}]** {o.description}")
+            lines.append("")
+
+        # Proposal
+        lines.append("## Analysis")
+        proposal = oracle.generate_proposal()
+        if proposal:
+            lines.append(f"- Generated proposal: `{proposal.id}`")
+            lines.append(f"- Title: {proposal.title}")
+            lines.append(f"- Confidence: {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append("")
+
+            if store_proposal:
+                stored = oracle.store_proposal(proposal)
+                if stored:
+                    lines.append("✅ Proposal stored in memory for review.")
+                else:
+                    lines.append("⚠️ Memory layer unavailable — proposal not persisted.")
+        else:
+            lines.append("- No actionable quality regressions found.")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_test_oracle_list_proposals(
+        status: str = "pending",
+        api_key: str = "",
+    ) -> str:
+        """List improvement proposals from the Test Oracle Citizen.
+
+        Args:
+            status: Filter by status — 'pending', 'all', etc.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.citizens import TestOracleCitizen
+
+        cb_path = config.citizens.codebase_path or str(config.data_dir.parent)
+        oracle = TestOracleCitizen(codebase_path=cb_path, memory_layer=memory)
+
+        if status == "pending":
+            try:
+                from animus.memory import MemoryType
+                results = memory.search(
+                    query="test_oracle proposal",
+                    memory_type=MemoryType.PROCEDURAL,
+                    limit=50,
+                )
+                proposals = []
+                for mem in results:
+                    meta = mem.get("metadata", {})
+                    if meta.get("id"):
+                        proposals.append(ImprovementProposal.from_dict(meta))
+            except Exception as e:
+                return f"Failed to list proposals: {e}"
+        else:
+            proposals = []
+
+        if not proposals:
+            return f"No {status} proposals found."
+
+        lines = [f"# Test Oracle Proposals ({status})", ""]
+        for p in proposals:
+            lines.append(f"## {p.id}")
+            lines.append(f"**Title:** {p.title}")
+            lines.append(f"**Status:** {p.status.value}")
+            lines.append(f"**Confidence:** {p.confidence.value} ({p.confidence_score:.0%})")
+            lines.append(f"**Problem:** {p.problem[:200]}...")
+            lines.append(f"**Recommendation:** {p.recommendation[:200]}...")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    # -----------------------------------------------------------------------
+    # Proposal Queue tools (Mind Foundation)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_proposal_queue_list(
+        status: str = "pending",
+        api_key: str = "",
+    ) -> str:
+        """List proposals in the approval queue.
+
+        Args:
+            status: Filter by status — 'pending', 'approved', 'commissioned',
+                'complete', 'rejected', 'backlog', 'all'.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.citizens import ProposalQueue
+
+        queue = ProposalQueue(memory_layer=memory)
+        queue.load_from_memory()
+
+        if status == "all":
+            items = list(queue._proposals.values())
+        elif status == "pending":
+            items = queue.list_pending()
+        elif status == "approved":
+            items = queue.list_approved()
+        elif status == "commissioned":
+            items = queue.list_commissioned()
+        elif status == "complete":
+            items = queue.list_completed()
+        elif status == "rejected":
+            items = queue.list_rejected()
+        elif status == "backlog":
+            items = queue.get_backlog()
+        else:
+            return f"Unknown status filter: {status!r}"
+
+        if not items:
+            return f"No proposals with status '{status}' found."
+
+        lines = [f"# Proposal Queue ({status})", ""]
+        for qp in items:
+            p = qp.proposal
+            lines.append(f"## {p.id}")
+            lines.append(f"**Title:** {p.title}")
+            lines.append(f"**Status:** {qp.current_status.value}")
+            lines.append(f"**Priority:** {qp.priority}")
+            lines.append(f"**Tags:** {', '.join(qp.tags) if qp.tags else 'none'}")
+            lines.append(f"**Confidence:** {p.confidence.value} ({p.confidence_score:.0%})")
+            lines.append(f"**Effort:** {p.estimated_effort_hours}h")
+            # Stage 5 — wrap proposal content in untrusted envelope
+            problem_wrapped = _wrap_untrusted(p.problem[:200], p.id)
+            rec_wrapped = _wrap_untrusted(p.recommendation[:200], p.id)
+            lines.append(f"**Problem:**\n{problem_wrapped}")
+            lines.append(f"**Recommendation:**\n{rec_wrapped}")
+            lines.append(f"**Transitions:** {len(qp.transitions)}")
+            if qp.transitions:
+                last = qp.transitions[-1]
+                lines.append(f"**Last action:** {last.from_status.value} → {last.to_status.value} by {last.actor}")
+            lines.append("")
+
+        lines.append(_PI_DEFENSE_FOOTER)
+        response, redaction_count = _scrub_egress("\n".join(lines))
+        audit_log.record("animus_proposal_queue_list", {Sensitivity.PUBLIC}, len(items), redaction_count, len(response))
+        return response
+
+    @mcp.tool()
+    def animus_proposal_queue_approve(
+        proposal_id: str,
+        reason: str = "",
+        api_key: str = "",
+    ) -> str:
+        """Approve a proposal in the queue.
+
+        Args:
+            proposal_id: ID of proposal to approve.
+            reason: Approval rationale.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.citizens import ProposalQueue
+
+        queue = ProposalQueue(memory_layer=memory)
+        queue.load_from_memory()
+
+        result = queue.approve(proposal_id, actor="human", reason=reason)
+        if result is None:
+            return f"Proposal '{proposal_id}' not found."
+        return f"✅ Proposal {proposal_id} approved. Status: {result.current_status.value}"
+
+    @mcp.tool()
+    def animus_proposal_queue_reject(
+        proposal_id: str,
+        reason: str = "",
+        api_key: str = "",
+    ) -> str:
+        """Reject a proposal in the queue.
+
+        Args:
+            proposal_id: ID of proposal to reject.
+            reason: Rejection rationale.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.citizens import ProposalQueue
+
+        queue = ProposalQueue(memory_layer=memory)
+        queue.load_from_memory()
+
+        result = queue.reject(proposal_id, actor="human", reason=reason)
+        if result is None:
+            return f"Proposal '{proposal_id}' not found."
+        return f"❌ Proposal {proposal_id} rejected. Status: {result.current_status.value}"
+
+    @mcp.tool()
+    def animus_proposal_queue_stats(
+        api_key: str = "",
+    ) -> str:
+        """Get proposal queue statistics.
+
+        Args:
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.citizens import ProposalQueue
+
+        queue = ProposalQueue(memory_layer=memory)
+        queue.load_from_memory()
+        stats = queue.stats()
+        return json.dumps(stats, indent=2)
+
+    # -----------------------------------------------------------------------
+    # Citizen Council tools (Mind Foundation)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_citizen_council_backlog(
+        deduplicate: bool = True,
+        api_key: str = "",
+    ) -> str:
+        """Get the unified, ranked backlog from all citizens.
+
+        Collects proposals from Architect, Conversation Designer,
+        Knowledge Curator, and Test Oracle, ranks them by priority,
+        and optionally deduplicates by affected component.
+
+        Args:
+            deduplicate: Remove duplicates by component overlap.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration."
+
+        from animus.citizens import CitizenCouncil
+
+        council = CitizenCouncil(memory_layer=memory)
+        count = council.collect_from_memory()
+        if count == 0:
+            return "No proposals found in memory. Run citizen scans first."
+
+        ranked = council.rank_backlog(deduplicate=deduplicate)
+        if not ranked:
+            return "Backlog is empty after ranking."
+
+        lines = ["# Citizen Council — Unified Ranked Backlog", ""]
+        lines.append(f"**Total proposals:** {len(council._proposals)}")
+        lines.append(f"**Displayed after deduplication:** {len(ranked)}")
+        lines.append(f"**Unique components:** {council.summary()['unique_components']}")
+        lines.append("")
+
+        for rp in ranked[:20]:
+            p = rp.proposal
+            lines.append(f"## #{rp.rank} — {p.id}")
+            lines.append(f"**Score:** {rp.priority_score:.2f} | **Severity:** {rp.severity_score}")
+            lines.append(f"**Title:** {p.title}")
+            lines.append(f"**Sources:** {', '.join(rp.source_citizens)}")
+            lines.append(f"**Confidence:** {p.confidence.value} ({p.confidence_score:.0%})")
+            lines.append(f"**Effort:** {p.estimated_effort_hours}h")
+            lines.append(f"**Components:** {', '.join(p.affected_components)}")
+            # Stage 5 — wrap proposal content in untrusted envelope
+            problem_wrapped = _wrap_untrusted(p.problem[:200], p.id)
+            rec_wrapped = _wrap_untrusted(p.recommendation[:200], p.id)
+            lines.append(f"**Problem:**\n{problem_wrapped}")
+            lines.append(f"**Recommendation:**\n{rec_wrapped}")
+            if rp.duplicates:
+                lines.append(f"**Duplicates:** {', '.join(rp.duplicates)}")
+            lines.append("")
+
+        lines.append(_PI_DEFENSE_FOOTER)
+        response, redaction_count = _scrub_egress("\n".join(lines))
+        audit_log.record("animus_citizen_council_backlog", {Sensitivity.PUBLIC}, len(ranked), redaction_count, len(response))
+        return response
+
+    @mcp.tool()
+    def animus_citizen_council_summary(
+        api_key: str = "",
+    ) -> str:
+        """Get summary statistics from the Citizen Council.
+
+        Args:
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration."
+
+        from animus.citizens import CitizenCouncil
+
+        council = CitizenCouncil(memory_layer=memory)
+        council.collect_from_memory()
+        summary = council.summary()
+        return json.dumps(summary, indent=2, default=str)
+
     return mcp
 
 

@@ -75,19 +75,19 @@ def create_workflow(workflow: Workflow, authorization: str | None = Header(None)
 @router.post("/workflows/execute", responses=WORKFLOW_RESPONSES)
 @state.limiter.limit("10/minute")
 def execute_workflow(
-    request_obj: Request,
-    request: WorkflowExecuteRequest,
+    request: Request,
+    execute_request: WorkflowExecuteRequest,
     authorization: str | None = Header(None),
 ):
     """Execute a workflow. Rate limited to 10 executions/minute per IP."""
     verify_auth(authorization)
 
-    workflow = state.workflow_engine.load_workflow(request.workflow_id)
+    workflow = state.workflow_engine.load_workflow(execute_request.workflow_id)
     if not workflow:
-        raise not_found("Workflow", request.workflow_id)
+        raise not_found("Workflow", execute_request.workflow_id)
 
-    if request.variables:
-        workflow.variables.update(request.variables)
+    if execute_request.variables:
+        workflow.variables.update(execute_request.variables)
 
     result = state.workflow_engine.execute_workflow(workflow)
     return result
