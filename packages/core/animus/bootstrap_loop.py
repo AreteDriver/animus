@@ -650,8 +650,8 @@ class BootstrapLoop:
         logger.info("Running Architect observation cycle...")
 
         try:
-            # Focus on the animus package during bootstrap (relative to codebase root)
-            focus = ["animus"]
+            # Focus on the core animus package during bootstrap (relative to codebase root)
+            focus = ["packages/core/animus", "packages/forge/src/animus_forge"]
             self.architect.observe_codebase(focus_paths=focus)
             report = self.architect.analyze()
             proposal = self.architect.generate_proposal(report)
