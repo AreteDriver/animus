@@ -629,8 +629,8 @@ class TestConversationDesignerCitizen:
         log_dir.mkdir()
         log_file = log_dir / "session.jsonl"
         entries = [
-            json.dumps({"prompt": "help"}),
-            json.dumps({"prompt": "help"}),
+            json.dumps({"prompt": "do something here"}),
+            json.dumps({"prompt": "do something here"}),
             json.dumps({"prompt": "fix this"}),
         ]
         log_file.write_text("\n".join(entries))

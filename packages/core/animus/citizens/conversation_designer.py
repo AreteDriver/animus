@@ -72,6 +72,29 @@ class ConversationDesignerCitizen:
         self.memory = memory_layer
         self._patterns: list[ConversationPattern] = []
 
+    # Common intentional single-word commands that should not be flagged as vague.
+    INTENTIONAL_SHORT_COMMANDS = {
+        "help", "restart", "status", "exit", "clear", "commit", "push", "pull",
+        "deploy", "test", "build", "run", "stop", "logs", "yes", "no", "ok",
+        "cancel", "abort", "resume", "pause", "list", "show", "info",
+    }
+
+    @staticmethod
+    def _extract_prompt(entry: dict[str, Any]) -> str:
+        """Extract the user prompt from a conversation log entry.
+
+        Supports multiple log formats:
+        - ``prompt`` — generic / OpenAI-style
+        - ``display`` — Claude Code history.jsonl
+        - ``message`` — Slack/Discord-style
+        - ``content`` — Generic fallback
+        """
+        for key in ("prompt", "display", "message", "content"):
+            val = entry.get(key)
+            if isinstance(val, str) and val.strip():
+                return val.strip()
+        return ""
+
     # ------------------------------------------------------------------
     # Observation methods (read-only)
     # ------------------------------------------------------------------
@@ -98,7 +121,7 @@ class ConversationDesignerCitizen:
             try:
                 for line in log_file.read_text().splitlines():
                     entry = json.loads(line)
-                    prompt = entry.get("prompt", "").strip().lower()
+                    prompt = self._extract_prompt(entry).lower()
                     # Normalize: strip punctuation, collapse whitespace
                     normalized = re.sub(r"[^\w\s]", "", prompt)
                     normalized = re.sub(r"\s+", " ", normalized).strip()
@@ -163,8 +186,16 @@ class ConversationDesignerCitizen:
             try:
                 for line in log_file.read_text().splitlines():
                     entry = json.loads(line)
-                    prompt = entry.get("prompt", "").strip()
-                    if len(prompt) < 20 and vague_pattern.search(prompt):
+                    prompt = self._extract_prompt(entry)
+                    # Skip empty and very short intentional commands
+                    if not prompt or prompt.lower().strip() in self.INTENTIONAL_SHORT_COMMANDS:
+                        continue
+                    # Flag short vague prompts OR longer prompts that are purely vague
+                    is_short_vague = len(prompt) < 25 and vague_pattern.search(prompt)
+                    is_long_vague = len(prompt) < 60 and vague_pattern.search(prompt) and not any(
+                        kw in prompt.lower() for kw in ("file", "path", "function", "method", "class", "module", "package")
+                    )
+                    if is_short_vague or is_long_vague:
                         normalized = prompt.lower().strip()
                         vague_counts[normalized] = vague_counts.get(normalized, 0) + 1
             except Exception:
@@ -191,6 +222,9 @@ class ConversationDesignerCitizen:
         """Detect cycles where user corrects the AI repeatedly.
 
         These indicate the initial response missed intent.
+        When ``sessionId`` is present in log entries, corrections are
+        grouped per-session and flagged only when they occur within
+        a short window (consecutive or near-consecutive turns).
 
         Args:
             limit: Maximum conversations to analyze.
@@ -205,7 +239,8 @@ class ConversationDesignerCitizen:
 
         correction_keywords = [
             "no,", "not quite", "that's not", "wrong", "incorrect",
-            "i meant", "actually,", "wait,", "no —", "nope",
+            "i meant", "actually,", "wait,", "no —", "nope", "not what i",
+            "rephrase", "clarify", "you misunderstood", "try again",
         ]
 
         for log_file in sorted(self.conversation_log_dir.glob("*.jsonl"))[-limit:]:
@@ -214,25 +249,42 @@ class ConversationDesignerCitizen:
                 for line in log_file.read_text().splitlines():
                     entries.append(json.loads(line))
 
-                correction_count = 0
+                # Group by sessionId if available, otherwise treat whole file as one session
+                sessions: dict[str, list[dict[str, Any]]] = {}
                 for entry in entries:
-                    prompt = entry.get("prompt", "").lower()
-                    if any(kw in prompt for kw in correction_keywords):
-                        correction_count += 1
+                    sid = entry.get("sessionId", "__file__")
+                    sessions.setdefault(sid, []).append(entry)
 
-                if correction_count >= 2:
-                    observations.append(
-                        Observation(
-                            source="conversation",
-                            description=f"Correction loop detected ({correction_count} corrections in session)",
-                            severity="high" if correction_count >= 4 else "medium",
-                            context={
-                                "file": log_file.name,
-                                "correction_count": correction_count,
-                                "pattern_type": "correction_loop",
-                            },
+                for sid, session_entries in sessions.items():
+                    correction_count = 0
+                    max_consecutive = 0
+                    current_streak = 0
+
+                    for entry in session_entries:
+                        prompt = self._extract_prompt(entry).lower()
+                        if any(kw in prompt for kw in correction_keywords):
+                            correction_count += 1
+                            current_streak += 1
+                            max_consecutive = max(max_consecutive, current_streak)
+                        else:
+                            current_streak = 0
+
+                    # Flag only when there are multiple corrections AND at least two are consecutive/nearby
+                    if correction_count >= 2 and max_consecutive >= 1:
+                        observations.append(
+                            Observation(
+                                source="conversation",
+                                description=f"Correction loop detected ({correction_count} corrections in session {sid[:8]})",
+                                severity="high" if correction_count >= 4 else "medium",
+                                context={
+                                    "file": log_file.name,
+                                    "session_id": sid,
+                                    "correction_count": correction_count,
+                                    "max_consecutive": max_consecutive,
+                                    "pattern_type": "correction_loop",
+                                },
+                            )
                         )
-                    )
             except Exception:
                 continue
 
