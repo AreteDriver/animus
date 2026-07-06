@@ -307,6 +307,70 @@ class ArchitectCitizen:
         self._observations.extend(observations)
         return observations
 
+    def observe_adls(self, decisions_dir: Path | str | None = None) -> list[Observation]:
+        """Read Architecture Decision Logs for constraints and standards.
+
+        ADLs encode the project's architectural intent — what the code
+        *should* be doing. Cross-referencing observations against ADL
+        constraints produces grounded, specific proposals instead of
+        generic "reduce coupling" boilerplate.
+
+        Args:
+            decisions_dir: Directory containing ADL markdown files.
+
+        Returns:
+            List of observations keyed by ADL constraints.
+        """
+        observations: list[Observation] = []
+        target = Path(decisions_dir) if decisions_dir else self.codebase_path / "decisions"
+        if not target.exists():
+            target = self.codebase_path / "docs" / "architecture" / "decisions"
+
+        if not target.exists():
+            return observations
+
+        adl_constraints: list[dict[str, Any]] = []
+        for md_file in sorted(target.rglob("*.md")):
+            try:
+                text = md_file.read_text()
+                # Extract ADL headers and decision blocks
+                lines = text.splitlines()
+                current_adl: str | None = None
+                in_decision_block = False
+                for line in lines:
+                    if line.startswith("## ADL-"):
+                        current_adl = line.strip("# ").strip()
+                    elif "**Decision:**" in line:
+                        in_decision_block = True
+                    elif in_decision_block and line.startswith("**"):
+                        in_decision_block = False
+                    elif in_decision_block and current_adl and line.strip():
+                        adl_constraints.append({
+                            "adl": current_adl,
+                            "constraint": line.strip(),
+                            "source_file": str(md_file.relative_to(self.codebase_path)),
+                        })
+            except Exception:
+                continue
+
+        # Emit an observation summarizing active ADL constraints
+        if adl_constraints:
+            observations.append(
+                Observation(
+                    source="adl",
+                    description=f"Active ADL constraints: {len(adl_constraints)} from {target.name}/",
+                    severity="info",
+                    context={
+                        "adl_count": len(adl_constraints),
+                        "constraints": adl_constraints[:10],  # cap for memory
+                        "pattern_type": "adl_constraints",
+                    },
+                )
+            )
+
+        self._observations.extend(observations)
+        return observations
+
     # ------------------------------------------------------------------
     # Analysis methods
     # ------------------------------------------------------------------
@@ -340,7 +404,9 @@ class ArchitectCitizen:
                 report.findings.append(obs.description)
                 report.technical_debt_items.append(obs.description)
             elif obs.source == "codebase" and obs.severity in ("medium", "high", "critical"):
+                # Codebase issues of medium+ severity are both technical debt and actionable findings
                 report.technical_debt_items.append(obs.description)
+                report.findings.append(obs.description)
             elif obs.source == "conversation":
                 report.friction_points.append(obs.description)
             elif obs.severity in ("high", "critical"):
@@ -485,6 +551,22 @@ class ArchitectCitizen:
                 )
             else:
                 recommendation = "Investigate and remediate identified issue"
+
+        # --- Enrich with ADL constraints if available ---
+        adl_contexts = [
+            o.context.get("constraints", [])
+            for o in all_obs
+            if o.source == "adl" and o.context
+        ]
+        adl_constraints = []
+        for ctx_list in adl_contexts:
+            adl_constraints.extend(ctx_list)
+        if adl_constraints:
+            adl_refs = ", ".join({c["adl"] for c in adl_constraints[:5]})
+            recommendation += (
+                f"\n\nGrounded in ADL constraints ({adl_refs}): ensure changes align with "
+                f"project architecture decisions and do not reintroduce patterns explicitly rejected."
+            )
 
         # --- Senior: estimate impact and calibrate confidence ---
         impact = self._estimate_impact(affected)
