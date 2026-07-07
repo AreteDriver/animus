@@ -7,7 +7,7 @@ and REPL lifecycle without requiring a live Ollama instance.
 from __future__ import annotations
 
 import tempfile
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -89,6 +89,60 @@ class TestHeadCheckpointStore:
             assert store.delete("to-delete") is True
             assert store.load("to-delete") is None
             assert store.delete("to-delete") is False
+
+    def test_five_session_continuity(self) -> None:
+        """Simulate 5 sessions saving/loading checkpoints — the core KC #5 test."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "continuity.db"
+            store = HeadCheckpointStore(db_path=db_path)
+            session_id = "continuity-test"
+
+            messages_history: list[dict] = []
+            for session_num in range(1, 6):
+                # Simulate session N loading prior state
+                prior = store.load(session_id)
+                if prior:
+                    messages_history = list(prior.messages)
+
+                # Session N adds new messages
+                new_msgs = [
+                    {"role": "user", "content": f"Session {session_num} user query"},
+                    {"role": "assistant", "content": f"Session {session_num} assistant response"},
+                ]
+                messages_history.extend(new_msgs)
+
+                # Save checkpoint for next session
+                cp = HeadCheckpoint(
+                    session_id=session_id,
+                    started_at=datetime(2026, 7, session_num, tzinfo=UTC),
+                    last_active_at=datetime(2026, 7, session_num, 12, tzinfo=UTC),
+                    project_root=str(tmpdir),
+                    messages=messages_history,
+                    summary=f"Completed session {session_num}",
+                    total_tokens=session_num * 20,
+                    turns=session_num,
+                )
+                store.save(cp)
+
+            # Verify final state
+            final = store.load(session_id)
+            assert final is not None
+            assert final.turns == 5
+            assert len(final.messages) == 10  # 2 messages * 5 sessions
+            assert final.summary == "Completed session 5"
+            assert final.total_tokens == 100
+
+            # Verify all session messages are present in order
+            for i in range(1, 6):
+                user_msg = final.messages[(i - 1) * 2]
+                assist_msg = final.messages[(i - 1) * 2 + 1]
+                assert user_msg["content"] == f"Session {i} user query"
+                assert assist_msg["content"] == f"Session {i} assistant response"
+
+            # Verify list_recent surfaces the session
+            recent = store.list_recent(limit=1)
+            assert len(recent) == 1
+            assert recent[0].session_id == session_id
 
 
 # ------------------------------------------------------------------
@@ -241,6 +295,35 @@ class TestSessionBootstrap:
             )
             ctx = bootstrap.bootstrap()
             assert ctx["previous_session"] is None
+
+    def test_previous_session_loaded_when_recent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            store = HeadCheckpointStore(db_path=db_path)
+
+            # Save a checkpoint from 1 hour ago (within 24h window)
+            recent = HeadCheckpoint(
+                session_id="recent-session",
+                started_at=datetime.now(UTC) - timedelta(hours=2),
+                last_active_at=datetime.now(UTC) - timedelta(hours=1),
+                project_root=str(tmpdir),
+                messages=[{"role": "user", "content": "hello"}],
+                summary="Recent work",
+                turns=3,
+            )
+            store.save(recent)
+
+            bootstrap = SessionBootstrap(
+                project_root=tmpdir,
+                checkpoint_store=store,
+            )
+            ctx = bootstrap.bootstrap()
+            prev = ctx["previous_session"]
+            assert prev is not None
+            assert prev["session_id"] == "recent-session"
+            assert prev["turns"] == 3
+            assert prev["summary"] == "Recent work"
+            assert prev["messages"][0]["content"] == "hello"
 
 
 # ------------------------------------------------------------------
