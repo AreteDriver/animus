@@ -1,0 +1,12 @@
+[Unit]
+Description=Animus Test Oracle — find coverage and test hygiene gaps
+After=network.target
+
+[Service]
+Type=oneshot
+User=arete
+WorkingDirectory=/home/arete/projects/animus
+Environment="PYTHONPATH=/home/arete/projects/animus/packages/core:/home/arete/projects/animus/packages/kernel/src:/home/arete/projects/animus/packages/types/src"
+ExecStart=/home/arete/projects/animus/packages/core/.venv/bin/python3 -m animus.autonomous-loop --citizen test --focus evaluation
+StandardOutput=journal
+StandardError=journal
