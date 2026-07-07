@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/policy_decision.schema.json",
+  "title": "Policy Decision",
+  "description": "A deterministic policy enforcement decision. Rendered by the policy decision point (PDP) based on rules, context, and capability grants. Immutable once recorded.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "decision_id",
+    "rule_id",
+    "input_context",
+    "decision",
+    "principal",
+    "workspace_id",
+    "tx_time"
+  ],
+  "properties": {
+    "decision_id": {
+      "type": "string",
+      "pattern": "^dec-[a-z0-9_-]+$"
+    },
+    "rule_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Identifier of the policy rule that triggered this decision"
+    },
+    "input_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action",
+        "resource",
+        "principal"
+      ],
+      "properties": {
+        "action": {
+          "enum": [
+            "create",
+            "read",
+            "update",
+            "delete",
+            "execute",
+            "approve",
+            "delegate",
+            "export",
+            "import"
+          ]
+        },
+        "resource": {
+          "type": "string",
+          "minLength": 1
+        },
+        "principal": {
+          "type": "string",
+          "minLength": 3
+        },
+        "workspace_id": {
+          "type": "string",
+          "pattern": "^ws-[a-z0-9_-]+$"
+        },
+        "schema_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "payload_summary": {
+          "type": [
+            "string",
+            "null"
+        ]
+        }
+      }
+    },
+    "decision": {
+      "enum": [
+        "allow",
+        "deny",
+        "abstain",
+        "escalate"
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "denial_reason_code": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "missing_scope",
+        "stale_approval",
+        "unknown_schema",
+        "invalid_transition",
+        "budget_exhausted",
+        "capability_revoked",
+        "policy_conflict",
+        "escalation_required",
+        null
+      ]
+    },
+    "obligations": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "obligation_type",
+          "description"
+        ],
+        "properties": {
+          "obligation_type": {
+            "enum": [
+              "log",
+              "notify",
+              "approve",
+              "audit",
+              "rate_limit"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deadline": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "principal": {
+      "type": "string",
+      "minLength": 3
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^ws-[a-z0-9_-]+$"
+    },
+    "tx_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "parent_decision_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^dec-[a-z0-9_-]+$"
+    }
+  }
+}

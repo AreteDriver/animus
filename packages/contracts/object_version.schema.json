@@ -1,7 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://animus.local/schemas/common.schema.json",
-  "title": "Animus Canonical Object Envelope",
+  "$id": "https://animus.local/schemas/object_version.schema.json",
+  "title": "Object Version",
+  "description": "A versioned snapshot of an object in the canonical registry. Represents a single point-in-time state of an object with bitemporal validity.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -20,10 +21,10 @@
     "storage_tier",
     "presentation",
     "security_class",
-    "valid_time",
-    "transaction_time",
-    "provenance",
-    "integrity",
+    "valid_from",
+    "recorded_at",
+    "created_by",
+    "content_sha256",
     "payload"
   ],
   "properties": {
@@ -75,6 +76,7 @@
         "action",
         "outcome",
         "lesson",
+        "memory",
         "memory_candidate",
         "approval_receipt",
         "action_receipt",
@@ -96,6 +98,7 @@
         "candidate",
         "approved",
         "rejected",
+        "active",
         "not_applicable"
       ]
     },
@@ -138,120 +141,47 @@
         "restricted"
       ]
     },
-    "valid_time": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "valid_from",
-        "valid_to"
+    "valid_from": {
+      "type": [
+        "string",
+        "null"
       ],
-      "properties": {
-        "valid_from": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "valid_to": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        }
-      }
+      "format": "date-time"
     },
-    "transaction_time": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "recorded_at",
-        "superseded_at"
+    "valid_to": {
+      "type": [
+        "string",
+        "null"
       ],
-      "properties": {
-        "recorded_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "superseded_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        }
-      }
+      "format": "date-time"
     },
-    "provenance": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "created_by",
-        "source_refs",
-        "derived_from",
-        "trace_id"
-      ],
-      "properties": {
-        "created_by": {
-          "type": "string",
-          "minLength": 3
-        },
-        "source_refs": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "uniqueItems": true
-        },
-        "derived_from": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "uniqueItems": true
-        },
-        "trace_id": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "model_lineage": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "uniqueItems": true
-        },
-        "prompt_lineage": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "uniqueItems": true
-        }
-      }
+    "recorded_at": {
+      "type": "string",
+      "format": "date-time"
     },
-    "integrity": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "content_sha256"
+    "superseded_at": {
+      "type": [
+        "string",
+        "null"
       ],
-      "properties": {
-        "content_sha256": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{64}$"
-        },
-        "previous_version_sha256": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "pattern": "^[a-f0-9]{64}$"
-        }
-      }
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string",
+      "minLength": 3
+    },
+    "trace_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "payload": {
+      "type": "object"
     },
     "tags": {
       "type": "array",
@@ -260,9 +190,6 @@
         "minLength": 1
       },
       "uniqueItems": true
-    },
-    "payload": {
-      "type": "object"
     }
   }
 }

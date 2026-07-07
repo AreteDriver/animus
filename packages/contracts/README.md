@@ -29,6 +29,16 @@ These 20+ schemas define the data contracts across all Animus subsystems: memory
 | `source.schema.json` | Provenance and citation tracking |
 | `trace.schema.json` | Execution traces for debugging and audit |
 
+### Mind-class Schemas (v2.3+)
+
+| Schema | Purpose |
+|---|---|
+| `ledger_event.schema.json` | Immutable append-only event records |
+| `object_version.schema.json` | Bitemporal canonical object snapshots |
+| `outbox_entry.schema.json` | Transactional outbox for async delivery |
+| `capability_grant.schema.json` | Scoped authorization grants |
+| `policy_decision.schema.json` | Deterministic policy enforcement records |
+
 ## Usage
 
 ### Validate an object in Python

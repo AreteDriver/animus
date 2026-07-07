@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/ledger_event.schema.json",
+  "title": "Ledger Event",
+  "description": "Immutable append-only event record for the durable event store.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_type",
+    "object_id",
+    "object_version",
+    "principal",
+    "workspace_id",
+    "payload",
+    "integrity_hash",
+    "tx_time"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "pattern": "^evt-[a-z0-9_-]+$"
+    },
+    "event_type": {
+      "enum": [
+        "created",
+        "updated",
+        "superseded",
+        "approved",
+        "rejected",
+        "deleted",
+        "restored",
+        "exported",
+        "imported"
+      ]
+    },
+    "object_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{2,127}$"
+    },
+    "object_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "principal": {
+      "type": "string",
+      "minLength": 3
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^ws-[a-z0-9_-]+$"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "integrity_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "tx_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "parent_event_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

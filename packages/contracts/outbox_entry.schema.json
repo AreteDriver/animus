@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/outbox_entry.schema.json",
+  "title": "Outbox Entry",
+  "description": "Transactional outbox entry for reliable async message delivery. Workers claim, process, and acknowledge entries. Duplicate delivery is safe because every consumer must be idempotent.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entry_id",
+    "topic",
+    "payload",
+    "headers",
+    "created_at"
+  ],
+  "properties": {
+    "entry_id": {
+      "type": "string",
+      "pattern": "^[a-z]+-[a-z0-9_-]+$"
+    },
+    "topic": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload": {
+      "type": "object"
+    },
+    "headers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "claimed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "claimed_by": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "retry_count": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0
+    },
+    "processed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "error_message": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://animus.local/schemas/capability_grant.schema.json",
+  "title": "Capability Grant",
+  "description": "A scoped authorization grant issued to a principal. Defines what actions a principal may perform on which resources, with budget limits and expiry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "grant_id",
+    "principal",
+    "scope",
+    "resource",
+    "action",
+    "granted_by",
+    "granted_at"
+  ],
+  "properties": {
+    "grant_id": {
+      "type": "string",
+      "pattern": "^grant-[a-z0-9_-]+$"
+    },
+    "principal": {
+      "type": "string",
+      "minLength": 3
+    },
+    "scope": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "description": "Permission scopes granted (e.g., read, write, delete, admin)"
+    },
+    "resource": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Resource pattern this grant applies to (e.g., workspace, object_id glob)"
+    },
+    "action": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "create",
+          "read",
+          "update",
+          "delete",
+          "execute",
+          "approve",
+          "delegate",
+          "export",
+          "import"
+        ]
+      },
+      "minItems": 1
+    },
+    "granted_by": {
+      "type": "string",
+      "minLength": 3
+    },
+    "granted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "budget": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "max_calls": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_cost": {
+          "type": "number",
+          "minimum": 0
+        },
+        "window_seconds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "conditions": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "require_approval_above_risk": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "allowed_workspaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "allowed_schemas": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "revoked_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "revoked_by": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "revocation_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}
