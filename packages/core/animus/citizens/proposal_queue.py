@@ -11,6 +11,7 @@ Every transition is logged with actor, timestamp, and reason.
 from __future__ import annotations
 
 import json
+import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -20,6 +21,8 @@ from animus.citizens.proposal import ImprovementProposal, ProposalStatus
 from animus.logging import get_logger
 
 logger = get_logger("citizens.proposal_queue")
+
+_DEFAULT_SQLITE_PATH = Path.home() / ".config" / "animus" / "proposal_queue.db"
 
 
 @dataclass
@@ -368,9 +371,43 @@ class ProposalQueue:
             logger.warning(f"Queue file persistence failed: {e}")
             self._persist_to_memory()
 
+    def _persist_to_sqlite(self) -> None:
+        """Fallback: store queue state in SQLite when memory layer is unavailable."""
+        try:
+            _DEFAULT_SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(str(_DEFAULT_SQLITE_PATH))
+            conn.execute("CREATE TABLE IF NOT EXISTS proposals (id TEXT PRIMARY KEY, data TEXT)")
+            conn.execute("DELETE FROM proposals")
+            for qp in self._proposals.values():
+                conn.execute(
+                    "INSERT OR REPLACE INTO proposals (id, data) VALUES (?, ?)",
+                    (qp.proposal.id, json.dumps(qp.to_dict(), default=str)),
+                )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.debug(f"Queue SQLite persistence failed: {e}")
+
+    def _load_from_sqlite(self) -> int:
+        """Load queue state from SQLite fallback."""
+        if not _DEFAULT_SQLITE_PATH.exists():
+            return 0
+        try:
+            conn = sqlite3.connect(str(_DEFAULT_SQLITE_PATH))
+            rows = conn.execute("SELECT data FROM proposals").fetchall()
+            conn.close()
+            for (data,) in rows:
+                qp = QueuedProposal.from_dict(json.loads(data))
+                self._proposals[qp.proposal.id] = qp
+            return len(self._proposals)
+        except Exception as e:
+            logger.debug(f"Queue SQLite load failed: {e}")
+            return 0
+
     def _persist_to_memory(self) -> None:
         """Fallback: store queue state in memory layer."""
         if self.memory is None:
+            self._persist_to_sqlite()
             return
         try:
             from animus.memory import MemoryType
@@ -384,6 +421,7 @@ class ProposalQueue:
             )
         except Exception as e:
             logger.debug(f"Queue memory persistence failed: {e}")
+            self._persist_to_sqlite()
 
     def load_from_memory(self) -> int:
         """Load queue state from disk or memory.
@@ -406,6 +444,11 @@ class ProposalQueue:
                 return len(self._proposals)
             except Exception as e:
                 logger.warning(f"Queue file load failed: {e}")
+
+        # Fallback to SQLite
+        sqlite_count = self._load_from_sqlite()
+        if sqlite_count > 0:
+            return sqlite_count
 
         # Fallback to memory search
         if self.memory is not None:
