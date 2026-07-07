@@ -246,4 +246,4 @@ If publicization causes issues:
 ## See Also
 
 - [Public/Private Split Specification](public-private-split.md)
-- [ADR-006: Public/Private Repository Split](../../adrs/ADR-006.md)
+- [ADR-006: Public/Private Repository Split](https://github.com/AreteDriver/animus/blob/main/adrs/ADR-006.md)

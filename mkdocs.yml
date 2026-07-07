@@ -59,6 +59,8 @@ nav:
     - Security: reference/security.md
     - Whitepapers:
       - Index: reference/whitepapers/README.md
+  - Metrics:
+    - G1 Evidence Baseline: metrics/G1_EVIDENCE_BASELINE.md
   - Roadmap:
     - Current: roadmap/current.md
 
