@@ -39,6 +39,7 @@ from typing import Any
 
 from animus_kernel.head.checkpoint import HeadCheckpointStore
 from animus_kernel.head.repl import HeadREPL
+from animus_kernel.head.session_controller import SessionController, SessionPolicy
 
 
 @dataclass
@@ -142,9 +143,24 @@ class HeadDaemon:
 
     def _rpc_initialize(self, params: dict) -> dict:
         """Create a new HeadREPL session and start its worker thread."""
+        import datetime
+
         project_root = Path(params.get("project_root", "."))
         session_id = params.get("session_id") or f"sess_{uuid.uuid4().hex[:8]}"
         model = params.get("model", self.default_model)
+
+        # Session policy overrides from params
+        timer_minutes = params.get("session_timer_minutes")
+        wrapup_threshold = params.get("wrapup_threshold")
+        auto_restart = params.get("auto_restart")
+
+        policy = SessionPolicy()
+        if timer_minutes is not None:
+            policy.session_timer = datetime.timedelta(minutes=timer_minutes)
+        if wrapup_threshold is not None:
+            policy.wrapup_threshold = wrapup_threshold
+        if auto_restart is not None:
+            policy.auto_restart = bool(auto_restart)
 
         with self._lock:
             if session_id in self.sessions:
@@ -156,10 +172,14 @@ class HeadDaemon:
         # Build the REPL on the worker thread to avoid blocking stdin
         def _worker() -> None:
             try:
+                controller = SessionController(policy=policy)
                 state.repl = HeadREPL(
                     project_root=project_root,
                     model=model,
                     checkpoint_store=self._store,
+                    session_timer=policy.session_timer,
+                    wrapup_threshold=policy.wrapup_threshold,
+                    session_controller=controller,
                 )
                 state.repl._restore_session()
             except Exception as exc:  # noqa: BLE001
@@ -251,6 +271,46 @@ class HeadDaemon:
         if state.thread:
             state.thread.join(timeout=5.0)
         return {"status": "shutting_down", "session_id": session_id}
+
+    def _rpc_get_session_policy(self, params: dict) -> dict:
+        session_id = params.get("session_id")
+        with self._lock:
+            state = self.sessions.get(session_id)
+        if not state:
+            raise ValueError(f"Unknown session: {session_id}")
+
+        if state.repl and state.repl._session_controller:
+            policy = state.repl._session_controller.policy
+            return {
+                "wrapup_threshold": policy.wrapup_threshold,
+                "session_timer_seconds": (
+                    policy.session_timer.total_seconds() if policy.session_timer else None
+                ),
+                "auto_restart": policy.auto_restart,
+            }
+        return {"policy": None}
+
+    def _rpc_set_session_policy(self, params: dict) -> dict:
+        import datetime
+
+        session_id = params.get("session_id")
+        with self._lock:
+            state = self.sessions.get(session_id)
+        if not state:
+            raise ValueError(f"Unknown session: {session_id}")
+
+        if not (state.repl and state.repl._session_controller):
+            raise ValueError(f"Session {session_id} has no session controller")
+
+        policy = state.repl._session_controller.policy
+        if "wrapup_threshold" in params:
+            policy.wrapup_threshold = float(params["wrapup_threshold"])
+        if "session_timer_minutes" in params:
+            policy.session_timer = datetime.timedelta(minutes=int(params["session_timer_minutes"]))
+        if "auto_restart" in params:
+            policy.auto_restart = bool(params["auto_restart"])
+
+        return {"status": "updated", "session_id": session_id}
 
     # ------------------------------------------------------------------
     # Lifecycle helpers

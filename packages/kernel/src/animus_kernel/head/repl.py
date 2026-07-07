@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +20,7 @@ from animus_kernel.head.intent_parser import HeadIntentParser, IntentType
 from animus_kernel.head.planner import HeadPlanner
 from animus_kernel.head.quality_gate import HeadQualityGate
 from animus_kernel.head.session_bootstrap import SessionBootstrap
+from animus_kernel.head.session_controller import SessionController, SessionLifecycleEvent, SessionPolicy
 from animus_kernel.head.synthesizer import HeadSynthesizer
 from animus_kernel.head.tool_orchestrator import HeadToolOrchestrator
 from animus_kernel.head.tool_validator import RetryableToolExecutor
@@ -45,6 +46,11 @@ class HeadREPL:
         fallback_provider: Cloud provider name for fallback (default: anthropic)
         max_fallbacks_per_session: Hard cap on cloud calls per session
         auto_execute_direct: Whether to fast-path direct commands without model call
+        session_timer: Max wall-clock duration per session (default: None — disabled)
+        wrapup_threshold: Token utilization fraction (0.0–1.0) that triggers
+            graceful finalize. 1.0 disables token-based wrap-up (default: 1.0)
+        session_controller: Optional SessionController instance. If None and
+            session_timer or wrapup_threshold is set, one is created automatically.
     """
 
     def __init__(
@@ -60,6 +66,9 @@ class HeadREPL:
         fallback_provider: str = "anthropic",
         max_fallbacks_per_session: int = 10,
         auto_execute_direct: bool = True,
+        session_timer: timedelta | None = None,
+        wrapup_threshold: float = 1.0,
+        session_controller: SessionController | None = None,
     ) -> None:
         self.model = model
         self.project_root = Path(project_root) if project_root else Path.cwd()
@@ -126,6 +135,20 @@ class HeadREPL:
         self.turns = 0
         self.total_tokens = 0
 
+        # Session lifecycle management
+        self._session_started_at: datetime | None = None
+        self._session_timer = session_timer
+        self._wrapup_threshold = wrapup_threshold
+        self._session_wrapped_up = False
+        self._session_controller = session_controller
+        if session_controller is None and (session_timer is not None or wrapup_threshold < 1.0):
+            policy = SessionPolicy(
+                wrapup_threshold=wrapup_threshold,
+                session_timer=session_timer or timedelta.max,
+                auto_restart=True,
+            )
+            self._session_controller = SessionController(policy=policy)
+
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
@@ -136,6 +159,9 @@ class HeadREPL:
         Called automatically by `start()`, but can be invoked directly
         for testing or programmatic use.
         """
+        if self._session_started_at is None:
+            self._session_started_at = datetime.now(UTC)
+
         context = self.session_bootstrap.bootstrap()
         system = self.session_bootstrap.build_system_prompt(context)
 
@@ -223,6 +249,10 @@ class HeadREPL:
             # Normal turn
             self._turn(user_input)
             self.turns += 1
+
+            # Session lifecycle check
+            if self._check_session_limits():
+                break
 
             # Auto-checkpoint
             if self.turns % self.checkpoint_every == 0:
@@ -487,6 +517,7 @@ class HeadREPL:
             self.turns += 1
             if self.turns % self.checkpoint_every == 0:
                 self._checkpoint()
+            self._check_session_limits()
         finally:
             sys.stdout = old_stdout
 
@@ -497,6 +528,138 @@ class HeadREPL:
             "fallback_used": fb_after > fb_before,
             "turns": self.turns,
         }
+
+    # ------------------------------------------------------------------
+    # Session lifecycle
+    # ------------------------------------------------------------------
+
+    def _check_session_limits(self) -> bool:
+        """Check session limits and trigger graceful finalize if breached.
+
+        Returns True if the session was wrapped up (and optionally restarted).
+        """
+        if self._session_wrapped_up or not self._session_controller:
+            return False
+
+        stats = self.context.get_stats()
+        elapsed = (
+            (datetime.now(UTC) - self._session_started_at).total_seconds()
+            if self._session_started_at
+            else 0.0
+        )
+
+        breached, reason = self._session_controller.should_finalize(
+            self.session_id,
+            stats.utilization_percent,
+            elapsed,
+            self.turns,
+        )
+        if not breached:
+            return False
+
+        self._session_controller.log_event(
+            self.session_id,
+            SessionLifecycleEvent.WRAPPING_UP,
+            stats.utilization_percent,
+            elapsed,
+            self.turns,
+            reason,
+        )
+        print(f"\n   ⏳ Session limit reached: {reason}")
+        print("   Wrapping up session gracefully...\n")
+
+        self._graceful_finalize()
+        return True
+
+    def _graceful_finalize(self) -> None:
+        """Generate a summary, checkpoint, and optionally restart the session."""
+        policy = self._session_controller.policy if self._session_controller else None
+        wrapup_prompt = (
+            policy.wrapup_prompt
+            if policy and policy.wrapup_prompt
+            else SessionController.DEFAULT_WRAPUP_PROMPT
+        )
+
+        # Inject wrap-up prompt as a system message
+        self.context.add_message({"role": "system", "content": wrapup_prompt})
+
+        # Call model for summary (no tools, single turn)
+        response = self._call_model()
+        summary = response.content.strip() if response and response.content else ""
+
+        if summary:
+            self.context.add_message({"role": "assistant", "content": summary})
+            existing = self.context._summary
+            if existing:
+                self.context.set_summary(f"{existing}\n\n{summary}")
+            else:
+                self.context.set_summary(summary)
+
+        # Checkpoint before any restart
+        self._checkpoint()
+        self._session_wrapped_up = True
+
+        elapsed = (
+            (datetime.now(UTC) - self._session_started_at).total_seconds()
+            if self._session_started_at
+            else 0.0
+        )
+        if self._session_controller:
+            self._session_controller.log_event(
+                self.session_id,
+                SessionLifecycleEvent.CHECKPOINTING,
+                self.context.get_stats().utilization_percent,
+                elapsed,
+                self.turns,
+                "Checkpoint saved before restart",
+            )
+
+        # Restart or finish
+        policy = self._session_controller.policy if self._session_controller else None
+        if policy and policy.auto_restart:
+            self._restart_session()
+        else:
+            print("\n   ✅ Session wrapped up. Exiting.\n")
+
+    def _restart_session(self) -> None:
+        """Start a fresh session bootstrapped from the current checkpoint."""
+        print("\n   🔄 Restarting session from checkpoint...\n")
+
+        old_session_id = self.session_id
+        old_summary = self.context._summary
+
+        # Generate new session id
+        self.session_id = self._generate_session_id()
+        self.turns = 0
+        self.total_tokens = 0
+        self._session_wrapped_up = False
+
+        # Preserve summary and clear messages
+        self.context.clear()
+        if old_summary:
+            self.context.set_summary(old_summary)
+
+        # Re-bootstrap with fresh system prompt but previous context
+        self.bootstrap()
+        self._session_started_at = datetime.now(UTC)
+
+        elapsed = 0.0
+        if self._session_controller:
+            self._session_controller.log_event(
+                self.session_id,
+                SessionLifecycleEvent.RESTARTING,
+                self.context.get_stats().utilization_percent,
+                elapsed,
+                self.turns,
+                f"Restarted from {old_session_id}",
+            )
+
+        print(f"   🧠 New session started: {self.session_id}")
+        print(f"   📥 Restored context from previous session.\n")
+
+    # ------------------------------------------------------------------
+    # Model call
+    # ------------------------------------------------------------------
 
     def _call_model(self, tools: list[dict] | None = None) -> Any | None:
         """Call the Ollama model with current messages and optional tools."""
@@ -622,6 +785,9 @@ class HeadREPL:
         elif cmd == "checkpoint":
             self._checkpoint()
             print("   Checkpoint saved.")
+        elif cmd == "restart":
+            self._restart_session()
+            print("   Session restarted from checkpoint.")
         elif cmd == "clear":
             # Keep system message, reset rest
             system = self.context._system_message()

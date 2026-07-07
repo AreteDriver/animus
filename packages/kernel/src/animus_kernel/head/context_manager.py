@@ -363,6 +363,30 @@ class HeadContextManager:
             return 0
         return len(text) // 4 + 1
 
+    def graceful_finalize_summary(self) -> str:
+        """Build a summary string from current messages + existing summary.
+
+        Used by SessionController before checkpointing a wrapped-up session.
+        Returns a markdown-formatted string suitable for bootstrapping
+        the next session.
+        """
+        parts: list[str] = []
+        if self._summary:
+            parts.append(f"## Previous Session Summary\n\n{self._summary}")
+
+        # Capture the last few user/assistant exchanges as bullet points
+        recent = []
+        for msg in self._messages[-10:]:
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            if role in ("user", "assistant") and content:
+                recent.append(f"- **{role.title()}**: {content[:200]}")
+
+        if recent:
+            parts.append("## Recent Exchanges\n\n" + "\n".join(recent))
+
+        return "\n\n".join(parts) if parts else ""
+
     def _resolve_limit(self, model: str) -> int:
         """Resolve context-window limit for a model name."""
         # Exact match

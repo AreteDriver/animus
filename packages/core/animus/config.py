@@ -344,6 +344,29 @@ class CitizensConfig:
 
 
 @dataclass
+class SessionConfig:
+    """Configuration for session lifecycle management."""
+
+    session_timer_minutes: int = 30
+    wrapup_threshold: float = 0.96
+    auto_restart: bool = True
+
+    def __post_init__(self):
+        if env_timer := os.environ.get("ANIMUS_SESSION_TIMER_MINUTES"):
+            try:
+                self.session_timer_minutes = int(env_timer)
+            except ValueError:
+                pass
+        if env_threshold := os.environ.get("ANIMUS_WRAPUP_THRESHOLD"):
+            try:
+                self.wrapup_threshold = float(env_threshold)
+            except ValueError:
+                pass
+        if env_restart := os.environ.get("ANIMUS_SESSION_AUTO_RESTART"):
+            self.auto_restart = env_restart.lower() in ("true", "1", "yes")
+
+
+@dataclass
 class AutonomousConfig:
     """Configuration for the autonomous action system.
 
@@ -396,6 +419,7 @@ class AnimusConfig:
     autonomous: AutonomousConfig = field(default_factory=AutonomousConfig)
     citizen_zero: CitizenZeroConfig = field(default_factory=CitizenZeroConfig)
     citizens: CitizensConfig = field(default_factory=CitizensConfig)
+    session: SessionConfig = field(default_factory=SessionConfig)
 
     def __post_init__(self):
         # Convert string to Path if needed
@@ -517,6 +541,11 @@ class AnimusConfig:
                 "forge_host": self.citizens.forge_host,
                 "forge_port": self.citizens.forge_port,
                 "auto_store_proposals": self.citizens.auto_store_proposals,
+            },
+            "session": {
+                "session_timer_minutes": self.session.session_timer_minutes,
+                "wrapup_threshold": self.session.wrapup_threshold,
+                "auto_restart": self.session.auto_restart,
             },
         }
 
@@ -706,6 +735,14 @@ class AnimusConfig:
                 if "auto_store_proposals" in citizens_data:
                     config.citizens.auto_store_proposals = citizens_data["auto_store_proposals"]
 
+            if session_data := data.get("session"):
+                if "session_timer_minutes" in session_data:
+                    config.session.session_timer_minutes = session_data["session_timer_minutes"]
+                if "wrapup_threshold" in session_data:
+                    config.session.wrapup_threshold = session_data["wrapup_threshold"]
+                if "auto_restart" in session_data:
+                    config.session.auto_restart = session_data["auto_restart"]
+
             # Re-apply environment overrides
             config.__post_init__()
             config.model.__post_init__()
@@ -722,6 +759,7 @@ class AnimusConfig:
             config.autonomous.__post_init__()
             config.citizen_zero.__post_init__()
             config.citizens.__post_init__()
+            config.session.__post_init__()
 
         return config
 

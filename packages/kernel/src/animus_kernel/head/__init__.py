@@ -13,6 +13,7 @@ from .planner import HeadPlanner, ToolPlan, ToolPlanStep
 from .quality_gate import HeadQualityGate, QualityScore
 from .repl import HeadREPL
 from .session_bootstrap import SessionBootstrap
+from .session_controller import SessionController, SessionLifecycleEvent, SessionPolicy, SessionTelemetry
 from .synthesizer import HeadSynthesizer, SynthesisResult
 from .tool_orchestrator import HeadToolOrchestrator
 
@@ -36,4 +37,8 @@ __all__ = [
     "SynthesisResult",
     "HeadCheckpoint",
     "HeadCheckpointStore",
+    "SessionController",
+    "SessionPolicy",
+    "SessionLifecycleEvent",
+    "SessionTelemetry",
 ]

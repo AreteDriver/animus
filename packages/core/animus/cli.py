@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import timedelta
 
 from animus.workflows.ingest import ingest
 
@@ -294,6 +295,51 @@ def _cmd_test_oracle(args: argparse.Namespace) -> int:
     return 0
 
 
+# ------------------------------------------------------------------
+# Session
+# ------------------------------------------------------------------
+
+
+def _cmd_session(args: argparse.Namespace) -> int:
+    from animus_kernel.head.repl import HeadREPL
+
+    timer = None
+    if args.timer:
+        value = args.timer.strip().lower()
+        if value.endswith("h"):
+            timer = timedelta(hours=int(value[:-1]))
+        elif value.endswith("m"):
+            timer = timedelta(minutes=int(value[:-1]))
+        elif value.endswith("s"):
+            timer = timedelta(seconds=int(value[:-1]))
+        else:
+            timer = timedelta(minutes=int(value))
+
+    wrapup = args.wrapup_at if args.wrapup_at < 1.0 else 1.0
+
+    try:
+        repl = HeadREPL(
+            model=args.model,
+            project_root=args.project,
+            session_timer=timer,
+            wrapup_threshold=wrapup,
+        )
+        if args.no_restart and repl._session_controller:
+            repl._session_controller.policy.auto_restart = False
+        repl.start()
+    except RuntimeError as exc:
+        print(f"Failed to start session: {exc}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        print("\nGoodbye.")
+    return 0
+
+
+# ------------------------------------------------------------------
+# Proposal Queue
+# ------------------------------------------------------------------
+
+
 def _cmd_proposal_queue_list(args: argparse.Namespace) -> int:
     from animus.citizens import ProposalQueue
     from animus.config import get_config
@@ -551,6 +597,39 @@ def main(argv: list[str] | None = None) -> int:
         help="Store generated proposal in Animus memory",
     )
     oracle_parser.set_defaults(func=_cmd_test_oracle)
+
+    # Session
+    session_parser = subparsers.add_parser(
+        "session",
+        help="Start an interactive Head REPL session with lifecycle management",
+    )
+    session_parser.add_argument(
+        "--model",
+        default="qwen2.5:32b",
+        help="Ollama model to use (default: qwen2.5:32b)",
+    )
+    session_parser.add_argument(
+        "--project",
+        default=".",
+        help="Project root directory (default: current directory)",
+    )
+    session_parser.add_argument(
+        "--timer",
+        default=None,
+        help="Session wall-clock limit, e.g. 30m, 1h, 90s (default: disabled)",
+    )
+    session_parser.add_argument(
+        "--wrapup-at",
+        type=float,
+        default=0.96,
+        help="Token utilization fraction (0.0–1.0) that triggers graceful finalize (default: 0.96)",
+    )
+    session_parser.add_argument(
+        "--no-restart",
+        action="store_true",
+        help="Disable automatic session restart after wrap-up",
+    )
+    session_parser.set_defaults(func=_cmd_session)
 
     # Proposal Queue
     proposal_queue_parser = subparsers.add_parser(

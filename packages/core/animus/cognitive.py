@@ -24,7 +24,9 @@ if TYPE_CHECKING:
     from animus.entities import EntityMemory
     from animus.learning import LearningLayer
     from animus.memory import MemoryLayer
+    from animus.meta.thinker import MetaThinker
     from animus.proactive import ProactiveEngine
+    from animus.routing.router import ProviderRouter
     from animus.tools import ToolRegistry
 
 logger = get_logger("cognitive")
@@ -713,12 +715,16 @@ class CognitiveLayer:
         learning: "LearningLayer | None" = None,
         entity_memory: "EntityMemory | None" = None,
         proactive: "ProactiveEngine | None" = None,
+        meta_thinker: "MetaThinker | None" = None,
+        provider_router: "ProviderRouter | None" = None,
     ):
         self.primary_config = primary_config or ModelConfig.ollama()
         self.fallback_config = fallback_config
         self.learning = learning
         self.entity_memory = entity_memory
         self.proactive = proactive
+        self.meta_thinker = meta_thinker
+        self.provider_router = provider_router
         self.register_translator = RegisterTranslator()
 
         self.primary: IntelligenceProvider = create_model(self.primary_config)
@@ -728,7 +734,9 @@ class CognitiveLayer:
 
         logger.info(
             f"CognitiveLayer initialized: primary={self.primary_config.provider.value}, "
-            f"model={self.primary_config.model_name}"
+            f"model={self.primary_config.model_name}, "
+            f"meta_thinker={'enabled' if meta_thinker else 'disabled'}, "
+            f"router={'enabled' if provider_router else 'disabled'}"
         )
 
     def think(
@@ -824,14 +832,58 @@ class CognitiveLayer:
     ) -> str:
         """Generate a response, routing to the appropriate model based on task weight.
 
-        Heavy tasks (planning, code gen, debugging) go to the primary model.
-        Light tasks (summarization, formatting) go to the local/fallback model.
+        If ProviderRouter is configured, uses history-aware trajectory scoring
+        to select the best model. Otherwise falls back to static task classification.
         """
+        system = self._build_system_prompt(context, mode)
+
+        # History-aware routing via ProviderRouter
+        if self.provider_router and self.provider_router.config.enabled:
+            decision = self.provider_router.select(
+                prompt=prompt,
+                estimated_tokens=len(prompt.split()) * 2,  # Rough estimate
+            )
+            logger.info(
+                f"Router selected {decision.provider_name} (score={decision.score:.3f}): "
+                f"{decision.reason}"
+            )
+
+            start_time = __import__("time").time()
+            try:
+                if decision.provider_name == "local" and self.fallback:
+                    response = self.fallback.generate(prompt, system)
+                else:
+                    response = self.primary.generate(prompt, system)
+
+                latency_ms = (__import__("time").time() - start_time) * 1000
+
+                # Record success for learning
+                self.provider_router.record_success(
+                    provider_name=decision.provider_name,
+                    prompt=prompt,
+                    latency_ms=latency_ms,
+                    quality_score=0.7,  # Baseline quality; could use rubric eval
+                )
+                return response
+
+            except Exception as e:
+                latency_ms = (__import__("time").time() - start_time) * 1000
+                logger.warning(f"Routed provider {decision.provider_name} failed: {e}")
+                self.provider_router.record_failure(
+                    provider_name=decision.provider_name,
+                    prompt=prompt,
+                    latency_ms=latency_ms,
+                    error_type=type(e).__name__,
+                )
+                # Fallback to primary on routing failure
+                return self.primary.generate(prompt, system)
+
+        # Static fallback routing (original behavior)
         weight = classify_task(prompt)
         logger.debug(f"Task classified as {weight.value}: {prompt[:60]}...")
 
         if weight == TaskWeight.LIGHT and self.fallback:
-            return self.delegate_to_local(prompt, self._build_system_prompt(context, mode))
+            return self.delegate_to_local(prompt, system)
 
         return self.think(prompt, context, mode)
 
@@ -1006,6 +1058,13 @@ When you have gathered enough information, provide your final answer."""
         Uses structured tool_use content blocks instead of markdown parsing.
         """
         from animus.tools import tools_to_anthropic_format
+        from animus.meta.events import IterationStarted, ResponseReceived, ToolExecution, LoopCompleted, MaxIterationsReached
+        from animus.meta.signals import SignalType
+
+        # Initialize Meta-Thinker for this session
+        if self.meta_thinker:
+            self.meta_thinker.reset()
+            self.meta_thinker.set_original_prompt(prompt)
 
         system = self._build_system_prompt(context, mode, citizen_context=citizen_context)
         anthropic_tools = tools_to_anthropic_format(
@@ -1013,8 +1072,22 @@ When you have gathered enough information, provide your final answer."""
         )
         messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
         text_parts: list[str] = []
+        total_iterations = 0
 
-        for _ in range(max_iterations):
+        for iteration in range(max_iterations):
+            total_iterations = iteration + 1
+
+            # Notify Meta-Thinker
+            if self.meta_thinker:
+                self.meta_thinker.observe(
+                    IterationStarted(
+                        session_id="anthropic_loop",
+                        iteration=total_iterations,
+                        max_iterations=max_iterations,
+                        mode=mode.value,
+                    )
+                )
+
             response = self.primary.generate_with_tools(
                 messages=messages,
                 system=system,
@@ -1030,8 +1103,29 @@ When you have gathered enough information, provide your final answer."""
                 elif block.type == "tool_use":
                     tool_use_blocks.append(block)
 
+            # Notify Meta-Thinker of response
+            if self.meta_thinker:
+                self.meta_thinker.observe(
+                    ResponseReceived(
+                        session_id="anthropic_loop",
+                        iteration=total_iterations,
+                        text="\n".join(text_parts),
+                        tool_calls=[{"name": b.name, "input": b.input} for b in tool_use_blocks],
+                    )
+                )
+
             if not tool_use_blocks:
                 # No tool calls — return final text
+                if self.meta_thinker:
+                    self.meta_thinker.observe(
+                        LoopCompleted(
+                            session_id="anthropic_loop",
+                            iteration=total_iterations,
+                            final_answer="\n".join(text_parts),
+                            total_iterations=total_iterations,
+                            reason="no_tool_calls",
+                        )
+                    )
                 return "\n".join(text_parts) if text_parts else ""
 
             # Build assistant message with ALL content blocks (text + tool_use)
@@ -1066,6 +1160,20 @@ When you have gathered enough information, provide your final answer."""
 
                 result = tools.execute(block.name, block.input)
                 tools.record_tool_use(block.name, result.success)
+
+                # Notify Meta-Thinker of tool execution
+                if self.meta_thinker:
+                    self.meta_thinker.observe(
+                        ToolExecution(
+                            session_id="anthropic_loop",
+                            iteration=total_iterations,
+                            tool_name=block.name,
+                            params=block.input,
+                            success=result.success,
+                            error=result.error,
+                        )
+                    )
+
                 tool_results.append(
                     {
                         "type": "tool_result",
@@ -1078,8 +1186,44 @@ When you have gathered enough information, provide your final answer."""
 
             messages.append({"role": "user", "content": tool_results})
 
+            # Check Meta-Thinker signals between iterations
+            if self.meta_thinker:
+                signals = self.meta_thinker.check()
+                for signal in signals:
+                    if signal.signal_type == SignalType.REPLAN:
+                        # Inject replan guidance as a system-level hint
+                        replan_msg = (
+                            f"[Meta-Thinker Guidance] {signal.reason}\n"
+                            f"Suggested approach: {signal.suggested_approach}"
+                        )
+                        messages.append({"role": "user", "content": replan_msg})
+                        logger.info(f"Meta-Thinker replan: {signal.reason}")
+                    elif signal.signal_type == SignalType.INJECT_BRIEF:
+                        messages.append({"role": "user", "content": signal.brief_text})
+                        logger.info(f"Meta-Thinker brief injected: {signal.reason}")
+                    elif signal.signal_type == SignalType.ESCALATE:
+                        logger.info(f"Meta-Thinker escalation: {signal.reason}")
+                        # Escalation handled at loop level; could switch modes
+                    elif signal.signal_type == SignalType.HALT:
+                        logger.warning(f"Meta-Thinker halt: {signal.reason}")
+                        return signal.partial_result or "\n".join(text_parts)
+
         # Max iterations reached — return whatever text we have
         logger.warning(f"Max tool iterations ({max_iterations}) reached")
+        if self.meta_thinker:
+            self.meta_thinker.observe(
+                MaxIterationsReached(
+                    session_id="anthropic_loop",
+                    iteration=total_iterations,
+                    final_response="\n".join(text_parts),
+                    total_iterations=total_iterations,
+                )
+            )
+            # Check for halt signal on max iterations
+            signals = self.meta_thinker.check()
+            for signal in signals:
+                if signal.signal_type == SignalType.HALT:
+                    return signal.partial_result or "\n".join(text_parts)
         return "\n".join(text_parts) if text_parts else ""
 
     def _think_with_tools_markdown(
@@ -1092,14 +1236,35 @@ When you have gathered enough information, provide your final answer."""
         approval_callback: Callable | None = None,
     ) -> str:
         """Agentic loop using markdown ```tool blocks (Ollama/Mock/OpenAI)."""
+        from animus.meta.events import IterationStarted, ResponseReceived, ToolExecution, LoopCompleted, MaxIterationsReached
+        from animus.meta.signals import SignalType
+
+        # Initialize Meta-Thinker for this session
+        if self.meta_thinker:
+            self.meta_thinker.reset()
+            self.meta_thinker.set_original_prompt(prompt)
+
         tools_schema = tools.get_schema_text(intent=prompt, lazy=True, max_full_schemas=5)
         system = self._build_system_prompt(context, mode, tools_schema)
 
         messages = [{"role": "user", "content": prompt}]
         final_response = ""
+        total_iterations = 0
 
         for iteration in range(max_iterations):
-            logger.debug(f"Tool iteration {iteration + 1}/{max_iterations}")
+            total_iterations = iteration + 1
+            logger.debug(f"Tool iteration {total_iterations}/{max_iterations}")
+
+            # Notify Meta-Thinker
+            if self.meta_thinker:
+                self.meta_thinker.observe(
+                    IterationStarted(
+                        session_id="markdown_loop",
+                        iteration=total_iterations,
+                        max_iterations=max_iterations,
+                        mode=mode.value,
+                    )
+                )
 
             # Generate response
             full_prompt = self._format_messages(messages)
@@ -1108,9 +1273,30 @@ When you have gathered enough information, provide your final answer."""
             # Parse tool calls
             tool_calls = self._parse_tool_calls(response)
 
+            # Notify Meta-Thinker of response
+            if self.meta_thinker:
+                self.meta_thinker.observe(
+                    ResponseReceived(
+                        session_id="markdown_loop",
+                        iteration=total_iterations,
+                        text=response,
+                        tool_calls=[{"name": name, "input": params} for name, params in tool_calls],
+                    )
+                )
+
             if not tool_calls:
                 # No tool calls, we're done
                 final_response = response
+                if self.meta_thinker:
+                    self.meta_thinker.observe(
+                        LoopCompleted(
+                            session_id="markdown_loop",
+                            iteration=total_iterations,
+                            final_answer=response,
+                            total_iterations=total_iterations,
+                            reason="no_tool_calls",
+                        )
+                    )
                 break
 
             # Execute tools
@@ -1132,6 +1318,20 @@ When you have gathered enough information, provide your final answer."""
                 # Execute tool
                 result = tools.execute(tool_name, params)
                 tools.record_tool_use(tool_name, result.success)
+
+                # Notify Meta-Thinker
+                if self.meta_thinker:
+                    self.meta_thinker.observe(
+                        ToolExecution(
+                            session_id="markdown_loop",
+                            iteration=total_iterations,
+                            tool_name=tool_name,
+                            params=params,
+                            success=result.success,
+                            error=result.error,
+                        )
+                    )
+
                 tool_results.append(result.to_context())
                 logger.debug(f"Tool {tool_name} result: success={result.success}")
 
@@ -1143,10 +1343,43 @@ When you have gathered enough information, provide your final answer."""
             results_text = "\n\n".join(tool_results)
             messages.append({"role": "user", "content": f"Tool results:\n{results_text}"})
 
+            # Check Meta-Thinker signals between iterations
+            if self.meta_thinker:
+                signals = self.meta_thinker.check()
+                for signal in signals:
+                    if signal.signal_type == SignalType.REPLAN:
+                        replan_msg = (
+                            f"[Meta-Thinker Guidance] {signal.reason}\n"
+                            f"Suggested approach: {signal.suggested_approach}"
+                        )
+                        messages.append({"role": "user", "content": replan_msg})
+                        logger.info(f"Meta-Thinker replan: {signal.reason}")
+                    elif signal.signal_type == SignalType.INJECT_BRIEF:
+                        messages.append({"role": "user", "content": signal.brief_text})
+                        logger.info(f"Meta-Thinker brief injected: {signal.reason}")
+                    elif signal.signal_type == SignalType.ESCALATE:
+                        logger.info(f"Meta-Thinker escalation: {signal.reason}")
+                    elif signal.signal_type == SignalType.HALT:
+                        logger.warning(f"Meta-Thinker halt: {signal.reason}")
+                        return signal.partial_result or final_response
+
         else:
             # Max iterations reached
             logger.warning(f"Max tool iterations ({max_iterations}) reached")
             final_response = response
+            if self.meta_thinker:
+                self.meta_thinker.observe(
+                    MaxIterationsReached(
+                        session_id="markdown_loop",
+                        iteration=total_iterations,
+                        final_response=final_response,
+                        total_iterations=total_iterations,
+                    )
+                )
+                signals = self.meta_thinker.check()
+                for signal in signals:
+                    if signal.signal_type == SignalType.HALT:
+                        return signal.partial_result or final_response
 
         return final_response
 

@@ -5,8 +5,24 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from datetime import timedelta
 
 from animus_kernel.head.repl import HeadREPL
+
+
+def _parse_timer(value: str | None) -> timedelta | None:
+    """Parse a timer string like '30m', '1h', '90s' into a timedelta."""
+    if value is None:
+        return None
+    value = value.strip().lower()
+    if value.endswith("h"):
+        return timedelta(hours=int(value[:-1]))
+    if value.endswith("m"):
+        return timedelta(minutes=int(value[:-1]))
+    if value.endswith("s"):
+        return timedelta(seconds=int(value[:-1]))
+    # Default to minutes if no suffix
+    return timedelta(minutes=int(value))
 
 
 def main() -> None:
@@ -44,6 +60,22 @@ def main() -> None:
         help="Run as JSON-RPC daemon (stdio) instead of interactive REPL",
     )
     parser.add_argument(
+        "--session-timer",
+        default=None,
+        help="Session wall-clock limit, e.g. 30m, 1h, 90s (default: disabled)",
+    )
+    parser.add_argument(
+        "--wrapup-at",
+        type=float,
+        default=1.0,
+        help="Token utilization fraction (0.0–1.0) that triggers graceful finalize (default: 1.0 = disabled)",
+    )
+    parser.add_argument(
+        "--no-auto-restart",
+        action="store_true",
+        help="Disable automatic session restart after wrap-up",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -70,13 +102,21 @@ def main() -> None:
 
         system_prompt = pathlib.Path(args.system_prompt).read_text()
 
+    session_timer = _parse_timer(args.session_timer)
+    wrapup_threshold = args.wrapup_at if args.wrapup_at < 1.0 else 1.0
+
     try:
         repl = HeadREPL(
             model=args.model,
             project_root=args.project,
             memory_dir=args.memory_dir,
             system_prompt=system_prompt,
+            session_timer=session_timer,
+            wrapup_threshold=wrapup_threshold,
         )
+        # Override auto_restart if --no-auto-restart was passed
+        if args.no_auto_restart and repl._session_controller:
+            repl._session_controller.policy.auto_restart = False
         repl.start()
     except RuntimeError as exc:
         print(f"Failed to start Head: {exc}", file=sys.stderr)
