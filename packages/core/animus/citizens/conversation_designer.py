@@ -88,16 +88,51 @@ class ConversationDesignerCitizen:
         - ``display`` — Claude Code history.jsonl
         - ``message`` — Slack/Discord-style
         - ``content`` — Generic fallback
+        - ``message.content`` — Claude Code session JSONL (nested dict)
         """
-        for key in ("prompt", "display", "message", "content"):
+        for key in ("prompt", "display", "content"):
             val = entry.get(key)
             if isinstance(val, str) and val.strip():
                 return val.strip()
+
+        # Claude Code: message is a dict with role/content
+        msg = entry.get("message")
+        if isinstance(msg, dict):
+            content = msg.get("content")
+            if isinstance(content, str) and content.strip():
+                return content.strip()
+
+        # Slack/Discord: message is a plain string
+        msg_str = entry.get("message")
+        if isinstance(msg_str, str) and msg_str.strip():
+            return msg_str.strip()
+
         return ""
 
     # ------------------------------------------------------------------
     # Observation methods (read-only)
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _is_human_user_entry(entry: dict[str, Any]) -> bool:
+        """Return True if entry represents a human user prompt.
+
+        Filters out assistant responses, tool results, and system events
+        so that only actual user input is analyzed.
+        """
+        # Claude Code JSONL: type == "user" with origin.kind == "human"
+        if entry.get("type") == "user":
+            origin = entry.get("origin", {})
+            if isinstance(origin, dict) and origin.get("kind") == "human":
+                return True
+            # Generic logs without origin: rely on top-level "prompt" key
+            if "prompt" in entry:
+                return True
+            return False
+        # Generic / OpenAI-style: presence of top-level "prompt" implies user
+        if "prompt" in entry:
+            return True
+        return False
 
     def observe_repeated_prompts(self, limit: int = 100) -> list[Observation]:
         """Observe conversation logs for repeated prompt patterns.
@@ -121,6 +156,8 @@ class ConversationDesignerCitizen:
             try:
                 for line in log_file.read_text().splitlines():
                     entry = json.loads(line)
+                    if not self._is_human_user_entry(entry):
+                        continue
                     prompt = self._extract_prompt(entry).lower()
                     # Normalize: strip punctuation, collapse whitespace
                     normalized = re.sub(r"[^\w\s]", "", prompt)
@@ -133,7 +170,7 @@ class ConversationDesignerCitizen:
                 continue
 
         for prompt, count in sorted(prompt_counts.items(), key=lambda x: -x[1]):
-            if count >= 3:
+            if count >= 2:
                 severity = "high" if count >= 10 else "medium" if count >= 5 else "low"
                 observations.append(
                     Observation(
@@ -186,6 +223,8 @@ class ConversationDesignerCitizen:
             try:
                 for line in log_file.read_text().splitlines():
                     entry = json.loads(line)
+                    if not self._is_human_user_entry(entry):
+                        continue
                     prompt = self._extract_prompt(entry)
                     # Skip empty and very short intentional commands
                     if not prompt or prompt.lower().strip() in self.INTENTIONAL_SHORT_COMMANDS:
@@ -202,7 +241,7 @@ class ConversationDesignerCitizen:
                 continue
 
         for prompt, count in sorted(vague_counts.items(), key=lambda x: -x[1]):
-            if count >= 2:
+            if count >= 1:
                 observations.append(
                     Observation(
                         source="conversation",
@@ -261,6 +300,8 @@ class ConversationDesignerCitizen:
                     current_streak = 0
 
                     for entry in session_entries:
+                        if not self._is_human_user_entry(entry):
+                            continue
                         prompt = self._extract_prompt(entry).lower()
                         if any(kw in prompt for kw in correction_keywords):
                             correction_count += 1
@@ -337,8 +378,15 @@ class ConversationDesignerCitizen:
     # Proposal generation
     # ------------------------------------------------------------------
 
-    def generate_proposal(self) -> ImprovementProposal | None:
+    def generate_proposal(
+        self, focus_pattern: str | None = None
+    ) -> ImprovementProposal | None:
         """Generate an improvement proposal from conversation analysis.
+
+        Args:
+            focus_pattern: Optionally force a specific pattern type
+                (e.g. ``"repeated_prompt"``). When omitted, the
+                highest-severity pattern is chosen automatically.
 
         Returns:
             Improvement proposal, or None if no actionable findings.
@@ -349,8 +397,29 @@ class ConversationDesignerCitizen:
             logger.info("No conversation patterns detected — no proposal generated")
             return None
 
-        # Focus on highest-severity pattern
-        top = max(patterns, key=lambda p: {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(p.severity, 0))
+        if focus_pattern:
+            matching = [p for p in patterns if p.pattern_type == focus_pattern]
+            if matching:
+                # Pick the most frequent match for the focused type
+                top = max(matching, key=lambda p: p.frequency)
+            else:
+                logger.warning(
+                    f"Focus pattern '{focus_pattern}' not found — falling back to severity ranking"
+                )
+                top = max(
+                    patterns,
+                    key=lambda p: {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(
+                        p.severity, 0
+                    ),
+                )
+        else:
+            # Focus on highest-severity pattern
+            top = max(
+                patterns,
+                key=lambda p: {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(
+                    p.severity, 0
+                ),
+            )
 
         evidence = [
             EvidenceItem(

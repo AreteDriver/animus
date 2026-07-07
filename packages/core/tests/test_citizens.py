@@ -683,6 +683,30 @@ class TestConversationDesignerCitizen:
         proposal = designer.generate_proposal()
         assert proposal is None
 
+    def test_generate_proposal_focus_pattern(self, tmp_path):
+        log_dir = tmp_path / "conversations"
+        log_dir.mkdir()
+        log_file = log_dir / "session.jsonl"
+        # Mix of repeated prompts (low severity, freq=3) and vague requests (medium, freq=2)
+        entries = [
+            json.dumps({"prompt": "commit and push"}),
+            json.dumps({"prompt": "commit and push"}),
+            json.dumps({"prompt": "commit and push"}),
+            json.dumps({"prompt": "do something here"}),
+            json.dumps({"prompt": "do something here"}),
+        ]
+        log_file.write_text("\n".join(entries))
+
+        designer = ConversationDesignerCitizen(conversation_log_dir=log_dir)
+        # Default should pick vague_request (medium severity > low severity)
+        default_proposal = designer.generate_proposal()
+        assert default_proposal is not None
+
+        # Focused should pick repeated_prompt regardless of severity
+        focused_proposal = designer.generate_proposal(focus_pattern="repeated_prompt")
+        assert focused_proposal is not None
+        assert "commit and push" in focused_proposal.problem.lower()
+
     def test_store_proposal_with_memory(self, tmp_path):
         mock_memory = MagicMock()
         designer = ConversationDesignerCitizen(memory_layer=mock_memory)
