@@ -30,9 +30,16 @@ from animus.memory.types import (
     SemanticFact,
 )
 
+# Optional: DurableMemoryStore is gated by sqlalchemy availability.
+try:
+    from animus.memory.stores.durable import DurableMemoryStore
+except ImportError:
+    DurableMemoryStore = None  # type: ignore[misc,assignment]
+
 __all__ = [
     "ChromaMemoryStore",
     "Conversation",
+    "DurableMemoryStore",
     "LocalMemoryStore",
     "Memory",
     "MemoryLayer",

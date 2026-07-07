@@ -60,6 +60,15 @@ class MemoryLayer:
             except ImportError:
                 logger.warning("ChromaDB not available, falling back to JSON storage")
                 self.store = _memory.LocalMemoryStore(data_dir)
+        elif backend == "durable":
+            if _memory.DurableMemoryStore is None:
+                raise RuntimeError(
+                    "DurableMemoryStore requires sqlalchemy. Install: pip install animus[postgres]"
+                )
+            # Durable store reads database_url from ANIMUS_DATABASE_URL env var
+            # or ObjectStoreConfig; data_dir is ignored.
+            self.store = _memory.DurableMemoryStore()
+            self.store.create_tables()
         else:
             self.store = _memory.LocalMemoryStore(data_dir)
 

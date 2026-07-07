@@ -48,7 +48,7 @@ class ModelConfig:
 class MemoryConfig:
     """Configuration for the memory system."""
 
-    backend: str = "chroma"  # "chroma" or "json"
+    backend: str = "chroma"  # "chroma", "json", or "durable"
     collection_name: str = "animus_memories"
 
     def __post_init__(self):
