@@ -33,6 +33,14 @@ from animus.logging import get_logger
 logger = get_logger("durability.postgres_store")
 
 try:
+    from animus_contracts import ValidationError as _ContractValidationError
+    from animus_contracts import validate as _validate_contract
+
+    _HAS_CONTRACTS = True
+except ImportError:  # pragma: no cover
+    _HAS_CONTRACTS = False
+
+try:
     from sqlalchemy import (
         Column,
         DateTime,
@@ -422,6 +430,8 @@ class DurableObjectStore:
         integrity = self._compute_integrity_hash(record)
         now = _now_utc()
 
+        self._validate_object_version(record, integrity, valid_from=now, recorded_at=now)
+
         with self._session_factory() as session:
             row = _ObjectRegistryRow(
                 object_id=record.object_id,
@@ -543,11 +553,47 @@ class DurableObjectStore:
         valid_from: datetime | None = None,
         recorded_at: datetime | None = None,
     ) -> None:
-        """Validate an object record. Fail-closed: raises LedgerValidationError."""
-        # Schema validation hook — reserved for future integration with
-        # contracts.validator. Currently a no-op so the store works without
-        # the contracts package.
-        pass
+        """Validate an object record against ``object_version.schema.json``.
+
+        Raises :exc:`LedgerValidationError` on mismatch (fail-closed).
+        Skips validation when ``animus_contracts`` is not installed.
+        """
+        if not _HAS_CONTRACTS:
+            return
+
+        now_iso = (recorded_at or _now_utc()).isoformat()
+        valid_from_iso = valid_from.isoformat() if valid_from else None
+
+        version_dict = {
+            "object_id": record.object_id,
+            "object_version": record.version,
+            "schema_id": record.schema_id,
+            "schema_version": record.schema_version,
+            "owner_id": record.owner_id,
+            "workspace_id": record.workspace_id,
+            "subject_domain": record.subject_domain,
+            "artifact_type": record.artifact_type,
+            "cognitive_role": record.cognitive_role,
+            "workflow_status": record.workflow_status,
+            "epistemic_status": record.epistemic_status,
+            "lifecycle_status": record.lifecycle_status,
+            "storage_tier": record.storage_tier,
+            "presentation": record.presentation,
+            "security_class": record.security_class,
+            "valid_from": valid_from_iso,
+            "recorded_at": now_iso,
+            "created_by": record.created_by,
+            "content_sha256": integrity_hash,
+            "payload": record.payload,
+            "tags": record.tags or [],
+        }
+
+        try:
+            _validate_contract(version_dict, "object_version")
+        except _ContractValidationError as exc:
+            raise LedgerValidationError(
+                f"Object version failed schema validation: {exc.errors}"
+            ) from exc
 
     def retrieve(self, object_id: str) -> ObjectRecord | None:
         """Retrieve the current (non-superseded) version of an object."""
