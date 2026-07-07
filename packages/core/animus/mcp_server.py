@@ -1505,6 +1505,83 @@ def create_mcp_server():
         return json.dumps(stats, indent=2)
 
     # -----------------------------------------------------------------------
+    # Citizen listing (Mind Foundation)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_list_citizens(
+        api_key: str = "",
+    ) -> str:
+        """List all registered Phase 0 citizens and their status.
+
+        Returns citizen ID, version, purpose, and operational status.
+
+        Args:
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration."
+
+        citizens = [
+            {
+                "id": "C-001",
+                "name": "Architect",
+                "version": "1.2.0",
+                "purpose": "Observes codebase, conversations, and evaluations; produces evidence-backed improvement proposals",
+                "focus_areas": ["technical_debt", "architecture", "code_quality"],
+                "status": "active",
+            },
+            {
+                "id": "C-002",
+                "name": "Conversation Designer",
+                "version": "1.1.0",
+                "purpose": "Reduces cognitive effort; detects repeated prompts, vague requests, and correction loops",
+                "focus_areas": ["ux", "communication_patterns", "cognitive_load"],
+                "status": "active",
+            },
+            {
+                "id": "C-003",
+                "name": "Knowledge Curator",
+                "version": "1.0.0",
+                "purpose": "Maintains knowledge accuracy; detects stale references, contradictions, and orphan topics",
+                "focus_areas": ["docs", "knowledge_graph", "cross_project_patterns"],
+                "status": "active",
+            },
+            {
+                "id": "C-004",
+                "name": "Test Oracle",
+                "version": "1.0.0",
+                "purpose": "Analyzes test suite health, coverage trends, and eval drift",
+                "focus_areas": ["testing", "coverage", "eval_calibration"],
+                "status": "active",
+            },
+            {
+                "id": "CZ",
+                "name": "Citizen Zero",
+                "version": "0.1",
+                "purpose": "Persistent identity overlay; grounds every LLM call in chartered principles and verified invariants",
+                "focus_areas": ["identity", "constitution", "continuity"],
+                "status": "active",
+            },
+        ]
+
+        lines = ["# Registered Animus Citizens", ""]
+        for c in citizens:
+            lines.append(f"## {c['id']}: {c['name']} ({c['version']})")
+            lines.append(f"**Purpose:** {c['purpose']}")
+            lines.append(f"**Focus:** {', '.join(c['focus_areas'])}")
+            lines.append(f"**Status:** {c['status']}")
+            lines.append("")
+
+        response = "\n".join(lines)
+        audit_log.record("animus_list_citizens", {Sensitivity.PUBLIC}, len(citizens), 0, len(response))
+        return response
+
+    # -----------------------------------------------------------------------
     # Citizen Council tools (Mind Foundation)
     # -----------------------------------------------------------------------
 
