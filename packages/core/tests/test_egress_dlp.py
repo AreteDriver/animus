@@ -144,6 +144,7 @@ class TestRecallScrubsOnEgress:
                 "github_token",
                 "credential_label_separated",
                 "credential_label_camelcase",
+                "credential_label_compound",
             )
         )
 

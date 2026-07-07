@@ -125,8 +125,9 @@ class TestMcpServerCreation:
         # 4 memory + 2 versioning + 3 task + 1 brief + 1 workflow + 1 harvest
         # + 4 watchlist + 3 transcripts + 1 self-improve
         # + 2 architect + 2 conversation_designer + 2 knowledge_curator
-        # + 2 test_oracle + 4 proposal_queue + 2 citizen_council = 34
-        assert len(tools) == 34
+        # + 2 test_oracle + 4 proposal_queue + 2 citizen_council
+        # + 2 session_steward + 1 list_citizens = 37
+        assert len(tools) == 37
 
 
 class TestMemoryTools:
