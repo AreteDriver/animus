@@ -186,6 +186,23 @@ class Tool:
             "requires_approval": self.requires_approval,
         }
 
+    def get_compact_schema(self) -> dict:
+        """Get compact schema: name, description, param names only.
+
+        Used by lazy schema loading to keep token costs low while still
+        making the model aware of all available tools. Full schemas are
+        loaded on-demand for top-ranked tools.
+        """
+        param_names = []
+        if self.parameters and isinstance(self.parameters, dict):
+            props = self.parameters.get("properties", {})
+            param_names = list(props.keys())
+        return {
+            "name": self.name,
+            "description": self.description,
+            "params": param_names,
+        }
+
 
 class ToolRegistry:
     """
@@ -196,6 +213,7 @@ class ToolRegistry:
 
     def __init__(self):
         self._tools: dict[str, Tool] = {}
+        self._tool_history: dict[str, list[dict]] = {}
         logger.debug("ToolRegistry initialized")
 
     def register(self, tool: Tool) -> None:
@@ -219,24 +237,207 @@ class ToolRegistry:
         """List all registered tools."""
         return list(self._tools.values())
 
-    def get_schema(self) -> list[dict]:
-        """Get JSON Schema for all tools (for model context)."""
-        return [tool.get_schema() for tool in self._tools.values()]
+    def record_tool_use(self, name: str, success: bool) -> None:
+        """Record a tool execution outcome for history-aware routing."""
+        if name not in self._tool_history:
+            self._tool_history[name] = []
+        self._tool_history[name].append(
+            {"success": success, "timestamp": datetime.now().isoformat()}
+        )
+        # Keep last 20 entries to prevent unbounded growth
+        self._tool_history[name] = self._tool_history[name][-20:]
 
-    def get_schema_text(self) -> str:
-        """Get formatted text description of all tools."""
-        lines = ["Available tools:"]
+    def get_schema(
+        self,
+        intent: str | None = None,
+        lazy: bool = True,
+        max_full_schemas: int = 5,
+    ) -> list[dict]:
+        """Get JSON Schema for tools with optional lazy loading.
+
+        When lazy=True, returns compact schemas for all tools and
+        full schemas only for the top-N tools ranked by ISO score.
+
+        Args:
+            intent: User prompt or task description for ISO scoring.
+            lazy: If True, use two-phase lazy schema loading.
+            max_full_schemas: Max number of tools to return full schemas for.
+
+        Returns:
+            List of tool schemas (compact or full depending on ranking).
+        """
+        if not lazy or not intent:
+            # Fallback: return full schemas for all tools
+            return [tool.get_schema() for tool in self._tools.values()]
+
+        # Score all tools by ISO + history boost
+        scored: list[tuple[float, Tool]] = []
         for tool in self._tools.values():
-            lines.append(f"\n- {tool.name}: {tool.description}")
-            if tool.parameters.get("properties"):
-                lines.append("  Parameters:")
-                for param, spec in tool.parameters["properties"].items():
-                    required = param in tool.parameters.get("required", [])
-                    req_marker = " (required)" if required else ""
-                    lines.append(
-                        f"    - {param}: {spec.get('description', spec.get('type', 'any'))}{req_marker}"
-                    )
+            score = self._iso_score(intent, tool)
+            score = self._apply_history_boost(score, tool.name)
+            scored.append((score, tool))
+
+        # Sort descending by score
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        # Build result: compact for all, full for top-N
+        results: list[dict] = []
+        for i, (score, tool) in enumerate(scored):
+            if i < max_full_schemas:
+                # Full schema for top-ranked tools
+                full = tool.get_schema()
+                full["_iso_score"] = round(score, 3)
+                results.append(full)
+            else:
+                # Compact schema for remaining tools
+                compact = tool.get_compact_schema()
+                compact["_iso_score"] = round(score, 3)
+                results.append(compact)
+
+        logger.debug(
+            f"Lazy schema load: {len(results)} tools, "
+            f"{min(max_full_schemas, len(scored))} full, "
+            f"{max(0, len(scored) - max_full_schemas)} compact"
+        )
+        return results
+
+    def get_schema_text(
+        self,
+        intent: str | None = None,
+        lazy: bool = True,
+        max_full_schemas: int = 5,
+    ) -> str:
+        """Get formatted text description with optional lazy loading.
+
+        Args:
+            intent: User prompt or task description for ISO scoring.
+            lazy: If True, use two-phase lazy schema loading.
+            max_full_schemas: Max number of tools to return full schemas for.
+
+        Returns:
+            Formatted text describing available tools.
+        """
+        if not lazy or not intent:
+            lines = ["Available tools:"]
+            for tool in self._tools.values():
+                lines.append(f"\n- {tool.name}: {tool.description}")
+                if tool.parameters.get("properties"):
+                    lines.append("  Parameters:")
+                    for param, spec in tool.parameters["properties"].items():
+                        required = param in tool.parameters.get("required", [])
+                        req_marker = " (required)" if required else ""
+                        lines.append(
+                            f"    - {param}: {spec.get('description', spec.get('type', 'any'))}{req_marker}"
+                        )
+            return "\n".join(lines)
+
+        # Score all tools
+        scored: list[tuple[float, Tool]] = []
+        for tool in self._tools.values():
+            score = self._iso_score(intent, tool)
+            score = self._apply_history_boost(score, tool.name)
+            scored.append((score, tool))
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        lines = ["Available tools:"]
+        for i, (score, tool) in enumerate(scored):
+            if i < max_full_schemas:
+                lines.append(f"\n- {tool.name} [relevance: {score:.2f}]: {tool.description}")
+                if tool.parameters.get("properties"):
+                    lines.append("  Parameters:")
+                    for param, spec in tool.parameters["properties"].items():
+                        required = param in tool.parameters.get("required", [])
+                        req_marker = " (required)" if required else ""
+                        lines.append(
+                            f"    - {param}: {spec.get('description', spec.get('type', 'any'))}{req_marker}"
+                        )
+            else:
+                # Compact entry
+                param_hint = ""
+                props = tool.parameters.get("properties", {}) if tool.parameters else {}
+                if props:
+                    param_hint = f" (params: {', '.join(props.keys())})"
+                lines.append(
+                    f"\n- {tool.name} [relevance: {score:.2f}]: {tool.description}{param_hint}"
+                )
         return "\n".join(lines)
+
+    def _iso_score(self, intent: str, tool: Tool) -> float:
+        """Score tool relevance to user intent using keyword overlap.
+
+        Lightweight Intent–Schema Overlap (ISO) scoring. Tokenizes the
+        intent and tool metadata (name, description, param names) into
+        normalized keyword sets, then computes Jaccard similarity.
+
+        Args:
+            intent: User prompt or current task description.
+            tool: Tool to score.
+
+        Returns:
+            Relevance score between 0.0 and 1.0.
+        """
+        if not intent:
+            return 0.5  # Neutral when no intent provided
+
+        def _tokenize(text: str) -> set[str]:
+            return set(
+                re.sub(r"[^a-z0-9]", "", w.lower())
+                for w in text.split()
+                if len(w) > 2
+            )
+
+        intent_tokens = _tokenize(intent)
+        tool_text = f"{tool.name} {tool.description}"
+        if tool.parameters and isinstance(tool.parameters, dict):
+            props = tool.parameters.get("properties", {})
+            for param_name in props.keys():
+                tool_text += f" {param_name}"
+            for spec in props.values():
+                if isinstance(spec, dict):
+                    tool_text += f" {spec.get('description', '')}"
+        tool_tokens = _tokenize(tool_text)
+
+        if not intent_tokens or not tool_tokens:
+            return 0.0
+
+        overlap = len(intent_tokens & tool_tokens)
+        union = len(intent_tokens | tool_tokens)
+        return overlap / union if union > 0 else 0.0
+
+    def _apply_history_boost(
+        self, score: float, tool_name: str
+    ) -> float:
+        """Boost score based on recent tool usage history.
+
+        Successful recent uses get a small boost; recent failures get
+        a penalty. This enables history-aware routing without requiring
+        a separate routing graph (see ACE-Router for future enhancement).
+
+        Args:
+            score: Base ISO score.
+            tool_name: Name of the tool.
+
+        Returns:
+            Adjusted score.
+        """
+        history = self._tool_history.get(tool_name, [])
+        if not history:
+            return score
+
+        # Weight recent history more heavily
+        boost = 0.0
+        total_weight = 0.0
+        for i, entry in enumerate(history[-5:]):
+            weight = (i + 1) / 5.0  # More recent = higher weight
+            total_weight += weight
+            if entry.get("success"):
+                boost += weight * 0.15
+            else:
+                boost -= weight * 0.10
+
+        if total_weight > 0:
+            score += boost / total_weight
+        return max(0.0, min(1.0, score))
 
     def get_numbered_menu(self) -> tuple[str, dict[int, str]]:
         """Get a numbered tool menu for constrained selection.
@@ -976,19 +1177,46 @@ BUILTIN_TOOLS = [
 ]
 
 
-def tools_to_anthropic_format(registry: ToolRegistry) -> list[dict]:
-    """Convert ToolRegistry to Anthropic tool_use format.
+def tools_to_anthropic_format(
+    registry: ToolRegistry,
+    intent: str | None = None,
+    lazy: bool = True,
+    max_full_schemas: int = 5,
+) -> list[dict]:
+    """Convert ToolRegistry to Anthropic tool_use format with lazy loading.
 
     Anthropic expects ``input_schema`` instead of ``parameters``.
     Tool.parameters is already JSON Schema, so this is a key rename.
+
+    When lazy=True, returns compact schemas for low-relevance tools
+    to reduce per-turn token overhead (per Tool Attention paper).
+
+    Args:
+        registry: ToolRegistry to convert.
+        intent: User prompt for ISO scoring.
+        lazy: Enable two-phase lazy schema loading.
+        max_full_schemas: Max tools with full input_schema.
+
+    Returns:
+        List of Anthropic-format tool definitions.
     """
     result = []
-    for tool in registry.list_tools():
+
+    # Get ranked schemas from registry
+    schemas = registry.get_schema(
+        intent=intent, lazy=lazy, max_full_schemas=max_full_schemas
+    )
+
+    for schema in schemas:
+        name = schema["name"]
+        description = schema["description"]
+        # Compact schemas use "params" key; full schemas use "parameters"
+        params = schema.get("parameters") or schema.get("params", {})
         result.append(
             {
-                "name": tool.name,
-                "description": tool.description,
-                "input_schema": tool.parameters,
+                "name": name,
+                "description": description,
+                "input_schema": params,
             }
         )
     return result

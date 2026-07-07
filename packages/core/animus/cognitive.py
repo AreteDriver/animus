@@ -1008,7 +1008,9 @@ When you have gathered enough information, provide your final answer."""
         from animus.tools import tools_to_anthropic_format
 
         system = self._build_system_prompt(context, mode, citizen_context=citizen_context)
-        anthropic_tools = tools_to_anthropic_format(tools)
+        anthropic_tools = tools_to_anthropic_format(
+            tools, intent=prompt, lazy=True, max_full_schemas=5
+        )
         messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
         text_parts: list[str] = []
 
@@ -1063,6 +1065,7 @@ When you have gathered enough information, provide your final answer."""
                         continue
 
                 result = tools.execute(block.name, block.input)
+                tools.record_tool_use(block.name, result.success)
                 tool_results.append(
                     {
                         "type": "tool_result",
@@ -1089,7 +1092,7 @@ When you have gathered enough information, provide your final answer."""
         approval_callback: Callable | None = None,
     ) -> str:
         """Agentic loop using markdown ```tool blocks (Ollama/Mock/OpenAI)."""
-        tools_schema = tools.get_schema_text()
+        tools_schema = tools.get_schema_text(intent=prompt, lazy=True, max_full_schemas=5)
         system = self._build_system_prompt(context, mode, tools_schema)
 
         messages = [{"role": "user", "content": prompt}]
@@ -1128,6 +1131,7 @@ When you have gathered enough information, provide your final answer."""
 
                 # Execute tool
                 result = tools.execute(tool_name, params)
+                tools.record_tool_use(tool_name, result.success)
                 tool_results.append(result.to_context())
                 logger.debug(f"Tool {tool_name} result: success={result.success}")
 
