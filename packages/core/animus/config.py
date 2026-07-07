@@ -56,6 +56,22 @@ class MemoryConfig:
 
 
 @dataclass
+class ObjectStoreConfig:
+    """Configuration for the durable object store (PostgreSQL backend).
+
+    When ``database_url`` is set, the :class:`DurableObjectStore` is available
+    for bitemporal object persistence with ledger and outbox.
+    """
+
+    backend: str = "sqlite"  # "sqlite" or "postgres"
+    database_url: str | None = None
+
+    def __post_init__(self):
+        self.backend = os.environ.get("ANIMUS_OBJECT_STORE_BACKEND", self.backend)
+        self.database_url = os.environ.get("ANIMUS_DATABASE_URL", self.database_url)
+
+
+@dataclass
 class APIConfig:
     """Configuration for the HTTP API server."""
 
@@ -369,6 +385,7 @@ class AnimusConfig:
     log_to_file: bool = True
     model: ModelConfig = field(default_factory=ModelConfig)
     memory: MemoryConfig = field(default_factory=MemoryConfig)
+    object_store: ObjectStoreConfig = field(default_factory=ObjectStoreConfig)
     api: APIConfig = field(default_factory=APIConfig)
     voice: VoiceConfig = field(default_factory=VoiceConfig)
     integrations: IntegrationConfig = field(default_factory=IntegrationConfig)

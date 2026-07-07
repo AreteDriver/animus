@@ -72,6 +72,10 @@ sync = [
     "zeroconf>=0.131.0",
 ]
 mcp = ["mcp>=1.0.0"]
+postgres = [
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.1",
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-benchmark>=4.0.0",

@@ -7,6 +7,9 @@ that inventories every file with its SHA-256. ``rebuild`` verifies the manifest
 checksums and restores the state into a fresh data dir. A round-trip
 (export → wipe → rebuild) is exercised in tests so the path is proven, not
 assumed.
+
+PostgreSQL-backed :class:`~animus.durability.postgres_store.DurableObjectStore`
+is available as an optional backend when ``sqlalchemy`` is installed.
 """
 
 from animus.durability.export import (
