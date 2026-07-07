@@ -89,6 +89,14 @@ personal/
 # Self-improve sandbox state
 .gorgon/
 
+# Animus runtime state
+.animus/
+
+# Forge commission artifacts (generated at runtime)
+packages/forge/src/animus_forge/workflows/architect-*.json
+packages/forge/src/animus_forge/workflows/test-*.json
+packages/forge/src/animus_forge/workflows/no-op-*.json
+
 # Node
 node_modules/
 package-lock.json
