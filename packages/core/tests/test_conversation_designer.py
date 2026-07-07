@@ -184,9 +184,9 @@ class TestConversationDesignerCitizen:
 
         log_file = log_dir / "session.jsonl"
         entries = [
-            {"prompt": "How do I configure the API?"},
-            {"prompt": "How do I configure the API?"},
-            {"prompt": "How do I configure the API?"},
+            {"prompt": "Configure the API endpoint please"},
+            {"prompt": "Configure the API endpoint please"},
+            {"prompt": "Configure the API endpoint please"},
         ]
         log_file.write_text("\n".join(json.dumps(e) for e in entries))
 
