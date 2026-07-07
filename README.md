@@ -66,7 +66,7 @@ Decentralized multi-agent coordination without a supervisor bottleneck. Agents r
 
 ### Core — Personal AI Assistant
 
-Persistent memory (episodic, semantic, procedural via ChromaDB), 40+ CLI commands, integrations (Google Calendar, Todoist, filesystem, webhooks), and a cognitive layer supporting Anthropic, OpenAI, and Ollama with native tool use.
+Persistent memory (episodic, semantic, procedural via ChromaDB), 40+ CLI commands, integrations (Google Calendar, Todoist, filesystem, webhooks), and an inference layer supporting Anthropic, OpenAI, and Ollama with native tool use.
 
 [`packages/core/`](packages/core/) | `import animus`
 
@@ -81,10 +81,10 @@ One-command install, Rich-based onboarding wizard, FastAPI+HTMX ops dashboard at
 ## Core Principles
 
 - **Persistence** — context accumulates across sessions, devices, and years
-- **Sovereignty** — cryptographic ownership, local-first by default
-- **Loyalty** — aligned to you, not a platform's incentives
+- **Local-first control** — your data stays on your hardware by default, with cryptographic audit trails
 - **Portability** — moves with you across all devices
 - **Model independence** — swap models without losing memory or context
+- **Deterministic behavior** — reproducible outputs, versioned configs, measured outcomes
 
 ---
 
