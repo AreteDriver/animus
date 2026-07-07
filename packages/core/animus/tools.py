@@ -1026,6 +1026,12 @@ def create_default_registry(security_config=None) -> ToolRegistry:
     registry.register(WATCHLIST_LIST_TOOL)
     registry.register(WATCHLIST_SCAN_TOOL)
 
+    # Register Forge integration tools
+    from animus.forge_tools import FORGE_TOOLS
+
+    for tool in FORGE_TOOLS:
+        registry.register(tool)
+
     logger.info(f"Created default registry with {len(registry.list_tools())} tools")
     return registry
 
