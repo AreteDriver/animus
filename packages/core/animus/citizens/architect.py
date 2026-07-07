@@ -447,6 +447,11 @@ class ArchitectCitizen:
         """
         if report is None:
             report = self.analyze()
+        elif isinstance(report, list):
+            report = AnalysisReport(
+                observations=report,
+                findings=[o.description for o in report if o.severity in ("medium", "high", "critical")],
+            )
 
         if not report.findings and not report.technical_debt_items and not report.friction_points:
             logger.info("No actionable findings — no proposal generated")
