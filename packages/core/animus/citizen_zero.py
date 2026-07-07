@@ -623,7 +623,8 @@ class CitizenZeroSession:
                 reason="No project detected during bootstrap",
                 action="reject",
             )
-        # TODO: More sophisticated validation (e.g., compare with git remote, prior sessions)
+        # NOTE: Future enhancement — compare with git remote and prior sessions
+        # for cross-session project continuity validation.
         return ProjectValidation(valid=True)
 
     def close(
@@ -725,8 +726,9 @@ class CitizenZeroSession:
             }
         )
 
-        # TODO: Phase 3 enhancement — analyze conversation for real insights
-        # For now, return structured placeholder candidates
+        # NOTE: Phase 3 enhancement — conversation insight analysis via
+        # Conversation Designer integration. Placeholder candidates returned
+        # until integration is complete.
 
         contradictions: list[str] = []
 

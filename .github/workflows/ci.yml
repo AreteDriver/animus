@@ -54,6 +54,90 @@ jobs:
       - name: Format check
         run: ruff format --check packages/ --exclude packages/_archive/
 
+  type-check:
+    name: Type Check (mypy)
+    runs-on: ubuntu-latest
+    # Non-blocking until codebase is fully typed. Reports issues without
+    # failing the build so we can ratchet down gradually.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-mypy-${{ hashFiles('packages/*/pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-mypy-
+
+      - name: Install dependencies
+        run: |
+          pip install -e packages/types/
+          pip install -e "packages/core/[dev]"
+          pip install -e "packages/kernel/[dev]"
+          pip install mypy
+
+      - name: Run mypy on core
+        run: |
+          mypy packages/core/animus/ \
+            --ignore-missing-imports \
+            --warn-return-any \
+            --warn-unused-configs \
+            --pretty \
+            || true
+
+      - name: Run mypy on kernel
+        run: |
+          mypy packages/kernel/src/animus_kernel/ \
+            --ignore-missing-imports \
+            --warn-return-any \
+            --warn-unused-configs \
+            --pretty \
+            || true
+
+      - name: Upload mypy report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mypy-report
+          path: |
+            packages/core/mypy-report.txt
+            packages/kernel/mypy-report.txt
+          retention-days: 30
+
+  test-kernel:
+    name: Test Kernel (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-kernel-${{ matrix.python-version }}-${{ hashFiles('packages/kernel/pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-kernel-${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        run: pip install -e "packages/kernel/[dev]"
+
+      - name: Test with coverage
+        run: pytest packages/kernel/tests/ -v --tb=short --cov=animus_kernel --cov-report=term-missing
+
   test-core:
     name: Test Core (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
@@ -223,7 +307,7 @@ jobs:
     name: Benchmarks
     runs-on: ubuntu-latest
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
-    needs: [test-core, test-quorum, test-types, test-forge, test-bootstrap, security]
+    needs: [type-check, test-kernel, test-core, test-quorum, test-types, test-forge, test-bootstrap, security]
     permissions:
       contents: write
     steps:
@@ -246,6 +330,7 @@ jobs:
           pip install -e packages/types/
           pip install -e "packages/quorum/[dev]"
           pip install -e "packages/forge/[dev]"
+          pip install -e "packages/kernel/[dev]"
           pip install -e "packages/core/[dev,api]"
 
       - name: Create benchmarks output directory
@@ -271,6 +356,12 @@ jobs:
           --benchmark-json=.benchmarks/quorum.json -q
         env:
           PYTHONPATH: packages/quorum/python
+
+      - name: Run Kernel benchmarks
+        run: >
+          pytest packages/kernel/tests/test_benchmarks.py
+          --benchmark-only --benchmark-disable-gc --benchmark-warmup=on
+          --benchmark-json=.benchmarks/kernel.json -q
 
       - name: Merge benchmark results
         run: |

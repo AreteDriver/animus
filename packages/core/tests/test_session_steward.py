@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import tempfile
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -76,7 +76,7 @@ class TestSessionStewardInit:
 class TestH1TimerWaste:
     def test_detects_low_utilization(self):
         steward = SessionStewardCitizen(min_sessions=2)
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         events = [
             MockTelemetryEvent(
                 session_id="s1",
@@ -106,7 +106,7 @@ class TestH1TimerWaste:
 
     def test_no_detection_when_utilization_high(self):
         steward = SessionStewardCitizen(min_sessions=1)
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         events = [
             MockTelemetryEvent(
                 session_id="s1",
@@ -122,7 +122,7 @@ class TestH1TimerWaste:
 
     def test_no_detection_without_timer_message(self):
         steward = SessionStewardCitizen(min_sessions=1)
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         events = [
             MockTelemetryEvent(
                 session_id="s1",
@@ -140,7 +140,7 @@ class TestH1TimerWaste:
 class TestH2ThresholdTight:
     def test_detects_high_utilization(self):
         steward = SessionStewardCitizen(min_sessions=1)
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         events = [
             MockTelemetryEvent(
                 session_id="s1",
@@ -167,7 +167,7 @@ class TestH2ThresholdTight:
 
     def test_no_detection_when_utilization_normal(self):
         steward = SessionStewardCitizen(min_sessions=1)
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         events = [
             MockTelemetryEvent(
                 session_id="s1",
@@ -185,7 +185,7 @@ class TestH2ThresholdTight:
 class TestH3RestartFatigue:
     def test_detects_restart_clusters(self):
         steward = SessionStewardCitizen(min_sessions=2)
-        base = datetime.now()
+        base = datetime.now(timezone.utc)
         events = [
             # Need wrapup events to pass min_sessions threshold
             MockTelemetryEvent(
@@ -229,7 +229,7 @@ class TestH3RestartFatigue:
 
     def test_no_detection_with_few_restarts(self):
         steward = SessionStewardCitizen(min_sessions=1)
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         events = [
             MockTelemetryEvent(
                 session_id="s1",
@@ -245,7 +245,7 @@ class TestH3RestartFatigue:
 class TestMinSessionsThreshold:
     def test_skips_analysis_below_threshold(self):
         steward = SessionStewardCitizen(min_sessions=10)
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         events = [
             MockTelemetryEvent(
                 session_id=f"s{i}",
@@ -260,7 +260,7 @@ class TestMinSessionsThreshold:
 
     def test_runs_analysis_at_threshold(self):
         steward = SessionStewardCitizen(min_sessions=5)
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         events = [
             MockTelemetryEvent(
                 session_id=f"s{i}",
@@ -427,7 +427,7 @@ class TestAuditEntryPoint:
                 min_sessions=2,
                 persistence_dir=td,
             )
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             events = [
                 MockTelemetryEvent(
                     session_id="s1",
@@ -460,7 +460,7 @@ class TestAuditEntryPoint:
                 min_sessions=2,
                 persistence_dir=td,
             )
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             events = [
                 MockTelemetryEvent(
                     session_id="s1",
@@ -496,7 +496,7 @@ class TestAnalysisWindow:
             min_sessions=2,
             analysis_window_hours=1.0,
         )
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         old = now - timedelta(hours=3)
         events = [
             MockTelemetryEvent(
@@ -524,7 +524,7 @@ class TestAnalysisWindow:
             min_sessions=2,
             analysis_window_hours=24.0,
         )
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         events = [
             MockTelemetryEvent(
                 session_id="s1",
@@ -596,7 +596,7 @@ class TestEmptyTelemetry:
 
     def test_only_non_wrapup_events(self):
         steward = SessionStewardCitizen(min_sessions=2)
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         events = [
             MockTelemetryEvent(
                 session_id="s1",
@@ -617,7 +617,7 @@ class TestEmptyTelemetry:
 class TestMixedHeuristics:
     def test_multiple_patterns_detected(self):
         steward = SessionStewardCitizen(min_sessions=2)
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         base = now - timedelta(minutes=30)
         events = [
             # H1: timer waste

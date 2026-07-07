@@ -35,9 +35,9 @@ class CheckpointManager:
 
     def __init__(
         self,
-        persistence: StatePersistence = None,
-        backend: DatabaseBackend = None,
-        db_path: str = None,
+        persistence: StatePersistence | None = None,
+        backend: DatabaseBackend | None = None,
+        db_path: str | None = None,
     ):
         """Initialize checkpoint manager.
 
@@ -59,8 +59,8 @@ class CheckpointManager:
     def start_workflow(
         self,
         name: str,
-        config: dict = None,
-        workflow_id: str = None,
+        config: dict | None = None,
+        workflow_id: str | None = None,
     ) -> str:
         """Start a new workflow.
 
@@ -81,7 +81,7 @@ class CheckpointManager:
 
         return workflow_id
 
-    def complete_workflow(self, workflow_id: str = None) -> None:
+    def complete_workflow(self, workflow_id: str | None = None) -> None:
         """Mark workflow as completed.
 
         Args:
@@ -93,7 +93,7 @@ class CheckpointManager:
             if wf_id == self._current_workflow:
                 self._current_workflow = None
 
-    def fail_workflow(self, error: str, workflow_id: str = None) -> None:
+    def fail_workflow(self, error: str, workflow_id: str | None = None) -> None:
         """Mark workflow as failed.
 
         Args:
@@ -110,7 +110,7 @@ class CheckpointManager:
     def workflow(
         self,
         name: str,
-        config: dict = None,
+        config: dict | None = None,
     ) -> Generator[str, None, None]:
         """Context manager for workflow execution.
 
@@ -133,8 +133,8 @@ class CheckpointManager:
     def stage(
         self,
         stage_name: str,
-        input_data: dict = None,
-        workflow_id: str = None,
+        input_data: dict | None = None,
+        workflow_id: str | None = None,
     ) -> Generator[StageContext, None, None]:
         """Context manager for stage execution with automatic checkpointing.
 
@@ -183,11 +183,11 @@ class CheckpointManager:
         self,
         stage: str,
         status: str,
-        input_data: dict = None,
-        output_data: dict = None,
+        input_data: dict | None = None,
+        output_data: dict | None = None,
         tokens_used: int = 0,
         duration_ms: int = 0,
-        workflow_id: str = None,
+        workflow_id: str | None = None,
     ) -> int:
         """Create a checkpoint immediately.
 
@@ -241,7 +241,7 @@ class CheckpointManager:
             "resume_from_stage": checkpoint["stage"],
         }
 
-    def get_progress(self, workflow_id: str = None) -> dict:
+    def get_progress(self, workflow_id: str | None = None) -> dict:
         """Get workflow progress information.
 
         Args:

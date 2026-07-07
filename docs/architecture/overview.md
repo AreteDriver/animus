@@ -336,6 +336,6 @@ All API access subject to Identity Plane authentication and guardrails.
 
 - [Package Architecture](packages.md) — Dependency graph and version matrix
 - [Citizen Zero](citizen-zero.md) — First citizen specification
-- [Decisions](decisions/) — Architecture Decision Records (ADRs)
+- [Decisions](decisions/README.md) — Architecture Decision Records (ADRs)
 - [Reference → Glossary](../reference/glossary.md) — Domain terms
 - [Roadmap](../roadmap/current.md) — Future plans

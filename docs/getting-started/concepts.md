@@ -37,5 +37,5 @@ An **exocortex** is an external cognitive system that augments your biological b
 ## See Also
 
 - [Architecture → Overview](../architecture/overview.md) — System architecture
-- [Packages](../packages/) — Per-package documentation
+- [Packages](../packages/README.md) — Per-package documentation
 - [Reference → Glossary](../reference/glossary.md) — Full term definitions

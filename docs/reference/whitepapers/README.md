@@ -18,4 +18,4 @@
 
 - [Whitepaper Gap Analysis](../whitepaper-comparison-2026-06.md) — Scorecard against the canonical whitepaper
 - [Architecture → Overview](../../architecture/overview.md) — Current system architecture
-- [Architecture → Decisions](../../architecture/decisions/) — ADRs and decision logs
+- [Architecture → Decisions](../../architecture/decisions/README.md) — ADRs and decision logs

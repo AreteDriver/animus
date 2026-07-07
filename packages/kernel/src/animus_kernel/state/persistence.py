@@ -86,7 +86,7 @@ class StatePersistence:
         self,
         workflow_id: str,
         name: str,
-        config: dict = None,
+        config: dict | None = None,
     ) -> None:
         """Create a new workflow record.
 
@@ -113,7 +113,7 @@ class StatePersistence:
         self,
         workflow_id: str,
         status: WorkflowStatus,
-        error: str = None,
+        error: str | None = None,
     ) -> None:
         """Update workflow status.
 
@@ -137,8 +137,8 @@ class StatePersistence:
         workflow_id: str,
         stage: str,
         status: str,
-        input_data: dict = None,
-        output_data: dict = None,
+        input_data: dict | None = None,
+        output_data: dict | None = None,
         tokens_used: int = 0,
         duration_ms: int = 0,
     ) -> int:

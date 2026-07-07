@@ -76,7 +76,7 @@ class StepExecutionMixin:
             return await loop.run_in_executor(None, cb.call, handler, step, self._context)
         return await loop.run_in_executor(None, handler, step, self._context)
 
-    def _execute_step(self, step: StepConfig, workflow_id: str = None) -> StepResult:
+    def _execute_step(self, step: StepConfig, workflow_id: str | None = None) -> StepResult:
         """Execute a single workflow step."""
         start_time = time.time()
         result = StepResult(step_id=step.id, status=StepStatus.PENDING)
@@ -135,7 +135,7 @@ class StepExecutionMixin:
         result.duration_ms = int((time.time() - start_time) * 1000)
         return result
 
-    async def _execute_step_async(self, step: StepConfig, workflow_id: str = None) -> StepResult:
+    async def _execute_step_async(self, step: StepConfig, workflow_id: str | None = None) -> StepResult:
         """Execute a single workflow step asynchronously."""
         start_time = time.time()
         result = StepResult(step_id=step.id, status=StepStatus.PENDING)

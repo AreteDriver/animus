@@ -465,8 +465,8 @@ class WorkflowExecutor(
     def execute(
         self,
         workflow: WorkflowConfig,
-        inputs: dict = None,
-        resume_from: str = None,
+        inputs: dict | None = None,
+        resume_from: str | None = None,
         enable_memory: bool = True,
     ) -> ExecutionResult:
         """Execute a workflow.
@@ -582,8 +582,8 @@ class WorkflowExecutor(
     async def execute_async(
         self,
         workflow: WorkflowConfig,
-        inputs: dict = None,
-        resume_from: str = None,
+        inputs: dict | None = None,
+        resume_from: str | None = None,
     ) -> ExecutionResult:
         """Execute a workflow asynchronously.
 

@@ -44,53 +44,53 @@ except ImportError:  # pragma: no cover
 
 Base = declarative_base() if _HAS_SQLALCHEMY else object  # type: ignore[misc,assignment]
 
+if _HAS_SQLALCHEMY:
 
-class _ObjectRegistryRow(Base):  # type: ignore[valid-type,misc]
-    """ORM mapping for the ``object_registry`` table."""
+    class _ObjectRegistryRow(Base):  # type: ignore[valid-type,misc]
+        """ORM mapping for the ``object_registry`` table."""
 
-    __tablename__ = "object_registry"
+        __tablename__ = "object_registry"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    object_id = Column(String(128), nullable=False)
-    object_version = Column(Integer, nullable=False, default=1)
-    schema_id = Column(String(256), nullable=False)
-    schema_version = Column(String(32), nullable=False)
-    owner_id = Column(String(128), nullable=False)
-    workspace_id = Column(String(128), nullable=False)
-    subject_domain = Column(String(32), nullable=False)
-    artifact_type = Column(String(64), nullable=False)
-    cognitive_role = Column(String(32), nullable=False)
-    workflow_status = Column(String(32), nullable=False)
-    epistemic_status = Column(String(32), nullable=False)
-    lifecycle_status = Column(String(32), nullable=False)
-    storage_tier = Column(String(16), nullable=False)
-    presentation = Column(String(32), nullable=False)
-    security_class = Column(String(32), nullable=False)
-    valid_from = Column(DateTime(timezone=True), nullable=True)
-    valid_to = Column(DateTime(timezone=True), nullable=True)
-    recorded_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    superseded_at = Column(DateTime(timezone=True), nullable=True)
-    created_by = Column(String(256), nullable=False)
-    trace_id = Column(String(256), nullable=True)
-    content_sha256 = Column(String(64), nullable=False)
-    payload = Column(JSON, nullable=False)
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        object_id = Column(String(128), nullable=False)
+        object_version = Column(Integer, nullable=False, default=1)
+        schema_id = Column(String(256), nullable=False)
+        schema_version = Column(String(32), nullable=False)
+        owner_id = Column(String(128), nullable=False)
+        workspace_id = Column(String(128), nullable=False)
+        subject_domain = Column(String(32), nullable=False)
+        artifact_type = Column(String(64), nullable=False)
+        cognitive_role = Column(String(32), nullable=False)
+        workflow_status = Column(String(32), nullable=False)
+        epistemic_status = Column(String(32), nullable=False)
+        lifecycle_status = Column(String(32), nullable=False)
+        storage_tier = Column(String(16), nullable=False)
+        presentation = Column(String(32), nullable=False)
+        security_class = Column(String(32), nullable=False)
+        valid_from = Column(DateTime(timezone=True), nullable=True)
+        valid_to = Column(DateTime(timezone=True), nullable=True)
+        recorded_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+        superseded_at = Column(DateTime(timezone=True), nullable=True)
+        created_by = Column(String(256), nullable=False)
+        trace_id = Column(String(256), nullable=True)
+        content_sha256 = Column(String(64), nullable=False)
+        payload = Column(JSON, nullable=False)
 
+    class _EventLedgerRow(Base):  # type: ignore[valid-type,misc]
+        """ORM mapping for the ``event_ledger`` table."""
 
-class _EventLedgerRow(Base):  # type: ignore[valid-type,misc]
-    """ORM mapping for the ``event_ledger`` table."""
+        __tablename__ = "event_ledger"
 
-    __tablename__ = "event_ledger"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    event_kind = Column(String(128), nullable=False)
-    occurred_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    actor_refs = Column(JSON, nullable=False, server_default="[]")
-    object_refs = Column(JSON, nullable=False, server_default="[]")
-    event_data = Column(JSON, nullable=False, server_default="{}")
-    idempotency_key = Column(String(256), nullable=True)
-    valid_from = Column(DateTime(timezone=True), nullable=True)
-    valid_to = Column(DateTime(timezone=True), nullable=True)
-    recorded_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        event_kind = Column(String(128), nullable=False)
+        occurred_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+        actor_refs = Column(JSON, nullable=False, server_default="[]")
+        object_refs = Column(JSON, nullable=False, server_default="[]")
+        event_data = Column(JSON, nullable=False, server_default="{}")
+        idempotency_key = Column(String(256), nullable=True)
+        valid_from = Column(DateTime(timezone=True), nullable=True)
+        valid_to = Column(DateTime(timezone=True), nullable=True)
+        recorded_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
 def _sha256(payload: dict[str, Any]) -> str:

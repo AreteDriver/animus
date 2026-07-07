@@ -30,14 +30,14 @@
 
 | Package | Import | Purpose | Tests | Coverage |
 |---|---|---|---|---|
-| [Core](core/) | `import animus` | Personal AI exocortex — memory, CLI, integrations | 2,865 | 97% |
-| [Forge](forge/) | `import animus_forge` | Multi-agent workflow orchestration | 10,304 | 97% |
-| [Bootstrap](bootstrap/) | `import animus_bootstrap` | Install daemon, wizard, dashboard | 2,048 | 97% |
-| [Quorum](quorum/) | `import convergent` | Decentralized agent coordination | 961 | 97% |
-| [Kernel](kernel/) | `import animus_kernel` | Autonomous builder engine (standalone) | — | — |
-| [Types](types/) | `import animus_types` | Shared schemas and type definitions | — | — |
-| [PWA](pwa/) | N/A | Progressive web app interface | — | — |
-| [Contracts](contracts/) | N/A | Canonical JSON schemas for v2.1 | — | — |
+| [Core](core/README.md) | `import animus` | Personal AI exocortex — memory, CLI, integrations | 2,865 | 97% |
+| [Forge](forge/README.md) | `import animus_forge` | Multi-agent workflow orchestration | 10,304 | 97% |
+| [Bootstrap](bootstrap/README.md) | `import animus_bootstrap` | Install daemon, wizard, dashboard | 2,048 | 97% |
+| [Quorum](quorum/README.md) | `import convergent` | Decentralized agent coordination | 961 | 97% |
+| [Kernel](kernel/README.md) | `import animus_kernel` | Autonomous builder engine (standalone) | — | — |
+| [Types](types/README.md) | `import animus_types` | Shared schemas and type definitions | — | — |
+| [PWA](pwa/README.md) | N/A | Progressive web app interface | — | — |
+| [Contracts](contracts/README.md) | N/A | Canonical JSON schemas for v2.1 | — | — |
 
 ---
 

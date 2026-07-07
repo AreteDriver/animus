@@ -11,7 +11,7 @@ class AnimusKernelError(Exception):
 
     code = "KERNEL_ERROR"
 
-    def __init__(self, message: str, details: dict = None):
+    def __init__(self, message: str, details: dict | None = None):
         self.message = message
         self.details = details or {}
         super().__init__(message)
@@ -53,7 +53,7 @@ class ContractViolationError(AgentError):
 
     code = "CONTRACT_VIOLATION"
 
-    def __init__(self, message: str, role: str = None, field: str = None):
+    def __init__(self, message: str, role: str | None = None, field: str | None = None):
         super().__init__(message, {"role": role, "field": field})
         self.role = role
         self.field = field
@@ -64,7 +64,7 @@ class APIError(AgentError):
 
     code = "API_ERROR"
 
-    def __init__(self, message: str, provider: str = None, status_code: int = None):
+    def __init__(self, message: str, provider: str | None = None, status_code: int | None = None):
         super().__init__(message, {"provider": provider, "status_code": status_code})
         self.provider = provider
         self.status_code = status_code
@@ -82,7 +82,7 @@ class BudgetExceededError(AnimusKernelError):
 
     code = "BUDGET_EXCEEDED"
 
-    def __init__(self, message: str, budget: int = 0, used: int = 0, agent: str = None):
+    def __init__(self, message: str, budget: int = 0, used: int = 0, agent: str | None = None):
         super().__init__(message, {"budget": budget, "used": used, "agent": agent})
         self.budget = budget
         self.used = used
@@ -101,7 +101,7 @@ class StageFailedError(WorkflowError):
 
     code = "STAGE_FAILED"
 
-    def __init__(self, message: str, stage: str = None, cause: Exception = None):
+    def __init__(self, message: str, stage: str | None = None, cause: Exception | None = None):
         details = {"stage": stage}
         if cause:
             details["cause"] = str(cause)
@@ -115,7 +115,7 @@ class MaxRetriesError(WorkflowError):
 
     code = "MAX_RETRIES"
 
-    def __init__(self, message: str, stage: str = None, attempts: int = 0):
+    def __init__(self, message: str, stage: str | None = None, attempts: int = 0):
         super().__init__(message, {"stage": stage, "attempts": attempts})
         self.stage = stage
         self.attempts = attempts

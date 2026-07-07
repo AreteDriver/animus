@@ -33,10 +33,10 @@ class ContractViolation(Exception):
     def __init__(
         self,
         message: str,
-        role: str = None,
-        field: str = None,
-        field_path: str = None,
-        details: dict = None,
+        role: str | None = None,
+        field: str | None = None,
+        field_path: str | None = None,
+        details: dict | None = None,
     ):
         self.role = role
         self.field = field_path or field

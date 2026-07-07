@@ -167,7 +167,7 @@ class BudgetManager:
 
     def __init__(
         self,
-        config: BudgetConfig = None,
+        config: BudgetConfig | None = None,
         on_threshold_callback: Callable[[BudgetStatus, dict], None] = None,
         backend: DatabaseBackend | None = None,
         session_id: str | None = None,
@@ -411,7 +411,7 @@ class BudgetManager:
         return not (self.config.per_step_limit and tokens > self.config.per_step_limit)
 
     def can_allocate(
-        self, tokens: int, agent_id: str = None, effective: float | None = None
+        self, tokens: int, agent_id: str | None = None, effective: float | None = None
     ) -> bool:
         """Check if tokens can be allocated (reservation- and thread-aware).
 
@@ -427,7 +427,7 @@ class BudgetManager:
         with self._lock:
             return self._can_allocate_unlocked(tokens, agent_id, effective)
 
-    def allocate(self, tokens: int, agent_id: str = None, effective: float | None = None) -> bool:
+    def allocate(self, tokens: int, agent_id: str | None = None, effective: float | None = None) -> bool:
         """Atomically check and RESERVE tokens.
 
         Unlike a bare ``can_allocate`` followed by work, this reserves the
@@ -452,7 +452,7 @@ class BudgetManager:
                 self._pending_by_agent[agent_id] = self._pending_by_agent.get(agent_id, 0) + tokens
             return True
 
-    def release(self, tokens: int, agent_id: str = None, effective: float | None = None) -> None:
+    def release(self, tokens: int, agent_id: str | None = None, effective: float | None = None) -> None:
         """Release a prior :meth:`allocate` reservation (clamped at zero).
 
         Pass the same ``effective`` value used at :meth:`allocate` so the ET
@@ -475,7 +475,7 @@ class BudgetManager:
         agent_id: str,
         tokens: int = 0,
         operation: str = "",
-        metadata: dict = None,
+        metadata: dict | None = None,
         *,
         input_tokens: int = 0,
         output_tokens: int = 0,
@@ -589,7 +589,7 @@ class BudgetManager:
 
     def get_usage_history(
         self,
-        agent_id: str = None,
+        agent_id: str | None = None,
         limit: int = 50,
     ) -> list[UsageRecord]:
         """Get usage history.

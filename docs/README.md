@@ -15,7 +15,7 @@ New here? Start with one of these paths based on your goal:
 | **Understand the system** | [Architecture → Overview](architecture/overview.md) |
 | **Contribute code or docs** | [Contributing → Setup](contributing/setup.md) |
 | **Deploy or operate Animus** | [Operators → Deployment](operators/deployment.md) |
-| **Read about the v2.1 architecture** | [Architecture → Decisions](architecture/decisions/) |
+| **Read about the v2.1 architecture** | [Architecture → Decisions](architecture/decisions/README.md) |
 
 ---
 
@@ -31,21 +31,21 @@ New here? Start with one of these paths based on your goal:
 
 - [Overview](architecture/overview.md) — System context, four-layer stack, data flow
 - [Packages](architecture/packages.md) — Dependency map and package responsibilities
-- [Decisions](architecture/decisions/) — ADRs and decision logs (ADL)
+- [Decisions](architecture/decisions/README.md) — ADRs and decision logs (ADL)
 - [Standards](architecture/standards.md) — Documentation, code quality, and commit conventions
 
 ### Packages
 
 Each package has its own documentation lane:
 
-- [Core](packages/core/) — Personal AI exocortex (`import animus`)
-- [Forge](packages/forge/) — Multi-agent orchestration (`import animus_forge`)
-- [Bootstrap](packages/bootstrap/) — System daemon and onboarding (`import animus_bootstrap`)
-- [Quorum](packages/quorum/) — Agent coordination protocol (`import convergent`)
-- [Kernel](packages/kernel/) — Autonomous builder engine (standalone)
-- [Types](packages/types/) — Shared schema types
-- [PWA](packages/pwa/) — Progressive web app interface
-- [Contracts](packages/contracts/) — Canonical JSON schemas
+- [Core](packages/core/README.md) — Personal AI exocortex (`import animus`)
+- [Forge](packages/forge/README.md) — Multi-agent orchestration (`import animus_forge`)
+- [Bootstrap](packages/bootstrap/README.md) — System daemon and onboarding (`import animus_bootstrap`)
+- [Quorum](packages/quorum/README.md) — Agent coordination protocol (`import convergent`)
+- [Kernel](packages/kernel/README.md) — Autonomous builder engine (standalone)
+- [Types](packages/types/README.md) — Shared schema types
+- [PWA](packages/pwa/README.md) — Progressive web app interface
+- [Contracts](packages/contracts/README.md) — Canonical JSON schemas
 
 ### Contributing
 
@@ -67,12 +67,12 @@ Each package has its own documentation lane:
 - [FAQ](reference/faq.md) — Frequently asked questions
 - [Changelog](reference/changelog.md) — Release history
 - [Security](reference/security.md) — Threat model, security layer, best practices
-- [Whitepapers](reference/whitepapers/) — Architecture whitepapers
+- [Whitepapers](reference/whitepapers/README.md) — Architecture whitepapers
 
 ### Roadmap
 
 - [Current](roadmap/current.md) — Active quarter priorities
-- [Index](roadmap/) — All roadmap documents
+- [Index](roadmap/README.md) — All roadmap documents
 
 ---
 
@@ -88,4 +88,6 @@ Each package has its own documentation lane:
 
 ## Status
 
-This documentation tree is under active reorganization (see [docs/planning/documentation-roadmap.md](planning/documentation-roadmap.md)). If a link is broken or a section is missing, file an issue or submit a PR.
+- **Build**: Clean (0 warnings, 0 errors) — verified 2026-07-06
+- **Deployment**: Blocked — repo is private, so GitHub Pages requires Pro. Cloudflare Pages workflow is ready (`.github/workflows/docs-deploy-cloudflare.yml`); set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets to enable.
+- **Reorganization**: Active (see [docs/planning/documentation-roadmap.md](planning/documentation-roadmap.md)). If a link is broken or a section is missing, file an issue or submit a PR.

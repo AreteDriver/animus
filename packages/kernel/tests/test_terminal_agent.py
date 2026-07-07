@@ -86,6 +86,7 @@ def patched_run_command(monkeypatch):
 
 
 class TestTerminalAgentBuildSuccess:
+    @pytest.mark.asyncio
     async def test_build_passes_first_iteration(
         self,
         tmp_path,
@@ -117,6 +118,7 @@ class TestTerminalAgentBuildSuccess:
         mock_budget.allocate.assert_called()
         mock_budget.release.assert_called()
 
+    @pytest.mark.asyncio
     async def test_build_no_supervisor(
         self,
         tmp_path,
@@ -138,6 +140,7 @@ class TestTerminalAgentBuildSuccess:
         assert result.success is True
         assert result.tests_passed is True
 
+    @pytest.mark.asyncio
     async def test_build_detects_file_changes(
         self,
         tmp_path,
@@ -167,6 +170,7 @@ class TestTerminalAgentBuildSuccess:
         assert result.success is True
         assert "main.py" in result.files_changed
 
+    @pytest.mark.asyncio
     async def test_budget_gate_closed(
         self,
         tmp_path,
@@ -190,6 +194,7 @@ class TestTerminalAgentBuildSuccess:
         assert result.tests_passed is False
         assert result.iterations_used == 0
 
+    @pytest.mark.asyncio
     async def test_build_fail_then_rollback(
         self,
         tmp_path,
@@ -227,6 +232,7 @@ class TestTerminalAgentBuildSuccess:
         assert result.iterations_used == 2
         mock_rollback.rollback.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_build_exception_then_rollback(
         self,
         tmp_path,
@@ -248,6 +254,7 @@ class TestTerminalAgentBuildSuccess:
         assert result.success is False
         assert result.tests_passed is False
 
+    @pytest.mark.asyncio
     async def test_checkpoint_preserved(
         self,
         tmp_path,
@@ -274,6 +281,7 @@ class TestTerminalAgentBuildSuccess:
         assert cp.iteration_count == 1
         assert cp.test_results.get("passed") is True
 
+    @pytest.mark.asyncio
     async def test_et_consumed_non_negative(
         self,
         tmp_path,

@@ -24,7 +24,7 @@ class AllocationStrategy(ABC):
         self,
         total_budget: int,
         agents: list[dict],
-        context: dict = None,
+        context: dict | None = None,
     ) -> AllocationResult:
         """Allocate budget across agents.
 
@@ -54,7 +54,7 @@ class EqualAllocation(AllocationStrategy):
         self,
         total_budget: int,
         agents: list[dict],
-        context: dict = None,
+        context: dict | None = None,
     ) -> AllocationResult:
         """Allocate budget equally."""
         if not agents:
@@ -93,7 +93,7 @@ class PriorityAllocation(AllocationStrategy):
         self,
         total_budget: int,
         agents: list[dict],
-        context: dict = None,
+        context: dict | None = None,
     ) -> AllocationResult:
         """Allocate based on priority."""
         if not agents:
@@ -144,7 +144,7 @@ class AdaptiveAllocation(AllocationStrategy):
     def __init__(
         self,
         buffer_percent: float = 0.2,
-        history: list[dict] = None,
+        history: list[dict] | None = None,
     ):
         """Initialize strategy.
 
@@ -177,7 +177,7 @@ class AdaptiveAllocation(AllocationStrategy):
         self,
         total_budget: int,
         agents: list[dict],
-        context: dict = None,
+        context: dict | None = None,
     ) -> AllocationResult:
         """Allocate based on estimates and history."""
         if not agents:
@@ -267,7 +267,7 @@ class ReservePoolAllocation(AllocationStrategy):
         self,
         total_budget: int,
         agents: list[dict],
-        context: dict = None,
+        context: dict | None = None,
     ) -> AllocationResult:
         """Allocate with reserve pool."""
         if not agents:

@@ -1,6 +1,6 @@
 # Ogma — Reverse-Engineering Synthesis Persona
 
-Ogma reads external work (papers, podcasts, HN, blogs) **and our own projects** and produces implementation-ready synthesis. Companion to [Lugh](../../packages/core/animus/lugh/): where Lugh harvests, Ogma deciphers.
+Ogma reads external work (papers, podcasts, HN, blogs) **and our own projects** and produces implementation-ready synthesis. Companion to Lugh (in [Core](../../packages/core/README.md)): where Lugh harvests, Ogma deciphers.
 
 **Named for Ogma** — Celtic god of eloquence who invented Ogham script, the first written Gaelic. Patron of translation and learning. The fit: Ogma turns outside text (and our own code) into Animus-native understanding and rebuild proposals.
 

@@ -48,7 +48,7 @@ class ContractValidator:
         self,
         role: AgentRole | str,
         data: dict,
-        context: dict = None,
+        context: dict | None = None,
     ) -> ValidationResult:
         """Validate input data for an agent.
 

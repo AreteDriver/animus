@@ -19,9 +19,9 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Protocol
 
 from animus.citizens.proposal import (
     EvidenceItem,
@@ -52,10 +52,10 @@ class TelemetryEvent(Protocol):
 class TelemetryProvider(Protocol):
     """Protocol for objects that provide session telemetry."""
 
-    def get_telemetry(self, session_id: str | None = None) -> list[Any]:
+    def get_telemetry(self, session_id: str | None = None) -> list[TelemetryEvent]:
         ...
 
-    def get_summary_stats(self) -> dict[str, Any]:
+    def get_summary_stats(self) -> dict[str, float | int | str]:
         ...
 
 
@@ -70,7 +70,7 @@ class EfficiencyPattern:
     description: str
     severity: str  # "critical", "high", "medium", "low"
     recommendation: str
-    data: dict[str, Any] = field(default_factory=dict)
+    data: dict[str, float | int | str | None] = field(default_factory=dict)
 
 
 @dataclass
@@ -78,8 +78,8 @@ class PolicyDiff:
     """A proposed configuration change with before/after values."""
 
     parameter: str
-    current_value: Any
-    proposed_value: Any
+    current_value: str | int | float | None
+    proposed_value: str | int | float | None
     rationale: str
     expected_impact: str
 
@@ -189,9 +189,9 @@ class SessionStewardCitizen:
             logger.info("No telemetry available.")
             return patterns
 
-        # Filter to analysis window
-        cutoff = datetime.now() - timedelta(hours=self.analysis_window_hours)
-        recent = [t for t in telemetry if getattr(t, "timestamp", datetime.now()) > cutoff]
+        # Filter to analysis window (use UTC-aware cutoff to match kernel timestamps)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=self.analysis_window_hours)
+        recent = [t for t in telemetry if getattr(t, "timestamp", datetime.now(timezone.utc)) > cutoff]
 
         wrapup_events = [
             t for t in recent
@@ -207,7 +207,7 @@ class SessionStewardCitizen:
 
         # Build per-session stats
         session_ids = {getattr(t, "session_id", "unknown") for t in recent}
-        per_session: dict[str, list[Any]] = {}
+        per_session: dict[str, list[TelemetryEvent]] = {}
         for sid in session_ids:
             per_session[sid] = controller.get_telemetry(sid)
 
@@ -236,8 +236,8 @@ class SessionStewardCitizen:
 
     def _h1_timer_waste(
         self,
-        per_session: dict[str, list[Any]],
-        wrapup_events: list[Any],
+        per_session: dict[str, list[TelemetryEvent]],
+        wrapup_events: list[TelemetryEvent],
     ) -> list[EfficiencyPattern]:
         """Detect timer-triggered wrapups that under-utilize context window."""
         patterns: list[EfficiencyPattern] = []
@@ -277,8 +277,8 @@ class SessionStewardCitizen:
 
     def _h2_threshold_tight(
         self,
-        per_session: dict[str, list[Any]],
-        wrapup_events: list[Any],
+        per_session: dict[str, list[TelemetryEvent]],
+        wrapup_events: list[TelemetryEvent],
     ) -> list[EfficiencyPattern]:
         """Detect token-threshold wrapups that push too close to the limit."""
         patterns: list[EfficiencyPattern] = []
@@ -317,7 +317,7 @@ class SessionStewardCitizen:
 
     def _h3_restart_fatigue(
         self,
-        per_session: dict[str, list[Any]],
+        per_session: dict[str, list[TelemetryEvent]],
     ) -> list[EfficiencyPattern]:
         """Detect clusters of frequent restarts within short time windows."""
         patterns: list[EfficiencyPattern] = []
@@ -333,8 +333,8 @@ class SessionStewardCitizen:
 
         restart_events.sort(key=lambda x: getattr(x, "timestamp", datetime.min))
         window = timedelta(hours=2)
-        clusters: list[list[Any]] = []
-        current: list[Any] = []
+        clusters: list[list[TelemetryEvent]] = []
+        current: list[TelemetryEvent] = []
 
         for e in restart_events:
             if not current:
@@ -376,21 +376,21 @@ class SessionStewardCitizen:
 
     def _h4_model_drift(
         self,
-        per_session: dict[str, list[Any]],
+        per_session: dict[str, list[TelemetryEvent]],
     ) -> list[EfficiencyPattern]:
         """Detect model-specific utilization patterns (placeholder)."""
         return []
 
     def _h5_summary_quality(
         self,
-        per_session: dict[str, list[Any]],
+        per_session: dict[str, list[TelemetryEvent]],
     ) -> list[EfficiencyPattern]:
         """Detect wrapup summaries with quality regressions (placeholder)."""
         return []
 
     def _h6_correction_loops(
         self,
-        per_session: dict[str, list[Any]],
+        per_session: dict[str, list[TelemetryEvent]],
     ) -> list[EfficiencyPattern]:
         """Detect sessions with high correction-turn ratios.
 
@@ -404,7 +404,7 @@ class SessionStewardCitizen:
 
     def _h7_vague_prompts(
         self,
-        per_session: dict[str, list[Any]],
+        per_session: dict[str, list[TelemetryEvent]],
     ) -> list[EfficiencyPattern]:
         """Detect sessions triggered by vague or underspecified prompts.
 
@@ -416,7 +416,7 @@ class SessionStewardCitizen:
 
     def _h8_tool_overuse(
         self,
-        per_session: dict[str, list[Any]],
+        per_session: dict[str, list[TelemetryEvent]],
     ) -> list[EfficiencyPattern]:
         """Detect sessions with excessive tool call ratios.
 
@@ -635,10 +635,10 @@ class SessionStewardCitizen:
 
     def create_daemon_task(
         self,
-        daemon_scheduler: Any,
+        daemon_scheduler: object,
         controller: TelemetryProvider,
         interval_seconds: int = 3600,
-    ) -> Any:
+    ) -> object:
         """Register a recurring audit task with the daemon scheduler.
 
         Args:
@@ -672,7 +672,7 @@ class SessionStewardCitizen:
     # ── Helpers ─────────────────────────────────────────────────────
 
     @staticmethod
-    def _suggest_timer(timer_wrapups: list[Any]) -> str:
+    def _suggest_timer(timer_wrapups: list[TelemetryEvent]) -> str:
         """Suggest a longer timer based on observed patterns."""
         avg_elapsed = sum(
             getattr(e, "elapsed_seconds", 0.0) for e in timer_wrapups

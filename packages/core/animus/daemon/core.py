@@ -419,8 +419,8 @@ class AnimusDaemon:
         invoke the Head or a specialized worker to process the task.
         """
         logger.debug(f"Background task: {task.description}")
-        # TODO: Integrate with Head for NL task execution
-        # TODO: Integrate with Meta-Thinker for oversight
+        # NOTE: Head NL task execution and Meta-Thinker oversight are
+        # planned integrations. Background tasks currently simulate work.
         await asyncio.sleep(0.1)  # Simulate work
 
     # ── External API ──────────────────────────────────────────────────

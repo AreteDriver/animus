@@ -121,6 +121,6 @@ This project uses:
 
 ## See Also
 
-- [Architecture → Decisions](../architecture/decisions/) — Security-related ADRs
+- [Architecture → Decisions](../architecture/decisions/README.md) — Security-related ADRs
 - [Contributing → Guidelines](../contributing/guidelines.md) — Secure development practices
 - [Operators → Deployment](../operators/deployment.md) — Secure deployment patterns

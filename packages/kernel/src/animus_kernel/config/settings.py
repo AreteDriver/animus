@@ -15,10 +15,11 @@ from pydantic_settings import (
     SettingsConfigDict,
 )
 
+YamlConfigSettingsSource: type | None = None
 try:
     from pydantic_settings import YamlConfigSettingsSource
 except ImportError:  # pydantic-settings < 2.6
-    YamlConfigSettingsSource = None
+    pass
 
 logger = logging.getLogger(__name__)
 
