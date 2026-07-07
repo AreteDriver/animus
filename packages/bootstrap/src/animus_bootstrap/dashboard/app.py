@@ -36,6 +36,7 @@ from animus_bootstrap.dashboard.routers import (
     push,
     routing_page,
     self_mod,
+    session,
     tasks_page,
     timers_page,
     tools,
@@ -191,6 +192,7 @@ app.include_router(timers_page.router)
 app.include_router(feedback.router)
 app.include_router(identity_page.router)
 app.include_router(proposals.router)
+app.include_router(session.router)
 app.include_router(capture.router)
 app.include_router(push.router)
 

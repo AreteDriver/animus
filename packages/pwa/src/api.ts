@@ -1,10 +1,11 @@
 /** API client for Animus Bootstrap dashboard backend. */
 
 import { AuthError, clearToken, getToken } from "./auth";
+import { API_BASE_URL, API_RETRY_COUNT, WS_BASE_URL } from "./config";
 
-const BASE = "/api";
+const BASE = API_BASE_URL;
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function request<T>(path: string, options?: RequestInit, attempt = 0): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -12,17 +13,31 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
-  if (res.status === 401) {
-    clearToken();
-    window.dispatchEvent(new Event("animus:unauthorized"));
-    throw new AuthError();
+  try {
+    const res = await fetch(`${BASE}${path}`, { ...options, headers });
+    if (res.status === 401) {
+      clearToken();
+      window.dispatchEvent(new Event("animus:unauthorized"));
+      throw new AuthError();
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => res.statusText);
+      // Retry on 5xx or network-like errors (0 status from fetch abort)
+      if (attempt < API_RETRY_COUNT && (res.status >= 500 || res.status === 0)) {
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+        return request(path, options, attempt + 1);
+      }
+      throw new Error(`${res.status}: ${text}`);
+    }
+    return res.json() as Promise<T>;
+  } catch (err) {
+    // Retry on network failures (not HTTP errors handled above)
+    if (attempt < API_RETRY_COUNT && err instanceof TypeError) {
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      return request(path, options, attempt + 1);
+    }
+    throw err;
   }
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`${res.status}: ${text}`);
-  }
-  return res.json() as Promise<T>;
 }
 
 // Health
@@ -71,7 +86,10 @@ export function connectChat(onMessage: OnWSMessage): {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   const token = getToken();
   const query = token ? `?token=${encodeURIComponent(token)}` : "";
-  const ws = new WebSocket(`${proto}//${location.host}/ws/chat${query}`);
+  const wsPath = WS_BASE_URL.startsWith("/")
+    ? `${proto}//${location.host}${WS_BASE_URL}/chat${query}`
+    : `${WS_BASE_URL}/chat${query}`;
+  const ws = new WebSocket(wsPath);
   const pending: string[] = [];
 
   ws.onopen = () => {
@@ -168,5 +186,28 @@ export async function unsubscribePush(endpoint: string): Promise<void> {
   await request("/push/unsubscribe", {
     method: "POST",
     body: JSON.stringify({ endpoint }),
+  });
+}
+
+// Session continuity (checkpoint load/save)
+export interface CheckpointPayload {
+  session_id?: string;
+  messages: { role: string; content: string }[];
+  summary: string;
+  turns: number;
+}
+
+export async function loadCheckpoint(): Promise<CheckpointPayload | null> {
+  try {
+    return await request<CheckpointPayload>("/session/checkpoint");
+  } catch {
+    return null;
+  }
+}
+
+export async function saveCheckpoint(payload: CheckpointPayload): Promise<void> {
+  await request("/session/checkpoint", {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }

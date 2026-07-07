@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { connectChat, getHistory, type WSMessage } from "../api";
+import { connectChat, getHistory, loadCheckpoint, saveCheckpoint, type WSMessage } from "../api";
+import { CHECKPOINT_SAVE_DEBOUNCE_MS } from "../config";
 import { useSpeechRecognition } from "../useSpeechRecognition";
 import "./Chat.css";
 
@@ -19,6 +20,7 @@ export function ChatView() {
   const [pendingCount, setPendingCount] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<ReturnType<typeof connectChat> | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     supported: voiceSupported,
@@ -76,6 +78,55 @@ export function ChatView() {
       cancelled = true;
     };
   }, []);
+
+  // Load checkpoint from kernel session store for cross-device continuity.
+  useEffect(() => {
+    let cancelled = false;
+    loadCheckpoint()
+      .then((cp) => {
+        if (cancelled || !cp || cp.messages.length === 0) return;
+        setMessages((prev) => {
+          if (prev.length > 0) return prev; // history already loaded
+          return cp.messages.map((m, idx) => ({
+            id: `ckpt-${idx}`,
+            role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
+            text: m.content,
+            timestamp: new Date(),
+          }));
+        });
+      })
+      .catch(() => {
+        // checkpoint unavailable — continue with empty chat
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Auto-save checkpoint debounced whenever messages change.
+  useEffect(() => {
+    if (messages.length === 0) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      const payload = {
+        session_id: "pwa-session",
+        messages: messages.map((m) => ({
+          role: m.role,
+          content: m.text,
+        })),
+        summary: messages.length > 0
+          ? `Last ${messages.length} messages from PWA session`
+          : "",
+        turns: messages.filter((m) => m.role === "user").length,
+      };
+      saveCheckpoint(payload).catch(() => {
+        // silently fail — checkpoint is best-effort
+      });
+    }, CHECKPOINT_SAVE_DEBOUNCE_MS);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [messages]);
 
   useEffect(() => {
     let reconnectTimer: ReturnType<typeof setTimeout>;

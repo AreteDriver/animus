@@ -4,6 +4,7 @@ import { StatusView } from "./views/Status";
 import { PersonasView } from "./views/Personas";
 import { CaptureView } from "./views/Capture";
 import { LoginView } from "./views/Login";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { getToken } from "./auth";
 import "./App.css";
 
@@ -22,12 +23,23 @@ export function App() {
   const [sharedText] = useState(readSharedText);
   const [view, setView] = useState<View>(() => (sharedText ? "capture" : "chat"));
   const [authed, setAuthed] = useState<boolean>(() => getToken() !== null);
+  const [online, setOnline] = useState<boolean>(() => navigator.onLine);
 
   useEffect(() => {
-    // The API client clears the token and fires this event on a 401.
     const onUnauthorized = () => setAuthed(false);
     window.addEventListener("animus:unauthorized", onUnauthorized);
     return () => window.removeEventListener("animus:unauthorized", onUnauthorized);
+  }, []);
+
+  useEffect(() => {
+    const onOnline = () => setOnline(true);
+    const onOffline = () => setOnline(false);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
   }, []);
 
   if (!authed) {
@@ -42,11 +54,16 @@ export function App() {
 
   return (
     <div className="app">
+      {!online && (
+        <div className="app-offline-banner">Offline — changes will sync when reconnected</div>
+      )}
       <main className="app-main">
-        {view === "chat" && <ChatView />}
-        {view === "capture" && <CaptureView initialText={sharedText} />}
-        {view === "status" && <StatusView />}
-        {view === "personas" && <PersonasView />}
+        <ErrorBoundary>
+          {view === "chat" && <ChatView />}
+          {view === "capture" && <CaptureView initialText={sharedText} />}
+          {view === "status" && <StatusView />}
+          {view === "personas" && <PersonasView />}
+        </ErrorBoundary>
       </main>
 
       <nav className="app-nav">

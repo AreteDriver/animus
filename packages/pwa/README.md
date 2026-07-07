@@ -32,7 +32,14 @@ npm run preview    # Preview production build
 
 ## Configuration
 
-The PWA connects to the Bootstrap API by default at `http://localhost:7700`. Update the API base URL in `src/config.ts` if your Bootstrap daemon runs elsewhere.
+The PWA connects to the Bootstrap API by default at `/api` (same-origin when served by the Bootstrap dashboard). In development, the Vite proxy forwards `/api` and `/ws` to `http://localhost:7700`.
+
+Override at build time via environment variables:
+
+```bash
+VITE_API_BASE_URL=/api   npm run build
+VITE_WS_BASE_URL=/ws     npm run build
+```
 
 ## Deployment
 

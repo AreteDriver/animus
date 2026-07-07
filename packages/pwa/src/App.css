@@ -53,3 +53,13 @@
   font-size: 11px;
   font-weight: 600;
 }
+
+.app-offline-banner {
+  background: var(--warn-bg, #fef3c7);
+  color: var(--warn-text, #92400e);
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--warn-border, #fbbf24);
+}
