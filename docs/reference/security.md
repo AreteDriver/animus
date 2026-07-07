@@ -4,6 +4,58 @@
 
 ---
 
+## Policy Decision Point
+
+Animus includes a deterministic Policy Decision Point (PDP) for capability-based authorization. It evaluates action requests against capability grants and enforces default-deny semantics.
+
+### Components
+
+- **PolicyDecisionPoint** — evaluates `(principal, action, resource, workspace)` tuples
+- **CapabilityGrantStore** — in-memory store for grants (PostgreSQL-backed in production)
+
+### Decisions
+
+| Decision | Meaning |
+|---|---|
+| `ALLOW` | Grant permits the action |
+| `DENY` | No grant, expired grant, or action not permitted |
+| `ESCALATE` | High-risk action (delete, execute, delegate, export) requires approval |
+| `ABSTAIN` | Reserved for future use |
+
+### Denial Reasons
+
+- `MISSING_SCOPE` — No grants found or action not in grant
+- `CAPABILITY_REVOKED` — All grants expired or revoked
+- `UNKNOWN_SCHEMA` — Schema not in grant's allowed list
+- `ESCALATION_REQUIRED` — High-risk action
+
+### Usage
+
+```python
+from animus.policy import PolicyDecisionPoint, CapabilityGrant, CapabilityGrantStore
+
+store = CapabilityGrantStore()
+store.create(CapabilityGrant(
+    grant_id="grant-001",
+    principal="user-alice",
+    scope=["memory"],
+    resource="ws-test",
+    action=["read", "create"],
+    granted_by="admin",
+    granted_at=datetime.now(timezone.utc),
+))
+
+pdp = PolicyDecisionPoint(store)
+result = pdp.evaluate(
+    principal="user-alice",
+    action="read",
+    resource="mem-001",
+    workspace_id="ws-test",
+)
+assert result.decision == "allow"
+```
+
+---
 ## Security Documents
 
 | Document | Scope | Last Updated |

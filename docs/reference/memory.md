@@ -249,8 +249,43 @@ These methods automatically restrict results to `PUBLIC` sensitivity. Use them f
 |---|---|---|
 | **chroma** | `chromadb` package | Vector search, semantic recall; default |
 | **json** | None | Simple file-based storage; fallback if ChromaDB unavailable |
+| **durable** | `sqlalchemy`, PostgreSQL | ACID, bitemporal ledger, audit trail; production-grade |
 
 **Backend selection:** Set `memory.backend` in config or `ANIMUS_MEMORY_BACKEND` env var.
+
+### Durable Backend (PostgreSQL)
+
+The `durable` backend upstreams the `DurableObjectStore` from `animus-mind` and provides:
+
+- **ACID transactions** via PostgreSQL (or SQLite for testing)
+- **Bitemporal recording** — every change is ledgered with valid time + transaction time
+- **Optimistic concurrency** — version-based conflict detection on updates
+- **Audit trail** — `get_ledger_events()` returns the complete history of any memory
+- **Schema compliance** — validates against `animus_contracts` schemas on write
+
+**Usage:**
+
+```python
+from animus.memory.layer import MemoryLayer
+
+layer = MemoryLayer(
+    backend="durable",
+    database_url="postgresql://...",
+    workspace_id="ws-production",
+)
+```
+
+Or via environment variables (see `animus/config.py` for full list).
+
+**Type mappings:**
+
+| Memory Type | Stored As |
+|---|---|
+| `SEMANTIC` | `cognitive_role="memory"` |
+| `EPISODIC` | `cognitive_role="knowledge"` |
+| `PROCEDURAL` | `cognitive_role="intelligence"` |
+
+The original UUID is preserved in the payload for round-trip fidelity; the backend uses a schema-compliant `object_id` (`mem-{stripped_uuid}`).
 
 ---
 
