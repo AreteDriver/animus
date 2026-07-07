@@ -1670,6 +1670,133 @@ def create_mcp_server():
         summary = council.summary()
         return json.dumps(summary, indent=2, default=str)
 
+    # -----------------------------------------------------------------------
+    # Session Steward tools
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_session_steward_scan(
+        session_controller_data: str = "",
+        store_proposal: bool = True,
+        api_key: str = "",
+    ) -> str:
+        """Run the Session Steward Citizen retrospective audit.
+
+        Reads session lifecycle telemetry and identifies policy
+        inefficiencies (timer waste, threshold tightness, restart fatigue).
+        Never modifies running sessions.
+
+        Args:
+            session_controller_data: JSON-encoded SessionController telemetry data.
+            store_proposal: Whether to store the generated proposal in memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration."
+
+        if not config.citizens.session_steward_enabled:
+            return "Session Steward is disabled. Set citizens.session_steward_enabled=true to use it."
+
+        from animus.citizens import SessionStewardCitizen
+
+        steward = SessionStewardCitizen(
+            min_sessions=5,
+            memory_layer=memory if store_proposal else None,
+        )
+
+        # Reconstruct a minimal SessionController from JSON data if provided
+        if session_controller_data:
+            try:
+                data = json.loads(session_controller_data)
+                from animus_kernel.head.session_controller import SessionController, SessionPolicy
+
+                policy = SessionPolicy(
+                    wrapup_threshold=data.get("wrapup_threshold", 0.96),
+                    session_timer=timedelta(minutes=data.get("session_timer_minutes", 30)),
+                    auto_restart=data.get("auto_restart", True),
+                )
+                controller = SessionController(policy=policy)
+                for ev in data.get("events", []):
+                    from animus_kernel.head.session_controller import SessionLifecycleEvent
+
+                    controller.log_event(
+                        session_id=ev.get("session_id", "unknown"),
+                        event=SessionLifecycleEvent[ev.get("event", "RUNNING")],
+                        utilization_percent=ev.get("utilization_percent", 0.0),
+                        elapsed_seconds=ev.get("elapsed_seconds", 0.0),
+                        turns=ev.get("turns", 0),
+                        message=ev.get("message", ""),
+                    )
+            except (json.JSONDecodeError, KeyError, ValueError) as exc:
+                return f"Failed to parse session controller data: {exc}"
+        else:
+            return "No session controller data provided. Pass JSON-encoded telemetry."
+
+        lines = ["# Session Steward Scan Report", ""]
+
+        patterns = steward.observe_telemetry(controller)
+        if patterns:
+            lines.append(f"## Detected Patterns ({len(patterns)})")
+            for p in patterns:
+                lines.append(f"- **[{p.heuristic}]** {p.description} ({p.severity})")
+            lines.append("")
+        else:
+            lines.append("## No Patterns Detected")
+            lines.append("Either insufficient telemetry (<5 sessions) or no inefficiencies found.")
+            lines.append("")
+
+        proposal = steward.generate_proposal(patterns)
+        if proposal:
+            lines.append("## Improvement Proposal Generated")
+            lines.append(f"**ID:** `{proposal.id}`")
+            lines.append(f"**Title:** {proposal.title}")
+            lines.append(f"**Problem:** {proposal.problem}")
+            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(f"**Recommendation:**")
+            lines.append(proposal.recommendation)
+            if proposal.potential_risks:
+                lines.append("**Risks:**")
+                for r in proposal.potential_risks:
+                    lines.append(f"  - {r.description} ({r.severity}) — {r.mitigation}")
+            lines.append("")
+
+            if store_proposal:
+                stored = steward.store_proposal(proposal)
+                if stored:
+                    lines.append("✅ Proposal stored in memory for review.")
+                else:
+                    lines.append("⚠️ Memory layer unavailable — proposal not persisted.")
+        else:
+            lines.append("## No Proposal Generated")
+            lines.append("No actionable inefficiency patterns detected.")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_session_steward_status(
+        api_key: str = "",
+    ) -> str:
+        """Get Session Steward configuration and readiness status.
+
+        Args:
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        status = {
+            "citizens_enabled": config.citizens.enabled,
+            "session_steward_enabled": config.citizens.session_steward_enabled,
+            "min_sessions": 5,
+            "note": "Session Steward is a retrospective auditor. It does not modify running sessions.",
+        }
+        return json.dumps(status, indent=2)
+
     return mcp
 
 

@@ -324,6 +324,7 @@ class CitizensConfig:
     forge_host: str = "localhost"
     forge_port: int = 7700
     auto_store_proposals: bool = True  # Store proposals in memory automatically
+    session_steward_enabled: bool = False  # Retrospective session telemetry auditor
 
     def __post_init__(self):
         if env_enabled := os.environ.get("ANIMUS_CITIZENS_ENABLED"):
@@ -341,6 +342,8 @@ class CitizensConfig:
                 self.forge_port = int(env_port)
             except ValueError:
                 pass
+        if env_steward := os.environ.get("ANIMUS_SESSION_STEWARD_ENABLED"):
+            self.session_steward_enabled = env_steward.lower() in ("true", "1", "yes")
 
 
 @dataclass

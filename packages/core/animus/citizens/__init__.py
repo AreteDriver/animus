@@ -31,6 +31,7 @@ from animus.citizens.proposal import (
     RiskAssessment,
 )
 from animus.citizens.proposal_queue import ProposalQueue, QueuedProposal
+from animus.citizens.session_steward import SessionStewardCitizen
 from animus.citizens.test_oracle import TestOracleCitizen
 
 __all__ = [
@@ -42,6 +43,7 @@ __all__ = [
     "ProposalQueue",
     "QueuedProposal",
     "RankedProposal",
+    "SessionStewardCitizen",
     "TestOracleCitizen",
     "EvidenceItem",
     "ImprovementProposal",

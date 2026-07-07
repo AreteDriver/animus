@@ -335,6 +335,108 @@ def _cmd_session(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_session_steward(args: argparse.Namespace) -> int:
+    from animus.citizens import SessionStewardCitizen
+    from animus.config import get_config
+    from animus.memory import MemoryLayer
+
+    config = get_config()
+    if not config.citizens.enabled:
+        print("Citizens are disabled in configuration.", file=sys.stderr)
+        return 1
+
+    if not config.citizens.session_steward_enabled:
+        print("Session Steward is disabled. Set citizens.session_steward_enabled=true to use it.", file=sys.stderr)
+        return 1
+
+    memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if not args.no_store else None
+
+    telemetry_data = None
+    if args.telemetry_file:
+        import json
+        import os
+
+        path = os.path.expanduser(args.telemetry_file)
+        if not os.path.exists(path):
+            print(f"Telemetry file not found: {path}", file=sys.stderr)
+            return 1
+        with open(path, "r", encoding="utf-8") as fh:
+            telemetry_data = fh.read()
+    else:
+        print("No --telemetry-file provided. Session Steward requires telemetry data.", file=sys.stderr)
+        return 1
+
+    steward = SessionStewardCitizen(
+        min_sessions=5,
+        memory_layer=memory,
+    )
+
+    # Reconstruct a minimal SessionController from JSON data
+    try:
+        data = json.loads(telemetry_data)
+        from animus_kernel.head.session_controller import SessionController, SessionPolicy
+
+        policy = SessionPolicy(
+            wrapup_threshold=data.get("wrapup_threshold", 0.96),
+            session_timer=timedelta(minutes=data.get("session_timer_minutes", 30)),
+            auto_restart=data.get("auto_restart", True),
+        )
+        controller = SessionController(policy=policy)
+        for ev in data.get("events", []):
+            from animus_kernel.head.session_controller import SessionLifecycleEvent
+
+            controller.log_event(
+                session_id=ev.get("session_id", "unknown"),
+                event=SessionLifecycleEvent[ev.get("event", "RUNNING")],
+                utilization_percent=ev.get("utilization_percent", 0.0),
+                elapsed_seconds=ev.get("elapsed_seconds", 0.0),
+                turns=ev.get("turns", 0),
+                message=ev.get("message", ""),
+            )
+    except (json.JSONDecodeError, KeyError, ValueError) as exc:
+        print(f"Failed to parse telemetry data: {exc}", file=sys.stderr)
+        return 1
+
+    print("# Session Steward Scan Report\n")
+
+    patterns = steward.observe_telemetry(controller)
+    if patterns:
+        print(f"## Detected Patterns ({len(patterns)})\n")
+        for p in patterns:
+            print(f"- **[{p.heuristic}]** {p.description} ({p.severity})")
+        print()
+    else:
+        print("## No Patterns Detected")
+        print("Either insufficient telemetry (<5 sessions) or no inefficiencies found.\n")
+
+    proposal = steward.generate_proposal(patterns)
+    if proposal:
+        print("## Improvement Proposal Generated")
+        print(f"**ID:** `{proposal.id}`")
+        print(f"**Title:** {proposal.title}")
+        print(f"**Problem:** {proposal.problem}")
+        print(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+        print(f"**Recommendation:**")
+        print(proposal.recommendation)
+        if proposal.potential_risks:
+            print("**Risks:**")
+            for r in proposal.potential_risks:
+                print(f"  - {r.description} ({r.severity}) — {r.mitigation}")
+        print()
+
+        if not args.no_store:
+            stored = steward.store_proposal(proposal)
+            if stored:
+                print("✅ Proposal stored in memory for review.")
+            else:
+                print("⚠️ Memory layer unavailable — proposal not persisted.")
+    else:
+        print("## No Proposal Generated")
+        print("No actionable inefficiency patterns detected.")
+
+    return 0
+
+
 # ------------------------------------------------------------------
 # Proposal Queue
 # ------------------------------------------------------------------
@@ -630,6 +732,26 @@ def main(argv: list[str] | None = None) -> int:
         help="Disable automatic session restart after wrap-up",
     )
     session_parser.set_defaults(func=_cmd_session)
+
+    # ------------------------------------------------------------------
+    # Session Steward
+    # ------------------------------------------------------------------
+
+    session_steward_parser = subparsers.add_parser(
+        "session-steward",
+        help="Run Session Steward retrospective audit",
+    )
+    session_steward_parser.add_argument(
+        "--telemetry-file",
+        default=None,
+        help="Path to JSON file with SessionController telemetry (from /session stats)",
+    )
+    session_steward_parser.add_argument(
+        "--no-store",
+        action="store_true",
+        help="Skip storing the proposal in memory",
+    )
+    session_steward_parser.set_defaults(func=_cmd_session_steward)
 
     # Proposal Queue
     proposal_queue_parser = subparsers.add_parser(
