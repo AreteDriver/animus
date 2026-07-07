@@ -552,6 +552,69 @@ def _cmd_proposal_queue_stats(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_proposal_queue_show(args: argparse.Namespace) -> int:
+    from animus.citizens import ProposalQueue
+    from animus.config import get_config
+    from animus.memory import MemoryLayer
+
+    config = get_config()
+    memory = MemoryLayer(config.data_dir, backend=config.memory.backend)
+    queue = ProposalQueue(memory_layer=memory)
+    queue.load_from_memory()
+
+    qp = queue.get(args.proposal_id)
+    if qp is None:
+        print(f"Proposal '{args.proposal_id}' not found.", file=sys.stderr)
+        return 1
+
+    p = qp.proposal
+    print(f"# {p.id}\n")
+    print(f"Title:       {p.title}")
+    print(f"Status:      {qp.current_status.value}")
+    print(f"Priority:    {qp.priority}")
+    print(f"Confidence:  {p.confidence.value} ({p.confidence_score:.0%})")
+    print(f"Effort:      {p.estimated_effort_hours}h")
+    print(f"Problem:     {p.problem}")
+    print(f"Recommendation: {p.recommendation}")
+    print(f"Affected:    {', '.join(p.affected_files) if p.affected_files else 'none'}")
+    print(f"Tags:        {', '.join(qp.tags) if qp.tags else 'none'}")
+    if qp.transitions:
+        print("\nTransitions:")
+        for t in qp.transitions:
+            print(f"  {t.from_status.value} → {t.to_status.value} by {t.actor} ({t.timestamp.isoformat()})")
+    if p.evidence:
+        print(f"\nEvidence ({len(p.evidence)} items):")
+        for i, ev in enumerate(p.evidence, 1):
+            print(f"  {i}. [{ev.source}] {ev.description[:100]}")
+            if ev.data:
+                print(f"     Data: {str(ev.data)[:120]}")
+    else:
+        print("\nNo evidence attached.")
+    return 0
+
+
+def _cmd_proposal_queue_clear_sources(args: argparse.Namespace) -> int:
+    from animus.citizens import ProposalQueue
+    from animus.config import get_config
+    from animus.memory import MemoryLayer
+
+    config = get_config()
+    memory = MemoryLayer(config.data_dir, backend=config.memory.backend)
+    queue = ProposalQueue(memory_layer=memory)
+    queue.load_from_memory()
+
+    qp = queue.get(args.proposal_id)
+    if qp is None:
+        print(f"Proposal '{args.proposal_id}' not found.", file=sys.stderr)
+        return 1
+
+    count = len(qp.proposal.evidence)
+    qp.proposal.evidence.clear()
+    queue.save_to_memory()
+    print(f"🧹 Cleared {count} evidence item(s) from {args.proposal_id}.")
+    return 0
+
+
 def _cmd_citizen_council_backlog(args: argparse.Namespace) -> int:
     from animus.citizens import CitizenCouncil
     from animus.config import get_config
@@ -781,6 +844,14 @@ def main(argv: list[str] | None = None) -> int:
 
     pq_stats = proposal_queue_subparsers.add_parser("stats", help="Show queue statistics")
     pq_stats.set_defaults(func=_cmd_proposal_queue_stats)
+
+    pq_show = proposal_queue_subparsers.add_parser("show", help="Show proposal details with evidence")
+    pq_show.add_argument("proposal_id", help="ID of proposal to show")
+    pq_show.set_defaults(func=_cmd_proposal_queue_show)
+
+    pq_clear = proposal_queue_subparsers.add_parser("clear-sources", help="Clear evidence from a proposal")
+    pq_clear.add_argument("proposal_id", help="ID of proposal to clear")
+    pq_clear.set_defaults(func=_cmd_proposal_queue_clear_sources)
 
     # Citizen Council
     council_parser = subparsers.add_parser(

@@ -427,6 +427,30 @@ def main():
         )
     )
 
+    # Show pending autonomous proposals on startup
+    try:
+        from animus.citizens import ProposalQueue
+        pq = ProposalQueue(memory_layer=None)
+        pq.load_from_memory()
+        pending = pq.list_pending()
+        if pending:
+            console.print(
+                f"\n[yellow]⚡ {len(pending)} proposal(s) pending review:[/yellow]"
+            )
+            for qp in pending[:3]:
+                p = qp.proposal
+                console.print(
+                    f"  [dim]•[/dim] [bold]{p.id}[/bold] — {p.title[:50]}... "
+                    f"([cyan]{p.confidence_score:.0%}[/cyan] confidence, "
+                    f"{p.estimated_effort_hours}h)"
+                )
+            console.print(
+                "  [dim]Run [bold]/proposals[/bold] or "
+                "[bold]animus proposal-queue list[/bold] to review.[/dim]\n"
+            )
+    except Exception:
+        pass  # Memory layer may not be available; don't block startup
+
     # Initialize layers
     memory = MemoryLayer(config.data_dir, backend=config.memory.backend)
 
