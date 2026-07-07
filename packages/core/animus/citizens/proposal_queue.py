@@ -192,6 +192,29 @@ class ProposalQueue:
 
         logger.info(f"Proposal {proposal_id} approved by {actor}")
         self._persist()
+
+        # Auto-commission to Forge if enabled
+        if __import__("os").environ.get("ANIMUS_AUTO_COMMISSION") == "1":
+            try:
+                from animus.citizens.commissioner import ForgeCommissioner
+                commissioner = ForgeCommissioner()
+                result = commissioner.commission(qp.proposal)
+                if result.success:
+                    logger.info(f"Proposal {proposal_id} commissioned to Forge")
+                    qp.transitions.append(
+                        Transition(
+                            from_status=ProposalStatus.APPROVED,
+                            to_status=ProposalStatus.COMMISSIONED,
+                            actor="forge",
+                            reason="Auto-commissioned after approval",
+                        )
+                    )
+                    self._persist()
+                else:
+                    logger.warning(f"Auto-commission failed: {result.error}")
+            except Exception as e:
+                logger.warning(f"Auto-commission error: {e}")
+
         return qp
 
     def reject(self, proposal_id: str, actor: str = "human", reason: str = "") -> QueuedProposal | None:
