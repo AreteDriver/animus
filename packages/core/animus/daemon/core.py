@@ -415,13 +415,68 @@ class AnimusDaemon:
     async def _execute_task_background(self, task: ScheduledTask) -> None:
         """Execute a task in the background.
 
-        Placeholder for actual task execution. In production, this would
-        invoke the Head or a specialized worker to process the task.
+        Dispatches by task_type metadata. Media pipeline tasks are
+        executed end-to-end; unknown task types simulate work.
         """
+        task_type = task.metadata.get("task_type", "")
+
+        if task_type == "media_pipeline":
+            await self._run_media_pipeline_task(task)
+            return
+
+        # Generic / fallback task handling
         logger.debug(f"Background task: {task.description}")
         # NOTE: Head NL task execution and Meta-Thinker oversight are
         # planned integrations. Background tasks currently simulate work.
         await asyncio.sleep(0.1)  # Simulate work
+
+    async def _run_media_pipeline_task(self, task: ScheduledTask) -> None:
+        """Execute a media pipeline scan as a background task.
+
+        Uses the daemon's memory layer and codebase path config.
+        Only proposals with gap == FULL or run_research_guild are submitted
+        to the ProposalQueue; PARTIAL and NONE gaps are stored but not queued.
+        """
+        from animus.citizens.media import MediaPipelineOrchestrator
+        from animus.citizens.proposal_queue import ProposalQueue
+
+        url = task.metadata.get("url", "")
+        source_type = task.metadata.get("source_type", "auto")
+        run_rg = task.metadata.get("run_research_guild", False)
+        list_limit = task.metadata.get("list_limit", 25)
+
+        if not url:
+            logger.warning("Media pipeline task %s has no URL", task.task_id)
+            return
+
+        logger.info(
+            "Daemon executing media pipeline: %s (%s)", url, source_type
+        )
+
+        try:
+            queue = ProposalQueue(memory_layer=self.memory)
+            orchestrator = MediaPipelineOrchestrator(
+                memory_layer=self.memory,
+                codebase_path=self.config.citizens.codebase_path or str(self.config.data_dir.parent),
+                proposal_queue=queue,
+            )
+            report = orchestrator.run(
+                url=url,
+                source_type=source_type,
+                run_research_guild=run_rg,
+                store_outputs=True,
+                list_limit=list_limit,
+            )
+            logger.info(
+                "Media pipeline %s complete: gap=%s, mechanisms=%d, patterns=%d, proposal=%s",
+                task.task_id,
+                report.gap_status,
+                len(report.mechanisms),
+                len(report.patterns),
+                report.final_proposal.id if report.final_proposal else "none",
+            )
+        except Exception as e:
+            logger.error("Media pipeline task %s failed: %s", task.task_id, e)
 
     # ── External API ──────────────────────────────────────────────────
 

@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any
 from animus.citizens.abstraction import AbstractionCitizen, MechanismCard
 from animus.citizens.architecture_citizen import ArchitectureCitizen, GapAnalysis
 from animus.citizens.first_principles import FirstPrinciplesCitizen, PrincipleCard
+from animus.citizens.proposal_queue import ProposalQueue
 from animus.citizens.pattern import PatternCitizen, PatternCard
 from animus.citizens.proposal import ImprovementProposal
 from animus.citizens.research_guild import StageResult
@@ -412,9 +413,11 @@ class MediaPipelineOrchestrator:
         self,
         memory_layer: MemoryLayer | None = None,
         codebase_path: Path | str = ".",
+        proposal_queue: Any | None = None,
     ):
         self.memory = memory_layer
         self.codebase_path = Path(codebase_path).expanduser()
+        self.proposal_queue = proposal_queue
         self.harvester = MediaHarvester()
         self.synthesizer = MediaSynthesizer()
         self.adapter = MediaAbstractionAdapter()
@@ -582,6 +585,22 @@ class MediaPipelineOrchestrator:
                 report.final_proposal = proposal
                 if store_outputs and self.memory is not None and proposal:
                     ac.store_proposal(proposal)
+                # Submit to ProposalQueue for approval → commission → Forge pipeline
+                if self.proposal_queue is not None and proposal:
+                    try:
+                        self.proposal_queue.submit(
+                            proposal,
+                            priority=3 if report.gap_status == "FULL" else 5,
+                            tags=["media", "research_guild", f"gap:{report.gap_status.lower()}"],
+                        )
+                        logger.info(
+                            "Proposal %s submitted to queue (priority=%d, tags=%s)",
+                            proposal.id,
+                            3 if report.gap_status == "FULL" else 5,
+                            ["media", "research_guild", f"gap:{report.gap_status.lower()}"],
+                        )
+                    except Exception as e:
+                        logger.error("Failed to submit proposal %s to queue: %s", proposal.id, e)
 
         report.stages = stages
         report.duration_seconds = time.time() - start
@@ -668,3 +687,46 @@ class MediaPipelineOrchestrator:
         except Exception as e:
             logger.error("Failed to store OgmaOutput: %s", e)
             return False
+
+    # -- scheduling --------------------------------------------------------
+
+    @staticmethod
+    def schedule_scan(
+        scheduler: Any,
+        url: str,
+        source_type: str = "auto",
+        cron_expression: str = "0 9 * * 1",  # Mondays at 9am
+        run_research_guild: bool = False,
+        list_limit: int = 25,
+        priority: str = "normal",
+    ) -> Any:
+        """Schedule a recurring media pipeline scan via the daemon TaskScheduler.
+
+        Args:
+            scheduler: ``TaskScheduler`` instance.
+            url: Media URL to scan.
+            source_type: Source type override.
+            cron_expression: Cron schedule (default: weekly Monday 9am).
+            run_research_guild: Force full RG regardless of gap.
+            list_limit: Max items to harvest per run.
+            priority: Task priority (normal, high, critical).
+
+        Returns:
+            ``ScheduledTask`` object.
+        """
+        task = scheduler.schedule_cron(
+            description=f"Media pipeline scan: {url}",
+            cron_expression=cron_expression,
+            priority=priority,
+            metadata={
+                "task_type": "media_pipeline",
+                "url": url,
+                "source_type": source_type,
+                "run_research_guild": run_research_guild,
+                "list_limit": list_limit,
+            },
+        )
+        logger.info(
+            "Scheduled media scan %s for %s (%s)", task.task_id, url, cron_expression
+        )
+        return task

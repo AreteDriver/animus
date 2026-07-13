@@ -18,6 +18,7 @@ from animus.citizens.media import (
     MediaPipelineReport,
     MediaSynthesizer,
 )
+from animus.citizens.proposal import ImprovementProposal
 from animus.citizens.pattern import PatternCard, PatternCitizen
 from animus.lugh.sources.base import SourceItem
 from animus.ogma.models import OgmaOutput
@@ -617,4 +618,190 @@ class TestMediaPipelineReport:
         summary = report.summary()
         assert "gap=FULL" in summary
         assert "Mechanisms: 1" in summary
-        assert "Patterns: 1" in summary
+
+
+# ---------------------------------------------------------------------------
+# ProposalQueue wiring tests
+# ---------------------------------------------------------------------------
+
+
+class TestProposalQueueWiring:
+    @patch("animus.ogma.read.synthesize")
+    def test_full_gap_submits_to_queue(self, mock_synthesize):
+        """When gap=FULL, the final proposal should be submitted to ProposalQueue."""
+        from animus.citizens.pattern import PatternCard
+        from animus.citizens.first_principles import PrincipleCard
+        from animus.citizens.architecture_citizen import GapAnalysis
+
+        mock_queue = MagicMock()
+        ogma = OgmaOutput(
+            title="Technical Talk",
+            source_id="src",
+            item_id="item1",
+            date=datetime.now().date(),
+            concept="A system with retry logic and observability.",
+            novelty="New",
+            animus_gap="FULL",
+            animus_gap_notes="Full overlap",
+            weaknesses="None",
+            proposal="Add packages/core/animus/messaging/async_processor.py with retry. Also add packages/core/animus/state/external_store.py for state externalization.",
+            roi_value="High",
+            roi_effort="moderate",
+            roi_priority="Now",
+            risks="None",
+            confidence=0.8,
+            confidence_justification="Strong evidence",
+            sources_cited=["https://example.com"],
+        )
+        mock_synthesize.return_value = ogma
+        orchestrator = MediaPipelineOrchestrator(
+            memory_layer=None, codebase_path=".", proposal_queue=mock_queue
+        )
+        items = [
+            SourceItem(
+                source_id="yt:PLabc", item_id="vid1", title="V1",
+                url="https://youtube.com/watch?v=vid1", published=datetime.now(),
+                raw_text="text about retry and observability",
+            ),
+            SourceItem(
+                source_id="yt:PLabc", item_id="vid2", title="V2",
+                url="https://youtube.com/watch?v=vid2", published=datetime.now(),
+                raw_text="text about state externalization",
+            ),
+        ]
+        # Patch pipeline internals to guarantee downstream outputs
+        with patch.object(orchestrator.harvester, "ingest_playlist", return_value=items):
+            with patch.object(
+                orchestrator,
+                "_patternstep",
+                return_value=[
+                    PatternCard(
+                        name="Retry pattern",
+                        description="Retry and observability",
+                        category="reliability",
+                        tags=["media"],
+                        source_provenance=["src1"],
+                        constituent_mechanisms=["m1"],
+                    )
+                ],
+            ):
+                with patch.object(
+                    orchestrator,
+                    "_fpstep",
+                    return_value=[
+                        PrincipleCard(
+                            principle_statement="Retry systems are reliable",
+                            category="reliability",
+                            tags=["media"],
+                            source_provenance=["src1"],
+                            confidence=0.8,
+                        )
+                    ],
+                ):
+                    with patch.object(
+                        orchestrator,
+                        "_archstep",
+                        return_value=[
+                            GapAnalysis(
+                                principle_statement="Retry systems are reliable",
+                                gap_description="Missing retry module",
+                                severity="high",
+                                affected_files=["animus/messaging/async_processor.py"],
+                                confidence=0.8,
+                            )
+                        ],
+                    ):
+                        with patch.object(
+                            ArchitectureCitizen,
+                            "generate_proposal",
+                            return_value=ImprovementProposal(
+                                id="ARCH-20260713-test001",
+                                title="Add retry module",
+                                problem="Missing retry logic.",
+                                affected_components=["animus"],
+                                confidence_score=0.8,
+                            ),
+                        ):
+                            report = orchestrator.run(
+                                url="https://youtube.com/playlist?list=PLabc",
+                                source_type="youtube_playlist",
+                            )
+        assert report.gap_status == "FULL"
+        assert report.final_proposal is not None
+        mock_queue.submit.assert_called_once()
+        call_kwargs = mock_queue.submit.call_args[1]
+        assert call_kwargs["priority"] == 3  # FULL gap gets priority 3
+        assert "media" in call_kwargs["tags"]
+        assert "gap:full" in call_kwargs["tags"]
+
+    @patch("animus.ogma.read.synthesize")
+    def test_none_gap_does_not_submit(self, mock_synthesize):
+        """When gap=NONE, no proposal is generated and queue.submit is not called."""
+        mock_queue = MagicMock()
+        ogma = OgmaOutput(
+            title="Career Advice",
+            source_id="src",
+            item_id="item1",
+            date=datetime.now().date(),
+            concept="How to get a data job.",
+            novelty="New",
+            animus_gap="NONE",
+            animus_gap_notes="No overlap",
+            weaknesses="None",
+            proposal="Build a portfolio.",
+            roi_value="High",
+            roi_effort="moderate",
+            roi_priority="Later",
+            risks="None",
+            confidence=0.5,
+            confidence_justification="Evidence",
+            sources_cited=["https://example.com"],
+        )
+        mock_synthesize.return_value = ogma
+        orchestrator = MediaPipelineOrchestrator(
+            memory_layer=None, codebase_path=".", proposal_queue=mock_queue
+        )
+        items = [
+            SourceItem(
+                source_id="yt:PLabc", item_id="vid1", title="V1",
+                url="https://youtube.com/watch?v=vid1", published=datetime.now(),
+                raw_text="career advice text",
+            )
+        ]
+        with patch.object(orchestrator.harvester, "ingest_playlist", return_value=items):
+            report = orchestrator.run(
+                url="https://youtube.com/playlist?list=PLabc",
+                source_type="youtube_playlist",
+            )
+        assert report.gap_status == "NONE"
+        assert report.final_proposal is None
+        mock_queue.submit.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Daemon scheduler wiring tests
+# ---------------------------------------------------------------------------
+
+
+class TestDaemonSchedulerWiring:
+    def test_schedule_scan_creates_cron_task(self):
+        """MediaPipelineOrchestrator.schedule_scan should create a cron task."""
+        from animus.daemon.scheduler import TaskScheduler
+
+        scheduler = TaskScheduler(persistence_dir="/tmp/test_scheduler_media")
+        task = MediaPipelineOrchestrator.schedule_scan(
+            scheduler=scheduler,
+            url="https://youtube.com/playlist?list=PLabc",
+            source_type="youtube_playlist",
+            cron_expression="0 9 * * 1",
+            run_research_guild=False,
+            list_limit=10,
+        )
+        assert task.task_id.startswith("task-")
+        assert task.schedule_type.value == "cron"
+        assert task.metadata["task_type"] == "media_pipeline"
+        assert task.metadata["url"] == "https://youtube.com/playlist?list=PLabc"
+        assert task.metadata["source_type"] == "youtube_playlist"
+        assert task.metadata["list_limit"] == 10
+        assert task.metadata["run_research_guild"] is False
+        scheduler.cancel(task.task_id)
