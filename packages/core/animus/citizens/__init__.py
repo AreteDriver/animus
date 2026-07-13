@@ -22,6 +22,7 @@ from animus.citizens.architect import ArchitectCitizen
 from animus.citizens.commissioner import ForgeCommissioner
 from animus.citizens.citizen_council import CitizenCouncil, RankedProposal
 from animus.citizens.conversation_designer import ConversationDesignerCitizen
+from animus.citizens.abstraction import AbstractionCitizen
 from animus.citizens.harvester import HarvesterCitizen
 from animus.citizens.intelligence import IntelligenceCitizen
 from animus.citizens.knowledge_curator import KnowledgeCuratorCitizen
@@ -37,6 +38,7 @@ from animus.citizens.session_steward import SessionStewardCitizen
 from animus.citizens.test_oracle import TestOracleCitizen
 
 __all__ = [
+    "AbstractionCitizen",
     "ArchitectCitizen",
     "CitizenCouncil",
     "ConversationDesignerCitizen",

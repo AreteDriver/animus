@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from animus.citizens import (
+    AbstractionCitizen,
     ArchitectCitizen,
     CitizenCouncil,
     ConversationDesignerCitizen,
@@ -1556,3 +1557,240 @@ class TestHarvesterMcpTools:
             store_report=False,
         )
         assert "Watchlist Scan Report" in result
+
+
+# ---------------------------------------------------------------------------
+# AbstractionCitizen tests (Research Guild — Citizen 008)
+# ---------------------------------------------------------------------------
+
+
+class TestAbstractionCitizen:
+    def test_initialization(self):
+        citizen = AbstractionCitizen()
+        assert citizen.codebase_path == Path(".").expanduser()
+        assert citizen.memory is None
+
+    def test_strip_implementation_basic(self):
+        citizen = AbstractionCitizen()
+        text = "Use Redis for caching"
+        result = citizen.strip_implementation(text)
+        assert "[TECH]" in result
+        assert "Redis" not in result
+
+    def test_strip_implementation_multiple_techs(self):
+        citizen = AbstractionCitizen()
+        text = "Deploy with Kubernetes and monitor via Prometheus"
+        result = citizen.strip_implementation(text)
+        assert result.count("[TECH]") == 2
+
+    def test_extract_mechanisms_cache(self):
+        citizen = AbstractionCitizen()
+        source = "Use Redis cache with TTL and LRU eviction"
+        mechanisms = citizen.extract_mechanisms(source, "src1")
+        names = [m.name for m in mechanisms]
+        assert "caching layer" in names
+
+    def test_extract_mechanisms_async_comm(self):
+        citizen = AbstractionCitizen()
+        source = "Use message queues for async communication with retry"
+        mechanisms = citizen.extract_mechanisms(source, "src2")
+        names = [m.name for m in mechanisms]
+        assert "asynchronous communication" in names
+        assert "fault tolerance" in names
+
+    def test_extract_mechanisms_fault_tolerance(self):
+        citizen = AbstractionCitizen()
+        source = "Circuit breaker pattern for fault tolerance with exponential backoff"
+        mechanisms = citizen.extract_mechanisms(source, "src3")
+        names = [m.name for m in mechanisms]
+        assert "fault tolerance" in names
+
+    def test_extract_mechanisms_observability(self):
+        citizen = AbstractionCitizen()
+        source = "Enable telemetry and span collection for monitoring"
+        mechanisms = citizen.extract_mechanisms(source, "src4")
+        names = [m.name for m in mechanisms]
+        assert "observability" in names
+
+    def test_extract_mechanisms_no_match(self):
+        citizen = AbstractionCitizen()
+        source = "The quick brown fox jumps over the lazy dog"
+        mechanisms = citizen.extract_mechanisms(source, "src5")
+        assert mechanisms == []
+
+    def test_mechanism_card_fields(self):
+        citizen = AbstractionCitizen()
+        source = "Use Redis for caching with TTL"
+        mechanisms = citizen.extract_mechanisms(source, "src6")
+        assert mechanisms
+        m = mechanisms[0]
+        assert m.name
+        assert m.description
+        assert m.category
+        assert m.confidence > 0
+        assert "src6" in m.source_provenance
+
+    def test_generate_proposal_with_mechanisms(self):
+        citizen = AbstractionCitizen()
+        mechanisms = citizen.extract_mechanisms(
+            "Circuit breaker for fault tolerance", "src"
+        )
+        proposal = citizen.generate_proposal(mechanisms)
+        assert proposal is not None
+        assert "mechanism" in proposal.title.lower()
+        assert proposal.confidence_score > 0
+
+    def test_generate_proposal_empty_mechanisms(self):
+        citizen = AbstractionCitizen()
+        proposal = citizen.generate_proposal([])
+        assert proposal is None
+
+    def test_observe_codebase_returns_list(self):
+        citizen = AbstractionCitizen(codebase_path=".")
+        obs = citizen.observe_codebase()
+        assert isinstance(obs, list)
+
+    def test_store_and_list_mechanisms(self):
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = [
+            {
+                "id": "m1",
+                "content": "caching layer: Separate read-heavy data",
+                "metadata": {"name": "caching layer", "category": "performance"},
+            }
+        ]
+        citizen = AbstractionCitizen(memory_layer=mock_memory)
+        mechanisms = citizen.extract_mechanisms(
+            "Use Redis for caching with TTL", "src7"
+        )
+        assert mechanisms
+        stored = citizen.store_mechanism(mechanisms[0])
+        assert stored is True
+        mock_memory.remember.assert_called_once()
+
+        listed = citizen.list_stored_mechanisms(limit=10)
+        assert len(listed) == 1
+        assert listed[0]["metadata"]["name"] == "caching layer"
+
+    def test_store_proposal(self):
+        mock_memory = MagicMock()
+        citizen = AbstractionCitizen(memory_layer=mock_memory)
+        mechanisms = citizen.extract_mechanisms(
+            "Circuit breaker with exponential backoff", "src8"
+        )
+        proposal = citizen.generate_proposal(mechanisms)
+        assert proposal is not None
+        stored = citizen.store_proposal(proposal)
+        assert stored is True
+        mock_memory.remember.assert_called_once()
+
+    def test_store_mechanism_without_memory(self):
+        citizen = AbstractionCitizen()
+        mechanisms = citizen.extract_mechanisms("Use Redis for caching", "src")
+        stored = citizen.store_mechanism(mechanisms[0])
+        assert stored is False
+
+    def test_store_report_with_memory(self):
+        mock_memory = MagicMock()
+        citizen = AbstractionCitizen(memory_layer=mock_memory)
+        from animus.citizens.abstraction import AbstractionReport
+
+        report = AbstractionReport(mechanisms=[], sources_processed=5)
+        stored = citizen.store_report(report)
+        assert stored is True
+        mock_memory.remember.assert_called_once()
+
+    def test_list_mechanisms_without_memory(self):
+        citizen = AbstractionCitizen()
+        listed = citizen.list_stored_mechanisms(limit=10)
+        assert listed == []
+
+
+class TestAbstractionCli:
+    def test_cli_import(self):
+        from animus.cli import _cmd_abstraction
+
+        assert callable(_cmd_abstraction)
+
+    def test_cmd_abstraction_scan(self, capsys, tmp_path, monkeypatch):
+        from animus.cli import _cmd_abstraction
+        from argparse import Namespace
+
+        args = Namespace(
+            abstraction_command="scan",
+            codebase_path=str(tmp_path),
+            store=False,
+        )
+        result = _cmd_abstraction(args)
+        captured = capsys.readouterr()
+        assert "Abstraction" in captured.out or result == 0
+
+    def test_cmd_abstraction_mechanisms(self, capsys, monkeypatch):
+        from animus.cli import _cmd_abstraction
+        from argparse import Namespace
+
+        args = Namespace(
+            abstraction_command="mechanisms",
+            codebase_path="",
+            limit=10,
+        )
+        result = _cmd_abstraction(args)
+        captured = capsys.readouterr()
+        assert "Abstraction" in captured.out or result == 0
+
+
+class TestAbstractionMcpTools:
+    @pytest.fixture
+    def mcp_server(self):
+        pytest.importorskip("mcp")
+        from animus.mcp_server import create_mcp_server
+
+        return create_mcp_server()
+
+    def test_abstraction_tools_exist(self, mcp_server):
+        tools = list(mcp_server._tools.keys())
+        assert "animus_abstraction_scan" in tools
+        assert "animus_abstraction_list_mechanisms" in tools
+
+    def test_abstraction_scan_mocked(self, mcp_server, monkeypatch):
+        def _mock_observe_codebase(*args, **kwargs):
+            return [
+                {
+                    "id": "abs1",
+                    "description": "Mock mechanism",
+                    "severity": "info",
+                    "context": {},
+                }
+            ]
+
+        def _mock_observe_harvested(*args, **kwargs):
+            return [
+                {
+                    "id": "src1",
+                    "description": "Mock source",
+                    "severity": "info",
+                    "context": {"content": "Use Redis for caching", "identifier": "src1"},
+                }
+            ]
+
+        monkeypatch.setattr(
+            "animus.citizens.abstraction.AbstractionCitizen.observe_codebase",
+            _mock_observe_codebase,
+        )
+        monkeypatch.setattr(
+            "animus.citizens.abstraction.AbstractionCitizen.observe_harvested_sources",
+            _mock_observe_harvested,
+        )
+
+        result = mcp_server._tools["animus_abstraction_scan"].fn(
+            codebase_path=".",
+            store_mechanisms=False,
+        )
+        assert "Abstraction Citizen Scan Report" in result
+        assert "Mock mechanism" in result
+
+    def test_abstraction_list_mechanisms_empty(self, mcp_server):
+        result = mcp_server._tools["animus_abstraction_list_mechanisms"].fn(
+            limit=10,
+        )
+        assert "No mechanism cards found" in result

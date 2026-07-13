@@ -107,6 +107,7 @@ class CitizenCouncil:
             return 0
 
         names = citizen_names or [
+            "abstraction",
             "architect",
             "conversation_designer",
             "harvester",

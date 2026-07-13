@@ -801,6 +801,98 @@ def _cmd_harvester(args: argparse.Namespace) -> int:
     return 1
 
 
+def _cmd_abstraction(args: argparse.Namespace) -> int:
+    from animus.citizens import AbstractionCitizen
+    from animus.config import get_config
+    from animus.memory import MemoryLayer
+
+    config = get_config()
+    if not config.citizens.enabled:
+        print("Citizens are disabled in configuration.", file=sys.stderr)
+        return 1
+
+    store = getattr(args, "store", False)
+    memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
+    abstraction = AbstractionCitizen(
+        memory_layer=memory,
+        codebase_path=args.codebase_path or config.citizens.codebase_path or str(config.data_dir.parent),
+    )
+
+    sub = args.abstraction_command
+
+    if sub == "scan":
+        print("# Running Abstraction Citizen scan...", file=sys.stderr)
+
+        # Codebase observations
+        obs = abstraction.observe_codebase()
+        if obs:
+            print(f"\n## Codebase Mechanisms ({len(obs)} found)", file=sys.stderr)
+            for o in obs:
+                print(f"- [{o['severity'].upper()}] {o['description']}", file=sys.stderr)
+
+        # Harvested sources
+        sources = abstraction.observe_harvested_sources()
+        if sources:
+            print(f"\n## Harvested Sources ({len(sources)} found)", file=sys.stderr)
+            for s in sources:
+                print(f"- [{s['severity'].upper()}] {s['description']}", file=sys.stderr)
+
+        # Extract mechanisms from all sources
+        mechanisms: list = []
+        for s in sources:
+            content = s["context"].get("content", "")
+            sid = s["context"].get("identifier", "")
+            if content:
+                mechs = abstraction.extract_mechanisms(content, sid)
+                mechanisms.extend(mechs)
+
+        print(f"\n# Extracted Mechanisms ({len(mechanisms)} total)")
+        for m in mechanisms:
+            print(f"\n## {m.name} ({m.category})")
+            print(f"**Description:** {m.description}")
+            if m.source_provenance:
+                print(f"**Sources:** {', '.join(m.source_provenance)}")
+            print(f"**Confidence:** {m.confidence}")
+            if store and memory:
+                stored = abstraction.store_mechanism(m)
+                if stored:
+                    print(f"✅ Stored mechanism '{m.name}'")
+
+        # Generate proposal
+        proposal = abstraction.generate_proposal(mechanisms)
+        if proposal:
+            print(f"\n## Proposal Generated: {proposal.title}")
+            print(f"**ID:** {proposal.id}")
+            print(f"**Problem:** {proposal.problem}")
+            print(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            print(f"**Recommendation:** {proposal.recommendation}")
+            print(f"**Effort:** {proposal.estimated_effort_hours}h")
+            if store and memory:
+                stored = abstraction.store_proposal(proposal)
+                if stored:
+                    print("\n✅ Proposal stored in memory.")
+        else:
+            print("\n## No Proposal Generated")
+            print("No mechanisms extracted — nothing to propose.")
+        return 0
+
+    if sub == "mechanisms":
+        mechs = abstraction.list_stored_mechanisms(limit=args.limit)
+        print(f"# Stored Mechanisms ({len(mechs)} found)\n")
+        if not mechs:
+            print("No mechanisms found in memory.")
+            return 0
+        for m in mechs:
+            meta = m.get("metadata", {})
+            name = meta.get("name", "Untitled")
+            category = meta.get("category", "unknown")
+            print(f"- [{category}] {name}")
+        return 0
+
+    print(f"Unknown abstraction subcommand: {sub}", file=sys.stderr)
+    return 1
+
+
 def _cmd_intelligence(args: argparse.Namespace) -> int:
     from animus.citizens import IntelligenceCitizen
     from animus.config import get_config
@@ -1019,6 +1111,33 @@ def main(argv: list[str] | None = None) -> int:
         help="Store generated proposal in Animus memory",
     )
     oracle_parser.set_defaults(func=_cmd_test_oracle)
+
+    # ------------------------------------------------------------------
+    # Abstraction Citizen (Research Guild)
+    # ------------------------------------------------------------------
+
+    abstraction_parser = subparsers.add_parser(
+        "abstraction",
+        help="Run the Research Guild Abstraction Citizen — extract mechanisms",
+    )
+    abstraction_subparsers = abstraction_parser.add_subparsers(dest="abstraction_command")
+
+    abs_scan = abstraction_subparsers.add_parser("scan", help="Scan codebase and memory for mechanisms")
+    abs_scan.add_argument(
+        "--codebase-path",
+        default="",
+        help="Path to the codebase",
+    )
+    abs_scan.add_argument(
+        "--store",
+        action="store_true",
+        help="Store extracted mechanisms and proposal in memory",
+    )
+    abs_scan.set_defaults(func=_cmd_abstraction)
+
+    abs_mechanisms = abstraction_subparsers.add_parser("mechanisms", help="List stored mechanism cards")
+    abs_mechanisms.add_argument("--limit", type=int, default=20, help="Max mechanisms to list")
+    abs_mechanisms.set_defaults(func=_cmd_abstraction)
 
     # ------------------------------------------------------------------
     # Harvester (Research Guild)

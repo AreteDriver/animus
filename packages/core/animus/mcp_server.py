@@ -2039,6 +2039,150 @@ def create_mcp_server():
         return "\n".join(lines)
 
     # -----------------------------------------------------------------------
+    # Abstraction Citizen tools (Research Guild)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_abstraction_scan(
+        codebase_path: str = "",
+        store_mechanisms: bool = False,
+        api_key: str = "",
+    ) -> str:
+        """Run the Abstraction Citizen mechanism extraction.
+
+        Scans codebase and memory for harvested sources, extracts transferable
+        mechanisms, and strips implementation details. Optionally stores
+        mechanism cards in memory.
+
+        Args:
+            codebase_path: Path to the codebase for scanning.
+            store_mechanisms: Whether to store extracted mechanisms in memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration. Set citizens.enabled=true to use the Abstraction Citizen."
+
+        from animus.citizens import AbstractionCitizen
+
+        resolved_path = codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        abstraction = AbstractionCitizen(
+            memory_layer=memory if store_mechanisms else None,
+            codebase_path=resolved_path,
+        )
+
+        lines = ["# Abstraction Citizen Scan Report", ""]
+
+        # Codebase mechanisms
+        obs = abstraction.observe_codebase()
+        if obs:
+            lines.append(f"## Codebase Mechanisms ({len(obs)} found)")
+            for o in obs:
+                lines.append(f"- **[{o['severity'].upper()}]** {o['description']}")
+            lines.append("")
+
+        # Harvested sources
+        sources = abstraction.observe_harvested_sources()
+        if sources:
+            lines.append(f"## Harvested Sources ({len(sources)} found)")
+            for s in sources:
+                lines.append(f"- **[{s['severity'].upper()}]** {s['description']}")
+            lines.append("")
+
+        # Extract mechanisms
+        mechanisms: list = []
+        for s in sources:
+            content = s["context"].get("content", "")
+            sid = s["context"].get("identifier", "")
+            if content:
+                mechs = abstraction.extract_mechanisms(content, sid)
+                mechanisms.extend(mechs)
+
+        if mechanisms:
+            lines.append(f"## Extracted Mechanisms ({len(mechanisms)} total)")
+            for m in mechanisms:
+                lines.append(f"\n### {m.name} ({m.category})")
+                lines.append(f"**Description:** {m.description}")
+                if m.source_provenance:
+                    lines.append(f"**Sources:** {', '.join(m.source_provenance)}")
+                lines.append(f"**Confidence:** {m.confidence}")
+                if store_mechanisms:
+                    stored = abstraction.store_mechanism(m)
+                    if stored:
+                        lines.append("✅ Stored in memory.")
+            lines.append("")
+        else:
+            lines.append("## No Mechanisms Extracted")
+            lines.append("No recognizable mechanisms found in scanned sources.")
+            lines.append("")
+
+        # Proposal
+        proposal = abstraction.generate_proposal(mechanisms)
+        if proposal:
+            lines.append("## Improvement Proposal Generated")
+            lines.append(f"**ID:** `{proposal.id}`")
+            lines.append(f"**Title:** {proposal.title}")
+            lines.append(f"**Problem:** {proposal.problem}")
+            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(f"**Recommendation:** {proposal.recommendation}")
+            lines.append(f"**Effort:** {proposal.estimated_effort_hours}h")
+            if proposal.potential_risks:
+                lines.append("**Risks:**")
+                for r in proposal.potential_risks:
+                    lines.append(f"  - {r.description} ({r.severity}) — {r.mitigation}")
+            if store_mechanisms:
+                stored = abstraction.store_proposal(proposal)
+                if stored:
+                    lines.append("")
+                    lines.append("✅ Proposal stored in memory.")
+        else:
+            lines.append("## No Proposal Generated")
+            lines.append("No mechanisms extracted — no proposal needed.")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_abstraction_list_mechanisms(
+        limit: int = 20,
+        api_key: str = "",
+    ) -> str:
+        """List recently extracted mechanism cards from Animus memory.
+
+        Args:
+            limit: Maximum mechanisms to return (default 20).
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.citizens import AbstractionCitizen
+
+        abstraction = AbstractionCitizen(memory_layer=memory)
+        mechs = abstraction.list_stored_mechanisms(limit=limit)
+
+        if not mechs:
+            return "No mechanism cards found in memory. Run abstraction scans first."
+
+        lines = [f"# Mechanism Cards ({len(mechs)} found)", ""]
+        for m in mechs:
+            meta = m.get("metadata", {})
+            name = meta.get("name", "Untitled")
+            category = meta.get("category", "unknown")
+            description = meta.get("description", "")
+            lines.append(f"## {name} ({category})")
+            if description:
+                lines.append(f"**Description:** {description}")
+            if meta.get("source_provenance"):
+                lines.append(f"**Sources:** {', '.join(meta['source_provenance'])}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    # -----------------------------------------------------------------------
     # Harvester Citizen tools (Research Guild)
     # -----------------------------------------------------------------------
 
