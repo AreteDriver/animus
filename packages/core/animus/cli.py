@@ -1057,6 +1057,89 @@ def _cmd_first_principles(args: argparse.Namespace) -> int:
     return 1
 
 
+def _cmd_architecture_citizen(args: argparse.Namespace) -> int:
+    from animus.citizens import ArchitectureCitizen
+    from animus.config import get_config
+    from animus.memory import MemoryLayer
+
+    config = get_config()
+    if not config.citizens.enabled:
+        print("Citizens are disabled in configuration.", file=sys.stderr)
+        return 1
+
+    store = getattr(args, "store", False)
+    memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
+    arch = ArchitectureCitizen(
+        memory_layer=memory,
+        codebase_path=getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(config.data_dir.parent),
+    )
+
+    sub = args.architecture_citizen_command
+
+    if sub == "scan":
+        print("# Running Architecture Citizen scan...", file=sys.stderr)
+
+        # Observe principles from memory
+        principles = arch.observe_principles()
+        if principles:
+            print(f"\n## Principles Observed ({len(principles)} found)", file=sys.stderr)
+            for p in principles:
+                print(f"- [{p['severity'].upper()}] {p['description']}", file=sys.stderr)
+        else:
+            print("\n## No principles found in memory.", file=sys.stderr)
+
+        # Analyze gaps
+        principle_contexts = [p["context"] for p in principles]
+        gaps = arch.analyze_gaps(principle_contexts)
+        print(f"\n# Identified Gaps ({len(gaps)} total)")
+        for g in gaps:
+            print(f"\n## [{g.severity.upper()}] {g.principle_category}")
+            print(f"**Principle:** {g.principle_statement}")
+            print(f"**Gap:** {g.gap_description}")
+            print(f"**Coverage:** {g.coverage_ratio:.0%}")
+            print(f"**Recommendation:** {g.recommendation}")
+            print(f"**Effort:** {g.estimated_effort_hours}h")
+            if store and memory:
+                stored = arch.store_gap(g)
+                if stored:
+                    print(f"✅ Stored gap")
+
+        # Generate proposal
+        proposal = arch.generate_proposal(gaps)
+        if proposal:
+            print(f"\n## Proposal Generated: {proposal.title}")
+            print(f"**ID:** {proposal.id}")
+            print(f"**Problem:** {proposal.problem}")
+            print(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            print(f"**Recommendation:** {proposal.recommendation}")
+            print(f"**Effort:** {proposal.estimated_effort_hours}h")
+            if store and memory:
+                stored = arch.store_proposal(proposal)
+                if stored:
+                    print("\n✅ Proposal stored in memory.")
+        else:
+            print("\n## No Proposal Generated")
+            print("No gaps identified — nothing to propose.")
+        return 0
+
+    if sub == "gaps":
+        gaps = arch.list_stored_gaps(limit=args.limit)
+        print(f"# Stored Gaps ({len(gaps)} found)\n")
+        if not gaps:
+            print("No gaps found in memory.")
+            return 0
+        for g in gaps:
+            meta = g.get("metadata", {})
+            statement = meta.get("principle_statement", "Untitled")
+            severity = meta.get("severity", "unknown")
+            category = meta.get("principle_category", "unknown")
+            print(f"- [{severity}] [{category}] {statement}")
+        return 0
+
+    print(f"Unknown architecture-citizen subcommand: {sub}", file=sys.stderr)
+    return 1
+
+
 def _cmd_intelligence(args: argparse.Namespace) -> int:
     from animus.citizens import IntelligenceCitizen
     from animus.config import get_config
@@ -1356,6 +1439,33 @@ def main(argv: list[str] | None = None) -> int:
     fp_principles = fp_subparsers.add_parser("principles", help="List stored principle cards")
     fp_principles.add_argument("--limit", type=int, default=20, help="Max principles to list")
     fp_principles.set_defaults(func=_cmd_first_principles)
+
+    # ------------------------------------------------------------------
+    # Architecture Citizen (Research Guild)
+    # ------------------------------------------------------------------
+
+    arch_parser = subparsers.add_parser(
+        "architecture-citizen",
+        help="Run the Research Guild Architecture Citizen — identify gaps and draft proposals",
+    )
+    arch_subparsers = arch_parser.add_subparsers(dest="architecture_citizen_command")
+
+    arch_scan = arch_subparsers.add_parser("scan", help="Scan memory for principles and identify gaps")
+    arch_scan.add_argument(
+        "--codebase-path",
+        default="",
+        help="Path to the codebase",
+    )
+    arch_scan.add_argument(
+        "--store",
+        action="store_true",
+        help="Store identified gaps and proposal in memory",
+    )
+    arch_scan.set_defaults(func=_cmd_architecture_citizen)
+
+    arch_gaps = arch_subparsers.add_parser("gaps", help="List stored gap analyses")
+    arch_gaps.add_argument("--limit", type=int, default=20, help="Max gaps to list")
+    arch_gaps.set_defaults(func=_cmd_architecture_citizen)
 
     # ------------------------------------------------------------------
     # Harvester (Research Guild)

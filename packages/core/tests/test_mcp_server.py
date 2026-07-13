@@ -127,8 +127,8 @@ class TestMcpServerCreation:
         # + 2 architect + 2 conversation_designer + 2 knowledge_curator
         # + 2 test_oracle + 4 proposal_queue + 2 citizen_council
         # + 2 session_steward + 1 list_citizens
-        # + 4 intelligence + 3 harvester + 2 abstraction + 2 pattern + 2 first_principles = 50
-        assert len(tools) == 50
+        # + 4 intelligence + 3 harvester + 2 abstraction + 2 pattern + 2 first_principles + 2 architecture_citizen = 52
+        assert len(tools) == 52
 
     def test_intelligence_tools_exist(self, server):
         tools = server._tool_manager.list_tools()

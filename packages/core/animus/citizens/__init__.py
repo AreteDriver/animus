@@ -19,6 +19,7 @@ Every citizen operates under the Constitution layer:
 from __future__ import annotations
 
 from animus.citizens.architect import ArchitectCitizen
+from animus.citizens.architecture_citizen import ArchitectureCitizen
 from animus.citizens.commissioner import ForgeCommissioner
 from animus.citizens.citizen_council import CitizenCouncil, RankedProposal
 from animus.citizens.conversation_designer import ConversationDesignerCitizen
@@ -42,6 +43,7 @@ from animus.citizens.test_oracle import TestOracleCitizen
 __all__ = [
     "AbstractionCitizen",
     "ArchitectCitizen",
+    "ArchitectureCitizen",
     "CitizenCouncil",
     "ConversationDesignerCitizen",
     "FirstPrinciplesCitizen",

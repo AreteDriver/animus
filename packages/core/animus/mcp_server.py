@@ -2450,6 +2450,137 @@ def create_mcp_server():
         return "\n".join(lines)
 
     # -----------------------------------------------------------------------
+    # Architecture Citizen tools (Research Guild)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_architecture_citizen_scan(
+        codebase_path: str = "",
+        store_gaps: bool = False,
+        api_key: str = "",
+    ) -> str:
+        """Run the Architecture Citizen gap analysis.
+
+        Reads principle cards from memory, compares them to the codebase,
+        identifies gaps, and drafts concrete Improvement Proposals.
+
+        Args:
+            codebase_path: Path to the codebase for analysis.
+            store_gaps: Whether to store identified gaps in memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration. Set citizens.enabled=true to use the Architecture Citizen."
+
+        from animus.citizens import ArchitectureCitizen
+
+        resolved_path = codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        arch = ArchitectureCitizen(
+            memory_layer=memory if store_gaps else None,
+            codebase_path=resolved_path,
+        )
+
+        lines = ["# Architecture Citizen Scan Report", ""]
+
+        # Observe principles
+        principles = arch.observe_principles()
+        if principles:
+            lines.append(f"## Principles Observed ({len(principles)} found)")
+            for p in principles:
+                lines.append(f"- **[{p['severity'].upper()}]** {p['description']}")
+            lines.append("")
+        else:
+            lines.append("## No Principles Found")
+            lines.append("No principle cards in memory. Run first-principles scans first.")
+            lines.append("")
+
+        # Analyze gaps
+        principle_contexts = [p["context"] for p in principles]
+        gaps = arch.analyze_gaps(principle_contexts)
+        if gaps:
+            lines.append(f"## Identified Gaps ({len(gaps)} total)")
+            for g in gaps:
+                lines.append(f"\n### [{g.severity.upper()}] {g.principle_category}")
+                lines.append(f"**Principle:** {g.principle_statement}")
+                lines.append(f"**Gap:** {g.gap_description}")
+                lines.append(f"**Coverage:** {g.coverage_ratio:.0%}")
+                lines.append(f"**Recommendation:** {g.recommendation}")
+                lines.append(f"**Effort:** {g.estimated_effort_hours}h")
+                if store_gaps:
+                    stored = arch.store_gap(g)
+                    if stored:
+                        lines.append("✅ Stored in memory.")
+            lines.append("")
+        else:
+            lines.append("## No Gaps Identified")
+            lines.append("No gaps found between principles and codebase.")
+            lines.append("")
+
+        # Proposal
+        proposal = arch.generate_proposal(gaps)
+        if proposal:
+            lines.append("## Improvement Proposal Generated")
+            lines.append(f"**ID:** `{proposal.id}`")
+            lines.append(f"**Title:** {proposal.title}")
+            lines.append(f"**Problem:** {proposal.problem}")
+            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(f"**Recommendation:** {proposal.recommendation}")
+            lines.append(f"**Effort:** {proposal.estimated_effort_hours}h")
+            if proposal.potential_risks:
+                lines.append("**Risks:**")
+                for r in proposal.potential_risks:
+                    lines.append(f"  - {r.description} ({r.severity}) — {r.mitigation}")
+            if store_gaps:
+                stored = arch.store_proposal(proposal)
+                if stored:
+                    lines.append("")
+                    lines.append("✅ Proposal stored in memory.")
+        else:
+            lines.append("## No Proposal Generated")
+            lines.append("No gaps identified — no proposal needed.")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_architecture_citizen_list_gaps(
+        limit: int = 20,
+        api_key: str = "",
+    ) -> str:
+        """List recently identified gap analyses from Animus memory.
+
+        Args:
+            limit: Maximum gaps to return (default 20).
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.citizens import ArchitectureCitizen
+
+        arch = ArchitectureCitizen(memory_layer=memory)
+        gaps = arch.list_stored_gaps(limit=limit)
+
+        if not gaps:
+            return "No gap analyses found in memory. Run architecture-citizen scans first."
+
+        lines = [f"# Gap Analyses ({len(gaps)} found)", ""]
+        for g in gaps:
+            meta = g.get("metadata", {})
+            statement = meta.get("principle_statement", "Untitled")
+            severity = meta.get("severity", "unknown")
+            category = meta.get("principle_category", "unknown")
+            lines.append(f"## [{severity.upper()}] {category}")
+            lines.append(f"**Principle:** {statement}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    # -----------------------------------------------------------------------
     # Harvester Citizen tools (Research Guild)
     # -----------------------------------------------------------------------
 

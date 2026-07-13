@@ -12,6 +12,7 @@ import pytest
 from animus.citizens import (
     AbstractionCitizen,
     ArchitectCitizen,
+    ArchitectureCitizen,
     CitizenCouncil,
     ConversationDesignerCitizen,
     FirstPrinciplesCitizen,
@@ -2358,3 +2359,280 @@ class TestFirstPrinciplesMcpTools:
             limit=10,
         )
         assert "No principle cards found" in result
+
+
+# ---------------------------------------------------------------------------
+# ArchitectureCitizen tests (Research Guild — Citizen 011)
+# ---------------------------------------------------------------------------
+
+
+class TestArchitectureCitizen:
+    def test_initialization(self):
+        citizen = ArchitectureCitizen()
+        assert citizen.codebase_path == Path(".").expanduser()
+        assert citizen.memory is None
+
+    def test_analyze_gaps_with_principles(self, tmp_path):
+        # Create a minimal codebase file to search
+        (tmp_path / "test_module.py").write_text("class TestClass: pass\\n")
+        citizen = ArchitectureCitizen(codebase_path=tmp_path)
+        principles = [
+            {"principle_statement": "Systems that separate state from computation survive longer.", "category": "architecture", "tags": ["architecture"], "source_provenance": ["src1"]},
+        ]
+        gaps = citizen.analyze_gaps(principles)
+        assert len(gaps) >= 1
+        assert gaps[0].principle_statement
+        assert gaps[0].severity in ["low", "medium", "high", "critical"]
+        assert 0 <= gaps[0].coverage_ratio <= 1.0
+
+    def test_analyze_gaps_no_principles(self):
+        citizen = ArchitectureCitizen()
+        assert citizen.analyze_gaps([]) == []
+        assert citizen.analyze_gaps(None) == []
+
+    def test_gap_analysis_fields(self, tmp_path):
+        (tmp_path / "test_module.py").write_text("def test(): pass\\n")
+        citizen = ArchitectureCitizen(codebase_path=tmp_path)
+        principles = [
+            {"principle_statement": "Decoupling producers from consumers is the single most effective way to scale systems under uncertainty.", "category": "architecture", "tags": ["async"], "source_provenance": ["src1"]},
+        ]
+        gaps = citizen.analyze_gaps(principles)
+        assert gaps
+        g = gaps[0]
+        assert g.principle_statement
+        assert g.gap_description
+        assert g.recommendation
+        assert g.estimated_effort_hours >= 0
+
+    def test_generate_proposal_with_gaps(self):
+        citizen = ArchitectureCitizen()
+        from animus.citizens.architecture_citizen import GapAnalysis
+
+        gaps = [
+            GapAnalysis(
+                principle_statement="Test principle",
+                principle_category="architecture",
+                gap_description="Test gap",
+                severity="high",
+                coverage_ratio=0.2,
+                estimated_effort_hours=8.0,
+            ),
+        ]
+        proposal = citizen.generate_proposal(gaps)
+        assert proposal is not None
+        assert "gap" in proposal.title.lower() or "architecture" in proposal.title.lower()
+        assert proposal.confidence_score > 0
+        assert proposal.estimated_effort_hours > 0
+
+    def test_generate_proposal_empty_gaps(self):
+        citizen = ArchitectureCitizen()
+        proposal = citizen.generate_proposal([])
+        assert proposal is None
+
+    def test_generate_proposal_auto_discover(self):
+        citizen = ArchitectureCitizen()
+        proposal = citizen.generate_proposal()
+        assert proposal is None
+
+    def test_observe_principles_without_memory(self):
+        citizen = ArchitectureCitizen()
+        obs = citizen.observe_principles()
+        assert obs == []
+
+    def test_observe_principles_with_memory(self):
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = [
+            {
+                "content": "Systems that separate concerns survive longer",
+                "metadata": {
+                    "principle_statement": "Systems that separate concerns survive longer",
+                    "category": "architecture",
+                    "supporting_patterns": ["Separation of concerns"],
+                    "tags": ["architecture"],
+                    "source_provenance": ["src1"],
+                },
+            }
+        ]
+        citizen = ArchitectureCitizen(memory_layer=mock_memory)
+        obs = citizen.observe_principles()
+        assert len(obs) == 1
+        assert obs[0]["context"]["principle_statement"] == "Systems that separate concerns survive longer"
+
+    def test_store_and_list_gaps(self):
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = [
+            {
+                "id": "g1",
+                "content": "[HIGH] architecture gap",
+                "metadata": {"principle_statement": "Test principle", "severity": "high", "principle_category": "architecture"},
+            }
+        ]
+        citizen = ArchitectureCitizen(memory_layer=mock_memory)
+        from animus.citizens.architecture_citizen import GapAnalysis
+
+        gap = GapAnalysis(
+            principle_statement="Test principle",
+            principle_category="architecture",
+            gap_description="Test gap",
+            severity="high",
+            coverage_ratio=0.1,
+        )
+        stored = citizen.store_gap(gap)
+        assert stored is True
+        mock_memory.remember.assert_called_once()
+
+        listed = citizen.list_stored_gaps(limit=10)
+        assert len(listed) == 1
+        assert listed[0]["metadata"]["principle_statement"] == "Test principle"
+
+    def test_store_proposal(self):
+        mock_memory = MagicMock()
+        citizen = ArchitectureCitizen(memory_layer=mock_memory)
+        from animus.citizens.architecture_citizen import GapAnalysis
+
+        gaps = [
+            GapAnalysis(
+                principle_statement="Test principle",
+                principle_category="architecture",
+                gap_description="Test gap",
+                severity="high",
+                coverage_ratio=0.2,
+                estimated_effort_hours=8.0,
+            ),
+        ]
+        proposal = citizen.generate_proposal(gaps)
+        assert proposal is not None
+        stored = citizen.store_proposal(proposal)
+        assert stored is True
+        mock_memory.remember.assert_called_once()
+
+    def test_store_gap_without_memory(self):
+        citizen = ArchitectureCitizen()
+        from animus.citizens.architecture_citizen import GapAnalysis
+
+        gap = GapAnalysis(principle_statement="Test", gap_description="Gap")
+        stored = citizen.store_gap(gap)
+        assert stored is False
+
+    def test_store_report_with_memory(self):
+        mock_memory = MagicMock()
+        citizen = ArchitectureCitizen(memory_layer=mock_memory)
+        from animus.citizens.architecture_citizen import ArchitectureReport
+
+        report = ArchitectureReport(gaps=[], principles_processed=5)
+        stored = citizen.store_report(report)
+        assert stored is True
+        mock_memory.remember.assert_called_once()
+
+    def test_list_gaps_without_memory(self):
+        citizen = ArchitectureCitizen()
+        listed = citizen.list_stored_gaps(limit=10)
+        assert listed == []
+
+    def test_architecture_report_summary(self):
+        from animus.citizens.architecture_citizen import ArchitectureReport, GapAnalysis
+
+        report = ArchitectureReport(
+            gaps=[
+                GapAnalysis(principle_statement="P1", severity="critical"),
+                GapAnalysis(principle_statement="P2", severity="high"),
+            ],
+            principles_processed=3,
+        )
+        assert "2 gap(s) identified from 3 principle(s)" in report.summary()
+        assert "1 critical" in report.summary()
+        assert "1 high" in report.summary()
+
+    def test_estimate_effort(self):
+        citizen = ArchitectureCitizen()
+        assert citizen._estimate_effort("critical", 10) > citizen._estimate_effort("low", 0)
+        assert citizen._estimate_effort("critical", 0) >= 16.0
+        assert citizen._estimate_effort("low", 0) >= 2.0
+
+    def test_draft_recommendation(self):
+        citizen = ArchitectureCitizen()
+        rec = citizen._draft_recommendation("Test principle", "architecture", "high", ["file1.py", "file2.py"])
+        assert "Test principle" in rec
+        assert "file1.py" in rec
+        assert "high" in rec.lower() or "moderate" in rec.lower()
+
+
+class TestArchitectureCitizenCli:
+    def test_cli_import(self):
+        from animus.cli import _cmd_architecture_citizen
+
+        assert callable(_cmd_architecture_citizen)
+
+    def test_cmd_architecture_citizen_scan(self, capsys, tmp_path):
+        from animus.cli import _cmd_architecture_citizen
+        from argparse import Namespace
+
+        args = Namespace(
+            architecture_citizen_command="scan",
+            codebase_path=str(tmp_path),
+            store=False,
+        )
+        result = _cmd_architecture_citizen(args)
+        captured = capsys.readouterr()
+        assert "Architecture" in captured.out or result == 0
+
+    def test_cmd_architecture_citizen_gaps(self, capsys):
+        from animus.cli import _cmd_architecture_citizen
+        from argparse import Namespace
+
+        args = Namespace(
+            architecture_citizen_command="gaps",
+            codebase_path="",
+            limit=10,
+        )
+        result = _cmd_architecture_citizen(args)
+        captured = capsys.readouterr()
+        assert "Gap" in captured.out or result == 0
+
+
+class TestArchitectureCitizenMcpTools:
+    @pytest.fixture
+    def mcp_server(self):
+        pytest.importorskip("mcp")
+        from animus.mcp_server import create_mcp_server
+
+        return create_mcp_server()
+
+    def test_architecture_citizen_tools_exist(self, mcp_server):
+        tools = list(mcp_server._tools.keys())
+        assert "animus_architecture_citizen_scan" in tools
+        assert "animus_architecture_citizen_list_gaps" in tools
+
+    def test_architecture_citizen_scan_mocked(self, mcp_server, monkeypatch):
+        def _mock_observe_principles(*args, **kwargs):
+            return [
+                {
+                    "id": "pr1",
+                    "description": "Mock principle",
+                    "severity": "info",
+                    "context": {
+                        "principle_statement": "Systems that separate concerns survive longer.",
+                        "category": "architecture",
+                        "tags": ["architecture"],
+                        "source_provenance": ["src1"],
+                    },
+                },
+            ]
+
+        monkeypatch.setattr(
+            "animus.citizens.architecture_citizen.ArchitectureCitizen.observe_principles",
+            _mock_observe_principles,
+        )
+
+        result = mcp_server._tools["animus_architecture_citizen_scan"].fn(
+            codebase_path=".",
+            store_gaps=False,
+        )
+        assert "Architecture Citizen Scan Report" in result
+        assert "Mock principle" in result
+
+    def test_architecture_citizen_list_gaps_empty(self, mcp_server):
+        result = mcp_server._tools["animus_architecture_citizen_list_gaps"].fn(
+            limit=10,
+        )
+        assert "No gap analyses found" in result
