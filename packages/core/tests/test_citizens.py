@@ -19,6 +19,7 @@ from animus.citizens import (
     ImprovementProposal,
     IntelligenceCitizen,
     KnowledgeCuratorCitizen,
+    PatternCitizen,
     ProposalQueue,
     ProposalStatus,
     TestOracleCitizen,
@@ -1794,3 +1795,297 @@ class TestAbstractionMcpTools:
             limit=10,
         )
         assert "No mechanism cards found" in result
+
+
+# ---------------------------------------------------------------------------
+# PatternCitizen tests (Research Guild — Citizen 009)
+# ---------------------------------------------------------------------------
+
+
+class TestPatternCitizen:
+    def test_initialization(self):
+        citizen = PatternCitizen()
+        assert citizen.codebase_path == Path(".").expanduser()
+        assert citizen.memory is None
+
+    def test_discover_patterns_category_cluster(self):
+        citizen = PatternCitizen()
+        mechanisms = [
+            {"name": "caching layer", "category": "performance", "description": "Cache data", "tags": ["performance"], "source_provenance": ["src1"]},
+            {"name": "bounded retrieval", "category": "performance", "description": "Paginate results", "tags": ["performance"], "source_provenance": ["src2"]},
+            {"name": "flow control", "category": "reliability", "description": "Rate limit", "tags": ["reliability"], "source_provenance": ["src3"]},
+            {"name": "progressive rollout", "category": "performance", "description": "Feature flags", "tags": ["performance", "deployment"], "source_provenance": ["src4"]},
+        ]
+        patterns = citizen.discover_patterns(mechanisms)
+        assert len(patterns) >= 1
+        perf_patterns = [p for p in patterns if p.category == "performance"]
+        assert len(perf_patterns) >= 1
+        assert len(perf_patterns[0].constituent_mechanisms) >= 3
+
+    def test_discover_patterns_cross_cutting_tags(self):
+        citizen = PatternCitizen()
+        mechanisms = [
+            {"name": "caching layer", "category": "performance", "description": "Cache data", "tags": ["performance", "scalability"], "source_provenance": ["src1"]},
+            {"name": "bounded retrieval", "category": "performance", "description": "Paginate results", "tags": ["performance", "scalability"], "source_provenance": ["src2"]},
+            {"name": "fault tolerance", "category": "reliability", "description": "Circuit breaker", "tags": ["reliability"], "source_provenance": ["src3"]},
+        ]
+        patterns = citizen.discover_patterns(mechanisms)
+        # Cross-cutting tag "scalability" should create a pattern
+        cross = [p for p in patterns if p.category == "cross-cutting"]
+        assert len(cross) >= 1
+        assert "scalability" in cross[0].tags
+
+    def test_discover_patterns_no_match(self):
+        citizen = PatternCitizen()
+        mechanisms = [
+            {"name": "caching layer", "category": "performance", "description": "Cache data", "tags": ["performance"], "source_provenance": ["src1"]},
+        ]
+        patterns = citizen.discover_patterns(mechanisms)
+        assert patterns == []
+
+    def test_discover_patterns_empty(self):
+        citizen = PatternCitizen()
+        assert citizen.discover_patterns([]) == []
+        assert citizen.discover_patterns(None) == []
+
+    def test_pattern_card_fields(self):
+        citizen = PatternCitizen()
+        mechanisms = [
+            {"name": "caching layer", "category": "performance", "description": "Cache data", "tags": ["performance"], "source_provenance": ["src1"]},
+            {"name": "bounded retrieval", "category": "performance", "description": "Paginate", "tags": ["performance"], "source_provenance": ["src2"]},
+            {"name": "progressive rollout", "category": "performance", "description": "Flags", "tags": ["performance"], "source_provenance": ["src3"]},
+        ]
+        patterns = citizen.discover_patterns(mechanisms)
+        assert patterns
+        p = patterns[0]
+        assert p.name
+        assert p.description
+        assert p.category
+        assert p.confidence > 0
+        assert len(p.constituent_mechanisms) >= 3
+
+    def test_generate_proposal_with_patterns(self):
+        citizen = PatternCitizen()
+        mechanisms = [
+            {"name": "caching layer", "category": "performance", "description": "Cache data", "tags": ["performance"], "source_provenance": ["src1"]},
+            {"name": "bounded retrieval", "category": "performance", "description": "Paginate", "tags": ["performance"], "source_provenance": ["src2"]},
+            {"name": "progressive rollout", "category": "performance", "description": "Flags", "tags": ["performance"], "source_provenance": ["src3"]},
+        ]
+        patterns = citizen.discover_patterns(mechanisms)
+        proposal = citizen.generate_proposal(patterns)
+        assert proposal is not None
+        assert "pattern" in proposal.title.lower()
+        assert proposal.confidence_score > 0
+
+    def test_generate_proposal_empty_patterns(self):
+        citizen = PatternCitizen()
+        proposal = citizen.generate_proposal([])
+        assert proposal is None
+
+    def test_generate_proposal_auto_discover(self):
+        citizen = PatternCitizen()
+        proposal = citizen.generate_proposal()
+        assert proposal is None
+
+    def test_observe_mechanisms_without_memory(self):
+        citizen = PatternCitizen()
+        obs = citizen.observe_mechanisms()
+        assert obs == []
+
+    def test_observe_mechanisms_with_memory(self):
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = [
+            {
+                "content": "caching layer: Separate read-heavy data",
+                "metadata": {
+                    "name": "caching layer",
+                    "category": "performance",
+                    "description": "Separate read-heavy data",
+                    "source_provenance": ["src1"],
+                    "tags": ["performance"],
+                },
+            }
+        ]
+        citizen = PatternCitizen(memory_layer=mock_memory)
+        obs = citizen.observe_mechanisms()
+        assert len(obs) == 1
+        assert obs[0]["context"]["name"] == "caching layer"
+
+    def test_store_and_list_patterns(self):
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = [
+            {
+                "id": "p1",
+                "content": "Performance pattern",
+                "metadata": {"name": "Performance pattern", "category": "performance", "constituent_mechanisms": ["a", "b"]},
+            }
+        ]
+        citizen = PatternCitizen(memory_layer=mock_memory)
+        patterns = citizen.discover_patterns([
+            {"name": "a", "category": "performance", "description": "x", "tags": ["performance"], "source_provenance": ["s1"]},
+            {"name": "b", "category": "performance", "description": "y", "tags": ["performance"], "source_provenance": ["s2"]},
+            {"name": "c", "category": "performance", "description": "z", "tags": ["performance"], "source_provenance": ["s3"]},
+        ])
+        stored = citizen.store_pattern(patterns[0])
+        assert stored is True
+        mock_memory.remember.assert_called_once()
+
+        listed = citizen.list_stored_patterns(limit=10)
+        assert len(listed) == 1
+        assert listed[0]["metadata"]["name"] == "Performance pattern"
+
+    def test_store_proposal(self):
+        mock_memory = MagicMock()
+        citizen = PatternCitizen(memory_layer=mock_memory)
+        patterns = citizen.discover_patterns([
+            {"name": "a", "category": "performance", "description": "x", "tags": ["performance"], "source_provenance": ["s1"]},
+            {"name": "b", "category": "performance", "description": "y", "tags": ["performance"], "source_provenance": ["s2"]},
+            {"name": "c", "category": "performance", "description": "z", "tags": ["performance"], "source_provenance": ["s3"]},
+        ])
+        proposal = citizen.generate_proposal(patterns)
+        assert proposal is not None
+        stored = citizen.store_proposal(proposal)
+        assert stored is True
+        mock_memory.remember.assert_called_once()
+
+    def test_store_pattern_without_memory(self):
+        citizen = PatternCitizen()
+        patterns = citizen.discover_patterns([
+            {"name": "a", "category": "performance", "description": "x", "tags": ["performance"], "source_provenance": ["s1"]},
+            {"name": "b", "category": "performance", "description": "y", "tags": ["performance"], "source_provenance": ["s2"]},
+            {"name": "c", "category": "performance", "description": "z", "tags": ["performance"], "source_provenance": ["s3"]},
+        ])
+        stored = citizen.store_pattern(patterns[0])
+        assert stored is False
+
+    def test_store_report_with_memory(self):
+        mock_memory = MagicMock()
+        citizen = PatternCitizen(memory_layer=mock_memory)
+        from animus.citizens.pattern import PatternReport
+
+        report = PatternReport(patterns=[], mechanisms_processed=5)
+        stored = citizen.store_report(report)
+        assert stored is True
+        mock_memory.remember.assert_called_once()
+
+    def test_list_patterns_without_memory(self):
+        citizen = PatternCitizen()
+        listed = citizen.list_stored_patterns(limit=10)
+        assert listed == []
+
+    def test_pattern_report_summary(self):
+        from animus.citizens.pattern import PatternReport, PatternCard
+
+        report = PatternReport(
+            patterns=[PatternCard(name="p1", description="d1")],
+            mechanisms_processed=5,
+            mechanisms_with_no_pattern=2,
+        )
+        assert "1 pattern(s) discovered from 5 mechanism(s)" in report.summary()
+        assert "2 mechanism(s) with no recognizable pattern" in report.summary()
+
+
+class TestPatternCli:
+    def test_cli_import(self):
+        from animus.cli import _cmd_pattern
+
+        assert callable(_cmd_pattern)
+
+    def test_cmd_pattern_scan(self, capsys, tmp_path):
+        from animus.cli import _cmd_pattern
+        from argparse import Namespace
+
+        args = Namespace(
+            pattern_command="scan",
+            codebase_path=str(tmp_path),
+            store=False,
+        )
+        result = _cmd_pattern(args)
+        captured = capsys.readouterr()
+        assert "Pattern" in captured.out or result == 0
+
+    def test_cmd_pattern_patterns(self, capsys):
+        from animus.cli import _cmd_pattern
+        from argparse import Namespace
+
+        args = Namespace(
+            pattern_command="patterns",
+            codebase_path="",
+            limit=10,
+        )
+        result = _cmd_pattern(args)
+        captured = capsys.readouterr()
+        assert "Pattern" in captured.out or result == 0
+
+
+class TestPatternMcpTools:
+    @pytest.fixture
+    def mcp_server(self):
+        pytest.importorskip("mcp")
+        from animus.mcp_server import create_mcp_server
+
+        return create_mcp_server()
+
+    def test_pattern_tools_exist(self, mcp_server):
+        tools = list(mcp_server._tools.keys())
+        assert "animus_pattern_scan" in tools
+        assert "animus_pattern_list_patterns" in tools
+
+    def test_pattern_scan_mocked(self, mcp_server, monkeypatch):
+        def _mock_observe_mechanisms(*args, **kwargs):
+            return [
+                {
+                    "id": "m1",
+                    "description": "Mock mechanism",
+                    "severity": "info",
+                    "context": {
+                        "name": "caching layer",
+                        "category": "performance",
+                        "description": "Cache data",
+                        "tags": ["performance"],
+                        "source_provenance": ["src1"],
+                    },
+                },
+                {
+                    "id": "m2",
+                    "description": "Mock mechanism 2",
+                    "severity": "info",
+                    "context": {
+                        "name": "bounded retrieval",
+                        "category": "performance",
+                        "description": "Paginate",
+                        "tags": ["performance"],
+                        "source_provenance": ["src2"],
+                    },
+                },
+                {
+                    "id": "m3",
+                    "description": "Mock mechanism 3",
+                    "severity": "info",
+                    "context": {
+                        "name": "progressive rollout",
+                        "category": "performance",
+                        "description": "Flags",
+                        "tags": ["performance"],
+                        "source_provenance": ["src3"],
+                    },
+                },
+            ]
+
+        monkeypatch.setattr(
+            "animus.citizens.pattern.PatternCitizen.observe_mechanisms",
+            _mock_observe_mechanisms,
+        )
+
+        result = mcp_server._tools["animus_pattern_scan"].fn(
+            codebase_path=".",
+            store_patterns=False,
+        )
+        assert "Pattern Citizen Scan Report" in result
+        assert "Mock mechanism" in result
+
+    def test_pattern_list_patterns_empty(self, mcp_server):
+        result = mcp_server._tools["animus_pattern_list_patterns"].fn(
+            limit=10,
+        )
+        assert "No pattern cards found" in result

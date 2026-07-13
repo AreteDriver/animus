@@ -113,6 +113,7 @@ class CitizenCouncil:
             "harvester",
             "intelligence",
             "knowledge_curator",
+            "pattern",
             "test_oracle",
         ]
         count = 0

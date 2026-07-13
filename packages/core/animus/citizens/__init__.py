@@ -26,6 +26,7 @@ from animus.citizens.abstraction import AbstractionCitizen
 from animus.citizens.harvester import HarvesterCitizen
 from animus.citizens.intelligence import IntelligenceCitizen
 from animus.citizens.knowledge_curator import KnowledgeCuratorCitizen
+from animus.citizens.pattern import PatternCitizen
 from animus.citizens.proposal import (
     EvidenceItem,
     ImprovementProposal,
@@ -46,6 +47,7 @@ __all__ = [
     "HarvesterCitizen",
     "IntelligenceCitizen",
     "KnowledgeCuratorCitizen",
+    "PatternCitizen",
     "ProposalQueue",
     "QueuedProposal",
     "RankedProposal",

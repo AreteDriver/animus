@@ -2183,6 +2183,140 @@ def create_mcp_server():
         return "\n".join(lines)
 
     # -----------------------------------------------------------------------
+    # Pattern Citizen tools (Research Guild)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_pattern_scan(
+        codebase_path: str = "",
+        store_patterns: bool = False,
+        api_key: str = "",
+    ) -> str:
+        """Run the Pattern Citizen pattern discovery.
+
+        Reads mechanism cards from memory, clusters related mechanisms,
+        and names emergent patterns. Optionally stores pattern cards.
+
+        Args:
+            codebase_path: Path to the codebase for context.
+            store_patterns: Whether to store discovered patterns in memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration. Set citizens.enabled=true to use the Pattern Citizen."
+
+        from animus.citizens import PatternCitizen
+
+        resolved_path = codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        pattern = PatternCitizen(
+            memory_layer=memory if store_patterns else None,
+            codebase_path=resolved_path,
+        )
+
+        lines = ["# Pattern Citizen Scan Report", ""]
+
+        # Observe mechanisms
+        mechanisms = pattern.observe_mechanisms()
+        if mechanisms:
+            lines.append(f"## Mechanisms Observed ({len(mechanisms)} found)")
+            for m in mechanisms:
+                lines.append(f"- **[{m['severity'].upper()}]** {m['description']}")
+            lines.append("")
+        else:
+            lines.append("## No Mechanisms Found")
+            lines.append("No mechanism cards in memory. Run abstraction scans first.")
+            lines.append("")
+
+        # Discover patterns
+        mech_contexts = [m["context"] for m in mechanisms]
+        patterns = pattern.discover_patterns(mech_contexts)
+        if patterns:
+            lines.append(f"## Discovered Patterns ({len(patterns)} total)")
+            for p in patterns:
+                lines.append(f"\n### {p.name} ({p.category})")
+                lines.append(f"**Description:** {p.description}")
+                lines.append(f"**Mechanisms:** {', '.join(p.constituent_mechanisms)}")
+                lines.append(f"**Occurrences:** {p.occurrence_count}")
+                lines.append(f"**Confidence:** {p.confidence}")
+                if store_patterns:
+                    stored = pattern.store_pattern(p)
+                    if stored:
+                        lines.append("✅ Stored in memory.")
+            lines.append("")
+        else:
+            lines.append("## No Patterns Discovered")
+            lines.append("Not enough related mechanisms to form a pattern (need ≥3 in category or ≥2 with shared tags).")
+            lines.append("")
+
+        # Proposal
+        proposal = pattern.generate_proposal(patterns)
+        if proposal:
+            lines.append("## Improvement Proposal Generated")
+            lines.append(f"**ID:** `{proposal.id}`")
+            lines.append(f"**Title:** {proposal.title}")
+            lines.append(f"**Problem:** {proposal.problem}")
+            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(f"**Recommendation:** {proposal.recommendation}")
+            lines.append(f"**Effort:** {proposal.estimated_effort_hours}h")
+            if proposal.potential_risks:
+                lines.append("**Risks:**")
+                for r in proposal.potential_risks:
+                    lines.append(f"  - {r.description} ({r.severity}) — {r.mitigation}")
+            if store_patterns:
+                stored = pattern.store_proposal(proposal)
+                if stored:
+                    lines.append("")
+                    lines.append("✅ Proposal stored in memory.")
+        else:
+            lines.append("## No Proposal Generated")
+            lines.append("No patterns discovered — no proposal needed.")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_pattern_list_patterns(
+        limit: int = 20,
+        api_key: str = "",
+    ) -> str:
+        """List recently discovered pattern cards from Animus memory.
+
+        Args:
+            limit: Maximum patterns to return (default 20).
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.citizens import PatternCitizen
+
+        pattern = PatternCitizen(memory_layer=memory)
+        patterns = pattern.list_stored_patterns(limit=limit)
+
+        if not patterns:
+            return "No pattern cards found in memory. Run pattern scans first."
+
+        lines = [f"# Pattern Cards ({len(patterns)} found)", ""]
+        for p in patterns:
+            meta = p.get("metadata", {})
+            name = meta.get("name", "Untitled")
+            category = meta.get("category", "unknown")
+            mechanisms = meta.get("constituent_mechanisms", [])
+            description = meta.get("description", "")
+            lines.append(f"## {name} ({category})")
+            if description:
+                lines.append(f"**Description:** {description}")
+            if mechanisms:
+                lines.append(f"**Mechanisms:** {', '.join(mechanisms)}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    # -----------------------------------------------------------------------
     # Harvester Citizen tools (Research Guild)
     # -----------------------------------------------------------------------
 
