@@ -2743,6 +2743,137 @@ def create_mcp_server():
 
         return "\n".join(lines)
 
+    # -----------------------------------------------------------------------
+    # Research Guild Orchestrator tools
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_research_guild_pipeline(
+        target: str = "",
+        skip_harvester: bool = False,
+        store_outputs: bool = True,
+        api_key: str = "",
+    ) -> str:
+        """Run the full Research Guild pipeline end-to-end.
+
+        Chains Harvester → Abstraction → Pattern → First-Principles →
+        Architecture and returns a unified pipeline report.
+
+        Args:
+            target: GitHub repo target for Harvester (e.g., 'fastapi/fastapi').
+                Ignored if skip_harvester=True.
+            skip_harvester: If True, skip the Harvester stage and use
+                existing sources from memory.
+            store_outputs: Whether to store all intermediate outputs in memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration. Set citizens.enabled=true to use the Research Guild."
+
+        from animus.citizens import ResearchGuildOrchestrator
+
+        resolved_path = config.citizens.codebase_path or str(config.data_dir.parent)
+        orchestrator = ResearchGuildOrchestrator(
+            memory_layer=memory if store_outputs else None,
+            codebase_path=resolved_path,
+        )
+
+        report = orchestrator.run_pipeline(
+            target=target,
+            skip_harvester=skip_harvester,
+            store_outputs=store_outputs,
+        )
+
+        lines = ["# Research Guild Pipeline Report", ""]
+        lines.append(f"**Stages completed:** {report.total_stages}")
+        lines.append(f"**Total outputs:** {report.total_outputs}")
+        lines.append(f"**Total errors:** {report.total_errors}")
+        lines.append(f"**Duration:** {report.duration_seconds:.1f}s")
+        lines.append("")
+
+        for s in report.stages:
+            status = "✅" if not s.errors else "⚠️"
+            lines.append(
+                f"{status} **{s.citizen_name}**: {s.outputs_count} outputs, "
+                f"{s.stored_count} stored, {len(s.errors)} errors, {s.duration_seconds:.1f}s"
+            )
+            for e in s.errors:
+                lines.append(f"   - Error: {e}")
+        lines.append("")
+
+        if report.final_proposal:
+            lines.append("## Final Proposal")
+            lines.append(f"**ID:** `{report.final_proposal.id}`")
+            lines.append(f"**Title:** {report.final_proposal.title}")
+            lines.append(f"**Confidence:** {report.final_proposal.confidence.value} ({report.final_proposal.confidence_score:.0%})")
+            lines.append(f"**Effort:** {report.final_proposal.estimated_effort_hours}h")
+            lines.append(f"**Recommendation:** {report.final_proposal.recommendation}")
+            lines.append("")
+            if store_outputs:
+                lines.append("✅ Pipeline outputs stored in memory for review.")
+        else:
+            lines.append("No final proposal generated.")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_research_guild_report(
+        limit: int = 5,
+        api_key: str = "",
+    ) -> str:
+        """Retrieve recent Research Guild pipeline reports from memory.
+
+        Args:
+            limit: Maximum reports to return (default 5).
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        try:
+            from animus.memory import MemoryType
+            results = memory.search(
+                query="Research Guild Pipeline Report",
+                memory_type=MemoryType.PROCEDURAL,
+                limit=limit,
+            )
+        except Exception as e:
+            return f"Failed to retrieve reports: {e}"
+
+        if not results:
+            return "No pipeline reports found in memory. Run the pipeline first."
+
+        lines = ["# Research Guild Pipeline Reports", ""]
+        for mem in results:
+            meta = mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
+            ts = meta.get("timestamp", "unknown")
+            lineage = meta.get("lineage", [])
+            stages = meta.get("stages", [])
+            errors = meta.get("errors", [])
+
+            lines.append(f"## Report ({ts})")
+            if lineage:
+                lines.append(f"**Lineage:** {' → '.join(lineage)}")
+            if stages:
+                lines.append(f"**Stages:** {len(stages)}")
+                for s in stages:
+                    lines.append(
+                        f"  - {s['citizen_name']}: {s['outputs_count']} outputs, "
+                        f"{s['duration_seconds']:.1f}s"
+                    )
+            if errors:
+                lines.append(f"**Errors:** {len(errors)}")
+                for e in errors[:3]:
+                    lines.append(f"  - {e}")
+            lines.append("")
+
+        return "\n".join(lines)
+
     return mcp
 
 

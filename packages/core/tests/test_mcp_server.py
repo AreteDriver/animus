@@ -127,8 +127,9 @@ class TestMcpServerCreation:
         # + 2 architect + 2 conversation_designer + 2 knowledge_curator
         # + 2 test_oracle + 4 proposal_queue + 2 citizen_council
         # + 2 session_steward + 1 list_citizens
-        # + 4 intelligence + 3 harvester + 2 abstraction + 2 pattern + 2 first_principles + 2 architecture_citizen = 52
-        assert len(tools) == 52
+        # + 4 intelligence + 3 harvester + 2 abstraction + 2 pattern + 2 first_principles + 2 architecture_citizen
+        # + 2 research_guild = 54
+        assert len(tools) == 54
 
     def test_intelligence_tools_exist(self, server):
         tools = server._tool_manager.list_tools()
@@ -144,6 +145,12 @@ class TestMcpServerCreation:
         assert "animus_harvester_scan" in tool_names
         assert "animus_harvester_watchlist_scan" in tool_names
         assert "animus_harvester_list_sources" in tool_names
+
+    def test_research_guild_tools_exist(self, server):
+        tools = server._tool_manager.list_tools()
+        tool_names = {t.name for t in tools}
+        assert "animus_research_guild_pipeline" in tool_names
+        assert "animus_research_guild_report" in tool_names
 
 
 class TestMemoryTools:

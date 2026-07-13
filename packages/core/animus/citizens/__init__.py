@@ -37,6 +37,7 @@ from animus.citizens.proposal import (
     RiskAssessment,
 )
 from animus.citizens.proposal_queue import ProposalQueue, QueuedProposal
+from animus.citizens.research_guild import ResearchGuildOrchestrator
 from animus.citizens.session_steward import SessionStewardCitizen
 from animus.citizens.test_oracle import TestOracleCitizen
 
@@ -55,6 +56,7 @@ __all__ = [
     "ProposalQueue",
     "QueuedProposal",
     "RankedProposal",
+    "ResearchGuildOrchestrator",
     "SessionStewardCitizen",
     "TestOracleCitizen",
     "EvidenceItem",

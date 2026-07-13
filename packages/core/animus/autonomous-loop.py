@@ -60,6 +60,10 @@ CITIZEN_REGISTRY: dict[str, tuple[type, str]] = {
         "animus.citizens.architecture_citizen.ArchitectureCitizen",
         "codebase",
     ),
+    "research_guild": (
+        "animus.citizens.research_guild.ResearchGuildOrchestrator",
+        "codebase",
+    ),
     "test": (
         "animus.citizens.test_oracle.TestOracleCitizen",
         "evaluation",

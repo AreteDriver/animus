@@ -1140,6 +1140,74 @@ def _cmd_architecture_citizen(args: argparse.Namespace) -> int:
     return 1
 
 
+def _cmd_research_guild(args: argparse.Namespace) -> int:
+    from animus.citizens import ResearchGuildOrchestrator
+    from animus.config import get_config
+    from animus.memory import MemoryLayer
+
+    config = get_config()
+    if not config.citizens.enabled:
+        print("Citizens are disabled in configuration.", file=sys.stderr)
+        return 1
+
+    store = getattr(args, "store", False)
+    memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
+    cb_path = (
+        getattr(args, "codebase_path", "")
+        or config.citizens.codebase_path
+        or str(config.data_dir.parent)
+    )
+
+    orchestrator = ResearchGuildOrchestrator(
+        memory_layer=memory,
+        codebase_path=cb_path,
+    )
+
+    sub = args.research_guild_command
+
+    if sub == "run":
+        print("# Running Research Guild pipeline...", file=sys.stderr)
+        report = orchestrator.run_pipeline(
+            target=args.target or "",
+            skip_harvester=args.skip_harvester,
+            store_outputs=store,
+        )
+        print(f"\n# Research Guild Pipeline Report")
+        print(report.summary())
+        if store and memory:
+            print("\n✅ Pipeline outputs stored in memory.")
+        return 0
+
+    if sub == "report":
+        # Show latest pipeline report from memory
+        if not memory:
+            print("Provide --store to retrieve reports from memory.", file=sys.stderr)
+            return 1
+        from animus.memory import MemoryType
+
+        results = memory.search(
+            query="Research Guild Pipeline Report",
+            memory_type=MemoryType.PROCEDURAL,
+            limit=5,
+        )
+        if not results:
+            print("No pipeline reports found in memory.")
+            return 0
+        for mem in results:
+            meta = mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
+            ts = meta.get("timestamp", "unknown")
+            lineage = meta.get("lineage", [])
+            print(f"\n## Pipeline Report ({ts})")
+            print(f"**Lineage:** {' → '.join(lineage)}")
+            stages = meta.get("stages", [])
+            for s in stages:
+                print(f"  - {s['citizen_name']}: {s['outputs_count']} outputs, {len(s['errors'])} errors, {s['duration_seconds']:.1f}s")
+        return 0
+
+    print(f"Unknown research-guild subcommand: {sub}", file=sys.stderr)
+    return 1
+
+
 def _cmd_intelligence(args: argparse.Namespace) -> int:
     from animus.citizens import IntelligenceCitizen
     from animus.config import get_config
@@ -1517,6 +1585,47 @@ def main(argv: list[str] | None = None) -> int:
         help="Store generated proposal in Animus memory",
     )
     hv_analyze.set_defaults(func=_cmd_harvester)
+
+    # ------------------------------------------------------------------
+    # Research Guild Orchestrator
+    # ------------------------------------------------------------------
+
+    rg_parser = subparsers.add_parser(
+        "research-guild",
+        help="Run the full Research Guild pipeline end-to-end",
+    )
+    rg_subparsers = rg_parser.add_subparsers(dest="research_guild_command")
+
+    rg_run = rg_subparsers.add_parser("run", help="Run the full pipeline")
+    rg_run.add_argument(
+        "--target",
+        default="",
+        help="GitHub repo target for Harvester (e.g., 'fastapi/fastapi')",
+    )
+    rg_run.add_argument(
+        "--skip-harvester",
+        action="store_true",
+        help="Skip Harvester and use existing sources from memory",
+    )
+    rg_run.add_argument(
+        "--codebase-path",
+        default="",
+        help="Path to the codebase",
+    )
+    rg_run.add_argument(
+        "--store",
+        action="store_true",
+        help="Store all intermediate outputs in memory",
+    )
+    rg_run.set_defaults(func=_cmd_research_guild)
+
+    rg_report = rg_subparsers.add_parser("report", help="Show latest pipeline report from memory")
+    rg_report.add_argument(
+        "--store",
+        action="store_true",
+        help="Required: retrieve reports from memory",
+    )
+    rg_report.set_defaults(func=_cmd_research_guild)
 
     # ------------------------------------------------------------------
     # Intelligence Officer

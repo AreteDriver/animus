@@ -24,8 +24,10 @@ from animus.citizens import (
     PatternCitizen,
     ProposalQueue,
     ProposalStatus,
+    ResearchGuildOrchestrator,
     TestOracleCitizen,
 )
+from animus.citizens.research_guild import GuildPipelineReport, StageResult
 from animus.citizens.commissioner import CommissionResult
 from animus.citizens.proposal import EvidenceItem, ProposalConfidence, RiskAssessment
 
@@ -2636,3 +2638,271 @@ class TestArchitectureCitizenMcpTools:
             limit=10,
         )
         assert "No gap analyses found" in result
+
+
+# ---------------------------------------------------------------------------
+# Research Guild Orchestrator tests
+# ---------------------------------------------------------------------------
+
+
+class TestStageResult:
+    def test_basic_creation(self):
+        r = StageResult(citizen_name="harvester", outputs_count=3)
+        assert r.citizen_name == "harvester"
+        assert r.outputs_count == 3
+        assert r.stored_count == 0
+        assert r.errors == []
+        assert r.duration_seconds == 0.0
+
+
+class TestGuildPipelineReport:
+    def test_basic_creation(self):
+        report = GuildPipelineReport()
+        assert report.total_stages == 0
+        assert report.total_outputs == 0
+        assert report.total_errors == 0
+        assert report.final_proposal is None
+
+    def test_with_stages(self):
+        report = GuildPipelineReport(
+            stages=[
+                StageResult(citizen_name="harvester", outputs_count=2),
+                StageResult(citizen_name="abstraction", outputs_count=1, stored_count=1),
+            ]
+        )
+        assert report.total_stages == 2
+        assert report.total_outputs == 3
+        assert report.total_errors == 0
+
+    def test_summary(self):
+        report = GuildPipelineReport(
+            stages=[
+                StageResult(citizen_name="harvester", outputs_count=2, duration_seconds=1.0),
+            ],
+            duration_seconds=5.0,
+        )
+        summary = report.summary()
+        assert "Research Guild Pipeline" in summary
+        assert "harvester" in summary
+        assert "2 output(s)" in summary
+        assert "5.0s" in summary
+
+    def test_to_dict(self):
+        report = GuildPipelineReport(
+            stages=[
+                StageResult(citizen_name="harvester", outputs_count=2, duration_seconds=1.0),
+            ],
+            duration_seconds=5.0,
+        )
+        d = report.to_dict()
+        assert d["duration_seconds"] == 5.0
+        assert d["final_proposal_id"] is None
+        assert isinstance(d["stages"], list)
+        assert len(d["stages"]) == 1
+        assert d["stages"][0]["citizen_name"] == "harvester"
+        assert d["stages"][0]["outputs_count"] == 2
+
+
+class TestResearchGuildOrchestrator:
+    def test_instantiation(self):
+        o = ResearchGuildOrchestrator(codebase_path=".")
+        assert o is not None
+        assert str(o.codebase_path) == "."
+
+    def test_run_pipeline_skip_harvester(self, tmp_path, monkeypatch):
+        """Pipeline with skip_harvester=True should still run remaining stages."""
+        memory = MagicMock()
+        orchestrator = ResearchGuildOrchestrator(
+            memory_layer=memory,
+            codebase_path=tmp_path,
+        )
+
+        # Mock all citizen methods to avoid real file scanning
+        monkeypatch.setattr(
+            "animus.citizens.HarvesterCitizen",
+            MagicMock,
+        )
+        monkeypatch.setattr(
+            "animus.citizens.AbstractionCitizen",
+            MagicMock,
+        )
+        monkeypatch.setattr(
+            "animus.citizens.PatternCitizen",
+            MagicMock,
+        )
+        monkeypatch.setattr(
+            "animus.citizens.FirstPrinciplesCitizen",
+            MagicMock,
+        )
+        monkeypatch.setattr(
+            "animus.citizens.ArchitectureCitizen",
+            MagicMock,
+        )
+
+        report = orchestrator.run_pipeline(skip_harvester=True)
+        # All mocked, so stages complete but produce 0 outputs
+        assert report.total_stages == 5
+        assert report.duration_seconds >= 0
+
+    def test_run_pipeline_without_memory(self, tmp_path, monkeypatch):
+        """Pipeline should run without memory layer (no storage)."""
+        orchestrator = ResearchGuildOrchestrator(codebase_path=tmp_path)
+
+        monkeypatch.setattr(
+            "animus.citizens.HarvesterCitizen",
+            MagicMock,
+        )
+        monkeypatch.setattr(
+            "animus.citizens.AbstractionCitizen",
+            MagicMock,
+        )
+        monkeypatch.setattr(
+            "animus.citizens.PatternCitizen",
+            MagicMock,
+        )
+        monkeypatch.setattr(
+            "animus.citizens.FirstPrinciplesCitizen",
+            MagicMock,
+        )
+        monkeypatch.setattr(
+            "animus.citizens.ArchitectureCitizen",
+            MagicMock,
+        )
+
+        report = orchestrator.run_pipeline()
+        assert report.total_stages == 5
+        # No memory means no storage
+        for s in report.stages:
+            assert s.stored_count == 0
+
+    def test_run_pipeline_error_handling(self, tmp_path, monkeypatch):
+        """Pipeline should capture stage errors and continue."""
+        memory = MagicMock()
+        orchestrator = ResearchGuildOrchestrator(
+            memory_layer=memory,
+            codebase_path=tmp_path,
+        )
+
+        class BrokenHarvester:
+            def __init__(self, **kwargs):
+                pass
+
+            def observe_codebase(self):
+                raise RuntimeError("harvester broke")
+
+        monkeypatch.setattr(
+            "animus.citizens.HarvesterCitizen",
+            BrokenHarvester,
+        )
+        monkeypatch.setattr(
+            "animus.citizens.AbstractionCitizen",
+            MagicMock,
+        )
+        monkeypatch.setattr(
+            "animus.citizens.PatternCitizen",
+            MagicMock,
+        )
+        monkeypatch.setattr(
+            "animus.citizens.FirstPrinciplesCitizen",
+            MagicMock,
+        )
+        monkeypatch.setattr(
+            "animus.citizens.ArchitectureCitizen",
+            MagicMock,
+        )
+
+        report = orchestrator.run_pipeline()
+        # Should still complete all 5 stages
+        assert report.total_stages == 5
+        # Harvester stage should have an error
+        harvester_stage = report.stages[0]
+        assert harvester_stage.citizen_name == "harvester"
+        assert len(harvester_stage.errors) == 1
+        assert "harvester broke" in harvester_stage.errors[0]
+
+    def test_stage_result_error_aggregation(self):
+        report = GuildPipelineReport(
+            stages=[
+                StageResult(citizen_name="harvester", errors=["e1", "e2"]),
+                StageResult(citizen_name="abstraction", errors=["e3"]),
+            ],
+            errors=["pipeline error"],
+        )
+        assert report.total_errors == 4  # 2 + 1 + 1
+
+    def test_repr(self):
+        o = ResearchGuildOrchestrator(codebase_path="/tmp/test")
+        assert "ResearchGuildOrchestrator" in repr(o)
+        assert "/tmp/test" in repr(o)
+
+
+class TestResearchGuildCli:
+    def test_cli_import(self):
+        from animus.cli import _cmd_research_guild
+
+        assert callable(_cmd_research_guild)
+
+    def test_cmd_research_guild_run(self, capsys, tmp_path):
+        from animus.cli import _cmd_research_guild
+        from argparse import Namespace
+
+        args = Namespace(
+            research_guild_command="run",
+            target="",
+            skip_harvester=False,
+            codebase_path=str(tmp_path),
+            store=False,
+        )
+        result = _cmd_research_guild(args)
+        captured = capsys.readouterr()
+        assert result == 0
+        assert "Research Guild" in captured.out or "Research Guild" in captured.err
+
+
+class TestResearchGuildMcpTools:
+    @pytest.fixture
+    def mcp_server(self):
+        pytest.importorskip("mcp")
+        from animus.mcp_server import create_mcp_server
+
+        return create_mcp_server()
+
+    def test_research_guild_tools_exist(self, mcp_server):
+        tools = list(mcp_server._tools.keys())
+        assert "animus_research_guild_pipeline" in tools
+        assert "animus_research_guild_report" in tools
+
+    def test_research_guild_pipeline_mocked(self, mcp_server, monkeypatch):
+        from animus.citizens.research_guild import GuildPipelineReport, StageResult
+
+        def _mock_run_pipeline(*args, **kwargs):
+            return GuildPipelineReport(
+                stages=[
+                    StageResult(citizen_name="harvester", outputs_count=2, duration_seconds=1.0),
+                    StageResult(citizen_name="abstraction", outputs_count=3, duration_seconds=1.5),
+                    StageResult(citizen_name="pattern", outputs_count=1, duration_seconds=0.5),
+                    StageResult(citizen_name="first_principles", outputs_count=2, duration_seconds=1.0),
+                    StageResult(citizen_name="architecture", outputs_count=1, duration_seconds=2.0),
+                ],
+                duration_seconds=6.0,
+            )
+
+        monkeypatch.setattr(
+            "animus.citizens.research_guild.ResearchGuildOrchestrator.run_pipeline",
+            _mock_run_pipeline,
+        )
+
+        result = mcp_server._tools["animus_research_guild_pipeline"].fn(
+            target="",
+            skip_harvester=False,
+            store_outputs=False,
+        )
+        assert "Research Guild Pipeline Report" in result
+        assert "harvester" in result
+        assert "6.0s" in result
+
+    def test_research_guild_report_empty(self, mcp_server):
+        result = mcp_server._tools["animus_research_guild_report"].fn(
+            limit=5,
+        )
+        assert "No pipeline reports found" in result

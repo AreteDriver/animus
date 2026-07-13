@@ -116,6 +116,7 @@ class CitizenCouncil:
             "intelligence",
             "knowledge_curator",
             "pattern",
+            "research_guild",
             "test_oracle",
         ]
         count = 0
