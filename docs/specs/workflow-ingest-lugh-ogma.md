@@ -163,3 +163,81 @@ No new packages or repos. Pure composition of existing `lugh`, `ogma`, `memory` 
 *Spec version: 1.0*  
 *Generated: 2026-06-29*  
 *Decision basis: ADL-20260621-001 (hybrid pre-build workflow), Ogma PR #83 (provider resolution), Lugh canonical corpus v1.0*
+
+---
+
+## 8. Media Pipeline Extension (Research Guild Integration)
+
+> Added: 2026-07-13 · ADL-20260713-001
+
+The `animus_media_pipeline` MCP tool extends the basic ingest flow with conditional downstream analysis via the Research Guild citizen pipeline.
+
+### 8.1 Flow
+
+```
+Lugh Harvest → Ogma Synthesize → MechanismCard extraction
+                                    ↓
+                           [OgmaOutput.animus_gap]
+                                    ↓
+                         ┌──────────┼──────────┐
+                        NONE     PARTIAL      FULL
+                         ↓          ↓          ↓
+                    Store only   Store +    Store + full RG
+                               PatternCit.   (Pattern → FP → Arch)
+                                    ↓          ↓
+                                              ProposalQueue
+```
+
+### 8.2 Gating Rules
+
+| `animus_gap` | Downstream stages | ProposalQueue? |
+|---|---|---|
+| `NONE` | Store Ogma + MechanismCards only | No |
+| `PARTIAL` | Store + PatternCitizen (media-tuned dedup) | No |
+| `FULL` | Store + Pattern → FP → Architecture → `ImprovementProposal` | Yes (priority 3) |
+
+Override: `run_research_guild=True` forces full pipeline regardless of gap status.
+
+### 8.3 MCP Tool
+
+```python
+# Via MCP server (animus/mcp_server.py)
+animus_media_pipeline(
+    url: str,                          # YouTube playlist/channel URL
+    source_type: str = "auto",        # "auto" | "youtube_playlist" | "youtube_channel" | "podcast"
+    run_research_guild: bool = False,  # Force full RG pipeline
+    store_outputs: bool = True,        # Persist to semantic memory
+)
+```
+
+Returns a `MediaPipelineReport` markdown summary with gap status, stage results, and (when applicable) the generated proposal ID.
+
+### 8.4 Daemon Integration
+
+The P3 daemon's `TaskScheduler` supports recurring media scans via cron expressions:
+
+```python
+from animus.daemon.scheduler import TaskScheduler
+from animus.citizens.media import MediaPipelineOrchestrator
+
+scheduler = TaskScheduler(persistence_dir="/var/lib/animus/tasks")
+task = MediaPipelineOrchestrator.schedule_scan(
+    scheduler=scheduler,
+    url="https://youtube.com/playlist?list=PLabc",
+    source_type="youtube_playlist",
+    cron_expression="0 9 * * 1",   # Mondays at 9 AM
+    run_research_guild=False,
+    list_limit=25,
+)
+```
+
+The daemon's `_execute_task_background()` dispatches `task_type == "media_pipeline"` by calling `MediaPipelineOrchestrator.run()` with the task metadata.
+
+### 8.5 Key Files
+
+| File | Role |
+|---|---|
+| `animus/citizens/media.py` | `MediaPipelineOrchestrator`, `MediaPipelineReport`, `MediaHarvester`, `MediaSynthesizer`, `MediaAbstractionAdapter` |
+| `animus/daemon/core.py` | Daemon dispatch for `"media_pipeline"` task type |
+| `animus/mcp_server.py` | `animus_media_pipeline` MCP tool registration |
+| `tests/test_media_pipeline.py` | 32 tests covering orchestration, gating, dedup, ProposalQueue wiring, and daemon scheduler wiring |

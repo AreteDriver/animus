@@ -70,6 +70,46 @@ See `evidence/releases/README.md` for the full bundle format specification.
 
 ---
 
+## Scheduled Tasks (Daemon)
+
+The Animus P3 daemon (`animus.daemon.core`) supports cron-like scheduled tasks via `TaskScheduler`. Tasks are persisted JSON and dispatched in background worker threads.
+
+### Supported Task Types
+
+| Task Type | Description | Required Metadata |
+|---|---|---|
+| `media_pipeline` | Ingest and analyze media content via Research Guild | `url`, `source_type`, `list_limit`, `run_research_guild` |
+
+### Example: Weekly Media Scan
+
+```python
+from animus.daemon.scheduler import TaskScheduler
+from animus.citizens.media import MediaPipelineOrchestrator
+
+scheduler = TaskScheduler(persistence_dir="/var/lib/animus/tasks")
+MediaPipelineOrchestrator.schedule_scan(
+    scheduler=scheduler,
+    url="https://youtube.com/playlist?list=PLabc",
+    source_type="youtube_playlist",
+    cron_expression="0 9 * * 1",  # Mondays at 9 AM
+    run_research_guild=False,
+    list_limit=25,
+)
+```
+
+On trigger, the daemon calls:
+
+```python
+orchestrator = MediaPipelineOrchestrator(
+    memory_layer=..., codebase_path=...
+)
+report = orchestrator.run(url=..., source_type=..., run_research_guild=...)
+```
+
+Results are stored in memory and (for `gap=FULL`) submitted to the `ProposalQueue` for human review → Forge commission.
+
+---
+
 ## See Also
 
 - [Configuration](configuration.md) — Config file reference
