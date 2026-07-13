@@ -1003,6 +1003,32 @@ class TestCitizenCouncil:
         assert count == 1
         assert "ADL-001" in council._proposals
 
+    def test_collect_from_memory_includes_intelligence(self, tmp_path):
+        """Verify that intelligence proposals are collected by default."""
+        mock_memory = MagicMock()
+        intel_proposal = ImprovementProposal(
+            id="INTEL-20260712-123456",
+            title="Secret Detected",
+            problem="AWS key exposed",
+            recommendation="Rotate credentials",
+            affected_components=["Security"],
+        ).to_dict()
+
+        def _search(query, **kwargs):
+            if "intelligence" in query:
+                return [{"content": "intelligence proposal", "metadata": intel_proposal}]
+            return []
+
+        mock_memory.search.side_effect = _search
+
+        council = CitizenCouncil(memory_layer=mock_memory)
+        # Default citizen_names should include "intelligence"
+        count = council.collect_from_memory()
+        assert count == 1
+        assert "INTEL-20260712-123456" in council._proposals
+        rp = council._proposals["INTEL-20260712-123456"]
+        assert "intelligence" in rp.source_citizens
+
     def test_rank_backlog_scoring(self, tmp_path):
         council = CitizenCouncil()
         p1 = ImprovementProposal(

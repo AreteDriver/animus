@@ -109,6 +109,7 @@ class CitizenCouncil:
         names = citizen_names or [
             "architect",
             "conversation_designer",
+            "intelligence",
             "knowledge_curator",
             "test_oracle",
         ]
