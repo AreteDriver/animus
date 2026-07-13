@@ -680,6 +680,127 @@ def _cmd_citizen_council_summary(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_harvester(args: argparse.Namespace) -> int:
+    from animus.citizens import HarvesterCitizen
+    from animus.config import get_config
+    from animus.memory import MemoryLayer
+
+    config = get_config()
+    if not config.citizens.enabled:
+        print("Citizens are disabled in configuration.", file=sys.stderr)
+        return 1
+
+    store = getattr(args, "store", False)
+    memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
+    cb_path = getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(config.data_dir.parent)
+    harvester = HarvesterCitizen(
+        memory_layer=memory,
+        codebase_path=cb_path,
+    )
+
+    sub = args.harvester_command
+
+    if sub == "harvest":
+        if not args.target:
+            print("Provide --target (GitHub repo URL or user/repo).", file=sys.stderr)
+            return 1
+        source = harvester.harvest_repository(args.target, depth=args.depth)
+        if source is None:
+            print(f"Harvest failed for {args.target}. Check logs for details.", file=sys.stderr)
+            return 1
+        print(f"# Harvested Source: {source.title}\n")
+        print(f"**Type:** {source.source_type}")
+        print(f"**Identifier:** {source.identifier}")
+        print(f"**Confidence:** {source.confidence}")
+        if source.tags:
+            print(f"**Tags:** {', '.join(source.tags)}")
+        if source.metadata:
+            print(f"**Metadata:**")
+            for k, v in source.metadata.items():
+                print(f"  - {k}: {v}")
+        if store and memory:
+            stored = harvester.store_source(source)
+            if stored:
+                print("\n✅ Source stored in memory.")
+        return 0
+
+    if sub == "watchlist":
+        report = harvester.harvest_watchlist(interval_hours=args.interval_hours)
+        print(f"# Harvester Watchlist Report\n")
+        print(f"**Sources collected:** {report.total_collected}")
+        print(f"**Duplicates removed:** {report.duplicates_removed}")
+        if report.errors:
+            print(f"**Errors:** {len(report.errors)}")
+            for err in report.errors:
+                print(f"  - {err}")
+        for source in report.sources:
+            print(f"\n- [{source.source_type}] {source.title} ({source.identifier})")
+        if store and memory:
+            stored = harvester.store_report(report)
+            if stored:
+                print("\n✅ Report stored in memory.")
+        return 0
+
+    if sub == "sources":
+        sources = harvester.list_stored_sources(limit=args.limit)
+        print(f"# Stored Harvested Sources ({len(sources)} found)\n")
+        if not sources:
+            print("No harvested sources found in memory.")
+            return 0
+        for s in sources:
+            meta = s.get("metadata", {})
+            title = meta.get("title", "Untitled")
+            source_type = meta.get("source_type", "unknown")
+            print(f"- [{source_type}] {title}")
+        return 0
+
+    if sub == "analyze":
+        # Run full observation sweep and generate proposal
+        obs = harvester.observe_codebase()
+        memory_sources = harvester.observe_memory()
+        all_sources = []
+        for o in obs:
+            all_sources.append(
+                harvester.harvest_text(
+                    text=o["description"],
+                    source_type="code_snippet",
+                    identifier=o["context"].get("file", "unknown"),
+                )
+            )
+        all_sources.extend(memory_sources)
+        all_sources = harvester.deduplicate(all_sources)
+
+        print(f"# Harvester Observation Sweep\n")
+        print(f"**Codebase findings:** {len(obs)}")
+        print(f"**Memory sources:** {len(memory_sources)}")
+        print(f"**Unique sources:** {len(all_sources)}\n")
+
+        proposal = harvester.generate_proposal(all_sources)
+        if proposal:
+            print(f"## Proposal Generated: {proposal.title}")
+            print(f"**ID:** {proposal.id}")
+            print(f"**Problem:** {proposal.problem}")
+            print(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            print(f"**Recommendation:** {proposal.recommendation}")
+            print(f"**Effort:** {proposal.estimated_effort_hours}h")
+            print(f"**Components:** {', '.join(proposal.affected_components)}")
+            if proposal.potential_risks:
+                print("**Risks:**")
+                for r in proposal.potential_risks:
+                    print(f"  - {r.description} ({r.severity})")
+            if store and memory:
+                stored = harvester.store_proposal(proposal)
+                if stored:
+                    print(f"\n✅ Proposal stored in memory.")
+        else:
+            print("## No Proposal Generated")
+            print("No actionable findings from harvest sweep.")
+        return 0
+
+    print(f"Unknown harvester subcommand: {sub}", file=sys.stderr)
+    return 1
+
+
 def _cmd_intelligence(args: argparse.Namespace) -> int:
     from animus.citizens import IntelligenceCitizen
     from animus.config import get_config
@@ -898,6 +1019,57 @@ def main(argv: list[str] | None = None) -> int:
         help="Store generated proposal in Animus memory",
     )
     oracle_parser.set_defaults(func=_cmd_test_oracle)
+
+    # ------------------------------------------------------------------
+    # Harvester (Research Guild)
+    # ------------------------------------------------------------------
+
+    harvester_parser = subparsers.add_parser(
+        "harvester",
+        help="Run the Research Guild Harvester Citizen — collect raw sources",
+    )
+    harvester_subparsers = harvester_parser.add_subparsers(dest="harvester_command")
+
+    hv_harvest = harvester_subparsers.add_parser("harvest", help="Harvest a GitHub repository")
+    hv_harvest.add_argument("--target", required=True, help="GitHub repo URL or user/repo")
+    hv_harvest.add_argument("--depth", default="quick", choices=["quick", "deep"], help="Scan depth")
+    hv_harvest.add_argument(
+        "--store",
+        action="store_true",
+        help="Store harvested source in Animus memory",
+    )
+    hv_harvest.set_defaults(func=_cmd_harvester)
+
+    hv_watchlist = harvester_subparsers.add_parser("watchlist", help="Harvest all due watchlist repos")
+    hv_watchlist.add_argument(
+        "--interval-hours",
+        type=int,
+        default=0,
+        help="Override scan interval (0 = default 168h)",
+    )
+    hv_watchlist.add_argument(
+        "--store",
+        action="store_true",
+        help="Store report in Animus memory",
+    )
+    hv_watchlist.set_defaults(func=_cmd_harvester)
+
+    hv_sources = harvester_subparsers.add_parser("sources", help="List stored harvested sources")
+    hv_sources.add_argument("--limit", type=int, default=20, help="Max sources to list")
+    hv_sources.set_defaults(func=_cmd_harvester)
+
+    hv_analyze = harvester_subparsers.add_parser("analyze", help="Run observation sweep and generate proposal")
+    hv_analyze.add_argument(
+        "--codebase-path",
+        default="",
+        help="Path to the codebase",
+    )
+    hv_analyze.add_argument(
+        "--store",
+        action="store_true",
+        help="Store generated proposal in Animus memory",
+    )
+    hv_analyze.set_defaults(func=_cmd_harvester)
 
     # ------------------------------------------------------------------
     # Intelligence Officer

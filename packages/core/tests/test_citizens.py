@@ -14,6 +14,7 @@ from animus.citizens import (
     CitizenCouncil,
     ConversationDesignerCitizen,
     ForgeCommissioner,
+    HarvesterCitizen,
     ImprovementProposal,
     IntelligenceCitizen,
     KnowledgeCuratorCitizen,
@@ -1317,3 +1318,241 @@ class TestIntelligenceCli:
         assert ret == 1
         captured = capsys.readouterr()
         assert "Provide --text or --file" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# HarvesterCitizen tests
+# ---------------------------------------------------------------------------
+
+
+class TestHarvesterCitizen:
+    def test_initialization(self):
+        harvester = HarvesterCitizen(codebase_path="/tmp/test")
+        assert harvester.codebase_path == Path("/tmp/test")
+        assert harvester._harvested == []
+
+    def test_harvest_text(self):
+        harvester = HarvesterCitizen()
+        source = harvester.harvest_text("Hello world", source_type="document", identifier="doc1")
+        assert source.source_type == "document"
+        assert source.identifier == "doc1"
+        assert source.title == "Hello world"
+        assert source.content_snippet == "Hello world"
+        assert source.confidence == 0.5
+
+    def test_harvest_file(self, tmp_path):
+        harvester = HarvesterCitizen()
+        doc = tmp_path / "test.md"
+        doc.write_text("# Test Document\nThis is a test.")
+        source = harvester.harvest_file(doc)
+        assert source is not None
+        assert source.source_type == "document"
+        assert source.title == "test.md"
+        assert "# Test Document" in source.content_snippet
+
+    def test_harvest_file_not_found(self, tmp_path):
+        harvester = HarvesterCitizen()
+        source = harvester.harvest_file(tmp_path / "nonexistent.txt")
+        assert source is None
+
+    def test_deduplicate(self):
+        harvester = HarvesterCitizen()
+        s1 = harvester.harvest_text("Alpha", identifier="doc1")
+        s2 = harvester.harvest_text("Alpha", identifier="doc1")  # Same type + identifier + title → duplicate
+        s3 = harvester.harvest_text("Gamma", identifier="doc2")
+        result = harvester.deduplicate([s1, s2, s3])
+        assert len(result) == 2
+        identifiers = {s.identifier for s in result}
+        assert identifiers == {"doc1", "doc2"}
+
+    def test_observe_codebase(self, tmp_path):
+        harvester = HarvesterCitizen(codebase_path=tmp_path)
+        py_file = tmp_path / "main.py"
+        py_file.write_text("# TODO: refactor this\n# FIXME: bug here\nprint('hello')\n")
+        findings = harvester.observe_codebase()
+        assert len(findings) >= 1
+        assert any("TODO" in f["description"] for f in findings)
+
+    def test_observe_codebase_with_document(self, tmp_path):
+        harvester = HarvesterCitizen(codebase_path=tmp_path)
+        md_file = tmp_path / "readme.md"
+        md_file.write_text("# README\n" + "word " * 100)
+        findings = harvester.observe_codebase()
+        doc_findings = [f for f in findings if f["context"].get("pattern_type") == "document_source"]
+        assert len(doc_findings) >= 1
+        assert "readme.md" in doc_findings[0]["description"]
+
+    def test_observe_memory_no_memory(self):
+        harvester = HarvesterCitizen()
+        sources = harvester.observe_memory()
+        assert sources == []
+
+    def test_observe_memory_with_mock(self):
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = [
+            {"content": "Architecture note: use separation of concerns", "id": "mem1", "metadata": {"topic": "architecture"}},
+        ]
+        harvester = HarvesterCitizen(memory_layer=mock_memory)
+        sources = harvester.observe_memory()
+        assert len(sources) >= 1
+        assert sources[0].source_type == "memory"
+
+    def test_generate_proposal_no_sources(self):
+        harvester = HarvesterCitizen()
+        proposal = harvester.generate_proposal([])
+        assert proposal is None
+
+    def test_generate_proposal_from_sources(self):
+        harvester = HarvesterCitizen()
+        sources = [
+            harvester.harvest_text("Repo analysis of fastapi", source_type="repo", identifier="fastapi/fastapi"),
+        ]
+        proposal = harvester.generate_proposal(sources)
+        assert proposal is not None
+        assert "HARV-" in proposal.id
+        assert "ResearchGuild" in proposal.affected_components
+        assert len(proposal.evidence) >= 1
+
+    def test_store_source_without_memory(self):
+        harvester = HarvesterCitizen()
+        source = harvester.harvest_text("test")
+        assert harvester.store_source(source) is False
+
+    def test_store_source_with_memory(self):
+        mock_memory = MagicMock()
+        harvester = HarvesterCitizen(memory_layer=mock_memory)
+        source = harvester.harvest_text("test")
+        assert harvester.store_source(source) is True
+        mock_memory.remember.assert_called_once()
+
+    def test_store_proposal_with_memory(self):
+        mock_memory = MagicMock()
+        harvester = HarvesterCitizen(memory_layer=mock_memory)
+        proposal = ImprovementProposal(id="1", title="Test", problem="P", recommendation="R")
+        assert harvester.store_proposal(proposal) is True
+        mock_memory.remember.assert_called_once()
+
+    def test_list_stored_sources(self):
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = [
+            {"content": "harvested text", "id": "mem1", "metadata": {"title": "Test Source", "source_type": "text"}},
+        ]
+        harvester = HarvesterCitizen(memory_layer=mock_memory)
+        sources = harvester.list_stored_sources(limit=10)
+        assert len(sources) == 1
+        assert sources[0]["metadata"]["title"] == "Test Source"
+
+
+# ---------------------------------------------------------------------------
+# Harvester CLI tests
+# ---------------------------------------------------------------------------
+
+
+class TestHarvesterCli:
+    def test_cli_harvest_no_target(self, capsys):
+        from argparse import Namespace
+
+        from animus.cli import _cmd_harvester
+
+        args = Namespace(
+            harvester_command="harvest",
+            target="",
+            depth="quick",
+            store=False,
+        )
+        ret = _cmd_harvester(args)
+        assert ret == 1
+        captured = capsys.readouterr()
+        assert "Provide --target" in captured.err
+
+    def test_cli_sources(self, capsys):
+        from argparse import Namespace
+
+        from animus.cli import _cmd_harvester
+
+        args = Namespace(
+            harvester_command="sources",
+            limit=10,
+        )
+        ret = _cmd_harvester(args)
+        assert ret == 0
+        captured = capsys.readouterr()
+        assert "Stored Harvested Sources" in captured.out
+
+    def test_cli_analyze(self, capsys, tmp_path):
+        from argparse import Namespace
+
+        from animus.cli import _cmd_harvester
+
+        # Create a file with TODO for observe_codebase to find
+        py_file = tmp_path / "test_module.py"
+        py_file.write_text("# TODO: refactor\nprint('hello')\n")
+
+        args = Namespace(
+            harvester_command="analyze",
+            codebase_path=str(tmp_path),
+            store=False,
+        )
+        ret = _cmd_harvester(args)
+        assert ret == 0
+        captured = capsys.readouterr()
+        assert "Harvester Observation Sweep" in captured.out
+
+
+# ---------------------------------------------------------------------------
+# MCP tool tests
+# ---------------------------------------------------------------------------
+
+
+class TestHarvesterMcpTools:
+    @pytest.fixture
+    def mcp_server(self):
+        pytest.importorskip("mcp")
+        from animus.mcp_server import create_mcp_server
+
+        return create_mcp_server()
+
+    def test_harvester_tools_exist(self, mcp_server):
+        tools = list(mcp_server._tools.keys())
+        assert "animus_harvester_scan" in tools
+        assert "animus_harvester_watchlist_scan" in tools
+        assert "animus_harvester_list_sources" in tools
+
+    def test_harvester_scan_mocked(self, mcp_server, tmp_path, monkeypatch):
+        from animus.citizens.harvester import HarvestedSource
+
+        def _mock_harvest_repo(*, target, compare, depth):
+            from animus.lugh.repos import HarvestResult
+            return HarvestResult(
+                repo=target,
+                score=75,
+                architecture="Clean architecture with separation of concerns",
+                notable_patterns=["dependency injection"],
+                tools_worth_adopting=["pytest"],
+            )
+
+        monkeypatch.setattr(
+            "animus.lugh.repos.harvest_repo",
+            _mock_harvest_repo,
+        )
+
+        result = mcp_server._tools["animus_harvester_scan"].fn(
+            target="fastapi/fastapi",
+            depth="quick",
+            store_source=False,
+        )
+        assert "Harvester Scan Result" in result
+        assert "fastapi/fastapi" in result
+
+    def test_harvester_list_sources_empty(self, mcp_server):
+        result = mcp_server._tools["animus_harvester_list_sources"].fn(
+            limit=10,
+        )
+        assert "No harvested sources found" in result
+
+    def test_harvester_watchlist_scan_empty(self, mcp_server):
+        result = mcp_server._tools["animus_harvester_watchlist_scan"].fn(
+            interval_hours=0,
+            store_report=False,
+        )
+        assert "Watchlist Scan Report" in result

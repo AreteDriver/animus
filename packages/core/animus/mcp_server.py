@@ -2038,6 +2038,169 @@ def create_mcp_server():
 
         return "\n".join(lines)
 
+    # -----------------------------------------------------------------------
+    # Harvester Citizen tools (Research Guild)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_harvester_scan(
+        target: str,
+        depth: str = "quick",
+        store_source: bool = False,
+        api_key: str = "",
+    ) -> str:
+        """Harvest an external GitHub repository using the Research Guild Harvester.
+
+        Clones the repo, extracts architecture, dependencies, testing patterns,
+        and CI setup. Optionally stores the harvested source in memory.
+
+        Args:
+            target: GitHub repo URL or username/repo (e.g., 'fastapi/fastapi').
+            depth: Scan depth: 'quick' (shallow clone) or 'deep' (full clone).
+            store_source: Whether to store the harvested source in memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration. Set citizens.enabled=true to use the Harvester."
+
+        from animus.citizens import HarvesterCitizen
+
+        harvester = HarvesterCitizen(
+            memory_layer=memory if store_source else None,
+            codebase_path=config.citizens.codebase_path or str(config.data_dir.parent),
+        )
+
+        source = harvester.harvest_repository(target=target, depth=depth)
+        if source is None:
+            return f"Harvest failed for '{target}'. Check that the repo exists and Lugh is installed."
+
+        lines = ["# Harvester Scan Result", ""]
+        lines.append(f"**Source:** {source.title}")
+        lines.append(f"**Type:** {source.source_type}")
+        lines.append(f"**Identifier:** {source.identifier}")
+        lines.append(f"**Confidence:** {source.confidence}")
+        if source.tags:
+            lines.append(f"**Tags:** {', '.join(source.tags)}")
+        if source.metadata:
+            lines.append("**Metadata:**")
+            for k, v in source.metadata.items():
+                if isinstance(v, list):
+                    lines.append(f"  - {k}: {len(v)} item(s)")
+                else:
+                    lines.append(f"  - {k}: {v}")
+        if source.content_snippet:
+            lines.append("")
+            lines.append("**Content Snippet:**")
+            lines.append(source.content_snippet[:300])
+
+        if store_source:
+            stored = harvester.store_source(source)
+            if stored:
+                lines.append("")
+                lines.append("✅ Source stored in memory for Research Guild pipeline.")
+            else:
+                lines.append("")
+                lines.append("⚠️ Memory layer unavailable — source not persisted.")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_harvester_watchlist_scan(
+        interval_hours: int = 0,
+        store_report: bool = False,
+        api_key: str = "",
+    ) -> str:
+        """Run harvest scans on all due watchlist repos.
+
+        Args:
+            interval_hours: Override scan interval in hours (0 = use default 168h/7 days).
+            store_report: Whether to store the report in memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration. Set citizens.enabled=true to use the Harvester."
+
+        from animus.citizens import HarvesterCitizen
+
+        harvester = HarvesterCitizen(
+            memory_layer=memory if store_report else None,
+            codebase_path=config.citizens.codebase_path or str(config.data_dir.parent),
+        )
+
+        report = harvester.harvest_watchlist(interval_hours=interval_hours)
+        lines = ["# Harvester Watchlist Scan Report", ""]
+        lines.append(f"**Sources collected:** {report.total_collected}")
+        lines.append(f"**Duplicates removed:** {report.duplicates_removed}")
+        if report.errors:
+            lines.append(f"**Errors:** {len(report.errors)}")
+            for err in report.errors:
+                lines.append(f"  - {err}")
+        if report.sources:
+            lines.append("")
+            lines.append("## Collected Sources")
+            for source in report.sources:
+                lines.append(f"- [{source.source_type}] {source.title} ({source.identifier})")
+        else:
+            lines.append("")
+            lines.append("No new sources collected from watchlist.")
+
+        if store_report:
+            stored = harvester.store_report(report)
+            if stored:
+                lines.append("")
+                lines.append("✅ Report stored in memory.")
+            else:
+                lines.append("")
+                lines.append("⚠️ Memory layer unavailable — report not persisted.")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_harvester_list_sources(
+        limit: int = 20,
+        api_key: str = "",
+    ) -> str:
+        """List recently harvested sources from Animus memory.
+
+        Args:
+            limit: Maximum sources to return (default 20).
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.citizens import HarvesterCitizen
+
+        harvester = HarvesterCitizen(memory_layer=memory)
+        sources = harvester.list_stored_sources(limit=limit)
+
+        if not sources:
+            return "No harvested sources found in memory. Run scans first."
+
+        lines = [f"# Harvested Sources ({len(sources)} found)", ""]
+        for s in sources:
+            meta = s.get("metadata", {})
+            title = meta.get("title", "Untitled")
+            source_type = meta.get("source_type", "unknown")
+            lines.append(f"## {title}")
+            lines.append(f"**Type:** {source_type}")
+            if meta.get("identifier"):
+                lines.append(f"**Identifier:** {meta['identifier']}")
+            if meta.get("tags"):
+                lines.append(f"**Tags:** {', '.join(meta['tags'])}")
+            lines.append("")
+
+        return "\n".join(lines)
+
     return mcp
 
 
