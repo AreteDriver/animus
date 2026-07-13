@@ -1213,3 +1213,107 @@ class TestIntelligenceCitizen:
         report = intel.generate_osint_report("test")
         result = intel.store_report(report)
         assert result is False
+
+    def test_store_proposal_without_memory(self):
+        intel = IntelligenceCitizen()
+        report = intel.generate_osint_report("AWS key: AKIAIOSFODNN7EXAMPLE")
+        proposal = intel.generate_proposal(report)
+        assert proposal is not None
+        result = intel.store_proposal(proposal)
+        assert result is False
+
+
+# ---------------------------------------------------------------------------
+# Intelligence CLI tests
+# ---------------------------------------------------------------------------
+
+
+class TestIntelligenceCli:
+    """Test animus intelligence CLI subcommands via _cmd_intelligence."""
+
+    def test_cli_extract(self, capsys):
+        from argparse import Namespace
+
+        from animus.cli import _cmd_intelligence
+
+        args = Namespace(intel_command="extract", text="Email: alice@example.com", file="")
+        ret = _cmd_intelligence(args)
+        assert ret == 0
+        captured = capsys.readouterr()
+        assert "alice@example.com" in captured.out
+        assert "Emails" in captured.out
+
+    def test_cli_extract_no_input(self, capsys):
+        from argparse import Namespace
+
+        from animus.cli import _cmd_intelligence
+
+        args = Namespace(intel_command="extract", text="", file="")
+        ret = _cmd_intelligence(args)
+        assert ret == 1
+        captured = capsys.readouterr()
+        assert "Provide --text or --file" in captured.err
+
+    def test_cli_secrets(self, capsys):
+        from argparse import Namespace
+
+        from animus.cli import _cmd_intelligence
+
+        args = Namespace(intel_command="secrets", text="AWS_KEY=AKIAIOSFODNN7EXAMPLE", file="")
+        ret = _cmd_intelligence(args)
+        assert ret == 0
+        captured = capsys.readouterr()
+        assert "AWS Access Key ID" in captured.out
+        assert "CRITICAL" in captured.out
+
+    def test_cli_secrets_empty(self, capsys):
+        from argparse import Namespace
+
+        from animus.cli import _cmd_intelligence
+
+        args = Namespace(intel_command="secrets", text="safe text", file="")
+        ret = _cmd_intelligence(args)
+        assert ret == 0
+        captured = capsys.readouterr()
+        assert "No secrets detected" in captured.out
+
+    def test_cli_osint(self, capsys):
+        from argparse import Namespace
+
+        from animus.cli import _cmd_intelligence
+
+        args = Namespace(intel_command="osint", username="octocat")
+        ret = _cmd_intelligence(args)
+        assert ret == 0
+        captured = capsys.readouterr()
+        assert "GitHub" in captured.out
+        assert "octocat" in captured.out
+
+    def test_cli_analyze(self, capsys):
+        from argparse import Namespace
+
+        from animus.cli import _cmd_intelligence
+
+        args = Namespace(
+            intel_command="analyze",
+            text="Email: admin@example.com",
+            file="",
+            store=False,
+        )
+        ret = _cmd_intelligence(args)
+        assert ret == 0
+        captured = capsys.readouterr()
+        assert "Intelligence Report" in captured.out
+        assert "Entities" in captured.out
+        assert "emails: 1" in captured.out
+
+    def test_cli_analyze_no_input(self, capsys):
+        from argparse import Namespace
+
+        from animus.cli import _cmd_intelligence
+
+        args = Namespace(intel_command="analyze", text="", file="", store=False)
+        ret = _cmd_intelligence(args)
+        assert ret == 1
+        captured = capsys.readouterr()
+        assert "Provide --text or --file" in captured.err

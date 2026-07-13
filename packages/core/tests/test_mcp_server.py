@@ -126,8 +126,17 @@ class TestMcpServerCreation:
         # + 4 watchlist + 3 transcripts + 1 self-improve
         # + 2 architect + 2 conversation_designer + 2 knowledge_curator
         # + 2 test_oracle + 4 proposal_queue + 2 citizen_council
-        # + 2 session_steward + 1 list_citizens = 37
-        assert len(tools) == 37
+        # + 2 session_steward + 1 list_citizens
+        # + 4 intelligence = 41
+        assert len(tools) == 41
+
+    def test_intelligence_tools_exist(self, server):
+        tools = server._tool_manager.list_tools()
+        tool_names = {t.name for t in tools}
+        assert "animus_intelligence_extract" in tool_names
+        assert "animus_intelligence_secrets" in tool_names
+        assert "animus_intelligence_osint" in tool_names
+        assert "animus_intelligence_analyze" in tool_names
 
 
 class TestMemoryTools:
@@ -1328,6 +1337,92 @@ class TestCitizenCouncilTools:
             assert data["total_proposals"] == 3
             assert data["unique_components"] == 2
             assert data["sources"]["architect"] == 2
+
+
+class TestIntelligenceTools:
+    """Test animus_intelligence_* MCP tools."""
+
+    def test_intelligence_extract(self, server):
+        result = _run(
+            server.call_tool(
+                "animus_intelligence_extract",
+                {"text": "Email: alice@example.com, IP: 192.168.1.1"},
+            )
+        )
+        text = result[0][0].text
+        assert "alice@example.com" in text
+        assert "192.168.1.1" in text
+        assert "Emails" in text
+        assert "Ipv4 Addresses" in text
+
+    def test_intelligence_extract_empty(self, server):
+        result = _run(
+            server.call_tool("animus_intelligence_extract", {"text": ""})
+        )
+        text = result[0][0].text
+        assert "Total entities found: 0" in text
+
+    def test_intelligence_secrets_text(self, server):
+        result = _run(
+            server.call_tool(
+                "animus_intelligence_secrets",
+                {"text": "API key: AKIAIOSFODNN7EXAMPLE"},
+            )
+        )
+        text = result[0][0].text
+        assert "AWS Access Key ID" in text
+        assert "CRITICAL" in text
+
+    def test_intelligence_secrets_empty(self, server):
+        result = _run(
+            server.call_tool("animus_intelligence_secrets", {"text": "safe text"})
+        )
+        text = result[0][0].text
+        assert "No secrets detected" in text
+
+    def test_intelligence_secrets_file_not_found(self, server):
+        result = _run(
+            server.call_tool(
+                "animus_intelligence_secrets",
+                {"file_path": "/nonexistent/path"},
+            )
+        )
+        text = result[0][0].text
+        assert "File not found" in text
+
+    def test_intelligence_osint(self, server):
+        result = _run(
+            server.call_tool(
+                "animus_intelligence_osint",
+                {"usernames": "octocat,testuser"},
+            )
+        )
+        text = result[0][0].text
+        assert "GitHub" in text
+        assert "octocat" in text
+        assert "testuser" in text
+
+    def test_intelligence_analyze_text(self, server, mock_memory):
+        result = _run(
+            server.call_tool(
+                "animus_intelligence_analyze",
+                {"text": "Contact alice@example.com or visit https://github.com/test"},
+            )
+        )
+        text = result[0][0].text
+        assert "Intelligence Analysis Report" in text
+        assert "alice@example.com" in text
+        assert "Entities" in text
+
+    def test_intelligence_analyze_file_not_found(self, server, mock_memory):
+        result = _run(
+            server.call_tool(
+                "animus_intelligence_analyze",
+                {"file_path": "/nonexistent/path"},
+            )
+        )
+        text = result[0][0].text
+        assert "File not found" in text
 
 
 class TestMcpImportError:
