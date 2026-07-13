@@ -680,6 +680,142 @@ def _cmd_citizen_council_summary(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_intelligence(args: argparse.Namespace) -> int:
+    from animus.citizens import IntelligenceCitizen
+    from animus.config import get_config
+    from animus.memory import MemoryLayer
+
+    config = get_config()
+    store = getattr(args, "store", False)
+    memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
+    intel = IntelligenceCitizen(memory_layer=memory)
+
+    sub = args.intel_command
+
+    if sub == "extract":
+        text = args.text or ""
+        if not text and args.file:
+            from pathlib import Path
+
+            path = Path(args.file)
+            text = path.read_text(encoding="utf-8", errors="ignore") if path.exists() else ""
+        if not text:
+            print("Provide --text or --file.", file=sys.stderr)
+            return 1
+
+        entities = intel.extract_entities(text)
+        data = entities.to_dict()
+        print(f"# Extracted Entities ({entities.total_count()} total)\n")
+        for category, items in data.items():
+            if items:
+                print(f"## {category.replace('_', ' ').title()} ({len(items)})")
+                for item in items:
+                    print(f"- {item}")
+                print()
+        return 0
+
+    if sub == "secrets":
+        if args.file:
+            from pathlib import Path
+
+            path = Path(args.file)
+            if not path.exists():
+                print(f"File not found: {args.file}", file=sys.stderr)
+                return 1
+            findings = intel.scan_file_secrets(path)
+        elif args.text:
+            findings = intel.scan_secrets(args.text)
+        else:
+            print("Provide --text or --file.", file=sys.stderr)
+            return 1
+
+        if not findings:
+            print("No secrets detected.")
+            return 0
+
+        critical = [f for f in findings if f.severity == "critical"]
+        high = [f for f in findings if f.severity == "high"]
+        print(f"# Secret Findings: {len(findings)} total ({len(critical)} critical, {len(high)} high)\n")
+        for f in findings:
+            loc = f" (line {f.line_number})" if f.line_number else ""
+            print(f"[{f.severity.upper()}] {f.description}{loc}")
+            print(f"  pattern={f.pattern_name} match={f.matched_text}")
+        return 0
+
+    if sub == "osint":
+        if not args.username:
+            print("Provide --username.", file=sys.stderr)
+            return 1
+
+        profiles = intel.generate_profile_urls(args.username)
+        print(f"# OSINT Profiles for @{args.username}\n")
+        if profiles:
+            for p in profiles:
+                print(f"- {p.platform}: {p.url} ({p.category})")
+        else:
+            print("No valid profile URLs generated.")
+        return 0
+
+    if sub == "analyze":
+        text = args.text or ""
+        if args.file:
+            from pathlib import Path
+
+            path = Path(args.file)
+            if not path.exists():
+                print(f"File not found: {args.file}", file=sys.stderr)
+                return 1
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        if not text:
+            print("Provide --text or --file.", file=sys.stderr)
+            return 1
+
+        report = intel.analyze(text=text)
+        print(f"# Intelligence Report: {report.source}\n")
+        data = report.extracted.to_dict()
+        total = report.extracted.total_count()
+        print(f"## Entities ({total} total)")
+        for category, items in data.items():
+            if items:
+                print(f"- {category}: {len(items)}")
+        print()
+
+        if report.secrets:
+            crit = len([s for s in report.secrets if s.severity == "critical"])
+            print(f"## Secrets ({len(report.secrets)} total, {crit} critical)")
+            for s in report.secrets[:10]:
+                print(f"- [{s.severity}] {s.description}")
+            print()
+        else:
+            print("## Secrets")
+            print("None found.\n")
+
+        if report.profiles:
+            print(f"## OSINT Profiles ({len(report.profiles)} generated)")
+            for p in report.profiles[:10]:
+                print(f"- {p.platform}: {p.url}")
+            print()
+
+        proposal = intel.generate_proposal(report)
+        if proposal:
+            print(f"## Proposal: {proposal.title}")
+            print(f"ID: {proposal.id}")
+            print(f"Problem: {proposal.problem}")
+            print(f"Recommendation: {proposal.recommendation}")
+            print(f"Effort: {proposal.estimated_effort_hours}h")
+            if store and memory:
+                stored = intel.store_report(report)
+                if stored:
+                    print("\n✅ Report stored in memory.")
+        else:
+            print("## No Proposal")
+            print("No critical security findings — no proposal generated.")
+        return 0
+
+    print(f"Unknown intelligence subcommand: {sub}", file=sys.stderr)
+    return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="animus")
     subparsers = parser.add_subparsers(dest="command")
@@ -762,6 +898,40 @@ def main(argv: list[str] | None = None) -> int:
         help="Store generated proposal in Animus memory",
     )
     oracle_parser.set_defaults(func=_cmd_test_oracle)
+
+    # ------------------------------------------------------------------
+    # Intelligence Officer
+    # ------------------------------------------------------------------
+
+    intel_parser = subparsers.add_parser(
+        "intelligence",
+        help="Run the Intelligence Officer Citizen — extraction, secrets, OSINT",
+    )
+    intel_subparsers = intel_parser.add_subparsers(dest="intel_command")
+
+    intel_extract = intel_subparsers.add_parser("extract", help="Extract entities from text")
+    intel_extract.add_argument("--text", default="", help="Text to analyze")
+    intel_extract.add_argument("--file", default="", help="File to read and analyze")
+    intel_extract.set_defaults(func=_cmd_intelligence)
+
+    intel_secrets = intel_subparsers.add_parser("secrets", help="Scan for secrets and credentials")
+    intel_secrets.add_argument("--text", default="", help="Text to scan")
+    intel_secrets.add_argument("--file", default="", help="File to scan")
+    intel_secrets.set_defaults(func=_cmd_intelligence)
+
+    intel_osint = intel_subparsers.add_parser("osint", help="Generate OSINT profile URLs")
+    intel_osint.add_argument("--username", required=True, help="Username to look up")
+    intel_osint.set_defaults(func=_cmd_intelligence)
+
+    intel_analyze = intel_subparsers.add_parser("analyze", help="Comprehensive intelligence report")
+    intel_analyze.add_argument("--text", default="", help="Text to analyze")
+    intel_analyze.add_argument("--file", default="", help="File to analyze")
+    intel_analyze.add_argument(
+        "--store",
+        action="store_true",
+        help="Store report in Animus memory",
+    )
+    intel_analyze.set_defaults(func=_cmd_intelligence)
 
     # Session
     session_parser = subparsers.add_parser(

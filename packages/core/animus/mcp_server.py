@@ -1797,6 +1797,247 @@ def create_mcp_server():
         }
         return json.dumps(status, indent=2)
 
+    # -----------------------------------------------------------------------
+    # Intelligence Officer Citizen tools (Mind Foundation)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_intelligence_extract(
+        text: str,
+    ) -> str:
+        """Extract entities from text using the Intelligence Officer.
+
+        Identifies emails, URLs, domains, IP addresses, hashes, phone numbers,
+        social handles, credit cards, and AWS keys.
+
+        Args:
+            text: Source text to analyze.
+        """
+        from animus.citizens import IntelligenceCitizen
+
+        intel = IntelligenceCitizen()
+        entities = intel.extract_entities(text)
+        data = entities.to_dict()
+
+        lines = ["# Intelligence Extraction Report", ""]
+        total = entities.total_count()
+        lines.append(f"**Total entities found:** {total}")
+        lines.append("")
+
+        for category, items in data.items():
+            if items:
+                lines.append(f"## {category.replace('_', ' ').title()}")
+                for item in items[:20]:
+                    lines.append(f"- {item}")
+                if len(items) > 20:
+                    lines.append(f"- ... and {len(items) - 20} more")
+                lines.append("")
+
+        if total == 0:
+            lines.append("No entities detected in provided text.")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_intelligence_secrets(
+        text: str = "",
+        file_path: str = "",
+        api_key: str = "",
+    ) -> str:
+        """Scan text or a file for secrets and credentials.
+
+        Detects AWS keys, GitHub tokens, private keys, Stripe keys, database
+        URLs, generic API keys, and more.
+
+        Args:
+            text: Source text to scan (ignored if file_path is provided).
+            file_path: Absolute or relative path to a file to scan.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from pathlib import Path
+
+        from animus.citizens import IntelligenceCitizen
+
+        intel = IntelligenceCitizen()
+
+        if file_path:
+            path = Path(file_path)
+            if not path.exists():
+                return f"File not found: {file_path}"
+            findings = intel.scan_file_secrets(path)
+        elif text:
+            findings = intel.scan_secrets(text)
+        else:
+            return "Provide either text or file_path to scan."
+
+        if not findings:
+            return "No secrets detected."
+
+        lines = ["# Secret Detection Report", ""]
+        critical = [f for f in findings if f.severity == "critical"]
+        high = [f for f in findings if f.severity == "high"]
+        medium = [f for f in findings if f.severity == "medium"]
+        low = [f for f in findings if f.severity == "low"]
+
+        lines.append(f"**Critical:** {len(critical)} | **High:** {len(high)} | **Medium:** {len(medium)} | **Low:** {len(low)}")
+        lines.append("")
+
+        for finding in findings:
+            loc = f" (line {finding.line_number})" if finding.line_number else ""
+            lines.append(
+                f"- **[{finding.severity.upper()}]** {finding.description}{loc}"
+            )
+            lines.append(f"  Pattern: `{finding.pattern_name}` | Match: `{finding.matched_text}`")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_intelligence_osint(
+        usernames: str,
+    ) -> str:
+        """Generate public profile URLs for usernames across platforms.
+
+        Creates candidate URLs for social, professional, and code platforms.
+        URLs are generated, not verified for existence.
+
+        Args:
+            usernames: Comma-separated list of usernames to check.
+        """
+        from animus.citizens import IntelligenceCitizen
+
+        intel = IntelligenceCitizen()
+        lines = ["# OSINT Profile URLs", ""]
+
+        for username in (u.strip() for u in usernames.split(",") if u.strip()):
+            profiles = intel.generate_profile_urls(username)
+            if profiles:
+                lines.append(f"## @{username}")
+                for p in profiles:
+                    lines.append(f"- [{p.platform}]({p.url}) ({p.category})")
+                lines.append("")
+            else:
+                lines.append(f"## @{username}")
+                lines.append("- No valid profile URLs generated (username may fail format checks).")
+                lines.append("")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_intelligence_analyze(
+        text: str = "",
+        file_path: str = "",
+        store_report: bool = False,
+        api_key: str = "",
+    ) -> str:
+        """Run comprehensive intelligence analysis on text or file.
+
+        Combines entity extraction, secret detection, OSINT profile generation,
+        and NER into a single report. Optionally stores the report in memory.
+
+        Args:
+            text: Source text to analyze.
+            file_path: Path to file to analyze (takes precedence over text).
+            store_report: Whether to store the report in Animus memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from pathlib import Path
+
+        from animus.citizens import IntelligenceCitizen
+
+        intel = IntelligenceCitizen(memory_layer=memory if store_report else None)
+
+        if file_path:
+            path = Path(file_path)
+            if not path.exists():
+                return f"File not found: {file_path}"
+            report = intel.analyze(file_path=path)
+        elif text:
+            report = intel.analyze(text=text)
+        else:
+            return "Provide either text or file_path to analyze."
+
+        lines = ["# Intelligence Analysis Report", ""]
+        lines.append(f"**Source:** {report.source}")
+        lines.append(f"**Timestamp:** {report.timestamp.isoformat()}")
+        lines.append("")
+
+        # Entities
+        data = report.extracted.to_dict()
+        total = report.extracted.total_count()
+        lines.append(f"## Extracted Entities ({total} total)")
+        for category, items in data.items():
+            if items:
+                lines.append(f"- **{category.replace('_', ' ').title()}:** {len(items)}")
+                for item in items[:10]:
+                    lines.append(f"  - {item}")
+                if len(items) > 10:
+                    lines.append(f"  - ... and {len(items) - 10} more")
+        lines.append("")
+
+        # Secrets
+        if report.secrets:
+            critical = len([s for s in report.secrets if s.severity == "critical"])
+            lines.append(f"## Secrets Detected ({len(report.secrets)} total, {critical} critical)")
+            for s in report.secrets[:10]:
+                loc = f" line {s.line_number}" if s.line_number else ""
+                lines.append(f"- **[{s.severity.upper()}]** {s.description}{loc}")
+                lines.append(f"  Match: `{s.matched_text}`")
+            if len(report.secrets) > 10:
+                lines.append(f"- ... and {len(report.secrets) - 10} more")
+            lines.append("")
+        else:
+            lines.append("## Secrets Detected")
+            lines.append("None found.")
+            lines.append("")
+
+        # Profiles
+        if report.profiles:
+            lines.append(f"## OSINT Profiles ({len(report.profiles)} generated)")
+            for p in report.profiles[:15]:
+                lines.append(f"- [{p.platform}]({p.url}) — @{p.username} ({p.category})")
+            if len(report.profiles) > 15:
+                lines.append(f"- ... and {len(report.profiles) - 15} more")
+            lines.append("")
+
+        # Named entities
+        if report.entities:
+            lines.append(f"## Named Entities ({len(report.entities)} via NER)")
+            for e in report.entities[:15]:
+                lines.append(f"- {e['name']} ({e['type']})")
+            if len(report.entities) > 15:
+                lines.append(f"- ... and {len(report.entities) - 15} more")
+            lines.append("")
+
+        # Proposal
+        proposal = intel.generate_proposal(report)
+        if proposal:
+            lines.append("## Improvement Proposal Generated")
+            lines.append(f"**ID:** `{proposal.id}`")
+            lines.append(f"**Title:** {proposal.title}")
+            lines.append(f"**Problem:** {proposal.problem}")
+            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(f"**Effort:** {proposal.estimated_effort_hours}h")
+            lines.append("")
+            if store_report:
+                stored = intel.store_report(report)
+                if stored:
+                    lines.append("✅ Report stored in memory.")
+                else:
+                    lines.append("⚠️ Memory layer unavailable — report not persisted.")
+        else:
+            lines.append("## No Proposal Generated")
+            lines.append("No critical security findings — no proposal needed.")
+
+        return "\n".join(lines)
+
     return mcp
 
 

@@ -338,11 +338,57 @@ class IntelligenceCitizen:
         self,
         memory_layer: MemoryLayer | None = None,
         evidence_dir: Path | str | None = None,
+        codebase_path: Path | str = ".",
     ):
         self.memory = memory_layer
         self.evidence_dir = Path(evidence_dir).expanduser() if evidence_dir else None
+        self.codebase_path = Path(codebase_path).expanduser()
         if self.evidence_dir:
             self.evidence_dir.mkdir(parents=True, exist_ok=True)
+
+    # ------------------------------------------------------------------
+    # Observation methods (for autonomous loop compatibility)
+    # ------------------------------------------------------------------
+
+    def observe_codebase(self) -> list[dict[str, Any]]:
+        """Scan codebase for secrets and return findings as observations.
+
+        Returns:
+            List of observation dicts compatible with autonomous loop.
+        """
+        findings: list[dict[str, Any]] = []
+        if not self.codebase_path.exists():
+            logger.warning("Codebase path does not exist: %s", self.codebase_path)
+            return findings
+
+        secrets = self.scan_directory_secrets(self.codebase_path)
+        for s in secrets:
+            findings.append({
+                "source": "codebase",
+                "description": f"{s.description}: {s.matched_text}",
+                "severity": s.severity,
+                "context": {
+                    "pattern": s.pattern_name,
+                    "file": s.file_path,
+                    "line": s.line_number,
+                },
+            })
+
+        entities = self.extract_from_directory(self.codebase_path)
+        for file_path, extracted in entities.items():
+            if extracted.total_count() > 0:
+                findings.append({
+                    "source": "codebase",
+                    "description": f"Extracted {extracted.total_count()} entities from {file_path}",
+                    "severity": "info",
+                    "context": {
+                        "file": file_path,
+                        "entities": extracted.to_dict(),
+                    },
+                })
+
+        logger.info("Intelligence observe_codebase: %d findings", len(findings))
+        return findings
 
     # ------------------------------------------------------------------
     # Entity Extraction (ported from RedOPS entity_extract)
@@ -680,14 +726,36 @@ class IntelligenceCitizen:
         """Generate an improvement proposal from intelligence findings.
 
         Args:
-            report: IntelligenceReport to base proposal on. If None, no proposal.
+            report: IntelligenceReport to base proposal on. If None, scans codebase
+                and builds a report automatically.
 
         Returns:
             Improvement proposal, or None if no actionable findings.
         """
         if report is None:
-            logger.info("No intelligence report provided — no proposal generated")
-            return None
+            # Autonomous-loop path: scan codebase and build report
+            if not self.codebase_path.exists():
+                logger.info("No codebase path available — no proposal generated")
+                return None
+            logger.info("Scanning codebase for intelligence report: %s", self.codebase_path)
+            # Sample a subset of files to avoid excessive scanning
+            sample_texts: list[str] = []
+            for path in self.codebase_path.rglob("*.py"):
+                if any(part in _SKIP_DIRS for part in path.parts):
+                    continue
+                try:
+                    sample_texts.append(path.read_text(encoding="utf-8", errors="ignore"))
+                except Exception:
+                    continue
+                if len(sample_texts) >= 20:
+                    break
+
+            combined = "\n\n".join(sample_texts)
+            if not combined:
+                logger.info("No source files found to analyze — no proposal generated")
+                return None
+            report = self.generate_osint_report(combined)
+            report.entities = self.extract_named_entities(combined)
 
         # Critical secrets are always actionable
         critical_secrets = [s for s in report.secrets if s.severity == "critical"]
@@ -766,6 +834,34 @@ class IntelligenceCitizen:
 
         logger.info(f"Generated proposal {proposal.id}: {proposal.title}")
         return proposal
+
+    def store_proposal(self, proposal: ImprovementProposal) -> bool:
+        """Store a proposal in Animus memory (autonomous-loop compatibility).
+
+        Args:
+            proposal: Proposal to store.
+
+        Returns:
+            True if stored successfully.
+        """
+        if self.memory is None:
+            logger.warning("Memory layer not available — proposal not persisted")
+            return False
+
+        try:
+            from animus.memory import MemoryType
+
+            self.memory.remember(
+                content=f"{proposal.title}\n\n{proposal.problem}\n\nRecommendation: {proposal.recommendation}",
+                memory_type=MemoryType.PROCEDURAL,
+                tags=["intelligence", "proposal", proposal.status.value],
+                metadata=proposal.to_dict(),
+            )
+            logger.info(f"Proposal {proposal.id} stored in memory")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to store proposal: {e}")
+            return False
 
     # ------------------------------------------------------------------
     # Persistence

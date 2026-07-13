@@ -32,6 +32,10 @@ CITIZEN_REGISTRY: dict[str, tuple[type, str]] = {
         "animus.citizens.conversation_designer.ConversationDesignerCitizen",
         "conversation",
     ),
+    "intelligence": (
+        "animus.citizens.intelligence.IntelligenceCitizen",
+        "codebase",
+    ),
     "knowledge": (
         "animus.citizens.knowledge_curator.KnowledgeCuratorCitizen",
         "codebase",
