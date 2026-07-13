@@ -110,6 +110,7 @@ class CitizenCouncil:
             "abstraction",
             "architect",
             "conversation_designer",
+            "first_principles",
             "harvester",
             "intelligence",
             "knowledge_curator",

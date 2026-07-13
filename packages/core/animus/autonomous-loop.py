@@ -52,6 +52,10 @@ CITIZEN_REGISTRY: dict[str, tuple[type, str]] = {
         "animus.citizens.pattern.PatternCitizen",
         "codebase",
     ),
+    "first_principles": (
+        "animus.citizens.first_principles.FirstPrinciplesCitizen",
+        "codebase",
+    ),
     "test": (
         "animus.citizens.test_oracle.TestOracleCitizen",
         "evaluation",

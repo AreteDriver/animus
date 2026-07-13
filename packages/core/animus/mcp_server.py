@@ -2317,6 +2317,139 @@ def create_mcp_server():
         return "\n".join(lines)
 
     # -----------------------------------------------------------------------
+    # First-Principles Citizen tools (Research Guild)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_first_principles_scan(
+        codebase_path: str = "",
+        store_principles: bool = False,
+        api_key: str = "",
+    ) -> str:
+        """Run the First-Principles Citizen principle reduction.
+
+        Reads pattern cards from memory, reduces them to fundamental
+        engineering truths, and flags contradictions. Optionally stores
+        principle cards.
+
+        Args:
+            codebase_path: Path to the codebase for context.
+            store_principles: Whether to store reduced principles in memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration. Set citizens.enabled=true to use the First-Principles Citizen."
+
+        from animus.citizens import FirstPrinciplesCitizen
+
+        resolved_path = codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        fp = FirstPrinciplesCitizen(
+            memory_layer=memory if store_principles else None,
+            codebase_path=resolved_path,
+        )
+
+        lines = ["# First-Principles Citizen Scan Report", ""]
+
+        # Observe patterns
+        patterns = fp.observe_patterns()
+        if patterns:
+            lines.append(f"## Patterns Observed ({len(patterns)} found)")
+            for p in patterns:
+                lines.append(f"- **[{p['severity'].upper()}]** {p['description']}")
+            lines.append("")
+        else:
+            lines.append("## No Patterns Found")
+            lines.append("No pattern cards in memory. Run pattern scans first.")
+            lines.append("")
+
+        # Reduce to principles
+        pattern_contexts = [p["context"] for p in patterns]
+        principles = fp.reduce_to_principles(pattern_contexts)
+        if principles:
+            lines.append(f"## Reduced Principles ({len(principles)} total)")
+            for pr in principles:
+                lines.append(f"\n### Principle ({pr.category})")
+                lines.append(f"**Statement:** {pr.principle_statement}")
+                lines.append(f"**Supporting Patterns:** {', '.join(pr.supporting_patterns)}")
+                lines.append(f"**Confidence:** {pr.confidence}")
+                if pr.contradictions:
+                    lines.append(f"**Contradictions Flagged:** {len(pr.contradictions)}")
+                    for c in pr.contradictions:
+                        lines.append(f"  - ⚠️ {c}")
+                if store_principles:
+                    stored = fp.store_principle(pr)
+                    if stored:
+                        lines.append("✅ Stored in memory.")
+            lines.append("")
+        else:
+            lines.append("## No Principles Reduced")
+            lines.append("No recognizable first-principles found in observed patterns.")
+            lines.append("")
+
+        # Proposal
+        proposal = fp.generate_proposal(principles)
+        if proposal:
+            lines.append("## Improvement Proposal Generated")
+            lines.append(f"**ID:** `{proposal.id}`")
+            lines.append(f"**Title:** {proposal.title}")
+            lines.append(f"**Problem:** {proposal.problem}")
+            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(f"**Recommendation:** {proposal.recommendation}")
+            lines.append(f"**Effort:** {proposal.estimated_effort_hours}h")
+            if proposal.potential_risks:
+                lines.append("**Risks:**")
+                for r in proposal.potential_risks:
+                    lines.append(f"  - {r.description} ({r.severity}) — {r.mitigation}")
+            if store_principles:
+                stored = fp.store_proposal(proposal)
+                if stored:
+                    lines.append("")
+                    lines.append("✅ Proposal stored in memory.")
+        else:
+            lines.append("## No Proposal Generated")
+            lines.append("No principles reduced — no proposal needed.")
+
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_first_principles_list_principles(
+        limit: int = 20,
+        api_key: str = "",
+    ) -> str:
+        """List recently reduced principle cards from Animus memory.
+
+        Args:
+            limit: Maximum principles to return (default 20).
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from animus.citizens import FirstPrinciplesCitizen
+
+        fp = FirstPrinciplesCitizen(memory_layer=memory)
+        principles = fp.list_stored_principles(limit=limit)
+
+        if not principles:
+            return "No principle cards found in memory. Run first-principles scans first."
+
+        lines = [f"# Principle Cards ({len(principles)} found)", ""]
+        for p in principles:
+            meta = p.get("metadata", {})
+            statement = meta.get("principle_statement", "Untitled")
+            category = meta.get("category", "unknown")
+            lines.append(f"## Principle ({category})")
+            lines.append(f"**Statement:** {statement}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    # -----------------------------------------------------------------------
     # Harvester Citizen tools (Research Guild)
     # -----------------------------------------------------------------------
 

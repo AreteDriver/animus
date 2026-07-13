@@ -975,6 +975,88 @@ def _cmd_pattern(args: argparse.Namespace) -> int:
     return 1
 
 
+def _cmd_first_principles(args: argparse.Namespace) -> int:
+    from animus.citizens import FirstPrinciplesCitizen
+    from animus.config import get_config
+    from animus.memory import MemoryLayer
+
+    config = get_config()
+    if not config.citizens.enabled:
+        print("Citizens are disabled in configuration.", file=sys.stderr)
+        return 1
+
+    store = getattr(args, "store", False)
+    memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
+    fp = FirstPrinciplesCitizen(
+        memory_layer=memory,
+        codebase_path=getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(config.data_dir.parent),
+    )
+
+    sub = args.first_principles_command
+
+    if sub == "scan":
+        print("# Running First-Principles Citizen scan...", file=sys.stderr)
+
+        # Observe patterns from memory
+        patterns = fp.observe_patterns()
+        if patterns:
+            print(f"\n## Patterns Observed ({len(patterns)} found)", file=sys.stderr)
+            for p in patterns:
+                print(f"- [{p['severity'].upper()}] {p['description']}", file=sys.stderr)
+        else:
+            print("\n## No patterns found in memory.", file=sys.stderr)
+
+        # Reduce to principles
+        pattern_contexts = [p["context"] for p in patterns]
+        principles = fp.reduce_to_principles(pattern_contexts)
+        print(f"\n# Reduced Principles ({len(principles)} total)")
+        for pr in principles:
+            print(f"\n## Principle ({pr.category})")
+            print(f"**Statement:** {pr.principle_statement}")
+            print(f"**Supporting Patterns:** {', '.join(pr.supporting_patterns)}")
+            print(f"**Confidence:** {pr.confidence}")
+            if pr.contradictions:
+                print(f"**Contradictions Flagged:** {len(pr.contradictions)}")
+            if store and memory:
+                stored = fp.store_principle(pr)
+                if stored:
+                    print(f"✅ Stored principle")
+
+        # Generate proposal
+        proposal = fp.generate_proposal(principles)
+        if proposal:
+            print(f"\n## Proposal Generated: {proposal.title}")
+            print(f"**ID:** {proposal.id}")
+            print(f"**Problem:** {proposal.problem}")
+            print(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            print(f"**Recommendation:** {proposal.recommendation}")
+            print(f"**Effort:** {proposal.estimated_effort_hours}h")
+            if store and memory:
+                stored = fp.store_proposal(proposal)
+                if stored:
+                    print("\n✅ Proposal stored in memory.")
+        else:
+            print("\n## No Proposal Generated")
+            print("No principles reduced — nothing to propose.")
+        return 0
+
+    if sub == "principles":
+        principles = fp.list_stored_principles(limit=args.limit)
+        print(f"# Stored Principles ({len(principles)} found)\n")
+        if not principles:
+            print("No principles found in memory.")
+            return 0
+        for p in principles:
+            meta = p.get("metadata", {})
+            statement = meta.get("principle_statement", "Untitled")
+            category = meta.get("category", "unknown")
+            print(f"- [{category}] {statement}")
+        return 0
+
+    print(f"Unknown first-principles subcommand: {sub}", file=sys.stderr)
+    return 1
+
+
 def _cmd_intelligence(args: argparse.Namespace) -> int:
     from animus.citizens import IntelligenceCitizen
     from animus.config import get_config
@@ -1247,6 +1329,33 @@ def main(argv: list[str] | None = None) -> int:
     ptn_patterns = pattern_subparsers.add_parser("patterns", help="List stored pattern cards")
     ptn_patterns.add_argument("--limit", type=int, default=20, help="Max patterns to list")
     ptn_patterns.set_defaults(func=_cmd_pattern)
+
+    # ------------------------------------------------------------------
+    # First-Principles Citizen (Research Guild)
+    # ------------------------------------------------------------------
+
+    fp_parser = subparsers.add_parser(
+        "first-principles",
+        help="Run the Research Guild First-Principles Citizen — reduce patterns to truths",
+    )
+    fp_subparsers = fp_parser.add_subparsers(dest="first_principles_command")
+
+    fp_scan = fp_subparsers.add_parser("scan", help="Scan memory for patterns and reduce to principles")
+    fp_scan.add_argument(
+        "--codebase-path",
+        default="",
+        help="Path to the codebase",
+    )
+    fp_scan.add_argument(
+        "--store",
+        action="store_true",
+        help="Store reduced principles and proposal in memory",
+    )
+    fp_scan.set_defaults(func=_cmd_first_principles)
+
+    fp_principles = fp_subparsers.add_parser("principles", help="List stored principle cards")
+    fp_principles.add_argument("--limit", type=int, default=20, help="Max principles to list")
+    fp_principles.set_defaults(func=_cmd_first_principles)
 
     # ------------------------------------------------------------------
     # Harvester (Research Guild)

@@ -14,6 +14,7 @@ from animus.citizens import (
     ArchitectCitizen,
     CitizenCouncil,
     ConversationDesignerCitizen,
+    FirstPrinciplesCitizen,
     ForgeCommissioner,
     HarvesterCitizen,
     ImprovementProposal,
@@ -2089,3 +2090,271 @@ class TestPatternMcpTools:
             limit=10,
         )
         assert "No pattern cards found" in result
+
+
+# ---------------------------------------------------------------------------
+# FirstPrinciplesCitizen tests (Research Guild — Citizen 010)
+# ---------------------------------------------------------------------------
+
+
+class TestFirstPrinciplesCitizen:
+    def test_initialization(self):
+        citizen = FirstPrinciplesCitizen()
+        assert citizen.codebase_path == Path(".").expanduser()
+        assert citizen.memory is None
+
+    def test_reduce_to_principles_single_pattern(self):
+        citizen = FirstPrinciplesCitizen()
+        patterns = [
+            {"name": "State externalization pattern", "category": "architecture", "description": "Separate state from computation", "tags": ["state"], "source_provenance": ["src1"]},
+        ]
+        principles = citizen.reduce_to_principles(patterns)
+        assert len(principles) >= 1
+        statements = [p.principle_statement for p in principles]
+        assert any("separate state" in s.lower() for s in statements)
+
+    def test_reduce_to_principles_multiple_patterns_same_principle(self):
+        citizen = FirstPrinciplesCitizen()
+        patterns = [
+            {"name": "State externalization", "category": "architecture", "description": "Separate state", "tags": ["state"], "source_provenance": ["src1"]},
+            {"name": "Immutable log pattern", "category": "architecture", "description": "Use immutable logs", "tags": ["state"], "source_provenance": ["src2"]},
+        ]
+        principles = citizen.reduce_to_principles(patterns)
+        # Should merge into a single principle with combined supporting patterns
+        assert len(principles) >= 1
+        # At least one principle should have 2 supporting patterns
+        assert any(len(p.supporting_patterns) >= 2 for p in principles)
+
+    def test_reduce_to_principles_no_match(self):
+        citizen = FirstPrinciplesCitizen()
+        patterns = [
+            {"name": "Unknown pattern", "category": "unknown", "description": "Something random", "tags": ["unknown"], "source_provenance": ["src1"]},
+        ]
+        principles = citizen.reduce_to_principles(patterns)
+        assert principles == []
+
+    def test_reduce_to_principles_empty(self):
+        citizen = FirstPrinciplesCitizen()
+        assert citizen.reduce_to_principles([]) == []
+        assert citizen.reduce_to_principles(None) == []
+
+    def test_reduce_to_principles_contradictions(self):
+        citizen = FirstPrinciplesCitizen()
+        # Create a pattern that would trigger a contradiction keyword pair
+        patterns = [
+            {"name": "Stateless services", "category": "architecture", "description": "stateless and state externalization", "tags": ["state"], "source_provenance": ["src1"]},
+        ]
+        principles = citizen.reduce_to_principles(patterns)
+        for p in principles:
+            if "stateless" in p.principle_statement.lower() and "state externalization" in p.principle_statement.lower():
+                assert len(p.contradictions) > 0
+
+    def test_principle_card_fields(self):
+        citizen = FirstPrinciplesCitizen()
+        patterns = [
+            {"name": "Async communication pattern", "category": "architecture", "description": "Use async message queues", "tags": ["async"], "source_provenance": ["src1"]},
+        ]
+        principles = citizen.reduce_to_principles(patterns)
+        assert principles
+        p = principles[0]
+        assert p.principle_statement
+        assert p.category
+        assert p.confidence > 0
+        assert p.supporting_patterns
+
+    def test_generate_proposal_with_principles(self):
+        citizen = FirstPrinciplesCitizen()
+        patterns = [
+            {"name": "Async communication", "category": "architecture", "description": "Use async message queues", "tags": ["async"], "source_provenance": ["src1"]},
+            {"name": "Decoupling pattern", "category": "architecture", "description": "Decouple producers from consumers", "tags": ["async"], "source_provenance": ["src2"]},
+        ]
+        principles = citizen.reduce_to_principles(patterns)
+        proposal = citizen.generate_proposal(principles)
+        assert proposal is not None
+        assert "principle" in proposal.title.lower()
+        assert proposal.confidence_score > 0
+
+    def test_generate_proposal_empty_principles(self):
+        citizen = FirstPrinciplesCitizen()
+        proposal = citizen.generate_proposal([])
+        assert proposal is None
+
+    def test_generate_proposal_auto_discover(self):
+        citizen = FirstPrinciplesCitizen()
+        proposal = citizen.generate_proposal()
+        assert proposal is None
+
+    def test_observe_patterns_without_memory(self):
+        citizen = FirstPrinciplesCitizen()
+        obs = citizen.observe_patterns()
+        assert obs == []
+
+    def test_observe_patterns_with_memory(self):
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = [
+            {
+                "content": "Performance pattern",
+                "metadata": {
+                    "name": "Performance pattern",
+                    "category": "performance",
+                    "description": "Cache and paginate",
+                    "constituent_mechanisms": ["caching", "pagination"],
+                    "tags": ["performance"],
+                    "source_provenance": ["src1"],
+                },
+            }
+        ]
+        citizen = FirstPrinciplesCitizen(memory_layer=mock_memory)
+        obs = citizen.observe_patterns()
+        assert len(obs) == 1
+        assert obs[0]["context"]["name"] == "Performance pattern"
+
+    def test_store_and_list_principles(self):
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = [
+            {
+                "id": "pr1",
+                "content": "Systems that separate concerns survive longer",
+                "metadata": {"principle_statement": "Systems that separate concerns survive longer", "category": "architecture"},
+            }
+        ]
+        citizen = FirstPrinciplesCitizen(memory_layer=mock_memory)
+        principles = citizen.reduce_to_principles([
+            {"name": "Separation of concerns", "category": "architecture", "description": "Separate concerns", "tags": ["architecture"], "source_provenance": ["s1"]},
+        ])
+        assert principles
+        stored = citizen.store_principle(principles[0])
+        assert stored is True
+        mock_memory.remember.assert_called_once()
+
+        listed = citizen.list_stored_principles(limit=10)
+        assert len(listed) == 1
+        assert listed[0]["metadata"]["principle_statement"] == "Systems that separate concerns survive longer"
+
+    def test_store_proposal(self):
+        mock_memory = MagicMock()
+        citizen = FirstPrinciplesCitizen(memory_layer=mock_memory)
+        principles = citizen.reduce_to_principles([
+            {"name": "Async communication", "category": "architecture", "description": "Use async message queues", "tags": ["async"], "source_provenance": ["s1"]},
+        ])
+        proposal = citizen.generate_proposal(principles)
+        assert proposal is not None
+        stored = citizen.store_proposal(proposal)
+        assert stored is True
+        mock_memory.remember.assert_called_once()
+
+    def test_store_principle_without_memory(self):
+        citizen = FirstPrinciplesCitizen()
+        principles = citizen.reduce_to_principles([
+            {"name": "Async communication", "category": "architecture", "description": "Use async message queues", "tags": ["async"], "source_provenance": ["s1"]},
+        ])
+        stored = citizen.store_principle(principles[0])
+        assert stored is False
+
+    def test_store_report_with_memory(self):
+        mock_memory = MagicMock()
+        citizen = FirstPrinciplesCitizen(memory_layer=mock_memory)
+        from animus.citizens.first_principles import FirstPrinciplesReport
+
+        report = FirstPrinciplesReport(principles=[], patterns_processed=5)
+        stored = citizen.store_report(report)
+        assert stored is True
+        mock_memory.remember.assert_called_once()
+
+    def test_list_principles_without_memory(self):
+        citizen = FirstPrinciplesCitizen()
+        listed = citizen.list_stored_principles(limit=10)
+        assert listed == []
+
+    def test_first_principles_report_summary(self):
+        from animus.citizens.first_principles import FirstPrinciplesReport, PrincipleCard
+
+        report = FirstPrinciplesReport(
+            principles=[PrincipleCard(principle_statement="P1")],
+            patterns_processed=5,
+            contradictions_found=2,
+        )
+        assert "1 principle(s) reduced from 5 pattern(s)" in report.summary()
+        assert "2 contradiction(s) flagged" in report.summary()
+
+
+class TestFirstPrinciplesCli:
+    def test_cli_import(self):
+        from animus.cli import _cmd_first_principles
+
+        assert callable(_cmd_first_principles)
+
+    def test_cmd_first_principles_scan(self, capsys, tmp_path):
+        from animus.cli import _cmd_first_principles
+        from argparse import Namespace
+
+        args = Namespace(
+            first_principles_command="scan",
+            codebase_path=str(tmp_path),
+            store=False,
+        )
+        result = _cmd_first_principles(args)
+        captured = capsys.readouterr()
+        assert "First-Principles" in captured.out or result == 0
+
+    def test_cmd_first_principles_principles(self, capsys):
+        from animus.cli import _cmd_first_principles
+        from argparse import Namespace
+
+        args = Namespace(
+            first_principles_command="principles",
+            codebase_path="",
+            limit=10,
+        )
+        result = _cmd_first_principles(args)
+        captured = capsys.readouterr()
+        assert "Principle" in captured.out or result == 0
+
+
+class TestFirstPrinciplesMcpTools:
+    @pytest.fixture
+    def mcp_server(self):
+        pytest.importorskip("mcp")
+        from animus.mcp_server import create_mcp_server
+
+        return create_mcp_server()
+
+    def test_first_principles_tools_exist(self, mcp_server):
+        tools = list(mcp_server._tools.keys())
+        assert "animus_first_principles_scan" in tools
+        assert "animus_first_principles_list_principles" in tools
+
+    def test_first_principles_scan_mocked(self, mcp_server, monkeypatch):
+        def _mock_observe_patterns(*args, **kwargs):
+            return [
+                {
+                    "id": "p1",
+                    "description": "Mock pattern",
+                    "severity": "info",
+                    "context": {
+                        "name": "Async communication",
+                        "category": "architecture",
+                        "description": "Use async message queues",
+                        "tags": ["async"],
+                        "source_provenance": ["src1"],
+                    },
+                },
+            ]
+
+        monkeypatch.setattr(
+            "animus.citizens.first_principles.FirstPrinciplesCitizen.observe_patterns",
+            _mock_observe_patterns,
+        )
+
+        result = mcp_server._tools["animus_first_principles_scan"].fn(
+            codebase_path=".",
+            store_principles=False,
+        )
+        assert "First-Principles Citizen Scan Report" in result
+        assert "Mock pattern" in result
+
+    def test_first_principles_list_principles_empty(self, mcp_server):
+        result = mcp_server._tools["animus_first_principles_list_principles"].fn(
+            limit=10,
+        )
+        assert "No principle cards found" in result
