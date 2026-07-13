@@ -345,8 +345,18 @@ class PatternCitizen:
                     )
                 )
 
-        logger.info("Pattern discover_patterns: %d pattern(s) from %d mechanism(s)", len(cards), len(mechanisms))
-        return cards
+        # Deduplicate: patterns with identical constituent_mechanisms (regardless
+        # of which tag triggered them) collapse to one.
+        seen_mech_sets: set[frozenset] = set()
+        deduped: list[PatternCard] = []
+        for card in cards:
+            mech_set = frozenset(card.constituent_mechanisms)
+            if mech_set not in seen_mech_sets:
+                seen_mech_sets.add(mech_set)
+                deduped.append(card)
+
+        logger.info("Pattern discover_patterns: %d pattern(s) from %d mechanism(s) (deduped from %d)", len(deduped), len(mechanisms), len(cards))
+        return deduped
 
     # ------------------------------------------------------------------
     # Proposal generation

@@ -98,11 +98,15 @@ def clean_vtt(text: str) -> str:
 
 @dataclass
 class YouTubeSource:
-    """One configured YouTube channel.
+    """One configured YouTube channel or playlist.
 
     Attributes:
         channel: channel handle including ``@`` (e.g. ``"@AIDailyBrief"``) or a
-            full ``/channel/UC...`` / ``/c/Name`` path fragment.
+            full ``/channel/UC...`` / ``/c/Name`` path fragment. Mutually
+            exclusive with ``playlist_url``.
+        playlist_url: full YouTube playlist URL (e.g.
+            ``"https://www.youtube.com/playlist?list=PLabc"``). When set,
+            ``channel`` is ignored for listing.
         show_name: human-readable show name, used for metadata + author.
         fetch_captions: if True, download + clean English auto-captions per
             video; if False, items carry title + description only.
@@ -113,7 +117,8 @@ class YouTubeSource:
         tags: default tags applied to every item from this channel.
     """
 
-    channel: str
+    channel: str = ""
+    playlist_url: str = ""
     show_name: str = ""
     fetch_captions: bool = True
     list_limit: int = DEFAULT_LIST_LIMIT
@@ -122,6 +127,10 @@ class YouTubeSource:
 
     @property
     def source_id(self) -> str:
+        if self.playlist_url:
+            # Derive a stable source_id from the playlist URL
+            match = re.search(r"[?&]list=([A-Za-z0-9_-]+)", self.playlist_url)
+            return f"youtube:playlist:{match.group(1)}" if match else f"youtube:playlist:{self.playlist_url}"
         return f"youtube:{self.channel}"
 
     def fetch(self, limit: int | None = None) -> Iterable[SourceItem]:
@@ -139,6 +148,12 @@ class YouTubeSource:
 
     # -- internals -----------------------------------------------------------
 
+    def _list_url(self) -> str:
+        """Resolve the listing URL: playlist takes precedence over channel."""
+        if self.playlist_url:
+            return self.playlist_url
+        return f"https://www.youtube.com/{self.channel}/videos"
+
     def _list_videos(self, limit: int) -> list[tuple[str, str, datetime | None]]:
         """Return ``(video_id, title, published)`` for the most recent videos.
 
@@ -146,8 +161,11 @@ class YouTubeSource:
         emit ``upload_date`` alongside id/title. yt-dlp prints
         ``%(upload_date)s`` as ``YYYYMMDD`` for normal uploads and ``NA`` for
         videos without a fixed upload timestamp (live, premiere, members-only).
+
+        When ``playlist_url`` is set, uses the playlist URL instead of the
+        channel ``/videos`` tab.
         """
-        url = f"https://www.youtube.com/{self.channel}/videos"
+        url = self._list_url()
         cmd = [
             YT_DLP_BIN,
             "--playlist-end",
@@ -261,6 +279,44 @@ def probe_channel(channel: str) -> dict:
         "sample_titles": [t for _, t, _ in rows],
         "error": "" if rows else "channel not found or has no videos tab",
     }
+
+
+def probe_playlist(playlist_url: str) -> dict:
+    """Quick introspection of a YouTube playlist URL — for registry/CLI use.
+
+    Returns ``{ok, video_count, sample_titles, error}``. Does not raise.
+    """
+    if not _yt_dlp_available():
+        return {"ok": False, "video_count": 0, "sample_titles": [], "error": "yt-dlp not installed"}
+    if not playlist_url or "list=" not in playlist_url:
+        return {"ok": False, "video_count": 0, "sample_titles": [], "error": "not a valid playlist URL"}
+    src = YouTubeSource(playlist_url=playlist_url, fetch_captions=False, list_limit=3)
+    rows = src._list_videos(3)
+    return {
+        "ok": bool(rows),
+        "video_count": len(rows),
+        "sample_titles": [t for _, t, _ in rows],
+        "error": "" if rows else "playlist not found or empty",
+    }
+
+
+def playlist_to_source_items(
+    playlist_url: str,
+    fetch_captions: bool = True,
+    list_limit: int = DEFAULT_LIST_LIMIT,
+    tags: list[str] | None = None,
+) -> list[SourceItem]:
+    """Harvest all videos from a YouTube playlist as a list of SourceItems.
+
+    Convenience wrapper over ``YouTubeSource`` with ``playlist_url`` set.
+    """
+    src = YouTubeSource(
+        playlist_url=playlist_url,
+        fetch_captions=fetch_captions,
+        list_limit=list_limit,
+        tags=list(tags) if tags else [],
+    )
+    return list(src.fetch(limit=list_limit))
 
 
 # -- module helpers ---------------------------------------------------------

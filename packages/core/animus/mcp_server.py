@@ -2587,18 +2587,22 @@ def create_mcp_server():
     @mcp.tool()
     def animus_harvester_scan(
         target: str,
+        source_type: str = "github",
         depth: str = "quick",
         store_source: bool = False,
         api_key: str = "",
     ) -> str:
-        """Harvest an external GitHub repository using the Research Guild Harvester.
+        """Harvest an external source using the Research Guild Harvester.
 
-        Clones the repo, extracts architecture, dependencies, testing patterns,
-        and CI setup. Optionally stores the harvested source in memory.
+        Supports GitHub repos, YouTube playlists/channels, and podcast feeds.
+        Optionally stores the harvested source in memory.
 
         Args:
-            target: GitHub repo URL or username/repo (e.g., 'fastapi/fastapi').
+            target: Source target. For GitHub: username/repo. For YouTube:
+                full playlist or channel URL.
+            source_type: "github" | "youtube_playlist" | "youtube_channel" | "podcast" | "auto".
             depth: Scan depth: 'quick' (shallow clone) or 'deep' (full clone).
+                Only applies to GitHub repos.
             store_source: Whether to store the harvested source in memory.
             api_key: API key (required if ANIMUS_MCP_API_KEY is set).
         """
@@ -2608,6 +2612,52 @@ def create_mcp_server():
 
         if not config.citizens.enabled:
             return "Citizens are disabled in configuration. Set citizens.enabled=true to use the Harvester."
+
+        st = source_type.lower()
+        if st in ("youtube_playlist", "youtube_channel", "auto") and (
+            "youtube.com" in target or "youtu.be" in target
+        ):
+            from animus.citizens.media import MediaHarvester
+
+            mh = MediaHarvester()
+            if st == "youtube_playlist" or (st == "auto" and "playlist?list=" in target):
+                items = mh.ingest_playlist(target)
+            else:
+                items = mh.ingest_channel(target)
+
+            lines = ["# Harvester Scan Result (Media)", ""]
+            lines.append(f"**Source:** {target}")
+            lines.append(f"**Type:** {st}")
+            lines.append(f"**Items harvested:** {len(items)}")
+            for item in items[:5]:
+                lines.append(f"- [{item.item_id}] {item.title}")
+            if len(items) > 5:
+                lines.append(f"- ... and {len(items) - 5} more")
+
+            if store_source and items:
+                from animus.memory import MemoryType
+
+                stored_count = 0
+                for item in items:
+                    try:
+                        mem = memory.remember(
+                            content=item.raw_text or item.summary or item.title,
+                            memory_type=MemoryType.SEMANTIC,
+                            tags=["harvester", "research_guild", "media", item.source_id],
+                            metadata={
+                                "identifier": item.item_id,
+                                "source_type": item.source_id,
+                                "title": item.title,
+                                "url": item.url,
+                            },
+                        )
+                        stored_count += 1
+                    except Exception as e:
+                        logger.warning("Failed to store media item %s: %s", item.item_id, e)
+                lines.append("")
+                lines.append(f"✅ {stored_count}/{len(items)} items stored in memory.")
+
+            return "\n".join(lines)
 
         from animus.citizens import HarvesterCitizen
 
@@ -2746,6 +2796,107 @@ def create_mcp_server():
     # -----------------------------------------------------------------------
     # Research Guild Orchestrator tools
     # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_media_pipeline(
+        url: str,
+        source_type: str = "auto",
+        run_research_guild: bool = False,
+        store_outputs: bool = True,
+        api_key: str = "",
+    ) -> str:
+        """Run the full Media pipeline: Harvest → Ogma Synthesize → MechanismCard → (conditional RG).
+
+        Downstream stages are gated by Ogma's Animus gap assessment:
+        - NONE → store Ogma synthesis + MechanismCards only
+        - PARTIAL → store + run PatternCitizen
+        - FULL → store + run full Research Guild (Pattern → FP → Architecture)
+
+        Use run_research_guild=True to force full pipeline regardless of gap.
+
+        Args:
+            url: Media URL (YouTube playlist, channel, etc.).
+            source_type: "auto" | "youtube_playlist" | "youtube_channel" | "podcast".
+            run_research_guild: Force full RG downstream regardless of gap.
+            store_outputs: Whether to store all outputs in memory.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        if not config.citizens.enabled:
+            return "Citizens are disabled in configuration. Set citizens.enabled=true to use the Media Pipeline."
+
+        from animus.citizens.media import MediaPipelineOrchestrator
+
+        resolved_path = config.citizens.codebase_path or str(config.data_dir.parent)
+        orchestrator = MediaPipelineOrchestrator(
+            memory_layer=memory if store_outputs else None,
+            codebase_path=resolved_path,
+        )
+
+        report = orchestrator.run(
+            url=url,
+            source_type=source_type,
+            run_research_guild=run_research_guild,
+            store_outputs=store_outputs,
+        )
+
+        lines = ["# Media Pipeline Report", ""]
+        lines.append(f"**Gap status:** {report.gap_status}")
+        lines.append(f"**Forced RG:** {report.forced_rg}")
+        lines.append(f"**Stages:** {len(report.stages)}")
+        lines.append(f"**Duration:** {report.duration_seconds:.1f}s")
+        lines.append("")
+
+        for s in report.stages:
+            status = "✅" if not s.errors else "⚠️"
+            lines.append(
+                f"{status} **{s.citizen_name}**: {s.outputs_count} outputs, "
+                f"{s.stored_count} stored, {len(s.errors)} errors, {s.duration_seconds:.1f}s"
+            )
+            for e in s.errors:
+                lines.append(f"   - Error: {e}")
+        lines.append("")
+
+        if report.ogma_output:
+            lines.append("## Ogma Synthesis")
+            lines.append(f"**Title:** {report.ogma_output.title}")
+            lines.append(f"**Animus gap:** {report.ogma_output.animus_gap}")
+            lines.append(f"**Confidence:** {report.ogma_output.confidence:.2f}")
+            lines.append("")
+
+        if report.mechanisms:
+            lines.append(f"## Mechanisms ({len(report.mechanisms)})")
+            for m in report.mechanisms[:5]:
+                lines.append(f"- **{m.name}** ({m.category}) — {m.description[:100]}...")
+            if len(report.mechanisms) > 5:
+                lines.append(f"- ... and {len(report.mechanisms) - 5} more")
+            lines.append("")
+
+        if report.patterns:
+            lines.append(f"## Patterns ({len(report.patterns)})")
+            for p in report.patterns[:5]:
+                lines.append(f"- **{p.name}** — {p.description[:100]}...")
+            if len(report.patterns) > 5:
+                lines.append(f"- ... and {len(report.patterns) - 5} more")
+            lines.append("")
+
+        if report.final_proposal:
+            lines.append("## Final Proposal")
+            lines.append(f"**ID:** `{report.final_proposal.id}`")
+            lines.append(f"**Title:** {report.final_proposal.title}")
+            lines.append(f"**Confidence:** {report.final_proposal.confidence.value} ({report.final_proposal.confidence_score:.0%})")
+            lines.append(f"**Effort:** {report.final_proposal.estimated_effort_hours}h")
+            lines.append(f"**Recommendation:** {report.final_proposal.recommendation}")
+            lines.append("")
+            if store_outputs:
+                lines.append("✅ Pipeline outputs stored in memory for review.")
+        else:
+            lines.append("No final proposal generated.")
+
+        return "\n".join(lines)
 
     @mcp.tool()
     def animus_research_guild_pipeline(

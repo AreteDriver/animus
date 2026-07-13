@@ -257,6 +257,11 @@ class ArchitectureCitizen:
         Low coverage indicates a gap where the principle is not yet
         reflected in the architecture.
 
+        For media-derived principles (tagged "media"), uses a lightweight
+        gap-proxy approach instead of keyword coverage: trusts Ogma's gap
+        assessment and performs only a file-existence check for the
+        specific modules mentioned.
+
         Args:
             principles: List of principle dicts. If None, calls observe_principles.
 
@@ -278,9 +283,19 @@ class ArchitectureCitizen:
 
             statement = principle.get("principle_statement", "")
             category = principle.get("category", "")
+            tags = principle.get("tags", [])
             if not statement:
                 continue
 
+            is_media = "media" in tags
+
+            if is_media:
+                gap = self._analyze_media_gap(principle)
+                if gap:
+                    gaps.append(gap)
+                continue
+
+            # Standard keyword-based analysis for non-media principles
             keywords = _extract_keywords(statement)
             category_keywords = _GAP_KEYWORDS.get(category, [])
             if category_keywords:
@@ -344,6 +359,57 @@ class ArchitectureCitizen:
 
         logger.info("ArchitectureCitizen analyze_gaps: %d gap(s) from %d principle(s)", len(gaps), len(principles))
         return gaps
+
+    def _analyze_media_gap(self, principle: dict[str, Any]) -> GapAnalysis | None:
+        """Analyze gap for a media-derived principle using Ogma's assessment.
+
+        Uses Ogma's gap assessment + lightweight file existence check
+        instead of keyword coverage ratio.
+        """
+        statement = principle.get("principle_statement", "")
+        category = principle.get("category", "")
+        tags = principle.get("tags", [])
+
+        # Severity based on Ogma's gap status (if available in tags or metadata)
+        gap_status = "NONE"
+        for tag in tags:
+            if tag.startswith("gap:"):
+                gap_status = tag.split(":", 1)[1]
+                break
+
+        # Default severity mapping
+        severity_map = {
+            "NONE": "critical",
+            "PARTIAL": "medium",
+            "FULL": "low",
+        }
+        severity = severity_map.get(gap_status, "medium")
+
+        # Lightweight check: look for module paths mentioned in the principle statement
+        affected_files: list[str] = []
+        if self.codebase_path.exists():
+            # Extract potential module paths (e.g., packages/core/animus/...)
+            path_pattern = re.compile(r"packages/core/animus/[a-z_/]+")
+            for match in path_pattern.finditer(statement):
+                candidate = match.group(0)
+                full_path = self.codebase_path / candidate
+                if full_path.exists():
+                    affected_files.append(candidate)
+
+        gap = GapAnalysis(
+            principle_statement=statement,
+            principle_category=category,
+            gap_description=f"Media-derived principle '{statement[:60]}...' assessed via Ogma gap status ({gap_status})",
+            severity=severity,
+            affected_files=affected_files[:10],
+            keyword_matches=len(affected_files),
+            keyword_total=1,
+            coverage_ratio=1.0 if affected_files else 0.0,
+            confidence=0.6,
+            recommendation=self._draft_recommendation(statement, category, severity, affected_files),
+            estimated_effort_hours=self._estimate_effort(severity, len(affected_files)),
+        )
+        return gap
 
     def _draft_recommendation(self, statement: str, category: str, severity: str, affected_files: list[str]) -> str:
         """Draft a concrete recommendation for closing a gap."""

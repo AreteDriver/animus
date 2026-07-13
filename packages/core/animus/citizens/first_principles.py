@@ -267,6 +267,11 @@ class FirstPrinciplesCitizen:
         Uses keyword matching against _PRINCIPLE_RULES to map patterns
         to timeless principles. Flags contradictions for human review.
 
+        For media-derived patterns (tagged "media"), includes mechanism
+        descriptions in the reduction context to preserve domain specificity.
+        Small media-derived pattern lists (<3) skip reduction and pass
+        through directly for lightweight downstream analysis.
+
         Args:
             patterns: List of pattern dicts. If None, calls observe_patterns.
 
@@ -280,6 +285,28 @@ class FirstPrinciplesCitizen:
             logger.info("No patterns observed — no principles reduced")
             return []
 
+        # Detect media-derived patterns
+        is_media = any("media" in p.get("tags", []) for p in patterns)
+
+        # For small media-derived pattern lists, skip deep reduction
+        if is_media and len(patterns) < 3:
+            logger.info("Media-derived patterns (<3) — skipping deep reduction, passing through")
+            cards: list[PrincipleCard] = []
+            for pattern in patterns:
+                if not isinstance(pattern, dict):
+                    continue
+                cards.append(
+                    PrincipleCard(
+                        principle_statement=pattern.get("name", "Media-derived pattern"),
+                        supporting_patterns=[pattern.get("name", "")],
+                        confidence=pattern.get("confidence", 0.5),
+                        category=pattern.get("category", "general"),
+                        tags=pattern.get("tags", []) + ["media", "passthrough"],
+                        source_provenance=pattern.get("source_provenance", []),
+                    )
+                )
+            return cards
+
         cards: list[PrincipleCard] = []
 
         for pattern in patterns:
@@ -287,9 +314,15 @@ class FirstPrinciplesCitizen:
                 continue
 
             text = f"{pattern.get('name', '')} {pattern.get('description', '')}"
+            # For media patterns, also include constituent mechanism descriptions
+            if is_media and "constituent_mechanisms" in pattern:
+                mechs = pattern.get("constituent_mechanisms", [])
+                if isinstance(mechs, list):
+                    text += " " + " ".join(str(m) for m in mechs)
             if not text.strip():
                 continue
 
+            matched = False
             for pattern_re, statement, category, tags in _PRINCIPLE_RULES:
                 if pattern_re.search(text):
                     cards.append(
@@ -302,7 +335,22 @@ class FirstPrinciplesCitizen:
                             source_provenance=pattern.get("source_provenance", []),
                         )
                     )
+                    matched = True
                     break  # Only match the first applicable rule per pattern
+
+            # For media patterns with no rule match, create a principle
+            # from the pattern name itself to avoid losing signal
+            if is_media and not matched:
+                cards.append(
+                    PrincipleCard(
+                        principle_statement=f"{pattern.get('name', 'Media-derived insight')}: consider this pattern for Animus",
+                        supporting_patterns=[pattern.get("name", "")],
+                        confidence=0.5,
+                        category=pattern.get("category", "general"),
+                        tags=pattern.get("tags", []) + ["media"],
+                        source_provenance=pattern.get("source_provenance", []),
+                    )
+                )
 
         # Deduplicate: merge principles with identical statements
         merged: dict[str, PrincipleCard] = {}
