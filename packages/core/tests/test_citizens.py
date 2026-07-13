@@ -15,6 +15,7 @@ from animus.citizens import (
     ConversationDesignerCitizen,
     ForgeCommissioner,
     ImprovementProposal,
+    IntelligenceCitizen,
     KnowledgeCuratorCitizen,
     ProposalQueue,
     ProposalStatus,
@@ -1056,3 +1057,133 @@ class TestCitizenCouncil:
         ranked = council.rank_backlog(deduplicate=True)
         assert len(ranked) == 1
         assert ranked[0].duplicates == ["p2"]
+
+
+# ---------------------------------------------------------------------------
+# IntelligenceCitizen tests
+# ---------------------------------------------------------------------------
+
+
+class TestIntelligenceCitizen:
+    def test_initialization(self):
+        intel = IntelligenceCitizen()
+        assert intel.memory is None
+        assert intel.evidence_dir is None
+
+    def test_extract_entities(self):
+        intel = IntelligenceCitizen()
+        text = (
+            "Contact alice@example.com or visit https://github.com/test "
+            "Server at 192.168.1.1 MD5: aabbccdd11223344556677889900aabb "
+            "Reach us at +1-555-123-4567"
+        )
+        entities = intel.extract_entities(text)
+        assert "alice@example.com" in entities.emails
+        assert any("github.com/test" in u for u in entities.urls)
+        assert "192.168.1.1" in entities.ipv4_addresses
+        assert "aabbccdd11223344556677889900aabb" in entities.md5_hashes
+        assert entities.total_count() > 0
+
+    def test_extract_entities_empty_text(self):
+        intel = IntelligenceCitizen()
+        entities = intel.extract_entities("")
+        assert entities.is_empty()
+
+    def test_scan_secrets(self):
+        intel = IntelligenceCitizen()
+        text = "API key: AKIAIOSFODNN7EXAMPLE and github token: ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        findings = intel.scan_secrets(text)
+        assert len(findings) >= 2
+        patterns = {f.pattern_name for f in findings}
+        assert "aws_access_key" in patterns
+        assert "github_token" in patterns
+
+    def test_scan_secrets_empty_text(self):
+        intel = IntelligenceCitizen()
+        findings = intel.scan_secrets("")
+        assert findings == []
+
+    def test_scan_file_secrets(self, tmp_path):
+        intel = IntelligenceCitizen()
+        test_file = tmp_path / "config.py"
+        test_file.write_text("API_KEY = 'AKIAIOSFODNN7EXAMPLE'\n")
+
+        findings = intel.scan_file_secrets(test_file)
+        assert len(findings) == 1
+        assert findings[0].pattern_name == "aws_access_key"
+        assert findings[0].line_number == 1
+
+    def test_generate_profile_urls(self):
+        intel = IntelligenceCitizen()
+        profiles = intel.generate_profile_urls("octocat")
+        assert len(profiles) > 0
+
+        github = next((p for p in profiles if p.platform == "GitHub"), None)
+        assert github is not None
+        assert github.url == "https://github.com/octocat"
+        assert github.category == "code"
+
+    def test_generate_profile_urls_invalid_username(self):
+        intel = IntelligenceCitizen()
+        # Twitter max_length = 15, so 20-char username should be skipped
+        profiles = intel.generate_profile_urls("a" * 20)
+        twitter = next((p for p in profiles if p.platform == "Twitter/X"), None)
+        assert twitter is None
+
+    def test_extract_usernames(self):
+        intel = IntelligenceCitizen()
+        text = "Follow @octocat and check github.com/testuser for more."
+        usernames = intel.extract_usernames(text)
+        assert "octocat" in usernames
+        assert "testuser" in usernames
+
+    def test_generate_osint_report(self):
+        intel = IntelligenceCitizen()
+        text = (
+            "Developer @johndoe uses AWS key AKIAIOSFODNN7EXAMPLE. "
+            "Visit https://github.com/johndoe for code."
+        )
+        report = intel.generate_osint_report(text)
+        assert report.extracted.total_count() > 0
+        assert len(report.secrets) > 0
+        assert len(report.profiles) > 0
+        assert "secret(s) detected" in report.summary or "entities" in report.summary
+
+    def test_analyze_text(self):
+        intel = IntelligenceCitizen()
+        text = "Email: admin@example.com"
+        report = intel.analyze(text=text)
+        assert "admin@example.com" in report.extracted.emails
+
+    def test_analyze_no_input(self):
+        intel = IntelligenceCitizen()
+        report = intel.analyze()
+        assert report.summary == "No input provided"
+
+    def test_generate_proposal_from_critical_secrets(self):
+        intel = IntelligenceCitizen()
+        report = intel.generate_osint_report("AWS key: AKIAIOSFODNN7EXAMPLE")
+        proposal = intel.generate_proposal(report)
+        assert proposal is not None
+        assert "INTEL-" in proposal.id
+        assert "critical" in proposal.problem.lower()
+        assert proposal.confidence_score == 0.85
+
+    def test_generate_proposal_no_actionable_findings(self):
+        intel = IntelligenceCitizen()
+        report = intel.generate_osint_report("Just some harmless text here.")
+        proposal = intel.generate_proposal(report)
+        assert proposal is None
+
+    def test_proposal_from_high_secrets(self):
+        intel = IntelligenceCitizen()
+        report = intel.generate_osint_report("Generic API key: api_key=xxxxxxxxxxxxxxxxxxxx")
+        proposal = intel.generate_proposal(report)
+        assert proposal is not None
+        assert "high" in proposal.problem.lower()
+
+    def test_store_report_without_memory(self):
+        intel = IntelligenceCitizen()
+        report = intel.generate_osint_report("test")
+        result = intel.store_report(report)
+        assert result is False
