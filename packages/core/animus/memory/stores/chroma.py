@@ -64,16 +64,38 @@ class ChromaMemoryStore(MemoryStore):
             self.chroma_dir = data_dir / "chroma"
             self.chroma_dir.mkdir(parents=True, exist_ok=True)
 
-            self.client = chromadb.PersistentClient(
-                path=str(self.chroma_dir),
-                settings=chromadb.Settings(anonymized_telemetry=False),
-            )
+            # Prefer server mode for multi-process safety.  PersistentClient
+            # opens the SQLite DB and HNSW index directly in this process;
+            # multiple processes hitting the same path corrupt the index
+            # (observed: "Error executing plan: Internal error: Error finding id").
+            # HttpClient talks to a single ChromaDB server over HTTP.
+            #
+            # To enable server mode:
+            #   systemctl --user enable --now chromadb.service
+            # To fall back to local file mode, stop the service.
+            try:
+                self.client = chromadb.HttpClient(
+                    host="localhost",
+                    port=8787,
+                    settings=chromadb.Settings(anonymized_telemetry=False),
+                )
+                logger.info("ChromaDB connected via HttpClient (localhost:8787)")
+            except Exception as e:
+                logger.warning(
+                    f"ChromaDB server not available ({e}), falling back to PersistentClient"
+                )
+                self.client = chromadb.PersistentClient(
+                    path=str(self.chroma_dir),
+                    settings=chromadb.Settings(anonymized_telemetry=False),
+                )
+                logger.info("ChromaDB initialized in local file mode")
+
             self.collection = self.client.get_or_create_collection(
                 name=collection_name,
                 metadata={"hnsw:space": "cosine"},
             )
             logger.info(
-                f"ChromaDB initialized at {self.chroma_dir} "
+                f"ChromaDB ready at {self.chroma_dir} "
                 f"with {self.collection.count()} documents"
             )
         except ImportError as e:

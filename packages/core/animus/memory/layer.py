@@ -289,6 +289,34 @@ class MemoryLayer:
 
         return results[:limit]
 
+    def search(
+        self,
+        query: str,
+        memory_type: MemoryType | None = None,
+        tags: list[str] | None = None,
+        source: str | None = None,
+        min_confidence: float = 0.0,
+        limit: int = 10,
+        allowed_tiers: set[Sensitivity] | None = None,
+        tier: MemoryTier | None = None,
+    ) -> list[Memory]:
+        """Alias for :meth:`recall` — backward compatibility for citizen callers.
+
+        Citizens and legacy code call ``memory.search(...)``; ``MemoryLayer``
+        exposes ``recall(...)`` as the canonical name. This alias bridges the
+        gap so existing callers don't need to be rewritten.
+        """
+        return self.recall(
+            query,
+            memory_type=memory_type,
+            tags=tags,
+            source=source,
+            min_confidence=min_confidence,
+            limit=limit,
+            allowed_tiers=allowed_tiers,
+            tier=tier,
+        )
+
     def recall_by_tags(
         self,
         tags: list[str],

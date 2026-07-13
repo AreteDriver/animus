@@ -636,6 +636,38 @@ class HarvesterCitizen:
             logger.error("Failed to store proposal: %s", e)
             return False
 
+    def _source_from_harvest_result(
+        self,
+        target: str,
+        harvest_result: Any,
+    ) -> HarvestedSource | None:
+        """Convert a Lugh HarvestResult into a HarvestedSource.
+
+        This bridge method is called by the Research Guild Orchestrator
+        after ``harvest_repo()`` returns so the Harvester can store the
+        result in Animus memory as a first-class source.
+        """
+        if harvest_result is None:
+            return None
+        try:
+            return HarvestedSource(
+                source_type="repo",
+                identifier=target,
+                title=f"Repo: {harvest_result.repo}",
+                content_snippet=(
+                    f"Architecture: {harvest_result.architecture}\n"
+                    f"Testing: {harvest_result.testing_approach}\n"
+                    f"Patterns: {', '.join(harvest_result.notable_patterns[:5])}\n"
+                    f"Novel tools: {', '.join(harvest_result.tools_worth_adopting[:10])}"
+                )[:500],
+                tags=["repo", "external", "architecture"],
+                confidence=0.7 if harvest_result.score > 50 else 0.5,
+                metadata=harvest_result.to_dict(),
+            )
+        except Exception as e:
+            logger.warning("Failed to convert harvest result for %s: %s", target, e)
+            return None
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
