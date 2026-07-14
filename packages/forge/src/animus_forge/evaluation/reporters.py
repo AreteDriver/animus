@@ -94,6 +94,12 @@ class ConsoleReporter(Reporter):
                     for metric, score in case_result.metrics.items():
                         lines.append(f"    - {metric}: {score:.2%}")
 
+                if case_result.rubric_scores:
+                    band = case_result.rubric_band or "N/A"
+                    lines.append(f"  Rubric (band: {band}):")
+                    for criterion, score in case_result.rubric_scores.items():
+                        lines.append(f"    - {criterion}: {score:.2%}")
+
                 if case_result.error:
                     lines.append(f"  Error: {case_result.error}")
 

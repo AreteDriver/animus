@@ -7,6 +7,7 @@ historical performance, not just prompt keywords.
 
 from __future__ import annotations
 
+import random
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable
@@ -63,6 +64,8 @@ class ProviderRouter:
         # ... send to decision.provider_name ...
         router.record_success(decision.provider_name, prompt, latency_ms=1200)
     """
+
+    _MAX_DECISION_HISTORY = 1000
 
     def __init__(self, config: RouterConfig | None = None):
         self.config = config or RouterConfig()
@@ -125,7 +128,6 @@ class ProviderRouter:
             )
 
         # Exploration: occasionally pick non-optimal provider for data gathering
-        import random
         is_exploration = random.random() < self.config.exploration_rate
         if is_exploration and len(ranked) > 1:
             # Pick second-best for exploration
@@ -160,8 +162,43 @@ class ProviderRouter:
             alternatives=alternatives,
         )
         self._decision_history.append(decision)
+        if len(self._decision_history) > self._MAX_DECISION_HISTORY:
+            self._decision_history = self._decision_history[-self._MAX_DECISION_HISTORY:]
         logger.info(f"Router: {decision.reason}")
         return decision
+
+    def update_quality_score(
+        self,
+        provider_name: str,
+        prompt: str,
+        quality_score: float,
+        task_type: str | None = None,
+    ) -> bool:
+        """Update the quality score of the most recent matching edge.
+
+        Allows post-hoc rubric evaluation scores to retroactively improve
+        the routing graph after external quality assessment.
+
+        Args:
+            provider_name: The provider that handled the task.
+            prompt: The original prompt.
+            quality_score: New quality score (0.0–1.0).
+            task_type: Optional task type override.
+
+        Returns:
+            True if an edge was updated, False otherwise.
+        """
+        signature = TaskSignature.from_prompt(prompt, task_type)
+        edge = self.graph.get_edge(provider_name, signature)
+        if edge is None or not edge.outcomes:
+            return False
+        # Update the most recent outcome's quality score
+        edge.outcomes[-1].quality_score = quality_score
+        logger.debug(
+            f"Updated quality score for {provider_name} on {signature.task_type}: "
+            f"{quality_score:.2f}"
+        )
+        return True
 
     def record_outcome(
         self,

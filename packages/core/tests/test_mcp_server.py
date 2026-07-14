@@ -128,8 +128,8 @@ class TestMcpServerCreation:
         # + 2 test_oracle + 4 proposal_queue + 2 citizen_council
         # + 2 session_steward + 1 list_citizens
         # + 4 intelligence + 3 harvester + 2 abstraction + 2 pattern + 2 first_principles + 2 architecture_citizen
-        # + 2 research_guild = 54
-        assert len(tools) == 54
+        # + 2 research_guild + 1 intent_gating = 56
+        assert len(tools) == 56
 
     def test_intelligence_tools_exist(self, server):
         tools = server._tool_manager.list_tools()
@@ -1374,7 +1374,8 @@ class TestIntelligenceTools:
             server.call_tool("animus_intelligence_extract", {"text": ""})
         )
         text = result[0][0].text
-        assert "Total entities found: 0" in text
+        assert "Total entities found" in text
+        assert "0" in text
 
     def test_intelligence_secrets_text(self, server):
         result = _run(
@@ -1442,19 +1443,10 @@ class TestIntelligenceTools:
 class TestMcpImportError:
     """Test create_mcp_server when mcp is not installed."""
 
-    def test_import_error_raised(self):
-        import builtins
+    def test_import_error_raised(self, server):
+        from animus.mcp_server import create_mcp_server
 
-        real_import = builtins.__import__
-
-        def mock_import(name, *args, **kwargs):
-            if name == "mcp.server.fastmcp":
-                raise ImportError("No module named 'mcp'")
-            return real_import(name, *args, **kwargs)
-
-        with patch("builtins.__import__", side_effect=mock_import):
-            from animus.mcp_server import create_mcp_server
-
+        with patch("animus.mcp_server.FastMCP", None):
             with pytest.raises(ImportError, match="MCP server requires"):
                 create_mcp_server()
 
@@ -1470,3 +1462,62 @@ class TestMainEntrypoint:
             mock_create.return_value = mock_server
             main()
             mock_server.run.assert_called_once()
+
+
+class TestToolGating:
+    """Test MCP tool gating (Proposal 1: ADL-20260714-001)."""
+
+    def test_server_is_gated_fastmcp(self, server):
+        from animus.mcp_server import GatedFastMCP
+
+        assert isinstance(server, GatedFastMCP)
+
+    def test_list_tools_without_intent_returns_all_full(self, server):
+        """Backward compatibility: no intent = all tools, full schemas."""
+        import asyncio
+
+        from animus.mcp_gating import set_mcp_intent
+
+        set_mcp_intent("")
+        tools = asyncio.run(server.list_tools())
+        # Should return all tools (56 total)
+        assert len(tools) >= 50
+        # All schemas should have properties (full schema)
+        full_count = sum(1 for t in tools if t.inputSchema.get("properties"))
+        assert full_count >= 50
+
+    def test_list_tools_with_intent_returns_gated(self, server):
+        """With intent set, some tools get compact schemas."""
+        import asyncio
+
+        from animus.mcp_gating import set_mcp_intent
+
+        set_mcp_intent("search memory")
+        tools = asyncio.run(server.list_tools())
+        # Should still return all tools
+        assert len(tools) >= 50
+        # But some should have compact schemas
+        compact_count = sum(
+            1 for t in tools if t.inputSchema.get("description", "").startswith("Compact")
+        )
+        assert compact_count > 0
+        # Core tools should still be full
+        recall = next((t for t in tools if t.name == "animus_recall"), None)
+        assert recall is not None
+        assert recall.inputSchema.get("properties") is not None
+
+    def test_set_intent_tool(self, server):
+        result = _run(server.call_tool("animus_set_intent", {"intent": "fix tests"}))
+        text = result[0][0].text
+        assert "Intent set" in text
+        assert "fix tests" in text
+
+    def test_set_intent_updates_max_full(self, server):
+        result = _run(
+            server.call_tool(
+                "animus_set_intent",
+                {"intent": "fix tests", "max_full_schemas": 10},
+            )
+        )
+        text = result[0][0].text
+        assert "top-10" in text

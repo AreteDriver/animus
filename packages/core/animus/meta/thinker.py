@@ -76,6 +76,8 @@ class MetaThinker:
     and produces signals to guide or interrupt the Head loop.
     """
 
+    _MAX_EVENTS = 500
+
     def __init__(self, config: MetaThinkerConfig | None = None):
         self.config = config or MetaThinkerConfig()
         self._events: list[Event] = []
@@ -105,6 +107,8 @@ class MetaThinker:
         if not self.config.enabled:
             return
         self._events.append(event)
+        if len(self._events) > self._MAX_EVENTS:
+            self._events = self._events[-self._MAX_EVENTS:]
         # Forward to detectors
         for detector in self._detectors:
             detector.observe(event)

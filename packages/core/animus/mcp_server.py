@@ -20,9 +20,30 @@ from animus.logging import get_logger
 from animus.memory import MemoryLayer, MemoryType
 from animus.memory.redaction import redact
 from animus.memory.types import Sensitivity
+from animus.mcp_gating import MCPToolGater, get_mcp_intent, set_mcp_intent
 from animus.tasks import TaskTracker
 
 logger = get_logger("mcp_server")
+
+# Lazy import FastMCP at module level so GatedFastMCP can subclass it.
+# Falls back to None if the MCP SDK is not installed (keeps import failures
+# out of the critical path for environments that don't need MCP).
+try:
+    from mcp.server.fastmcp import FastMCP
+except ImportError:
+    FastMCP = None  # type: ignore[misc,assignment]
+
+# Tools that should always be returned with full schemas regardless of intent.
+# These are the "core" tools that every session likely needs.
+_ALWAYS_EXPOSE = frozenset({
+    "animus_remember",
+    "animus_recall",
+    "animus_search_tags",
+    "animus_list_tasks",
+    "animus_create_task",
+    "animus_complete_task",
+    "animus_set_intent",
+})
 
 # Optional API key for MCP server authentication
 _MCP_API_KEY = os.environ.get("ANIMUS_MCP_API_KEY")
@@ -85,14 +106,62 @@ def _wrap_untrusted(content: str, memory_id: str) -> str:
     return f"{_UNTRUSTED_OPEN.format(memory_id=memory_id)}\n{safe}\n{_UNTRUSTED_CLOSE}"
 
 
+if FastMCP is not None:
+
+    class GatedFastMCP(FastMCP):  # type: ignore[misc]
+        """FastMCP subclass with intent-based tool gating.
+
+        Overrides ``list_tools()`` to return full schemas for top-ranked tools
+        and compact schemas for the rest, based on session intent.
+        """
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._tool_gater = MCPToolGater(max_full_schemas=5)
+            self._gater_initialized = False
+
+        def _ensure_gater(self) -> None:
+            """Populate gater with metadata from the tool manager."""
+            if self._gater_initialized:
+                return
+            for tool in self._tool_manager.list_tools():
+                self._tool_gater.register_tool(
+                    name=tool.name,
+                    description=tool.description or "",
+                    input_schema=getattr(tool, "parameters", {}) or {},
+                keywords=[],
+                category="general",
+                always_expose=(tool.name in _ALWAYS_EXPOSE),
+            )
+        self._gater_initialized = True
+
+    async def list_tools(self) -> list:
+        """Override to return gated schemas based on session intent."""
+        from mcp.types import Tool as MCPTool
+
+        self._ensure_gater()
+        intent = get_mcp_intent()
+        if not intent:
+            # No intent set — backward compatible, return all full schemas
+            return await super().list_tools()
+
+        gated = self._tool_gater.get_gated_schemas(intent=intent)
+        return [
+            MCPTool(
+                name=g.name,
+                description=g.description,
+                inputSchema=g.input_schema,
+            )
+            for g in gated
+        ]
+
+
 def create_mcp_server():
     """Create and configure the Animus MCP server."""
-    try:
-        from mcp.server.fastmcp import FastMCP
-    except ImportError as exc:
+    if FastMCP is None:
         raise ImportError(
             "MCP server requires the mcp SDK. Install with: pip install 'mcp>=1.0.0'"
-        ) from exc
+        )
 
     config = AnimusConfig.load()
     config.ensure_dirs()
@@ -100,7 +169,9 @@ def create_mcp_server():
     tasks = TaskTracker(config.data_dir)
     audit_log = EgressAuditLog(config.data_dir)
 
-    mcp = FastMCP("animus", instructions="Animus exocortex — persistent memory, tasks, and tools.")
+    mcp = GatedFastMCP(
+        "animus", instructions="Animus exocortex — persistent memory, tasks, and tools."
+    )
 
     # -----------------------------------------------------------------------
     # Memory tools
@@ -262,6 +333,37 @@ def create_mcp_server():
                 f"[{m.provenance}] {m.created_at.strftime('%Y-%m-%d %H:%M')}"
             )
         return "\n".join(lines)
+
+    # -----------------------------------------------------------------------
+    # Gating / intent tools
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_set_intent(intent: str, max_full_schemas: int = 5) -> str:
+        """Set the current task intent for MCP tool gating.
+
+        When intent is set, ``tools/list`` returns full schemas only for the
+        top-N most relevant tools. Remaining tools are returned with compact
+        schemas to reduce token overhead.
+
+        Args:
+            intent: Brief description of the current task (e.g., "search memory",
+                "run architect citizen", "fix failing tests").
+            max_full_schemas: Number of top-ranked tools to return with full
+                schemas (default 5, range 1–20).
+        """
+        if not intent or not intent.strip():
+            return "Error: intent cannot be empty."
+        max_full_schemas = max(1, min(20, max_full_schemas))
+        set_mcp_intent(intent.strip())
+        # Update gater threshold if server is a GatedFastMCP
+        if isinstance(mcp, GatedFastMCP):
+            mcp._tool_gater.max_full_schemas = max_full_schemas
+        return (
+            f"Intent set: '{intent.strip()}'. "
+            f"Tools/list will now return full schemas for top-{max_full_schemas} "
+            f"relevant tools and compact schemas for the rest."
+        )
 
     # -----------------------------------------------------------------------
     # Task tools

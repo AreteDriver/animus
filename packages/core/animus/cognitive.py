@@ -829,11 +829,19 @@ class CognitiveLayer:
         prompt: str,
         context: str | None = None,
         mode: ReasoningMode = ReasoningMode.QUICK,
+        quality_score: float = 0.7,
     ) -> str:
         """Generate a response, routing to the appropriate model based on task weight.
 
         If ProviderRouter is configured, uses history-aware trajectory scoring
         to select the best model. Otherwise falls back to static task classification.
+
+        Args:
+            prompt: The user's input.
+            context: Relevant context from memory.
+            mode: Reasoning mode to use.
+            quality_score: Post-hoc quality score (0.0–1.0) for router learning.
+                Pass rubric evaluation scores from Proposal 2 when available.
         """
         system = self._build_system_prompt(context, mode)
 
@@ -857,12 +865,12 @@ class CognitiveLayer:
 
                 latency_ms = (__import__("time").time() - start_time) * 1000
 
-                # Record success for learning
+                # Record success for learning with caller-supplied quality score
                 self.provider_router.record_success(
                     provider_name=decision.provider_name,
                     prompt=prompt,
                     latency_ms=latency_ms,
-                    quality_score=0.7,  # Baseline quality; could use rubric eval
+                    quality_score=quality_score,
                 )
                 return response
 

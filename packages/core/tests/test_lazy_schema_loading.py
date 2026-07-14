@@ -189,3 +189,33 @@ class TestToolsToAnthropicFormat:
         # Other tools should have list of param names
         compact = result[1]
         assert isinstance(compact["input_schema"], (dict, list))
+
+
+class TestIntentCache:
+    """Session-scoped intent caching in ToolRegistry."""
+
+    def test_cache_stores_scores(self, registry):
+        """Calling get_schema with same intent caches ISO scores."""
+        schemas1 = registry.get_schema(
+            intent="read file", lazy=True, max_full_schemas=1
+        )
+        # Cache should now contain the intent
+        assert "read file" in registry._intent_cache
+        schemas2 = registry.get_schema(
+            intent="read file", lazy=True, max_full_schemas=1
+        )
+        # Results should be identical
+        assert schemas1 == schemas2
+
+    def test_cache_key_is_normalized(self, registry):
+        """Cache keys are case-insensitive and stripped."""
+        registry.get_schema(intent="Read File", lazy=True, max_full_schemas=1)
+        registry.get_schema(intent="  read file  ", lazy=True, max_full_schemas=1)
+        # Both should hit the same cache entry (lowercase "read file")
+        assert "read file" in registry._intent_cache
+
+    def test_different_intents_create_separate_cache_entries(self, registry):
+        """Different intents create separate cache entries."""
+        registry.get_schema(intent="read file", lazy=True, max_full_schemas=1)
+        registry.get_schema(intent="search web", lazy=True, max_full_schemas=1)
+        assert len(registry._intent_cache) == 2

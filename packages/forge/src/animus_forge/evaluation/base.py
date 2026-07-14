@@ -124,6 +124,27 @@ def _unique_metric_key(base_name: str, existing: dict) -> str:
     return f"{base_name}_{suffix}"
 
 
+def _band_from_score(score: float) -> str:
+    """Map a 0-1 score to a letter band (A/B/C/D/F).
+
+    Bands align with the ``personal-quality`` rubric:
+        A: >= 0.90
+        B: >= 0.80
+        C: >= 0.70
+        D: >= 0.60
+        F: < 0.60
+    """
+    if score >= 0.90:
+        return "A"
+    if score >= 0.80:
+        return "B"
+    if score >= 0.70:
+        return "C"
+    if score >= 0.60:
+        return "D"
+    return "F"
+
+
 class EvalMetric(ABC):
     """Abstract base class for evaluation metrics.
 
@@ -381,6 +402,19 @@ class AgentEvaluator(Evaluator):
         else:
             status = EvalStatus.FAILED
 
+        # Propagate rubric scores from case metadata (set by RubricJudgeMetric)
+        rubric_scores = {}
+        rubric_band = None
+        if "rubric_criteria" in case.metadata:
+            criteria = case.metadata["rubric_criteria"]
+            if isinstance(criteria, dict):
+                rubric_scores = {
+                    name: entry["score"] / 10.0
+                    for name, entry in criteria.items()
+                    if isinstance(entry, dict) and "score" in entry
+                }
+                rubric_band = _band_from_score(overall_score)
+
         return EvalResult(
             case=case,
             status=status,
@@ -389,6 +423,8 @@ class AgentEvaluator(Evaluator):
             metrics=metric_scores,
             error=error,
             latency_ms=latency_ms,
+            rubric_scores=rubric_scores,
+            rubric_band=rubric_band,
         )
 
 
@@ -492,6 +528,19 @@ class ProviderEvaluator(Evaluator):
         else:
             status = EvalStatus.FAILED
 
+        # Propagate rubric scores from case metadata (set by RubricJudgeMetric)
+        rubric_scores = {}
+        rubric_band = None
+        if "rubric_criteria" in case.metadata:
+            criteria = case.metadata["rubric_criteria"]
+            if isinstance(criteria, dict):
+                rubric_scores = {
+                    name: entry["score"] / 10.0
+                    for name, entry in criteria.items()
+                    if isinstance(entry, dict) and "score" in entry
+                }
+                rubric_band = _band_from_score(overall_score)
+
         return EvalResult(
             case=case,
             status=status,
@@ -501,4 +550,6 @@ class ProviderEvaluator(Evaluator):
             error=error,
             latency_ms=latency_ms,
             tokens_used=tokens_used,
+            rubric_scores=rubric_scores,
+            rubric_band=rubric_band,
         )

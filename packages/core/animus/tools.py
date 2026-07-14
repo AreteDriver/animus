@@ -211,9 +211,13 @@ class ToolRegistry:
     Provides tool registration, lookup, and execution with error handling.
     """
 
+    _MAX_INTENT_CACHE = 50  # Prevent unbounded growth
+
     def __init__(self):
         self._tools: dict[str, Tool] = {}
         self._tool_history: dict[str, list[dict]] = {}
+        # Session-scoped intent cache: intent string -> sorted list of (score, tool_name)
+        self._intent_cache: dict[str, list[tuple[float, str]]] = {}
         logger.debug("ToolRegistry initialized")
 
     def register(self, tool: Tool) -> None:
@@ -258,6 +262,9 @@ class ToolRegistry:
         When lazy=True, returns compact schemas for all tools and
         full schemas only for the top-N tools ranked by ISO score.
 
+        Session-scoped intent cache: repeated calls with the same intent
+        reuse ISO scores without recomputation.
+
         Args:
             intent: User prompt or task description for ISO scoring.
             lazy: If True, use two-phase lazy schema loading.
@@ -270,15 +277,33 @@ class ToolRegistry:
             # Fallback: return full schemas for all tools
             return [tool.get_schema() for tool in self._tools.values()]
 
-        # Score all tools by ISO + history boost
-        scored: list[tuple[float, Tool]] = []
-        for tool in self._tools.values():
-            score = self._iso_score(intent, tool)
-            score = self._apply_history_boost(score, tool.name)
-            scored.append((score, tool))
+        cache_key = intent.strip().lower()
+        cached = self._intent_cache.get(cache_key)
 
-        # Sort descending by score
-        scored.sort(key=lambda x: x[0], reverse=True)
+        if cached is not None:
+            # Reuse cached scores; still need to look up Tool objects
+            scored: list[tuple[float, Tool]] = []
+            for score, name in cached:
+                tool = self._tools.get(name)
+                if tool:
+                    scored.append((score, tool))
+        else:
+            # Score all tools by ISO + history boost
+            scored = []
+            for tool in self._tools.values():
+                score = self._iso_score(intent, tool)
+                score = self._apply_history_boost(score, tool.name)
+                scored.append((score, tool))
+            # Sort descending by score
+            scored.sort(key=lambda x: x[0], reverse=True)
+            # Store in cache with size limit
+            if len(self._intent_cache) >= self._MAX_INTENT_CACHE:
+                # Evict oldest entry (simple FIFO)
+                oldest = next(iter(self._intent_cache))
+                del self._intent_cache[oldest]
+            self._intent_cache[cache_key] = [
+                (round(score, 4), tool.name) for score, tool in scored
+            ]
 
         # Build result: compact for all, full for top-N
         results: list[dict] = []

@@ -813,3 +813,271 @@ class CompositeMetric(EvalMetric):
             return 0.0
 
         return total_score / total_weight
+
+
+class RubricJudgeMetric(EvalMetric):
+    """Structured rubric-based LLM judge with per-criterion scores.
+
+    Unlike ``LLMJudgeMetric`` which returns a single scalar, this metric
+    prompts the judge for a JSON object containing per-criterion grades
+    and evidence quotes. The overall score is the weighted average of
+    criterion scores.
+
+    The per-criterion breakdown is stored in ``EvalResult.rubric_scores``
+    so downstream consumers (reporters, citizens) can see *which* criteria
+    passed or failed, not just a composite score.
+
+    Example judge response (JSON):
+        {
+          "criteria": {
+            "correctness": {
+              "score": 8,
+              "reason": "The answer correctly identifies Python 3.12."
+            },
+            "completeness": {
+              "score": 5,
+              "reason": "Missed the asyncio context detail."
+            }
+          },
+          "overall": 6.5
+        }
+    """
+
+    DEFAULT_PROMPT = """You are an expert evaluator. Assess the agent's output against the task and expected answer using the criteria below.
+
+Task: {input}
+Expected: {expected}
+Actual Output: {output}
+
+Criteria:
+{criteria}
+
+For EACH criterion, provide:
+- score: integer 0-10
+- reason: one-sentence evidence quote from the output
+
+Respond with ONLY valid JSON in this exact format:
+{{
+  "criteria": {{
+    "criterion_name": {{
+      "score": 0-10,
+      "reason": "..."
+    }},
+    ...
+  }},
+  "overall": 0.0-10.0
+}}"""
+
+    def __init__(
+        self,
+        judge_provider: Any = None,
+        criteria: dict[str, str] | None = None,
+        prompt_template: str | None = None,
+        weights: dict[str, float] | None = None,
+    ):
+        """Initialize rubric judge metric.
+
+        Args:
+            judge_provider: Provider to use for judging
+            criteria: Mapping of criterion_name -> criterion_description
+            prompt_template: Custom prompt template (must include {criteria})
+            weights: Per-criterion weights (default: equal weight)
+        """
+        self._judge_provider = judge_provider
+        self._criteria = criteria or {
+            "correctness": "Does the output correctly answer the task?",
+            "completeness": "Is the response thorough and complete?",
+            "relevance": "Is the response on-topic and focused?",
+        }
+        self._prompt_template = prompt_template or self.DEFAULT_PROMPT
+        self._weights = weights or {}
+
+    @property
+    def name(self) -> str:
+        return "rubric_judge"
+
+    def score(
+        self,
+        output: str | Any,
+        expected: str | Any | None,
+        case: EvalCase,
+    ) -> float:
+        if self._judge_provider is None:
+            raise JudgeError("rubric_judge has no judge_provider configured")
+
+        criteria_block = "\n".join(
+            f"- {name}: {desc}" for name, desc in self._criteria.items()
+        )
+        prompt = self._prompt_template.format(
+            input=case.input,
+            expected=expected or "N/A",
+            output=output,
+            criteria=criteria_block,
+        )
+
+        try:
+            from animus_forge.providers import CompletionRequest
+
+            request = CompletionRequest(
+                prompt=prompt,
+                temperature=0.0,
+                max_tokens=500,
+            )
+            response = self._judge_provider.complete(request)
+            raw = response.content.strip()
+        except JudgeError:
+            raise
+        except Exception as e:
+            raise JudgeError(f"judge provider call failed: {e}") from e
+
+        parsed = self._parse_judge_response(raw)
+        if parsed is None:
+            raise JudgeError(f"judge returned no parseable rubric: {raw!r}")
+
+        # Store per-criterion scores in case metadata for downstream use
+        case.metadata["rubric_criteria"] = parsed["criteria"]
+        case.metadata["rubric_overall"] = parsed["overall"]
+
+        # Return normalized overall score (0-1)
+        return min(max(parsed["overall"] / 10.0, 0.0), 1.0)
+
+    def _parse_judge_response(self, text: str) -> dict[str, Any] | None:
+        """Parse structured JSON response from the judge.
+
+        Tolerates markdown code fences and minor formatting issues.
+        Returns dict with "criteria" and "overall" keys, or None on failure.
+        """
+        # Strip markdown fences
+        text = text.strip()
+        if text.startswith("```json"):
+            text = text[7:]
+        if text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+
+        try:
+            import json
+
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            return None
+
+        if not isinstance(data, dict):
+            return None
+
+        criteria = data.get("criteria")
+        overall = data.get("overall")
+        if not isinstance(criteria, dict) or overall is None:
+            return None
+
+        # Normalize scores to 0-10 floats
+        normalized: dict[str, dict[str, Any]] = {}
+        overall_sum = 0.0
+        for name, entry in criteria.items():
+            if isinstance(entry, dict):
+                score = entry.get("score", 0)
+                reason = entry.get("reason", "")
+            elif isinstance(entry, (int, float)):
+                score = entry
+                reason = ""
+            else:
+                score = 0
+                reason = ""
+            normalized[name] = {"score": float(score), "reason": str(reason)}
+            overall_sum += float(score)
+
+        # If overall is missing, compute weighted average from criteria
+        if overall is None:
+            overall = self._weighted_average(criteria)
+
+        return {"criteria": normalized, "overall": float(overall)}
+
+    def _weighted_average(self, criteria: dict[str, Any]) -> float:
+        """Compute weighted average of criterion scores."""
+        total_score = 0.0
+        total_weight = 0.0
+        for name, entry in criteria.items():
+            if isinstance(entry, dict):
+                score = entry.get("score", 0)
+            else:
+                score = entry
+            weight = self._weights.get(name, 1.0)
+            total_score += float(score) * weight
+            total_weight += weight
+        if total_weight == 0:
+            return 0.0
+        return total_score / total_weight
+
+
+class RubricRegistry:
+    """Task-adaptive rubric registry — select rubrics by task category.
+
+    Predefined rubrics for common task types (code-edit, architecture-review,
+    documentation, etc.) so eval suites don't need to define criteria from
+    scratch every time.
+    """
+
+    _RUBRICS: dict[str, dict[str, str]] = {
+        "default": {
+            "correctness": "Does the output correctly answer the task?",
+            "completeness": "Is the response thorough and complete?",
+            "relevance": "Is the response on-topic and focused?",
+            "precision": "Are claims specific and well-supported?",
+        },
+        "code-edit": {
+            "correctness": "Does the code change achieve the stated goal?",
+            "safety": "Does the change avoid introducing bugs or security issues?",
+            "style": "Does the code follow existing style and conventions?",
+            "testability": "Can the change be tested or verified?",
+        },
+        "architecture-review": {
+            "soundness": "Is the proposed architecture technically sound?",
+            "scalability": "Will the design handle growth and load?",
+            "simplicity": "Is the design as simple as possible for the requirements?",
+            "risk-awareness": "Are trade-offs and risks explicitly acknowledged?",
+        },
+        "documentation": {
+            "accuracy": "Is the documentation factually correct?",
+            "clarity": "Is the writing clear and easy to follow?",
+            "completeness": "Are all important topics covered?",
+            "examples": "Does it include concrete examples where helpful?",
+        },
+        "security": {
+            "throat-modeling": "Are threats realistically modeled?",
+            "mitigation": "Are mitigations practical and effective?",
+            "coverage": "Are all attack surfaces considered?",
+            "evidence": "Are claims backed by references or proof?",
+        },
+    }
+
+    @classmethod
+    def get_rubric(cls, task_type: str) -> dict[str, str]:
+        """Get criteria dict for a task type. Falls back to 'default'."""
+        return cls._RUBRICS.get(task_type, cls._RUBRICS["default"])
+
+    @classmethod
+    def list_task_types(cls) -> list[str]:
+        """List available task types."""
+        return list(cls._RUBRICS.keys())
+
+    @classmethod
+    def register_rubric(cls, task_type: str, criteria: dict[str, str]) -> None:
+        """Register a custom rubric for a task type."""
+        cls._RUBRICS[task_type] = dict(criteria)
+
+    @classmethod
+    def create_metric(
+        cls,
+        task_type: str,
+        judge_provider: Any = None,
+        weights: dict[str, float] | None = None,
+    ) -> RubricJudgeMetric:
+        """Factory: create a ``RubricJudgeMetric`` pre-loaded for a task type."""
+        criteria = cls.get_rubric(task_type)
+        return RubricJudgeMetric(
+            judge_provider=judge_provider,
+            criteria=criteria,
+            weights=weights,
+        )

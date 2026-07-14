@@ -336,3 +336,48 @@ class TestProviderRouter:
 
         decision = router.select("test", excluded=["p2"])
         assert decision.provider_name == "p1"
+
+    def test_decision_history_limit(self):
+        config = RouterConfig(
+            enabled=True,
+            providers=[
+                ProviderNode(name="p1", provider_type="mock", capabilities={"general"}),
+            ],
+        )
+        router = ProviderRouter(config)
+
+        # Exceed the limit
+        for i in range(ProviderRouter._MAX_DECISION_HISTORY + 50):
+            router.select(f"prompt {i}")
+
+        assert len(router._decision_history) == ProviderRouter._MAX_DECISION_HISTORY
+        # Verify FIFO: oldest dropped, newest retained
+        assert router._decision_history[-1].reason.startswith("Selected")
+
+    def test_update_quality_score(self):
+        config = RouterConfig(
+            enabled=True,
+            providers=[
+                ProviderNode(name="p1", provider_type="mock", capabilities={"general"}),
+            ],
+        )
+        router = ProviderRouter(config)
+        router.record_success("p1", "test prompt", quality_score=0.5)
+
+        updated = router.update_quality_score("p1", "test prompt", quality_score=0.95)
+        assert updated is True
+
+        edge = router.graph.get_edge("p1", TaskSignature.from_prompt("test prompt"))
+        assert edge.outcomes[-1].quality_score == 0.95
+
+    def test_update_quality_score_no_edge(self):
+        config = RouterConfig(
+            enabled=True,
+            providers=[
+                ProviderNode(name="p1", provider_type="mock", capabilities={"general"}),
+            ],
+        )
+        router = ProviderRouter(config)
+
+        updated = router.update_quality_score("p1", "unknown prompt", quality_score=0.95)
+        assert updated is False

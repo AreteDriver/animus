@@ -244,6 +244,16 @@ class TestMetaThinkerSignals:
         assert thinker._original_prompt == ""
         assert thinker.check() == []
 
+    def test_event_history_limit(self):
+        thinker = MetaThinker(MetaThinkerConfig(enabled=True))
+        for i in range(MetaThinker._MAX_EVENTS + 50):
+            thinker.observe(
+                ToolExecution(iteration=i + 1, tool_name="cmd", params={}, success=True)
+            )
+        assert len(thinker._events) == MetaThinker._MAX_EVENTS
+        # Verify oldest events were pruned (FIFO)
+        assert thinker._events[0].iteration == 51
+
 
 class TestSignalTypes:
     """Tests for signal dataclasses."""
