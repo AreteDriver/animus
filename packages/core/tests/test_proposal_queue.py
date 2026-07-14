@@ -1,5 +1,7 @@
 """Tests for ProposalQueue approval lifecycle."""
 
+from pathlib import Path
+
 import pytest
 
 from animus.citizens.proposal import (
@@ -262,7 +264,11 @@ class TestProposalQueueStats:
 
 
 class TestProposalQueuePersistence:
-    def test_load_from_memory_without_memory(self, queue):
+    def test_load_from_memory_without_memory(self, queue, monkeypatch):
+        import animus.citizens.proposal_queue as pq_module
+        monkeypatch.setattr(
+            pq_module, "_DEFAULT_SQLITE_PATH", Path("/nonexistent/animus/proposal_queue.db")
+        )
         assert queue.load_from_memory() == 0
 
     def test_persist_without_memory_is_noop(self, queue, sample_proposal):

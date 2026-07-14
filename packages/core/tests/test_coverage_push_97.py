@@ -88,6 +88,8 @@ def _make_mock_chromadb():
     """Return a mock chromadb module with PersistentClient."""
     mod = MagicMock()
     mod.PersistentClient = MockChromaClient
+    mod.HttpClient.side_effect = Exception("no chromadb server")
+    mod.Settings = MagicMock()
     return mod
 
 
@@ -159,6 +161,7 @@ class TestChromaMemoryStoreInit:
 
     def test_init_generic_error(self, tmp_data_dir):
         bad_mod = MagicMock()
+        bad_mod.HttpClient.side_effect = Exception("no server")
         bad_mod.PersistentClient.side_effect = RuntimeError("db corrupt")
         with patch.dict(sys.modules, {"chromadb": bad_mod}):
             with pytest.raises(RuntimeError, match="db corrupt"):
