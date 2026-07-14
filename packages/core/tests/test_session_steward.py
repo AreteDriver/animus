@@ -35,6 +35,13 @@ class MockTelemetryEvent:
     turns: int = 0
     timestamp: datetime = field(default_factory=datetime.now)
     message: str = ""
+    # New fields for H4–H8
+    model_name: str = ""
+    summary_quality_score: float = 0.0
+    correction_count: int = 0
+    user_turns: int = 0
+    vague_prompt_count: int = 0
+    tool_calls: int = 0
 
 
 class MockTelemetryProvider:
@@ -240,6 +247,446 @@ class TestH3RestartFatigue:
         provider = MockTelemetryProvider(events)
         patterns = steward.observe_telemetry(provider)
         assert not any(p.heuristic == "H3" for p in patterns)
+
+
+class TestH4ModelDrift:
+    def test_detects_utilization_decline(self):
+        steward = SessionStewardCitizen(min_sessions=2)
+        now = datetime.now(timezone.utc)
+        events = [
+            # Early wrapups: high utilization
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=85.0,
+                timestamp=now - timedelta(hours=6),
+                model_name="qwen2.5-coder:14b",
+            ),
+            MockTelemetryEvent(
+                session_id="s2",
+                event_name="WRAPPING_UP",
+                utilization_percent=88.0,
+                timestamp=now - timedelta(hours=5),
+                model_name="qwen2.5-coder:14b",
+            ),
+            # Recent wrapups: low utilization (drift)
+            MockTelemetryEvent(
+                session_id="s3",
+                event_name="WRAPPING_UP",
+                utilization_percent=55.0,
+                timestamp=now - timedelta(hours=1),
+                model_name="qwen2.5-coder:14b",
+            ),
+            MockTelemetryEvent(
+                session_id="s4",
+                event_name="WRAPPING_UP",
+                utilization_percent=52.0,
+                timestamp=now,
+                model_name="qwen2.5-coder:14b",
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+
+        h4 = [p for p in patterns if p.heuristic == "H4"]
+        assert len(h4) == 1
+        assert h4[0].severity == "high"
+        assert "qwen2.5-coder:14b" in h4[0].description
+        assert "dropped" in h4[0].description
+
+    def test_no_detection_with_stable_utilization(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now - timedelta(hours=2),
+                model_name="qwen2.5-coder:14b",
+            ),
+            MockTelemetryEvent(
+                session_id="s2",
+                event_name="WRAPPING_UP",
+                utilization_percent=78.0,
+                timestamp=now,
+                model_name="qwen2.5-coder:14b",
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+        assert not any(p.heuristic == "H4" for p in patterns)
+
+    def test_no_detection_without_model_name(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=50.0,
+                timestamp=now,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+        assert not any(p.heuristic == "H4" for p in patterns)
+
+
+class TestH5SummaryQuality:
+    def test_detects_low_quality_wrapups(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                summary_quality_score=0.4,
+            ),
+            MockTelemetryEvent(
+                session_id="s2",
+                event_name="WRAPPING_UP",
+                utilization_percent=82.0,
+                timestamp=now,
+                summary_quality_score=0.3,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+
+        h5 = [p for p in patterns if p.heuristic == "H5"]
+        # Should detect both low-score and regression cluster
+        assert len(h5) == 2
+        assert any(p.severity == "medium" and "below 0.5" in p.description for p in h5)
+        assert any(p.severity == "high" and "regression" in p.description for p in h5)
+
+    def test_no_detection_when_quality_normal(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                summary_quality_score=0.85,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+        assert not any(p.heuristic == "H5" for p in patterns)
+
+    def test_no_detection_without_quality_scores(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+        assert not any(p.heuristic == "H5" for p in patterns)
+
+
+class TestH6CorrectionLoops:
+    def test_detects_high_correction_ratio(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                correction_count=5,
+                user_turns=8,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+
+        h6 = [p for p in patterns if p.heuristic == "H6"]
+        assert len(h6) == 1
+        assert h6[0].severity == "high"
+        assert "62%" in h6[0].description or "63%" in h6[0].description
+
+    def test_no_detection_when_ratio_low(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                correction_count=1,
+                user_turns=10,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+        assert not any(p.heuristic == "H6" for p in patterns)
+
+    def test_medium_severity_for_moderate_ratio(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                correction_count=2,
+                user_turns=6,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+
+        h6 = [p for p in patterns if p.heuristic == "H6"]
+        assert len(h6) == 1
+        assert h6[0].severity == "medium"
+
+
+class TestH7VaguePrompts:
+    def test_detects_vague_prompt_cluster(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                vague_prompt_count=1,
+            ),
+            MockTelemetryEvent(
+                session_id="s2",
+                event_name="WRAPPING_UP",
+                utilization_percent=82.0,
+                timestamp=now,
+                vague_prompt_count=2,
+            ),
+            MockTelemetryEvent(
+                session_id="s3",
+                event_name="WRAPPING_UP",
+                utilization_percent=79.0,
+                timestamp=now,
+                vague_prompt_count=1,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+
+        h7 = [p for p in patterns if p.heuristic == "H7"]
+        assert len(h7) == 1
+        assert h7[0].severity == "medium"
+        assert "3 sessions" in h7[0].description
+
+    def test_low_severity_for_few_sessions(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                vague_prompt_count=1,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+
+        h7 = [p for p in patterns if p.heuristic == "H7"]
+        assert len(h7) == 1
+        assert h7[0].severity == "low"
+
+    def test_no_detection_without_vague_prompts(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+        assert not any(p.heuristic == "H7" for p in patterns)
+
+
+class TestH8ToolOveruse:
+    def test_detects_high_tool_ratio(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                turns=3,
+                tool_calls=12,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+
+        h8 = [p for p in patterns if p.heuristic == "H8"]
+        assert len(h8) == 1
+        assert h8[0].severity == "low"
+        assert "4.0x" in h8[0].description
+
+    def test_detects_cluster_as_medium(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                turns=2,
+                tool_calls=8,
+            ),
+            MockTelemetryEvent(
+                session_id="s2",
+                event_name="WRAPPING_UP",
+                utilization_percent=82.0,
+                timestamp=now,
+                turns=2,
+                tool_calls=7,
+            ),
+            MockTelemetryEvent(
+                session_id="s3",
+                event_name="WRAPPING_UP",
+                utilization_percent=79.0,
+                timestamp=now,
+                turns=2,
+                tool_calls=9,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+
+        h8 = [p for p in patterns if p.heuristic == "H8"]
+        assert len(h8) == 1
+        assert h8[0].severity == "medium"
+        assert "3 session(s)" in h8[0].description
+
+    def test_no_detection_when_ratio_normal(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                turns=10,
+                tool_calls=5,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+        assert not any(p.heuristic == "H8" for p in patterns)
+
+    def test_no_detection_without_turns(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        now = datetime.now(timezone.utc)
+        events = [
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                tool_calls=10,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+        assert not any(p.heuristic == "H8" for p in patterns)
+
+
+class TestPolicyDiffH4H8:
+    def test_h4_generates_model_override_diff(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        patterns = [
+            EfficiencyPattern(
+                heuristic="H4",
+                description="Model drift",
+                severity="high",
+                recommendation="Rotate model",
+                data={"model_name": "qwen2.5-coder:14b", "drop_percent": 30.0},
+            ),
+        ]
+        diffs = steward.generate_policy_diffs(patterns)
+        assert any(d.parameter == "model_override" for d in diffs)
+
+    def test_h5_generates_wrapup_model_diff(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        patterns = [
+            EfficiencyPattern(
+                heuristic="H5",
+                description="Low quality",
+                severity="medium",
+                recommendation="Switch model",
+                data={},
+            ),
+        ]
+        diffs = steward.generate_policy_diffs(patterns)
+        assert any(d.parameter == "wrapup_model" for d in diffs)
+
+    def test_h6_generates_confirmation_step_diff(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        patterns = [
+            EfficiencyPattern(
+                heuristic="H6",
+                description="Correction loops",
+                severity="high",
+                recommendation="Add confirmation",
+                data={},
+            ),
+        ]
+        diffs = steward.generate_policy_diffs(patterns)
+        assert any(d.parameter == "confirmation_step" for d in diffs)
+
+    def test_h7_generates_intent_templates_diff(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        patterns = [
+            EfficiencyPattern(
+                heuristic="H7",
+                description="Vague prompts",
+                severity="medium",
+                recommendation="Add templates",
+                data={},
+            ),
+        ]
+        diffs = steward.generate_policy_diffs(patterns)
+        assert any(d.parameter == "intent_templates" for d in diffs)
+
+    def test_h8_generates_reasoning_budget_diff(self):
+        steward = SessionStewardCitizen(min_sessions=1)
+        patterns = [
+            EfficiencyPattern(
+                heuristic="H8",
+                description="Tool thrashing",
+                severity="medium",
+                recommendation="Increase budget",
+                data={},
+            ),
+        ]
+        diffs = steward.generate_policy_diffs(patterns)
+        assert any(d.parameter == "reasoning_budget" for d in diffs)
 
 
 class TestMinSessionsThreshold:
@@ -661,3 +1108,112 @@ class TestMixedHeuristics:
         assert "H1" in heuristics
         assert "H2" in heuristics
         assert "H3" in heuristics
+
+    def test_h4_h8_mixed_patterns(self):
+        steward = SessionStewardCitizen(min_sessions=2)
+        now = datetime.now(timezone.utc)
+        base = now - timedelta(minutes=30)
+        events = [
+            # H4: model drift (high early, low recent)
+            MockTelemetryEvent(
+                session_id="s1",
+                event_name="WRAPPING_UP",
+                utilization_percent=90.0,
+                timestamp=now - timedelta(hours=6),
+                model_name="qwen2.5-coder:14b",
+            ),
+            MockTelemetryEvent(
+                session_id="s2",
+                event_name="WRAPPING_UP",
+                utilization_percent=85.0,
+                timestamp=now - timedelta(hours=5),
+                model_name="qwen2.5-coder:14b",
+            ),
+            MockTelemetryEvent(
+                session_id="s3",
+                event_name="WRAPPING_UP",
+                utilization_percent=55.0,
+                timestamp=now - timedelta(hours=1),
+                model_name="qwen2.5-coder:14b",
+            ),
+            MockTelemetryEvent(
+                session_id="s4",
+                event_name="WRAPPING_UP",
+                utilization_percent=52.0,
+                timestamp=now,
+                model_name="qwen2.5-coder:14b",
+            ),
+            # H5: low summary quality
+            MockTelemetryEvent(
+                session_id="s5",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                summary_quality_score=0.4,
+            ),
+            # H6: correction loops
+            MockTelemetryEvent(
+                session_id="s6",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                correction_count=4,
+                user_turns=6,
+            ),
+            # H7: vague prompts cluster
+            MockTelemetryEvent(
+                session_id="s7",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                vague_prompt_count=1,
+            ),
+            MockTelemetryEvent(
+                session_id="s8",
+                event_name="WRAPPING_UP",
+                utilization_percent=82.0,
+                timestamp=now,
+                vague_prompt_count=1,
+            ),
+            MockTelemetryEvent(
+                session_id="s9",
+                event_name="WRAPPING_UP",
+                utilization_percent=79.0,
+                timestamp=now,
+                vague_prompt_count=2,
+            ),
+            # H8: tool overuse cluster
+            MockTelemetryEvent(
+                session_id="s10",
+                event_name="WRAPPING_UP",
+                utilization_percent=80.0,
+                timestamp=now,
+                turns=2,
+                tool_calls=8,
+            ),
+            MockTelemetryEvent(
+                session_id="s11",
+                event_name="WRAPPING_UP",
+                utilization_percent=82.0,
+                timestamp=now,
+                turns=2,
+                tool_calls=7,
+            ),
+            MockTelemetryEvent(
+                session_id="s12",
+                event_name="WRAPPING_UP",
+                utilization_percent=79.0,
+                timestamp=now,
+                turns=2,
+                tool_calls=9,
+            ),
+        ]
+        provider = MockTelemetryProvider(events)
+        patterns = steward.observe_telemetry(provider)
+
+        heuristics = {p.heuristic for p in patterns}
+        assert "H4" in heuristics
+        assert "H5" in heuristics
+        assert "H6" in heuristics
+        assert "H7" in heuristics
+        assert "H8" in heuristics

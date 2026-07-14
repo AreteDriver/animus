@@ -378,15 +378,161 @@ class SessionStewardCitizen:
         self,
         per_session: dict[str, list[TelemetryEvent]],
     ) -> list[EfficiencyPattern]:
-        """Detect model-specific utilization patterns (placeholder)."""
-        return []
+        """Detect model-specific utilization decline (drift).
+
+        Compares the most recent half of wrapup events to the earlier half
+        for each model. A significant drop in average utilization indicates
+        the model is degrading for the current workload.
+        """
+        patterns: list[EfficiencyPattern] = []
+
+        # Gather all wrapup events with model names
+        wrapups: list[TelemetryEvent] = []
+        for events in per_session.values():
+            for e in events:
+                if getattr(e, "event_name", "") == "WRAPPING_UP":
+                    model = getattr(e, "model_name", "")
+                    if model:
+                        wrapups.append(e)
+
+        if len(wrapups) < 4:
+            return patterns
+
+        # Group by model
+        by_model: dict[str, list[TelemetryEvent]] = {}
+        for e in wrapups:
+            model = getattr(e, "model_name", "unknown")
+            by_model.setdefault(model, []).append(e)
+
+        for model, events in by_model.items():
+            if len(events) < 4:
+                continue
+
+            events.sort(key=lambda x: getattr(x, "timestamp", datetime.min))
+            mid = len(events) // 2
+            first_half = events[:mid]
+            second_half = events[mid:]
+
+            avg_first = sum(
+                getattr(e, "utilization_percent", 0.0) for e in first_half
+            ) / len(first_half)
+            avg_second = sum(
+                getattr(e, "utilization_percent", 0.0) for e in second_half
+            ) / len(second_half)
+
+            if avg_first == 0:
+                continue
+
+            drop_percent = (avg_first - avg_second) / avg_first * 100
+
+            if drop_percent > 15.0:
+                severity = "high" if drop_percent > 25.0 else "medium"
+                patterns.append(
+                    EfficiencyPattern(
+                        heuristic="H4",
+                        description=(
+                            f"Model '{model}' utilization dropped {drop_percent:.1f}% "
+                            f"(from {avg_first:.1f}% to {avg_second:.1f}%) across "
+                            f"{len(events)} sessions."
+                        ),
+                        severity=severity,
+                        recommendation=(
+                            f"Consider rotating away from '{model}' or lowering its "
+                            f"wrapup threshold to compensate for quality degradation."
+                        ),
+                        data={
+                            "model_name": model,
+                            "avg_first": avg_first,
+                            "avg_second": avg_second,
+                            "drop_percent": drop_percent,
+                            "session_count": len(events),
+                        },
+                    )
+                )
+
+        return patterns
 
     def _h5_summary_quality(
         self,
         per_session: dict[str, list[TelemetryEvent]],
     ) -> list[EfficiencyPattern]:
-        """Detect wrapup summaries with quality regressions (placeholder)."""
-        return []
+        """Detect wrapup summary quality regressions.
+
+        Wrapup events may carry a ``summary_quality_score`` (0.0–1.0)
+        from offline rubric evaluation. Flags single low scores and
+        regression clusters.
+        """
+        patterns: list[EfficiencyPattern] = []
+
+        scored_wrapups: list[TelemetryEvent] = []
+        for events in per_session.values():
+            for e in events:
+                if getattr(e, "event_name", "") == "WRAPPING_UP":
+                    score = getattr(e, "summary_quality_score", 0.0)
+                    if score > 0.0:
+                        scored_wrapups.append(e)
+
+        if not scored_wrapups:
+            return patterns
+
+        # Sort chronologically
+        scored_wrapups.sort(key=lambda x: getattr(x, "timestamp", datetime.min))
+
+        # Single low scores
+        low_scores = [e for e in scored_wrapups if getattr(e, "summary_quality_score", 1.0) < 0.5]
+        if low_scores:
+            patterns.append(
+                EfficiencyPattern(
+                    heuristic="H5",
+                    description=(
+                        f"{len(low_scores)} wrapup summary(s) scored below 0.5 "
+                        f"(out of {len(scored_wrapups)} evaluated)."
+                    ),
+                    severity="medium",
+                    recommendation=(
+                        "Review summary generation prompt. Consider switching to a "
+                        "higher-capability model for wrapup turns."
+                    ),
+                    data={
+                        "low_score_count": len(low_scores),
+                        "total_evaluated": len(scored_wrapups),
+                    },
+                )
+            )
+
+        # Regression cluster: 2+ consecutive low scores
+        regression_count = 0
+        consecutive = 0
+        for e in scored_wrapups:
+            score = getattr(e, "summary_quality_score", 1.0)
+            if score < 0.6:
+                consecutive += 1
+                if consecutive >= 2:
+                    regression_count += 1
+            else:
+                consecutive = 0
+
+        if regression_count > 0:
+            patterns.append(
+                EfficiencyPattern(
+                    heuristic="H5",
+                    description=(
+                        f"{regression_count} regression cluster(s) of 2+ consecutive "
+                        f"low-quality wrapup summaries detected."
+                    ),
+                    severity="high",
+                    recommendation=(
+                        "Raise wrapup threshold to give the model more headroom, "
+                        "or switch to a dedicated summary model."
+                    ),
+                    data={
+                        "regression_count": regression_count,
+                        "threshold": 0.6,
+                    },
+                )
+            )
+
+        return patterns
 
     def _h6_correction_loops(
         self,
@@ -394,12 +540,63 @@ class SessionStewardCitizen:
     ) -> list[EfficiencyPattern]:
         """Detect sessions with high correction-turn ratios.
 
-        Reads meta events from WarmSession to identify patterns where
-        the user repeatedly corrects the agent.
+        Telemetry events carry ``correction_count`` and ``user_turns``.
+        A ratio > 0.3 indicates the user is spending significant effort
+        correcting the agent.
         """
         patterns: list[EfficiencyPattern] = []
-        # Placeholder: requires meta event integration
-        # Implementation would scan per-session messages for correction patterns
+
+        flagged_sessions: list[dict[str, Any]] = []
+        for sid, events in per_session.items():
+            # Aggregate correction counts and user turns across all events for session
+            correction_count = 0
+            user_turns = 0
+            for e in events:
+                correction_count += getattr(e, "correction_count", 0)
+                user_turns += getattr(e, "user_turns", 0)
+
+            if user_turns == 0:
+                continue
+
+            ratio = correction_count / user_turns
+            if ratio > 0.3:
+                flagged_sessions.append(
+                    {
+                        "session_id": sid,
+                        "correction_count": correction_count,
+                        "user_turns": user_turns,
+                        "ratio": ratio,
+                    }
+                )
+
+        if not flagged_sessions:
+            return patterns
+
+        # Severity based on worst ratio
+        max_ratio = max(s["ratio"] for s in flagged_sessions)
+        severity = "high" if max_ratio > 0.5 else "medium"
+        total_corrections = sum(s["correction_count"] for s in flagged_sessions)
+
+        patterns.append(
+            EfficiencyPattern(
+                heuristic="H6",
+                description=(
+                    f"{len(flagged_sessions)} session(s) show high correction ratios "
+                    f"(max {max_ratio:.0%}). {total_corrections} total corrections."
+                ),
+                severity=severity,
+                recommendation=(
+                    "Add a confirmation step before execution. Improve intent parsing "
+                    "to catch the user's actual goal on the first turn."
+                ),
+                data={
+                    "affected_sessions": len(flagged_sessions),
+                    "max_ratio": max_ratio,
+                    "total_corrections": total_corrections,
+                },
+            )
+        )
+
         return patterns
 
     def _h7_vague_prompts(
@@ -408,10 +605,68 @@ class SessionStewardCitizen:
     ) -> list[EfficiencyPattern]:
         """Detect sessions triggered by vague or underspecified prompts.
 
-        Leverages Conversation Designer patterns for vague request detection.
+        Telemetry events carry ``vague_prompt_count`` per session.
+        Clusters of vague-start sessions indicate missing shortcuts
+        or poor discoverability.
         """
         patterns: list[EfficiencyPattern] = []
-        # Placeholder: requires conversation log integration
+
+        vague_sessions: list[dict[str, Any]] = []
+        for sid, events in per_session.items():
+            vague_count = sum(getattr(e, "vague_prompt_count", 0) for e in events)
+            if vague_count > 0:
+                vague_sessions.append(
+                    {
+                        "session_id": sid,
+                        "vague_count": vague_count,
+                    }
+                )
+
+        if not vague_sessions:
+            return patterns
+
+        total_vague = sum(s["vague_count"] for s in vague_sessions)
+
+        # Cluster detection: ≥3 sessions with vague prompts
+        if len(vague_sessions) >= 3:
+            patterns.append(
+                EfficiencyPattern(
+                    heuristic="H7",
+                    description=(
+                        f"{len(vague_sessions)} sessions started with vague prompts "
+                        f"({total_vague} total)."
+                    ),
+                    severity="medium",
+                    recommendation=(
+                        "Add structured command shortcuts or template options for "
+                        "the most common ambiguous intents."
+                    ),
+                    data={
+                        "affected_sessions": len(vague_sessions),
+                        "total_vague_prompts": total_vague,
+                    },
+                )
+            )
+        else:
+            patterns.append(
+                EfficiencyPattern(
+                    heuristic="H7",
+                    description=(
+                        f"{len(vague_sessions)} session(s) with vague prompts "
+                        f"({total_vague} total)."
+                    ),
+                    severity="low",
+                    recommendation=(
+                        "Monitor for pattern growth. Consider clarifying questions "
+                        "when intent confidence is low."
+                    ),
+                    data={
+                        "affected_sessions": len(vague_sessions),
+                        "total_vague_prompts": total_vague,
+                    },
+                )
+            )
+
         return patterns
 
     def _h8_tool_overuse(
@@ -424,31 +679,53 @@ class SessionStewardCitizen:
         reasoning. Often correlates with poor prompt engineering.
         """
         patterns: list[EfficiencyPattern] = []
-        high_tool_sessions = 0
+        flagged_sessions: list[dict[str, Any]] = []
+
         for sid, events in per_session.items():
+            tool_calls = sum(getattr(e, "tool_calls", 0) for e in events)
             turns = sum(getattr(e, "turns", 0) for e in events)
             if turns == 0:
                 continue
-            # Heuristic: tool events would be a separate telemetry type
-            # This is a placeholder for when tool telemetry is available
-            pass
 
-        if high_tool_sessions >= 3:
-            patterns.append(
-                EfficiencyPattern(
-                    heuristic="H8",
-                    description=(
-                        f"{high_tool_sessions} sessions show elevated tool call ratios. "
-                        f"Agent may be thrashing rather than reasoning."
-                    ),
-                    severity="low",
-                    recommendation=(
-                        "Review tool descriptions for clarity. Consider adding "
-                        "Meta-Thinker tool-use cooldown or increasing reasoning budget."
-                    ),
-                    data={"affected_sessions": high_tool_sessions},
+            ratio = tool_calls / turns
+            if ratio > 3.0:
+                flagged_sessions.append(
+                    {
+                        "session_id": sid,
+                        "tool_calls": tool_calls,
+                        "turns": turns,
+                        "ratio": ratio,
+                    }
                 )
+
+        if not flagged_sessions:
+            return patterns
+
+        avg_ratio = sum(s["ratio"] for s in flagged_sessions) / len(flagged_sessions)
+        max_ratio = max(s["ratio"] for s in flagged_sessions)
+        severity = "medium" if len(flagged_sessions) >= 3 else "low"
+
+        patterns.append(
+            EfficiencyPattern(
+                heuristic="H8",
+                description=(
+                    f"{len(flagged_sessions)} session(s) show elevated tool call ratios "
+                    f"(avg {avg_ratio:.1f}x, max {max_ratio:.1f}x per turn). "
+                    f"Agent may be thrashing rather than reasoning."
+                ),
+                severity=severity,
+                recommendation=(
+                    "Review tool descriptions for clarity. Consider enabling "
+                    "Meta-Thinker tool-use cooldown or increasing reasoning budget."
+                ),
+                data={
+                    "affected_sessions": len(flagged_sessions),
+                    "avg_ratio": avg_ratio,
+                    "max_ratio": max_ratio,
+                },
             )
+        )
+
         return patterns
 
     # ── Policy Diff Generation ────────────────────────────────────────
@@ -493,6 +770,56 @@ class SessionStewardCitizen:
                         proposed_value="+50%",
                         rationale=pattern.description,
                         expected_impact="Fewer restarts, deeper context windows",
+                    )
+                )
+            elif pattern.heuristic == "H4" and pattern.data.get("model_name"):
+                diffs.append(
+                    PolicyDiff(
+                        parameter="model_override",
+                        current_value=pattern.data["model_name"],
+                        proposed_value="rotate_to_best_provider",
+                        rationale=pattern.description,
+                        expected_impact="Restore utilization levels by routing away from degraded model",
+                    )
+                )
+            elif pattern.heuristic == "H5":
+                diffs.append(
+                    PolicyDiff(
+                        parameter="wrapup_model",
+                        current_value="default",
+                        proposed_value="higher_capability",
+                        rationale=pattern.description,
+                        expected_impact="Improve summary quality at session wrapup",
+                    )
+                )
+            elif pattern.heuristic == "H6":
+                diffs.append(
+                    PolicyDiff(
+                        parameter="confirmation_step",
+                        current_value="disabled",
+                        proposed_value="enabled",
+                        rationale=pattern.description,
+                        expected_impact="Reduce correction loops by confirming intent before execution",
+                    )
+                )
+            elif pattern.heuristic == "H7":
+                diffs.append(
+                    PolicyDiff(
+                        parameter="intent_templates",
+                        current_value="existing",
+                        proposed_value="expand_top_3",
+                        rationale=pattern.description,
+                        expected_impact="Reduce vague prompts by providing structured starting points",
+                    )
+                )
+            elif pattern.heuristic == "H8":
+                diffs.append(
+                    PolicyDiff(
+                        parameter="reasoning_budget",
+                        current_value="default",
+                        proposed_value="increase_20pct",
+                        rationale=pattern.description,
+                        expected_impact="Reduce tool thrashing by giving the model more reasoning tokens per turn",
                     )
                 )
 
