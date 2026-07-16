@@ -78,6 +78,7 @@ postgres = [
 ]
 dev = [
     "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
     "pytest-benchmark>=4.0.0",
     "pytest-cov>=4.1.0",
     "ruff>=0.2.0",

@@ -1,6 +1,6 @@
 """Animus - An exocortex architecture for personal cognitive sovereignty."""
 
-__version__ = "1.0.0"
+__version__ = "2.3.0"
 
 from animus.cognitive import (
     CognitiveLayer,

@@ -360,10 +360,10 @@ class TestIntegrationConfig:
 class TestVersion:
     """Test version is updated for Phase 4+."""
 
-    def test_version_is_0_5_0(self):
+    def test_version_is_2_3_0(self):
         from animus import __version__
 
-        assert __version__ == "1.0.0"
+        assert __version__ == "2.3.0"
 
 
 if __name__ == "__main__":

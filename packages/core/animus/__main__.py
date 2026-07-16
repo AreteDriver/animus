@@ -392,7 +392,7 @@ def show_tags(memory: MemoryLayer):
 def main():
     """Main entry point for Animus CLI."""
     # Delegate structured subcommands before entering the REPL.
-    if len(sys.argv) > 1 and sys.argv[1] == "ingest":
+    if len(sys.argv) > 1:
         from animus.cli import main as cli_main
 
         return cli_main(sys.argv[1:])
