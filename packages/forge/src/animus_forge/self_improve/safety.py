@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import fnmatch
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -313,6 +314,88 @@ class SafetyChecker:
                     )
                 )
 
+        return violations
+
+    # ------------------------------------------------------------------
+    # E11 — Red-team loop-abuse hardening
+    # ------------------------------------------------------------------
+
+    _PROBE_PATTERNS: tuple[str, ...] = (
+        # Jailbreak / instruction-override probes
+        r"ignore\s+(?:all\s+)?(?:previous|prior|above)\s+(?:instructions|directives)",
+        r"ignore\s+(?:the\s+)?system\s+(?:prompt|message|instruction)",
+        r"you\s+(?:are\s+now|have\s+been)\s+(?:in|switched\s+to)\s+DAN\s+mode",
+        r"DAN\s*[:\-]\s*do\s+anything\s+now",
+        r"(?:developer|debug|admin)\s+mode\s*(?:activated|enabled|on)",
+        r"simulate\s+(?:being|acting\s+as)\s+(?:an?\s+)?(?:unrestricted|unfiltered|uncensored)",
+        r"pretend\s+(?:you\s+are|to\s+be)\s+(?:an?\s+)?(?:evil|malicious|hacker|attacker)",
+        r"(?:bypass|disable|turn\s+off)\s+(?:safety|guardrail|protection|restriction|filter)",
+        # Self-improve loop manipulation
+        r"(?:approve|auto-approve|skip)\s+(?:all\s+)?(?:safety|approval|human\s+review|check)",
+        r"set\s+(?:ANIMUS_FORGE_ALLOW_AUTO_APPROVE|auto_approve)\s*=\s*(?:1|true|yes)",
+        r"inject\s+(?:this\s+)?(?:code|payload|exploit)\s+(?:into|inside)\s+(?:the\s+)?(?:system|orchestrator|pipeline)",
+        # Encoding evasion (common red-team obfuscation)
+        r"base64\s*[:\-]\s*[A-Za-z0-9+/=]{40,}",
+        r"rot13\s*[:\-]\s*[A-Za-z ]{20,}",
+        # Repetition / flooding probes
+        r"(.)\1{80,}",
+    )
+
+    def is_probe_shaped(self, text: str) -> bool:
+        """Check if text matches known red-team probe signatures.
+
+        Probes may arrive disguised as improvement suggestions, attempting
+        to manipulate the self-improve loop into bypassing safety gates or
+        injecting malicious code. This is a coarse-grained filter; false
+        positives are acceptable (human review is the backstop).
+
+        Args:
+            text: Suggestion title or description to check.
+
+        Returns:
+            True if the text looks like an adversarial probe.
+        """
+        lowered = text.lower()
+        for pattern in self._PROBE_PATTERNS:
+            if re.search(pattern, lowered, re.IGNORECASE):
+                return True
+        return False
+
+    def check_suggestion_content(
+        self, suggestions: list[Any]
+    ) -> list[SafetyViolation]:
+        """Check improvement suggestions for probe-shaped content.
+
+        E11 — before an analyzer suggestion becomes a plan, each title and
+        description is screened for adversarial patterns. A single probe
+        triggers a blocking violation that halts the pipeline before any
+        code is generated or applied.
+
+        Args:
+            suggestions: Raw suggestions from the analyzer.
+
+        Returns:
+            List of violations (empty if all suggestions look legitimate).
+        """
+        violations: list[SafetyViolation] = []
+        for suggestion in suggestions:
+            title = getattr(suggestion, "title", "")
+            description = getattr(suggestion, "description", "")
+            for field_name, field_text in (("title", title), ("description", description)):
+                if self.is_probe_shaped(field_text):
+                    violations.append(
+                        SafetyViolation(
+                            file_path="",
+                            violation_type="probe_detected",
+                            message=(
+                                f"Red-team probe detected in suggestion "
+                                f"'{title}' ({field_name}): content matches known "
+                                f"adversarial patterns — aborting self-improve loop."
+                            ),
+                        )
+                    )
+                    # Don't duplicate-report the same suggestion
+                    break
         return violations
 
     def has_blocking_violations(self, violations: list[SafetyViolation]) -> bool:

@@ -90,6 +90,28 @@ class TestTierGating:
         monkeypatch.delenv("ANIMUS_OFFLINE", raising=False)
         assert is_egress_allowed("https://api.anthropic.com") is True
 
+    def test_content_recheck_blocks_secrets_even_when_public(self, monkeypatch):
+        """E13 — TOCTOU defense: gate re-checks payload content at use time,
+        regardless of the declared tier label. A PUBLIC tag on a memory
+        containing a credential must still be blocked."""
+        monkeypatch.delenv("ANIMUS_OFFLINE", raising=False)
+        allowed = is_egress_allowed(
+            "https://api.anthropic.com",
+            tier=Sensitivity.PUBLIC,
+            content="token sk-ant-api03-abcdefghijklmnopqrstuvwxyz12345",
+        )
+        assert allowed is False
+
+    def test_content_recheck_allows_clean_public(self, monkeypatch):
+        """Clean PUBLIC content without secrets passes the re-check."""
+        monkeypatch.delenv("ANIMUS_OFFLINE", raising=False)
+        allowed = is_egress_allowed(
+            "https://api.anthropic.com",
+            tier=Sensitivity.PUBLIC,
+            content="Normal memory about Linux SSDs.",
+        )
+        assert allowed is True
+
 
 @pytest.mark.skipif(
     pytest.importorskip("anthropic", reason="anthropic SDK is optional dep") is None,

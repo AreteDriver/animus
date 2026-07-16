@@ -40,6 +40,40 @@ class IntegritySignatureError(RuntimeError):
     """
 
 
+# ---------------------------------------------------------------------------
+# E9 — Repo-root tracked files (systemd units, deploy configs, etc.)
+#
+# These live outside the animus package tree but define runtime sandbox
+# boundaries. Tampering them silently widens the attack surface.
+# Resolved against the git repo root (found by walking up from the package).
+# ---------------------------------------------------------------------------
+_TRACKED_REPO_PATHS: tuple[str, ...] = (
+    "systemd/animus-autonomous.service",
+    "systemd/animus-autonomous-knowledge.service",
+    "systemd/animus-autonomous-conversation.service",
+    "systemd/animus-autonomous-all.service",
+    "systemd/animus-autonomous-test.service",
+    "deploy/systemd/user/animus-sync.service",
+    "deploy/systemd/user/animus-sync-fail.service",
+    "packages/bootstrap/contrib/systemd/animus.service",
+    "packages/bootstrap/contrib/systemd/animus-forge.service",
+    "packages/forge/scripts/animus-bounty-watcher.service",
+)
+
+
+def _repo_root() -> Path | None:
+    """Walk up from the animus package root to find the git repo root.
+
+    Returns None if no .git directory is found (e.g., in a shallow
+    deployment without version control).
+    """
+    pkg = _animus_pkg_root()
+    for parent in (pkg, *pkg.parents):
+        if (parent / ".git").is_dir():
+            return parent
+    return None
+
+
 # Critical-path files — relative to the animus package root.
 # Each path is resolved against ``Path(animus.__file__).parent`` at runtime
 # so tests can target a synthetic tree without hardcoded absolute paths.
@@ -52,8 +86,7 @@ _TRACKED_RELATIVE_PATHS: tuple[str, ...] = (
     # detection) and the immutable learning guardrails.
     "integrity/checker.py",
     "learning/guardrails.py",
-    # E9 — systemd unit files define the sandbox boundaries (ProtectSystem,
-    # IPAddressDeny, etc.). Tampering them silently widens the attack surface.
+    # E9 — redteam systemd unit files (inside the package tree)
     "redteam/systemd/animus-redteam.service",
     "redteam/systemd/animus-redteam.timer",
 )
@@ -128,9 +161,16 @@ def _animus_pkg_root() -> Path:
 
 
 def tracked_files(root: Path | None = None) -> list[Path]:
-    """Return the absolute paths of every tracked file (relative + modules)."""
+    """Return the absolute paths of every tracked file (relative + repo + modules)."""
     base = root or _animus_pkg_root()
     paths = [base / rel for rel in _TRACKED_RELATIVE_PATHS]
+    # E9 — repo-root paths (systemd units, deploy configs)
+    repo = _repo_root()
+    if repo is not None:
+        for repo_rel in _TRACKED_REPO_PATHS:
+            p = repo / repo_rel
+            if p.is_file():
+                paths.append(p)
     for mod in (*_TRACKED_MODULES_REQUIRED, *_TRACKED_MODULES_OPTIONAL):
         mod_path = _module_file(mod)
         if mod_path is not None:
@@ -159,6 +199,14 @@ def compute_current(root: Path | None = None) -> dict[str, str]:
         if not path.is_file():
             raise FileNotFoundError(f"Tracked file missing: {path}")
         out[rel] = _hash_file(path)
+    # E9 — repo-root tracked files (systemd units, deploy configs)
+    repo = _repo_root()
+    if repo is not None:
+        for repo_rel in _TRACKED_REPO_PATHS:
+            path = repo / repo_rel
+            if not path.is_file():
+                raise FileNotFoundError(f"Tracked repo file missing: {path}")
+            out[f"repo:{repo_rel}"] = _hash_file(path)
     # Cross-package modules resolve via importlib (independent of ``root``).
     out.update(tracked_module_hashes())
     return out
