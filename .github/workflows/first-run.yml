@@ -1,0 +1,103 @@
+name: First-Run Verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'pyproject.toml'
+      - 'README.md'
+      - '.github/workflows/first-run.yml'
+      - 'docs/user-scenarios/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'pyproject.toml'
+      - 'README.md'
+      - '.github/workflows/first-run.yml'
+      - 'docs/user-scenarios/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  first-run:
+    name: Clean Install + Architect Scan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Ensure clean environment
+        run: |
+          # Verify no pre-existing Animus config or state
+          rm -rf ~/.animus
+          # Verify no API keys leaking from runner env
+          unset ANTHROPIC_API_KEY || true
+          unset OPENAI_API_KEY || true
+          echo "Environment cleaned."
+
+      - name: Install Animus (core packages)
+        run: |
+          pip install -e packages/types/ \
+            -e "packages/core/[dev]" \
+            -e packages/kernel/ \
+            -e packages/contracts/
+
+      - name: Verify installation
+        run: |
+          python3 -c "import animus; print('Animus version:', animus.__version__)"
+
+      - name: Run Architect Citizen scan
+        env:
+          ANIMUS_CITIZENS_CODEBASE_PATH: ${{ github.workspace }}
+        timeout-minutes: 5
+        run: |
+          python3 -m animus.cli architect --focus codebase > /tmp/architect-output.txt 2>&1
+          cat /tmp/architect-output.txt
+
+      - name: Assert scan produced observations
+        run: |
+          if ! grep -q "Codebase Observations" /tmp/architect-output.txt; then
+            echo "ERROR: Architect scan produced no observations"
+            exit 1
+          fi
+          echo "✅ Architect scan produced observations"
+
+      - name: Assert scan generated a proposal
+        run: |
+          if ! grep -q "Proposal Generated" /tmp/architect-output.txt; then
+            echo "ERROR: Architect scan produced no proposal"
+            exit 1
+          fi
+          echo "✅ Architect scan generated a proposal"
+
+      - name: Assert proposal has ADL ID
+        run: |
+          if ! grep -qE 'ADL-[0-9]{8}-[a-f0-9]+' /tmp/architect-output.txt; then
+            echo "ERROR: Proposal missing ADL ID"
+            exit 1
+          fi
+          echo "✅ Proposal has valid ADL ID"
+
+      - name: Upload scan output on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: architect-scan-py${{ matrix.python-version }}
+          path: /tmp/architect-output.txt
+          retention-days: 7

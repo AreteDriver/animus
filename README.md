@@ -3,6 +3,7 @@
 **Multi-agent orchestration framework with budget controls, quality gates, and checkpoint/resume.**
 
 ![CI](https://github.com/AreteDriver/animus/workflows/CI/badge.svg)
+![First-Run](https://github.com/AreteDriver/animus/workflows/First-Run%20Verification/badge.svg)
 ![CodeQL](https://github.com/AreteDriver/animus/workflows/CodeQL%20Security%20Scan/badge.svg)
 ![Security](https://github.com/AreteDriver/animus/workflows/Security/badge.svg)
 [![PyPI - convergentAI](https://img.shields.io/pypi/v/convergentAI?label=convergentAI&color=blue)](https://pypi.org/project/convergentAI/)
@@ -96,6 +97,24 @@ One-command install, Rich-based onboarding wizard, FastAPI+HTMX ops dashboard at
 - Ollama (optional, for local LLM inference)
 
 ## Quickstart
+
+### First-Time User (5 minutes, no API keys)
+
+The fastest way to verify Animus works on your machine:
+
+```bash
+git clone https://github.com/AreteDriver/animus && cd animus
+pip install -e packages/types/ -e "packages/core/[dev]" -e packages/kernel/ -e packages/contracts/
+python -c "import animus; print('OK — version', animus.__version__)"
+export ANIMUS_CITIZENS_CODEBASE_PATH="$(pwd)"
+python -m animus.cli architect --focus codebase
+```
+
+You should see a scan of the repository and a generated improvement proposal with an `ADL-` ID. No API keys required — the Architect Citizen uses local static analysis.
+
+> **Full walkthrough:** See [`docs/user-scenarios/v2.3-first-run.md`](docs/user-scenarios/v2.3-first-run.md) for troubleshooting and next steps.
+
+### Full Stack (dashboard + PWA)
 
 ```bash
 git clone https://github.com/AreteDriver/animus && cd animus
