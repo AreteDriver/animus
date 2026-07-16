@@ -429,26 +429,28 @@ isn't. Breaking change, so it gets its own session.
 ### Session 7 — Security residual hardening (Qwen review + §8.1 leftovers)
 Does NOT gate "operational" — run it parallel to Phase C/D or right after S6.
 The 2026-06 local security review's 3 net-new items + the remaining §8.1 gaps.
-- [ ] **E13 (Qwen #6) TOCTOU on tier labels** — verify A4 closed it; if A4
-      inspects content at egress time the label-mutation window is moot, but add
-      an explicit re-check-at-use test. *(Mostly covered by Session 3 / A4.)*
-- [ ] **E11 (Qwen #4) self-improve / red-team loop abuse** — the loop that
-      generates and applies changes is an injection surface. Harden: the
-      red-team driver's generated probes can never reach an apply path; the
-      self-improve sandbox rejects probe-shaped input; test an adversarial probe
-      cannot escalate. *(Touches the Session 6 loop — can fold there if timing fits.)*
+- [x] **E13 (Qwen #6) TOCTOU on tier labels** — `is_egress_allowed()` re-checks
+      payload content at use time; PUBLIC tag + credential payload = blocked.
+      Tests: `test_content_recheck_blocks_secrets_even_when_public`.
+- [x] **E11 (Qwen #4) self-improve / red-team loop abuse** — `SafetyChecker`
+      screens analyzer suggestions for probe-shaped content before plan creation.
+      `is_probe_shaped()` matches jailbreak, DAN mode, encoding evasion, and
+      repetition-flooding patterns. End-to-end test proves `_apply_changes` is
+      never called when a probe is detected.
 - [ ] **E12 (Qwen #5) local-model supply-chain** — pin + checksum the Ollama
       model blobs Animus trusts; refuse to run a red-team/eval model whose digest
       changed unexpectedly. Closes the "backdoored open-weight model" vector.
-- [ ] **E9 systemd unit integrity** — version the unit files in the repo and add
-      them to the A6 integrity baseline so an edited unit (which defeats the
-      kernel-plane filter) is detected.
+- [x] **E9 systemd unit integrity** — `_TRACKED_REPO_PATHS` hashes 10 repo-root
+      systemd/deploy configs; `_repo_root()` discovers git root from package root.
+      Tampered unit files trip `IntegrityMismatchError` at boot.
 - [ ] **E10 PI-envelope cross-model testing** — the prompt-injection footer is
       only tested against Sonnet; add Qwen/Llama cases (the local-first models
       that are the *actual* primary consumers).
 - **Done when:** supply-chain digest test trips on a changed blob; probe-can't-
   escalate test passes; unit-tamper trips boot refusal; PI envelope holds on
   Qwen/Llama. D3 → 10 (fully hardened).
+- **Done 2026-07-16:** E9 + E11 + E13 closed. 3/5 Session 7 security items
+  complete; E10 + E12 deferred to follow-up.
 - [ ] **E14** Ollama upgrade so the uncensored 35B Qwen3.6-A3B loads — then
       re-run the adversarial review with the *aggressive* model for a stronger pass.
 
