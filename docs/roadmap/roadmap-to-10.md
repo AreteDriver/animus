@@ -303,6 +303,7 @@ Slot in opportunistically; none blocks the above. Includes the Qwen net-new item
 | E13 | **TOCTOU on tier labels: immutable tier at read / re-check at use** | **Qwen #6 (net-new)** | M |
 | E14 | Ollama upgrade so the uncensored 35B Qwen3.6-A3B red-team model loads | this session | S |
 | E15 | **Migration-number collision guard** — a test/CI check that fails when two `migrations/*.sql` share a leading number | **Session 1 (the `012` collision that broke the first full run)** | S |
+| **E16** | **Citizen Integration Contract** — map constitutional rights (P01/P02/P05/P07) to concrete code components; close G1–G7 gaps or honestly mark NOT YET IMPLEMENTED; make citizenhood inspectable in architecture docs | **Architecture reconciliation review 2026-07-16** | M |
 
 ---
 

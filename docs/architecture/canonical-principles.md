@@ -1,6 +1,6 @@
 # Animus — Document Canon & Status Index
 
-**Last updated: 2026-06-14**
+**Last updated: 2026-07-16**
 
 This repo accumulated multiple whitepapers, roadmaps, and design specs written
 at different times. Some describe shipped code; some describe aspirational
@@ -79,9 +79,14 @@ shipped capability:
 `specs/*` — all **ASPIRATIONAL-SPEC** unless a feature is confirmed in the
 canonical whitepaper's evidence index.
 
+`CITIZEN_INTEGRATION_CONTRACT.md` is **CANONICAL** as a bridge document: it maps
+constitutional rights to code but does not claim unimplemented features are
+operational. Every entry is labeled OPERATIONAL, PARTIAL, or NOT YET IMPLEMENTED.
+
 ## Grounded references (accurate)
 
 `THREAT_MODEL.md`, `CONSTITUTIONAL_PRINCIPLES.md`, `CONSCIOUSNESS_QUORUM_BRIDGE.md`,
-and each package's `CLAUDE.md` are **CANONICAL** for their subsystem. The
-constitutional-principles doc-to-code annotation style (every principle points
-at its enforcing module) is the grounding standard the rest aspires to.
+`CITIZEN_INTEGRATION_CONTRACT.md`, and each package's `CLAUDE.md` are **CANONICAL**
+for their subsystem. The constitutional-principles doc-to-code annotation style
+(every principle points at its enforcing module) is the grounding standard the rest
+aspires to.
