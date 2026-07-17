@@ -40,6 +40,7 @@ from animus.citizens.proposal import (
     RiskAssessment,
 )
 from animus.logging import get_logger
+from animus.memory.types import MemoryType
 
 if TYPE_CHECKING:
     from animus.memory import MemoryLayer
@@ -175,6 +176,11 @@ class ArchitectCitizen:
         # If Forge produced nothing (or is absent), run lightweight heuristics
         if not observations:
             observations.extend(self._observe_heuristics(focus_paths))
+
+        # If memory layer is available, enrich with indexed code observations
+        if self.memory is not None:
+            indexed_obs = self._observe_indexed_code_memory(focus_paths)
+            observations.extend(indexed_obs)
 
         # Deduplicate noisy Forge suggestions (e.g. "long function" flooding)
         observations = self._deduplicate_observations(observations, max_per_pattern=5)
@@ -1417,6 +1423,199 @@ class ArchitectCitizen:
         """Map analyzer priority (1=highest, 5=lowest) to severity."""
         mapping = {1: "critical", 2: "high", 3: "medium", 4: "low", 5: "info"}
         return mapping.get(priority, "medium")
+
+    # ------------------------------------------------------------------
+    # Indexed code memory observation (codebase via semantic memory)
+    # ------------------------------------------------------------------
+
+    def _observe_indexed_code_memory(
+        self, focus_paths: list[str] | None = None
+    ) -> list[Observation]:
+        """Query indexed code memory for coverage, recency, and hotspots.
+
+        When the codebase has been ingested via ``ingest_codebase()``,
+        semantic memory contains AST-level chunks with metadata. This
+        method surfaces coverage gaps, recently indexed areas (proxy
+        for active development), and high-complexity functions that
+        were captured during chunking.
+
+        Args:
+            focus_paths: Optional paths to narrow the scope.
+
+        Returns:
+            Observations derived from indexed code memory.
+        """
+        observations: list[Observation] = []
+        if self.memory is None or self.codebase_path is None:
+            return observations
+
+        try:
+            indexed_chunks = self._get_indexed_code_chunks(focus_paths)
+        except Exception as e:
+            logger.debug(f"Indexed code memory query failed: {e}")
+            return observations
+
+        if not indexed_chunks:
+            # Graceful degradation: no index yet, not an actionable finding
+            return observations
+
+        # --- Coverage analysis ------------------------------------------------
+        indexed_files = {
+            mem.metadata.get("file_path", "")
+            for mem in indexed_chunks
+            if mem.metadata.get("file_path")
+        }
+        # Count .py files on disk for comparison
+        roots = self._resolve_roots(focus_paths)
+        disk_files: set[str] = set()
+        for root in roots:
+            for pf in root.rglob("*.py"):
+                rel = str(pf.relative_to(self.codebase_path))
+                if any(p in rel for p in ("tests/", "/tests/", "test_", ".venv/", "venv/", "node_modules/")):
+                    continue
+                disk_files.add(rel)
+
+        if disk_files:
+            coverage = len(indexed_files) / len(disk_files)
+            if coverage < 0.5:
+                observations.append(
+                    Observation(
+                        source="codebase",
+                        description=f"Indexed code memory covers only {coverage:.0%} of Python files ({len(indexed_files)}/{len(disk_files)}); consider re-running ingest_codebase()",
+                        severity="medium",
+                        context={
+                            "indexed_files": len(indexed_files),
+                            "total_files": len(disk_files),
+                            "coverage_ratio": coverage,
+                            "pattern_type": "indexed_memory_coverage",
+                        },
+                    )
+                )
+            else:
+                observations.append(
+                    Observation(
+                        source="codebase",
+                        description=f"Indexed code memory covers {len(indexed_files)} Python files ({coverage:.0%})",
+                        severity="info",
+                        context={
+                            "indexed_files": len(indexed_files),
+                            "total_files": len(disk_files),
+                            "coverage_ratio": coverage,
+                            "pattern_type": "indexed_memory_coverage",
+                        },
+                    )
+                )
+
+        # --- Recency / active-development hotspots ---------------------------
+        now = datetime.now()
+        recent_files: dict[str, int] = {}
+        for mem in indexed_chunks:
+            rel = mem.metadata.get("file_path", "")
+            if not rel:
+                continue
+            # created_at is the ingest timestamp (last reindex of that file)
+            age_hours = (now - mem.created_at).total_seconds() / 3600 if mem.created_at else 999
+            if age_hours <= 24:
+                recent_files[rel] = recent_files.get(rel, 0) + 1
+
+        if recent_files:
+            top_recent = sorted(recent_files.items(), key=lambda x: -x[1])[:5]
+            observations.append(
+                Observation(
+                    source="codebase",
+                    description=f"Recently indexed {len(recent_files)} file(s) with {sum(recent_files.values())} chunk(s) — active development detected in {', '.join(f for f, _ in top_recent)}",
+                    severity="info",
+                    context={
+                        "recent_file_count": len(recent_files),
+                        "recent_chunk_count": sum(recent_files.values()),
+                        "top_recent": [f for f, _ in top_recent],
+                        "pattern_type": "indexed_memory_recency",
+                    },
+                )
+            )
+
+        # --- Complexity hotspots from indexed chunks -------------------------
+        complex_funcs: list[dict] = []
+        for mem in indexed_chunks:
+            meta = mem.metadata
+            if meta.get("chunk_type") in ("function", "method"):
+                # Try to extract complexity if it was computed during chunking
+                content = mem.content
+                func_name = meta.get("identifier", "unknown")
+                file_path = meta.get("file_path", "")
+                line_no = meta.get("line_no", 0)
+                # Rough heuristic: count control-flow keywords in the chunk
+                # (exact AST complexity isn't stored, but we can estimate)
+                if content and isinstance(content, str):
+                    flow_keywords = len(re.findall(r"\b(if|for|while|except|with|assert)\b", content))
+                    if flow_keywords >= 8:
+                        complex_funcs.append({
+                            "file": file_path,
+                            "function": func_name,
+                            "line": line_no,
+                            "flow_keywords": flow_keywords,
+                        })
+
+        if complex_funcs:
+            # Deduplicate by file+function
+            seen = set()
+            unique = []
+            for cf in complex_funcs:
+                key = (cf["file"], cf["function"])
+                if key not in seen:
+                    seen.add(key)
+                    unique.append(cf)
+            top_complex = sorted(unique, key=lambda x: -x["flow_keywords"])[:5]
+            observations.append(
+                Observation(
+                    source="codebase",
+                    description=f"Indexed memory reveals {len(unique)} high-complexity function(s); top: {top_complex[0]['function']} in {top_complex[0]['file']}",
+                    severity="medium",
+                    context={
+                        "complex_function_count": len(unique),
+                        "top_functions": top_complex,
+                        "pattern_type": "high_complexity",
+                    },
+                )
+            )
+
+        logger.info(f"Indexed code memory analysis produced {len(observations)} observation(s)")
+        return observations
+
+    def _get_indexed_code_chunks(
+        self, focus_paths: list[str] | None = None
+    ) -> list[Any]:
+        """Query semantic memory for code chunks ingested via ``code_ingest``.
+
+        Args:
+            focus_paths: If provided, filters to chunks whose file_path
+                metadata contains one of these path fragments.
+
+        Returns:
+            List of Memory objects with source="code_ingest".
+        """
+        if self.memory is None:
+            return []
+
+        results = self.memory.search(
+            query="function class method codebase",
+            memory_type=MemoryType.SEMANTIC,
+            source="code_ingest",
+            limit=500,
+        )
+
+        if not focus_paths:
+            return results
+
+        filtered = []
+        for mem in results:
+            fp = mem.metadata.get("file_path", "")
+            for focus in focus_paths:
+                focus = focus.rstrip("/")
+                if focus in fp or fp.startswith(focus + "/"):
+                    filtered.append(mem)
+                    break
+        return filtered
 
     def __repr__(self) -> str:
         return f"ArchitectCitizen(codebase={self.codebase_path}, observations={len(self._observations)})"

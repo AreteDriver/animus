@@ -12,6 +12,7 @@ Key design:
 - Singleton: PID file prevents multiple daemon instances
 """
 
+from animus.daemon.code_watch import CodeIndexReindexer
 from animus.daemon.core import (
     AnimusDaemon,
     DaemonConfig,
@@ -43,6 +44,7 @@ from animus.daemon.resource_guard import (
 
 __all__ = [
     "AnimusDaemon",
+    "CodeIndexReindexer",
     "DaemonConfig",
     "DaemonState",
     "DaemonEvent",

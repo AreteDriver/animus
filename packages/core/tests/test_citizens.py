@@ -407,6 +407,180 @@ class TestArchitectCitizen:
         assert "Factory" in trade_offs
         assert "Status quo" in trade_offs
 
+    # --- Indexed code memory integration tests ---
+
+    def test_indexed_code_memory_no_memory_returns_empty(self, tmp_path):
+        """When no memory layer is attached, indexed code observation is empty."""
+        architect = ArchitectCitizen(codebase_path=tmp_path)
+        obs = architect._observe_indexed_code_memory()
+        assert obs == []
+
+    def test_indexed_code_memory_no_chunks_returns_empty(self, tmp_path):
+        """When memory returns no code_ingest chunks, observation is empty."""
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = []
+        architect = ArchitectCitizen(codebase_path=tmp_path, memory_layer=mock_memory)
+        obs = architect._observe_indexed_code_memory()
+        assert obs == []
+        mock_memory.search.assert_called_once()
+        call_kwargs = mock_memory.search.call_args.kwargs
+        assert call_kwargs["source"] == "code_ingest"
+        assert call_kwargs["memory_type"].value == "semantic"
+
+    def test_indexed_code_memory_coverage_low(self, tmp_path):
+        """Low coverage triggers a medium-severity observation."""
+        pkg = tmp_path / "core"
+        pkg.mkdir()
+        (pkg / "a.py").write_text("x = 1\n")
+        (pkg / "b.py").write_text("y = 2\n")
+        (pkg / "c.py").write_text("z = 3\n")
+
+        mock_memory = MagicMock()
+        from animus.memory.types import MemoryType
+        from datetime import datetime
+
+        mock_memory.search.return_value = [
+            MagicMock(
+                metadata={"file_path": "core/a.py", "chunk_type": "function"},
+                created_at=datetime.now(),
+            ),
+        ]
+
+        architect = ArchitectCitizen(codebase_path=tmp_path, memory_layer=mock_memory)
+        obs = architect._observe_indexed_code_memory()
+        coverage_obs = [o for o in obs if o.context.get("pattern_type") == "indexed_memory_coverage"]
+        assert len(coverage_obs) == 1
+        assert coverage_obs[0].severity == "medium"
+        assert "33%" in coverage_obs[0].description
+
+    def test_indexed_code_memory_coverage_high(self, tmp_path):
+        """High coverage triggers an info-level observation."""
+        pkg = tmp_path / "core"
+        pkg.mkdir()
+        (pkg / "a.py").write_text("x = 1\n")
+        (pkg / "b.py").write_text("y = 2\n")
+
+        mock_memory = MagicMock()
+        from datetime import datetime
+
+        mock_memory.search.return_value = [
+            MagicMock(
+                metadata={"file_path": "core/a.py", "chunk_type": "function"},
+                created_at=datetime.now(),
+            ),
+            MagicMock(
+                metadata={"file_path": "core/b.py", "chunk_type": "function"},
+                created_at=datetime.now(),
+            ),
+        ]
+
+        architect = ArchitectCitizen(codebase_path=tmp_path, memory_layer=mock_memory)
+        obs = architect._observe_indexed_code_memory()
+        coverage_obs = [o for o in obs if o.context.get("pattern_type") == "indexed_memory_coverage"]
+        assert len(coverage_obs) == 1
+        assert coverage_obs[0].severity == "info"
+        assert "100%" in coverage_obs[0].description
+
+    def test_indexed_code_memory_recency_hotspot(self, tmp_path):
+        """Recently indexed chunks surface active-development info."""
+        pkg = tmp_path / "core"
+        pkg.mkdir()
+        (pkg / "a.py").write_text("x = 1\n")
+
+        mock_memory = MagicMock()
+        from datetime import datetime
+
+        mock_memory.search.return_value = [
+            MagicMock(
+                metadata={"file_path": "core/a.py", "chunk_type": "function"},
+                created_at=datetime.now(),
+            ),
+            MagicMock(
+                metadata={"file_path": "core/a.py", "chunk_type": "function"},
+                created_at=datetime.now(),
+            ),
+        ]
+
+        architect = ArchitectCitizen(codebase_path=tmp_path, memory_layer=mock_memory)
+        obs = architect._observe_indexed_code_memory()
+        recency_obs = [o for o in obs if o.context.get("pattern_type") == "indexed_memory_recency"]
+        assert len(recency_obs) == 1
+        assert recency_obs[0].severity == "info"
+        assert "core/a.py" in recency_obs[0].description
+
+    def test_indexed_code_memory_complexity_hotspot(self, tmp_path):
+        """High-complexity functions in indexed memory are surfaced."""
+        pkg = tmp_path / "core"
+        pkg.mkdir()
+        (pkg / "a.py").write_text("x = 1\n")  # disk placeholder
+
+        mock_memory = MagicMock()
+        from datetime import datetime
+
+        # Build a chunky function with many control-flow keywords
+        content = "\n".join(
+            f"    if cond{i}: do_{i}()"
+            for i in range(10)
+        )
+
+        mock_memory.search.return_value = [
+            MagicMock(
+                metadata={
+                    "file_path": "core/a.py",
+                    "chunk_type": "function",
+                    "identifier": "big_func",
+                    "line_no": 5,
+                },
+                created_at=datetime.now(),
+                content=content,
+            ),
+        ]
+
+        architect = ArchitectCitizen(codebase_path=tmp_path, memory_layer=mock_memory)
+        obs = architect._observe_indexed_code_memory()
+        complexity_obs = [o for o in obs if o.context.get("pattern_type") == "high_complexity"]
+        assert len(complexity_obs) == 1
+        assert complexity_obs[0].severity == "medium"
+        assert "big_func" in complexity_obs[0].description
+        assert complexity_obs[0].context["complex_function_count"] == 1
+
+    def test_get_indexed_code_chunks_focus_filter(self, tmp_path):
+        """Focus paths filter chunks to matching file paths."""
+        mock_memory = MagicMock()
+        from animus.memory.types import MemoryType
+        from datetime import datetime
+
+        mock_memory.search.return_value = [
+            MagicMock(
+                metadata={"file_path": "core/a.py"},
+                created_at=datetime.now(),
+            ),
+            MagicMock(
+                metadata={"file_path": "other/b.py"},
+                created_at=datetime.now(),
+            ),
+        ]
+
+        architect = ArchitectCitizen(codebase_path=tmp_path, memory_layer=mock_memory)
+        chunks = architect._get_indexed_code_chunks(focus_paths=["core"])
+        assert len(chunks) == 1
+        assert chunks[0].metadata["file_path"] == "core/a.py"
+
+    def test_observe_codebase_calls_indexed_memory_when_memory_present(self, tmp_path):
+        """observe_codebase triggers indexed memory observation when memory is attached."""
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = []
+
+        architect = ArchitectCitizen(codebase_path=tmp_path, memory_layer=mock_memory)
+        # Patch heuristics and analyzer so they return empty
+        with patch.object(architect, "_get_analyzer", return_value=None), \
+             patch.object(architect, "_observe_heuristics", return_value=[]):
+            obs = architect.observe_codebase()
+
+        # The memory search should have been called for code_ingest
+        calls = [c for c in mock_memory.search.call_args_list if c.kwargs.get("source") == "code_ingest"]
+        assert len(calls) >= 1
+
 
 # ---------------------------------------------------------------------------
 # ForgeCommissioner tests

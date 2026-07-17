@@ -335,6 +335,69 @@ def create_mcp_server():
         return "\n".join(lines)
 
     # -----------------------------------------------------------------------
+    # Codebase indexing tools
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_index_codebase(
+        path: str,
+        tags: str = "",
+        globs: str = "*.py,*.md",
+        api_key: str = "",
+    ) -> str:
+        """Index a local codebase into Animus semantic memory.
+
+        Uses AST-aware chunking (function/class-level for Python, header-level
+        for Markdown) and stores chunks as retrievable memories. Subsequent
+        ``animus_recall`` queries will surface code snippets by semantic
+        similarity.
+
+        Args:
+            path: Absolute or relative path to the codebase root.
+            tags: Comma-separated tags applied to every chunk (e.g.
+                "projectname,v1.0").
+            globs: Comma-separated filename patterns to include.
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        from pathlib import Path
+
+        from animus.workflows.code_ingest import ingest_codebase
+
+        root = Path(path).expanduser()
+        if not root.is_dir():
+            return f"Not a directory: {path}"
+
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+        glob_list = [g.strip() for g in globs.split(",") if g.strip()]
+
+        try:
+            result = ingest_codebase(
+                root,
+                memory=memory,
+                tags=tag_list,
+                globs=glob_list or None,
+                write_manifest=True,
+            )
+        except Exception as e:
+            return f"Indexing failed: {e}"
+
+        lines = [f"# Indexed {path}", ""]
+        lines.append(f"**Stored chunks:** {result.stored_count}")
+        if result.skipped_count:
+            lines.append(f"**Skipped (unchanged):** {result.skipped_count}")
+        if result.errors:
+            lines.append(f"**Errors:** {len(result.errors)}")
+            for err in result.errors[:5]:
+                lines.append(f"- [{err.stage}] {err.path}: {err.message}")
+        if result.manifest_path:
+            lines.append(f"**Manifest:** {result.manifest_path}")
+        return "\n".join(lines)
+
+    # -----------------------------------------------------------------------
     # Gating / intent tools
     # -----------------------------------------------------------------------
 

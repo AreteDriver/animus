@@ -37,6 +37,7 @@ from .events import (
     WebhookEvent,
     WebhookHandler,
 )
+from .code_watch import CodeIndexReindexer
 from .resource_guard import ResourceGuard
 from .scheduler import ScheduledTask, TaskScheduler
 from .session_manager import SessionManager
@@ -122,6 +123,9 @@ class AnimusDaemon:
         )
         self.webhook_handler = WebhookHandler()
         self.mcp_handler = MCPHandler()
+
+        # Code reindexer — watches arbitrary codebases for incremental reindex
+        self.code_reindexer = CodeIndexReindexer()
 
         # Event queue
         self._event_queue: asyncio.Queue = asyncio.Queue()
@@ -332,8 +336,13 @@ class AnimusDaemon:
         if self.config.enable_file_watch:
             if now - self._last_file_scan >= self.config.file_scan_interval:
                 self._last_file_scan = now
+                # Main daemon watch path
                 for event in self.file_handler.scan():
                     await self._event_queue.put(event)
+                # Codebase watch paths — process directly (no event queue)
+                for handler in self.code_reindexer.handlers:
+                    for event in handler.scan():
+                        self.code_reindexer.on_file_event(event)
 
         # 4. Periodic session prune
         if now - self._last_session_save >= self.config.session_save_interval:
@@ -520,6 +529,26 @@ class AnimusDaemon:
         if patterns:
             self.file_handler.patterns = patterns
         self.file_handler.add_callback(callback)
+
+    def watch_codebase(
+        self,
+        path: str | Path,
+        *,
+        tags: list[str] | None = None,
+        globs: list[str] | None = None,
+        exclude: list[str] | None = None,
+    ) -> None:
+        """Watch a codebase directory for changes and auto-reindex into memory.
+
+        Args:
+            path: Absolute or relative path to the codebase root.
+            tags: Tags applied to every indexed chunk.
+            globs: Filename patterns to include (default: ``*.py``, ``*.md``).
+            exclude: Patterns to skip.
+        """
+        self.code_reindexer.add_codebase(
+            Path(path), tags=tags, globs=globs, exclude=exclude
+        )
 
     def add_webhook_endpoint(self, endpoint: str, callback: Any) -> None:
         """Register a webhook endpoint handler."""
