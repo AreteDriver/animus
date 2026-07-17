@@ -34,8 +34,13 @@ class TestIngestCodebase:
         assert result.manifest_path is not None
         assert result.manifest_path.exists()
         data = json.loads(result.manifest_path.read_text())
-        assert data["version"] == "1.0"
+        assert data["version"] == "1.1"
         assert "files" in data
+        assert "summary" in data
+        summary = data["summary"]
+        assert summary["total_scanned_files"] == 1
+        assert summary["total_chunks"] >= 1
+        assert "mtime" in data["files"]["main.py"]
 
     def test_skip_existing(self, tmp_path: Path):
         (tmp_path / "main.py").write_text("def hello(): pass\n")

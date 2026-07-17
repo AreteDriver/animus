@@ -80,6 +80,11 @@ class ArchitectCitizen:
     It only observes, analyzes, and produces proposals.
     """
 
+    # Tunable thresholds for indexed-memory observation
+    DEFAULT_COVERAGE_THRESHOLD: float = 0.50
+    DEFAULT_COMPLEXITY_THRESHOLD: int = 10
+    DEFAULT_RECENCY_HOURS: float = 24.0
+
     def __init__(
         self,
         codebase_path: Path | str = "~/projects/animus",
@@ -87,6 +92,10 @@ class ArchitectCitizen:
         conversation_log_dir: Path | str | None = None,
         evidence_dir: Path | str | None = None,
         focus_paths: list[str] | None = None,
+        *,
+        coverage_threshold: float | None = None,
+        complexity_threshold: int | None = None,
+        recency_hours: float | None = None,
     ):
         self.codebase_path = Path(codebase_path).expanduser()
         self.memory = memory_layer
@@ -95,6 +104,10 @@ class ArchitectCitizen:
         )
         self.evidence_dir = Path(evidence_dir).expanduser() if evidence_dir else None
         self.focus_paths = focus_paths or []
+
+        self.coverage_threshold = coverage_threshold if coverage_threshold is not None else self.DEFAULT_COVERAGE_THRESHOLD
+        self.complexity_threshold = complexity_threshold if complexity_threshold is not None else self.DEFAULT_COMPLEXITY_THRESHOLD
+        self.recency_hours = recency_hours if recency_hours is not None else self.DEFAULT_RECENCY_HOURS
 
         if self.evidence_dir:
             self.evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -1459,49 +1472,56 @@ class ArchitectCitizen:
             # Graceful degradation: no index yet, not an actionable finding
             return observations
 
-        # --- Coverage analysis ------------------------------------------------
-        indexed_files = {
-            mem.metadata.get("file_path", "")
-            for mem in indexed_chunks
-            if mem.metadata.get("file_path")
-        }
-        # Count .py files on disk for comparison
-        roots = self._resolve_roots(focus_paths)
-        disk_files: set[str] = set()
-        for root in roots:
-            for pf in root.rglob("*.py"):
-                rel = str(pf.relative_to(self.codebase_path))
-                if any(p in rel for p in ("tests/", "/tests/", "test_", ".venv/", "venv/", "node_modules/")):
-                    continue
-                disk_files.add(rel)
+        # --- Manifest-based coverage (avoids disk walk) ----------------------
+        manifest = self._read_manifest(focus_paths)
+        if manifest:
+            summary = manifest.get("summary", {})
+            total_scanned = summary.get("total_scanned_files", 0)
+            total_chunked = summary.get("total_chunked_files", 0)
+            if total_scanned > 0:
+                coverage = total_chunked / total_scanned
+                if coverage < self.coverage_threshold:
+                    observations.append(
+                        Observation(
+                            source="codebase",
+                            description=f"Indexed code memory covers only {coverage:.0%} of Python files ({total_chunked}/{total_scanned}); consider re-running ingest_codebase()",
+                            severity="medium",
+                            context={
+                                "indexed_files": total_chunked,
+                                "total_files": total_scanned,
+                                "coverage_ratio": coverage,
+                                "pattern_type": "indexed_memory_coverage",
+                            },
+                        )
+                    )
+                else:
+                    observations.append(
+                        Observation(
+                            source="codebase",
+                            description=f"Indexed code memory covers {total_chunked} Python files ({coverage:.0%})",
+                            severity="info",
+                            context={
+                                "indexed_files": total_chunked,
+                                "total_files": total_scanned,
+                                "coverage_ratio": coverage,
+                                "pattern_type": "indexed_memory_coverage",
+                            },
+                        )
+                    )
 
-        if disk_files:
-            coverage = len(indexed_files) / len(disk_files)
-            if coverage < 0.5:
+            # --- Stale index detection ----------------------------------------
+            stale_files = self._detect_stale_index(manifest)
+            if stale_files:
+                top_stale = stale_files[:5]
                 observations.append(
                     Observation(
                         source="codebase",
-                        description=f"Indexed code memory covers only {coverage:.0%} of Python files ({len(indexed_files)}/{len(disk_files)}); consider re-running ingest_codebase()",
+                        description=f"Stale index: {len(stale_files)} file(s) modified on disk since last ingest; top: {', '.join(top_stale)}",
                         severity="medium",
                         context={
-                            "indexed_files": len(indexed_files),
-                            "total_files": len(disk_files),
-                            "coverage_ratio": coverage,
-                            "pattern_type": "indexed_memory_coverage",
-                        },
-                    )
-                )
-            else:
-                observations.append(
-                    Observation(
-                        source="codebase",
-                        description=f"Indexed code memory covers {len(indexed_files)} Python files ({coverage:.0%})",
-                        severity="info",
-                        context={
-                            "indexed_files": len(indexed_files),
-                            "total_files": len(disk_files),
-                            "coverage_ratio": coverage,
-                            "pattern_type": "indexed_memory_coverage",
+                            "stale_file_count": len(stale_files),
+                            "top_stale": top_stale,
+                            "pattern_type": "indexed_memory_stale",
                         },
                     )
                 )
@@ -1515,7 +1535,7 @@ class ArchitectCitizen:
                 continue
             # created_at is the ingest timestamp (last reindex of that file)
             age_hours = (now - mem.created_at).total_seconds() / 3600 if mem.created_at else 999
-            if age_hours <= 24:
+            if age_hours <= self.recency_hours:
                 recent_files[rel] = recent_files.get(rel, 0) + 1
 
         if recent_files:
@@ -1534,38 +1554,35 @@ class ArchitectCitizen:
                 )
             )
 
-        # --- Complexity hotspots from indexed chunks -------------------------
+        # --- Complexity hotspots from pre-computed metadata ------------------
         complex_funcs: list[dict] = []
         for mem in indexed_chunks:
             meta = mem.metadata
             if meta.get("chunk_type") in ("function", "method"):
-                # Try to extract complexity if it was computed during chunking
-                content = mem.content
-                func_name = meta.get("identifier", "unknown")
-                file_path = meta.get("file_path", "")
-                line_no = meta.get("line_no", 0)
-                # Rough heuristic: count control-flow keywords in the chunk
-                # (exact AST complexity isn't stored, but we can estimate)
-                if content and isinstance(content, str):
-                    flow_keywords = len(re.findall(r"\b(if|for|while|except|with|assert)\b", content))
-                    if flow_keywords >= 8:
+                score_str = meta.get("complexity_score")
+                if score_str:
+                    try:
+                        score = int(score_str)
+                    except (ValueError, TypeError):
+                        continue
+                    if score >= self.complexity_threshold:
                         complex_funcs.append({
-                            "file": file_path,
-                            "function": func_name,
-                            "line": line_no,
-                            "flow_keywords": flow_keywords,
+                            "file": meta.get("source_path", meta.get("file_path", "")),
+                            "function": meta.get("name", "unknown"),
+                            "line": meta.get("start_line", 0),
+                            "complexity_score": score,
                         })
 
         if complex_funcs:
             # Deduplicate by file+function
-            seen = set()
-            unique = []
+            seen: set[tuple[str, str]] = set()
+            unique: list[dict] = []
             for cf in complex_funcs:
                 key = (cf["file"], cf["function"])
                 if key not in seen:
                     seen.add(key)
                     unique.append(cf)
-            top_complex = sorted(unique, key=lambda x: -x["flow_keywords"])[:5]
+            top_complex = sorted(unique, key=lambda x: -x["complexity_score"])[:5]
             observations.append(
                 Observation(
                     source="codebase",
@@ -1574,13 +1591,69 @@ class ArchitectCitizen:
                     context={
                         "complex_function_count": len(unique),
                         "top_functions": top_complex,
-                        "pattern_type": "high_complexity",
+                        "pattern_type": "indexed_memory_complexity",
                     },
                 )
             )
 
         logger.info(f"Indexed code memory analysis produced {len(observations)} observation(s)")
         return observations
+
+    def _read_manifest(self, focus_paths: list[str] | None = None) -> dict | None:
+        """Read the nearest ingestion manifest under ``codebase_path``.
+
+        If *focus_paths* are provided, prefers manifests whose ``root``
+        matches one of the focus paths.
+
+        Returns:
+            Parsed manifest dict, or ``None`` if no manifest found.
+        """
+        if not self.codebase_path:
+            return None
+
+        candidates: list[Path] = []
+        default = self.codebase_path / ".animus_ingest_manifest.json"
+        if default.exists():
+            candidates.append(default)
+
+        if focus_paths:
+            for fp in focus_paths:
+                p = self.codebase_path / fp / ".animus_ingest_manifest.json"
+                if p.exists():
+                    candidates.append(p)
+
+        if not candidates:
+            return None
+
+        # Prefer the most recently written manifest
+        candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        for path in candidates:
+            try:
+                return json.loads(path.read_text())
+            except (OSError, json.JSONDecodeError):
+                continue
+        return None
+
+    def _detect_stale_index(self, manifest: dict) -> list[str]:
+        """Compare manifest mtimes to current disk mtimes.
+
+        Returns:
+            Sorted list of relative paths that are newer on disk than
+            recorded in the manifest.
+        """
+        stale: list[str] = []
+        files = manifest.get("files", {})
+        for rel_path, entry in files.items():
+            recorded_mtime = entry.get("mtime", 0)
+            disk_path = self.codebase_path / rel_path
+            if not disk_path.exists():
+                # File was deleted since ingest — also stale
+                stale.append(rel_path)
+                continue
+            current_mtime = disk_path.stat().st_mtime
+            if current_mtime > recorded_mtime:
+                stale.append(rel_path)
+        return sorted(stale)
 
     def _get_indexed_code_chunks(
         self, focus_paths: list[str] | None = None

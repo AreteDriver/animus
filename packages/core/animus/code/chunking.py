@@ -219,13 +219,17 @@ def _chunk_python(content: str, config: ChunkingConfig) -> list[CodeChunk]:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             start = node.lineno
             end = node.end_lineno or node.lineno
+            complexity = _compute_complexity(node)
+            meta: dict[str, str] = {"name": node.name}
+            if complexity > 1:
+                meta["complexity_score"] = str(complexity)
             chunks.append(
                 CodeChunk(
                     content="".join(lines[start - 1 : end]).rstrip(),
                     chunk_type=ChunkType.FUNCTION,
                     start_line=start,
                     end_line=end,
-                    metadata={"name": node.name},
+                    metadata=meta,
                 )
             )
             covered.update(range(start, end + 1))
@@ -244,13 +248,17 @@ def _chunk_python(content: str, config: ChunkingConfig) -> list[CodeChunk]:
                 for method in methods:
                     m_start = method.lineno
                     m_end = method.end_lineno or method.lineno
+                    m_complexity = _compute_complexity(method)
+                    m_meta: dict[str, str] = {"class": node.name, "name": method.name}
+                    if m_complexity > 1:
+                        m_meta["complexity_score"] = str(m_complexity)
                     chunks.append(
                         CodeChunk(
                             content="".join(lines[m_start - 1 : m_end]).rstrip(),
                             chunk_type=ChunkType.METHOD,
                             start_line=m_start,
                             end_line=m_end,
-                            metadata={"class": node.name, "name": method.name},
+                            metadata=m_meta,
                         )
                     )
                     covered.update(range(m_start, m_end + 1))
@@ -409,6 +417,26 @@ def _chunk_json(content: str, _config: ChunkingConfig) -> list[CodeChunk]:
         return chunks if chunks else _chunk_window(content, _config)
 
     return _chunk_window(content, _config)
+
+
+def _compute_complexity(node: ast.AST) -> int:
+    """Simple cyclomatic complexity counter (McCabe-like).
+
+    Counts branching constructs inside *node* but excludes nested
+    function/class definitions so parent complexity isn't inflated.
+    """
+    count = 1
+    for child in ast.walk(node):
+        if child is node:
+            continue
+        # Skip nested definitions — they get their own chunk/complexity
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler, ast.With, ast.Assert, ast.comprehension)):
+            count += 1
+        elif isinstance(child, ast.BoolOp):
+            count += len(child.values) - 1
+    return count
 
 
 def _chunk_window(content: str, config: ChunkingConfig) -> list[CodeChunk]:

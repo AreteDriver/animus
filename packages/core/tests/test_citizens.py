@@ -428,17 +428,16 @@ class TestArchitectCitizen:
         assert call_kwargs["memory_type"].value == "semantic"
 
     def test_indexed_code_memory_coverage_low(self, tmp_path):
-        """Low coverage triggers a medium-severity observation."""
-        pkg = tmp_path / "core"
-        pkg.mkdir()
-        (pkg / "a.py").write_text("x = 1\n")
-        (pkg / "b.py").write_text("y = 2\n")
-        (pkg / "c.py").write_text("z = 3\n")
+        """Low coverage triggers a medium-severity observation via manifest summary."""
+        manifest = {
+            "version": "1.1",
+            "summary": {"total_scanned_files": 3, "total_chunked_files": 1, "total_chunks": 2},
+            "files": {"core/a.py": {"chunk_count": 2, "mtime": 1.0}},
+        }
+        manifest_path = tmp_path / ".animus_ingest_manifest.json"
+        manifest_path.write_text(json.dumps(manifest))
 
         mock_memory = MagicMock()
-        from animus.memory.types import MemoryType
-        from datetime import datetime
-
         mock_memory.search.return_value = [
             MagicMock(
                 metadata={"file_path": "core/a.py", "chunk_type": "function"},
@@ -454,15 +453,16 @@ class TestArchitectCitizen:
         assert "33%" in coverage_obs[0].description
 
     def test_indexed_code_memory_coverage_high(self, tmp_path):
-        """High coverage triggers an info-level observation."""
-        pkg = tmp_path / "core"
-        pkg.mkdir()
-        (pkg / "a.py").write_text("x = 1\n")
-        (pkg / "b.py").write_text("y = 2\n")
+        """High coverage triggers an info-level observation via manifest summary."""
+        manifest = {
+            "version": "1.1",
+            "summary": {"total_scanned_files": 2, "total_chunked_files": 2, "total_chunks": 2},
+            "files": {"core/a.py": {"chunk_count": 1, "mtime": 1.0}, "core/b.py": {"chunk_count": 1, "mtime": 1.0}},
+        }
+        manifest_path = tmp_path / ".animus_ingest_manifest.json"
+        manifest_path.write_text(json.dumps(manifest))
 
         mock_memory = MagicMock()
-        from datetime import datetime
-
         mock_memory.search.return_value = [
             MagicMock(
                 metadata={"file_path": "core/a.py", "chunk_type": "function"},
@@ -483,13 +483,15 @@ class TestArchitectCitizen:
 
     def test_indexed_code_memory_recency_hotspot(self, tmp_path):
         """Recently indexed chunks surface active-development info."""
-        pkg = tmp_path / "core"
-        pkg.mkdir()
-        (pkg / "a.py").write_text("x = 1\n")
+        manifest = {
+            "version": "1.1",
+            "summary": {"total_scanned_files": 1, "total_chunked_files": 1, "total_chunks": 2},
+            "files": {"core/a.py": {"chunk_count": 2, "mtime": 1.0}},
+        }
+        manifest_path = tmp_path / ".animus_ingest_manifest.json"
+        manifest_path.write_text(json.dumps(manifest))
 
         mock_memory = MagicMock()
-        from datetime import datetime
-
         mock_memory.search.return_value = [
             MagicMock(
                 metadata={"file_path": "core/a.py", "chunk_type": "function"},
@@ -509,45 +511,103 @@ class TestArchitectCitizen:
         assert "core/a.py" in recency_obs[0].description
 
     def test_indexed_code_memory_complexity_hotspot(self, tmp_path):
-        """High-complexity functions in indexed memory are surfaced."""
-        pkg = tmp_path / "core"
-        pkg.mkdir()
-        (pkg / "a.py").write_text("x = 1\n")  # disk placeholder
+        """High-complexity functions surfaced from pre-computed metadata."""
+        manifest = {
+            "version": "1.1",
+            "summary": {"total_scanned_files": 1, "total_chunked_files": 1, "total_chunks": 1},
+            "files": {"core/a.py": {"chunk_count": 1, "mtime": 1.0}},
+        }
+        manifest_path = tmp_path / ".animus_ingest_manifest.json"
+        manifest_path.write_text(json.dumps(manifest))
 
         mock_memory = MagicMock()
-        from datetime import datetime
-
-        # Build a chunky function with many control-flow keywords
-        content = "\n".join(
-            f"    if cond{i}: do_{i}()"
-            for i in range(10)
-        )
-
         mock_memory.search.return_value = [
             MagicMock(
                 metadata={
                     "file_path": "core/a.py",
                     "chunk_type": "function",
-                    "identifier": "big_func",
-                    "line_no": 5,
+                    "name": "big_func",
+                    "source_path": "core/a.py",
+                    "start_line": 5,
+                    "complexity_score": "15",
                 },
                 created_at=datetime.now(),
-                content=content,
             ),
         ]
 
         architect = ArchitectCitizen(codebase_path=tmp_path, memory_layer=mock_memory)
         obs = architect._observe_indexed_code_memory()
-        complexity_obs = [o for o in obs if o.context.get("pattern_type") == "high_complexity"]
+        complexity_obs = [o for o in obs if o.context.get("pattern_type") == "indexed_memory_complexity"]
         assert len(complexity_obs) == 1
         assert complexity_obs[0].severity == "medium"
         assert "big_func" in complexity_obs[0].description
         assert complexity_obs[0].context["complex_function_count"] == 1
 
+    def test_indexed_code_memory_stale_index(self, tmp_path):
+        """Files newer on disk than manifest trigger stale observation."""
+        old = tmp_path / "old.py"
+        old.write_text("x = 1\n")
+        # File has fresh mtime (now); manifest claims mtime=1.0 → stale
+        manifest = {
+            "version": "1.1",
+            "summary": {"total_scanned_files": 1, "total_chunked_files": 1, "total_chunks": 1},
+            "files": {"old.py": {"chunk_count": 1, "mtime": 1.0}},
+        }
+        manifest_path = tmp_path / ".animus_ingest_manifest.json"
+        manifest_path.write_text(json.dumps(manifest))
+
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = [
+            MagicMock(
+                metadata={"file_path": "old.py", "chunk_type": "function"},
+                created_at=datetime.now(),
+            ),
+        ]
+
+        architect = ArchitectCitizen(codebase_path=tmp_path, memory_layer=mock_memory)
+        obs = architect._observe_indexed_code_memory()
+        stale_obs = [o for o in obs if o.context.get("pattern_type") == "indexed_memory_stale"]
+        assert len(stale_obs) == 1
+        assert stale_obs[0].severity == "medium"
+        assert "old.py" in stale_obs[0].description
+
+    def test_indexed_code_memory_configurable_thresholds(self, tmp_path):
+        """Constructor thresholds override defaults."""
+        manifest = {
+            "version": "1.1",
+            "summary": {"total_scanned_files": 4, "total_chunked_files": 1, "total_chunks": 1},
+            "files": {"core/a.py": {"chunk_count": 1, "mtime": 1.0}},
+        }
+        manifest_path = tmp_path / ".animus_ingest_manifest.json"
+        manifest_path.write_text(json.dumps(manifest))
+
+        mock_memory = MagicMock()
+        mock_memory.search.return_value = [
+            MagicMock(
+                metadata={"file_path": "core/a.py", "chunk_type": "function"},
+                created_at=datetime.now(),
+            ),
+        ]
+
+        # coverage=1/4=25% < default 50% → medium
+        architect_default = ArchitectCitizen(codebase_path=tmp_path, memory_layer=mock_memory)
+        obs_default = architect_default._observe_indexed_code_memory()
+        assert any(o.severity == "medium" for o in obs_default if o.context.get("pattern_type") == "indexed_memory_coverage")
+
+        # coverage=1/4=25% > custom 20% threshold → info (not triggered as low)
+        architect_custom = ArchitectCitizen(
+            codebase_path=tmp_path,
+            memory_layer=mock_memory,
+            coverage_threshold=0.20,
+        )
+        obs_custom = architect_custom._observe_indexed_code_memory()
+        cov_custom = [o for o in obs_custom if o.context.get("pattern_type") == "indexed_memory_coverage"]
+        assert len(cov_custom) == 1
+        assert cov_custom[0].severity == "info"
+
     def test_get_indexed_code_chunks_focus_filter(self, tmp_path):
         """Focus paths filter chunks to matching file paths."""
         mock_memory = MagicMock()
-        from animus.memory.types import MemoryType
         from datetime import datetime
 
         mock_memory.search.return_value = [
@@ -568,6 +628,14 @@ class TestArchitectCitizen:
 
     def test_observe_codebase_calls_indexed_memory_when_memory_present(self, tmp_path):
         """observe_codebase triggers indexed memory observation when memory is attached."""
+        manifest = {
+            "version": "1.1",
+            "summary": {"total_scanned_files": 0, "total_chunked_files": 0, "total_chunks": 0},
+            "files": {},
+        }
+        manifest_path = tmp_path / ".animus_ingest_manifest.json"
+        manifest_path.write_text(json.dumps(manifest))
+
         mock_memory = MagicMock()
         mock_memory.search.return_value = []
 

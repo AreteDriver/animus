@@ -174,18 +174,26 @@ def ingest_codebase(
                     IngestError("store", f"{rel_path}:{chunk.start_line}", str(exc))
                 )
 
+        mtime = file_path.stat().st_mtime if file_path.exists() else 0.0
         manifest_entries[rel_path] = {
             "hash": file_hash,
             "chunk_count": len(chunks),
             "ingested_at": datetime.now(timezone.utc).isoformat(),
+            "mtime": mtime,
         }
 
-    # Write manifest
+    # Write manifest with summary statistics
     if write_manifest:
+        total_chunks = sum(e["chunk_count"] for e in manifest_entries.values())
         full_manifest = {
-            "version": "1.0",
+            "version": "1.1",
             "root": str(root),
             "ingested_at": datetime.now(timezone.utc).isoformat(),
+            "summary": {
+                "total_scanned_files": len(by_path),
+                "total_chunked_files": len([e for e in manifest_entries.values() if e["chunk_count"] > 0]),
+                "total_chunks": total_chunks,
+            },
             "files": manifest_entries,
         }
         try:
