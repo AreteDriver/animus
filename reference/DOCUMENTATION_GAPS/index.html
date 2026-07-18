@@ -1,0 +1,3709 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+        <meta name="author" content="AreteDriver">
+      
+      
+        <link rel="canonical" href="https://aretedriver.github.io/animus/reference/DOCUMENTATION_GAPS/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Documentation Gap Analysis - Animus Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#documentation-gap-analysis" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Animus Documentation" class="md-header__button md-logo" aria-label="Animus Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Animus Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Documentation Gap Analysis
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/AreteDriver/animus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AreteDriver/animus
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/quickstart/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../packages/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Packages
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contributing/setup/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Contributing
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operators/deployment/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Operators
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../cli-commands/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../metrics/G1_EVIDENCE_BASELINE/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Metrics
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../roadmap/current/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Roadmap
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Animus Documentation" class="md-nav__button md-logo" aria-label="Animus Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Animus Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AreteDriver/animus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AreteDriver/animus
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/learning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Learning Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/proactive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proactive Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/citizen-zero/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citizen Zero
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../architecture/decisions/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/decisions/ADR-001/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-001
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/decisions/ADL-20260618-001/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADL-20260618-001
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/standards/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standards
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../packages/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Packages
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/forge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Forge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/quorum/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quorum
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/bootstrap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/kernel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kernel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/pwa/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PWA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/contracts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contracts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operators
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operators
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/local-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Local Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../whitepapers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Whitepapers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Whitepapers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../metrics/G1_EVIDENCE_BASELINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    G1 Evidence Baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Roadmap
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/current/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Current
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#critical-gaps-users-blocked-without-these" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critical Gaps (Users blocked without these)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Critical Gaps (Users blocked without these)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-cli-commands-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. ❌ CLI Commands Reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-memory-system-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. ❌ Memory System Reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. ❌ Configuration Reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#important-gaps-significant-friction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Important Gaps (Significant friction)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Important Gaps (Significant friction)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#4-api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. ❌ API Reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-local-model-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. ❌ Local Model Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-architecture-memory-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. ❌ Architecture: Memory Layer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-architecture-learning-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. ❌ Architecture: Learning Layer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-architecture-proactive-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. ❌ Architecture: Proactive Engine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-citizen-zero-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. ❌ Citizen Zero Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-observability-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance &amp; Observability Gaps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance &amp; Observability Gaps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#10-no-performance-telemetry-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. ❌ No Performance Telemetry System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-no-self-profiling-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. ❌ No Self-Profiling Framework
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-no-cost-per-operation-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. ❌ No Cost-Per-Operation Analysis
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stale-references-cleanup-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stale References (Cleanup needed)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Stale References (Cleanup needed)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#13-gorgon-references-in-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. ⚠️ gorgon references in docs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-packagesforgereadmemd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. ⚠️ packages/forge/README.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#orphaned-unlinked-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Orphaned / Unlinked Docs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Orphaned / Unlinked Docs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#15-docsgetting-started-docs-not-in-mkdocs-nav" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. ⚠️ docs/getting-started/ docs not in mkdocs nav
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#16-docsreferencesafetymd-vs-docsreferencesecuritymd-vs-docsreferencesecurity-layermd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16. ⚠️ docs/reference/safety.md vs docs/reference/security.md vs docs/reference/security-layer.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#17-docsoperatorsknown-issuesmd-docsoperatorsmigration-guidemd-docsoperatorsrecoverymd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17. ⚠️ docs/operators/known-issues.md, docs/operators/migration-guide.md, docs/operators/recovery.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#package-readme-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Package README Gaps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Package README Gaps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#18-packagescorereadmemd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18. ⚠️ packages/core/README.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#19-packagesforgereadmemd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        19. ⚠️ packages/forge/README.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#20-packagesbootstrapreadmemd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        20. ⚠️ packages/bootstrap/README.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#p4-performance-observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        P4: Performance &amp; Observability
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="P4: Performance &amp; Observability">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-nowhere-in-codebase-or-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where: Nowhere in codebase or docs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-exists-token-counts-tracked-per-workflow-forge-but-repl-has-zero-telemetry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What exists: Token counts tracked per-workflow (Forge), but REPL has zero telemetry
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#p5-fix-agent-loop-for-local-models-critical-reliability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        P5: Fix Agent Loop for Local Models (Critical Reliability)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="P5: Fix Agent Loop for Local Models (Critical Reliability)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-packagescoreanimus__main__py-line-2465" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where: packages/core/animus/__main__.py line 2465+
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-exists-constrained-agent-loop-_think_with_tools_constrained-assumes-model-can-follow-tool-number-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What exists: Constrained agent loop (_think_with_tools_constrained) assumes model can follow TOOL: &lt;number&gt; format
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommended-priority-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended Priority Order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#senior-engineer-prompt-ooda-loop-for-p0p5-completion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Senior Engineer Prompt: OODA Loop for P0–P5 Completion
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Senior Engineer Prompt: OODA Loop for P0–P5 Completion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-observe-gather-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Observe (Gather State)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-decide-prioritize-and-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Decide (Prioritize and Plan)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-act-implement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Act (Implement)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-verify-review-and-close" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Verify (Review and Close)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#abort-conditions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abort Conditions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#success-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Success Criteria
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-observe-gather-state_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Observe (Gather State)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-decide-prioritize-and-plan_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Decide (Prioritize and Plan)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-act-implement_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Act (Implement)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-verify-review-and-close_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Verify (Review and Close)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#abort-conditions_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abort Conditions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#success-criteria_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Success Criteria
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/AreteDriver/animus/blob/main/docs/reference/DOCUMENTATION_GAPS.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="documentation-gap-analysis">Documentation Gap Analysis<a class="headerlink" href="#documentation-gap-analysis" title="Anchor link to this section">&para;</a></h1>
+<p><strong>Last updated:</strong> 2026-07-01</p>
+<p><strong>Completed in this session:</strong>
+- ✅ Created <code>docs/reference/tools.md</code> — 14 tools documented with parameters, examples, and local model reliability notes
+- ✅ Added Tools link to README.md header navigation
+- ✅ Added Tools to mkdocs.yml nav
+- ✅ Fixed broken internal link in tools.md</p>
+<hr />
+<h2 id="critical-gaps-users-blocked-without-these">Critical Gaps (Users blocked without these)<a class="headerlink" href="#critical-gaps-users-blocked-without-these" title="Anchor link to this section">&para;</a></h2>
+<h3 id="1-cli-commands-reference">1. ❌ CLI Commands Reference<a class="headerlink" href="#1-cli-commands-reference" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Where:</strong> Nowhere in docs
+<strong>What exists:</strong> <code>packages/core/animus/__main__.py</code> has 40+ REPL commands (<code>/status</code>, <code>/stats</code>, <code>/history</code>, <code>/recall</code>, <code>/remember</code>, <code>/tag</code>, <code>/untag</code>, <code>/search-tags</code>, <code>/fact</code>, <code>/procedure</code>, <code>/export</code>, <code>/import</code>, <code>/backup</code>, <code>/tools</code>, <code>/tool</code>, <code>/task</code>, <code>/decide</code>, <code>/research</code>, <code>/brief</code>, <code>/briefing</code>, <code>/nudges</code>, <code>/meeting-prep</code>, <code>/reflect</code>, <code>/eval</code>, <code>/entities</code>, <code>/entity</code>, <code>/sync</code>, <code>/forge</code>, <code>/server</code>, <code>/voice</code>, <code>/speak</code>, <code>/speak-toggle</code>, <code>/build</code>, <code>/model</code>, <code>/auto</code>, <code>/deep</code>, <code>/learning</code>, <code>/guardrails</code>, <code>/unlearn</code>)
+<strong>Impact:</strong> Users must discover commands via <code>/help</code> or by reading 2600-line source file
+<strong>Fix:</strong> Create <code>docs/reference/cli-commands.md</code></p>
+<h3 id="2-memory-system-reference">2. ❌ Memory System Reference<a class="headerlink" href="#2-memory-system-reference" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Where:</strong> Nowhere in docs
+<strong>What exists:</strong> <code>MemoryLayer</code> with semantic/episodic/procedural types, tags, confidence scores, <code>recall()</code>, <code>remember()</code>, <code>forget()</code>, search by tags
+<strong>Impact:</strong> Users don't know how memory works, what gets stored, how to search effectively
+<strong>Fix:</strong> Create <code>docs/reference/memory.md</code></p>
+<h3 id="3-configuration-reference">3. ❌ Configuration Reference<a class="headerlink" href="#3-configuration-reference" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Where:</strong> <code>operators/configuration.md</code> exists but is it complete?
+<strong>What exists:</strong> <code>AnimusConfig</code> with nested settings for model, memory, learning, proactive, entities, api, voice, autonomous, tools_security, citizen_zero, sync
+<strong>Impact:</strong> Users can't tune behavior without reading source
+<strong>Fix:</strong> Audit and expand <code>operators/configuration.md</code> with full config schema and examples</p>
+<hr />
+<h2 id="important-gaps-significant-friction">Important Gaps (Significant friction)<a class="headerlink" href="#important-gaps-significant-friction" title="Anchor link to this section">&para;</a></h2>
+<h3 id="4-api-reference">4. ❌ API Reference<a class="headerlink" href="#4-api-reference" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Where:</strong> Nowhere in docs
+<strong>What exists:</strong> <code>APIServer</code> in <code>packages/core/animus/api.py</code> with FastAPI endpoints. No OpenAPI/Swagger docs generated.
+<strong>Impact:</strong> Can't integrate with Animus API without reading source
+<strong>Fix:</strong> Enable FastAPI auto-generated OpenAPI docs; create <code>docs/reference/api.md</code></p>
+<h3 id="5-local-model-troubleshooting">5. ❌ Local Model Troubleshooting<a class="headerlink" href="#5-local-model-troubleshooting" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Where:</strong> Nowhere in docs
+<strong>What exists:</strong> <code>docs/getting-started/ollama-setup.md</code> covers installation but not the constrained loop reliability issues
+<strong>Impact:</strong> Users think Animus is broken when natural language mode garbles
+<strong>Fix:</strong> Add "Working with Local Models" section to <code>ollama-setup.md</code> or create <code>docs/operators/local-models.md</code></p>
+<h3 id="6-architecture-memory-layer">6. ❌ Architecture: Memory Layer<a class="headerlink" href="#6-architecture-memory-layer" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Where:</strong> <code>docs/architecture/overview.md</code> mentions Memory Layer but no dedicated doc
+<strong>What exists:</strong> Kernel handles episodic/semantic/procedural memory with ChromaDB/SQLite/PostgreSQL backends
+<strong>Fix:</strong> Create <code>docs/architecture/memory.md</code></p>
+<h3 id="7-architecture-learning-layer">7. ❌ Architecture: Learning Layer<a class="headerlink" href="#7-architecture-learning-layer" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Where:</strong> Nowhere in architecture docs
+<strong>What exists:</strong> Pattern detection, guardrails, approval workflow, rollback checkpoints
+<strong>Fix:</strong> Create <code>docs/architecture/learning.md</code></p>
+<h3 id="8-architecture-proactive-engine">8. ❌ Architecture: Proactive Engine<a class="headerlink" href="#8-architecture-proactive-engine" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Where:</strong> Nowhere in architecture docs
+<strong>What exists:</strong> Morning briefings, nudges, meeting prep, background scanning
+<strong>Fix:</strong> Create <code>docs/architecture/proactive.md</code></p>
+<h3 id="9-citizen-zero-documentation">9. ❌ Citizen Zero Documentation<a class="headerlink" href="#9-citizen-zero-documentation" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Where:</strong> Only exists in <code>packages/core/animus/citizen_zero.py</code> and REPL help
+<strong>What exists:</strong> Constitutional corpus, identity projection, reflection, eval reports
+<strong>Impact:</strong> Users don't understand the identity/safety layer
+<strong>Fix:</strong> Create <code>docs/architecture/citizen-zero.md</code> or <code>docs/reference/citizen-zero.md</code></p>
+<hr />
+<h2 id="performance-observability-gaps">Performance &amp; Observability Gaps<a class="headerlink" href="#performance-observability-gaps" title="Anchor link to this section">&para;</a></h2>
+<h3 id="10-no-performance-telemetry-system">10. ❌ No Performance Telemetry System<a class="headerlink" href="#10-no-performance-telemetry-system" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Where:</strong> Nowhere in codebase
+<strong>What exists:</strong> Token counts are tracked per-workflow but not per-REPL-interaction. No latency histograms. No memory growth tracking.
+<strong>Impact:</strong> Can't answer "Is Animus getting slower over time?" Can't optimize what isn't measured.
+<strong>Measurable audit factors available now:</strong>
+- Token burn rate per session (already tracked in Forge workflows, missing in REPL)
+- Tool call latency distribution (not tracked)
+- Memory recall speed by backend (SQLite vs PostgreSQL vs ChromaDB)
+- Model inference time by provider (Ollama vs Anthropic vs OpenAI)
+- Conversation fragmentation overhead (auto-save every 10 messages → new conversation ID)
+- Database size growth over time
+- Cache hit rate for file reads
+- Approval callback latency (human-in-the-loop delay)
+- Context window utilization ratio
+- Dual-model routing frequency (how often fallback triggers)</p>
+<p><strong>Fix:</strong> Create <code>docs/operators/performance.md</code> + instrument <code>__main__.py</code> with lightweight metrics collection (no external dependencies — just logging with structured JSON)</p>
+<h3 id="11-no-self-profiling-framework">11. ❌ No Self-Profiling Framework<a class="headerlink" href="#11-no-self-profiling-framework" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Where:</strong> Nowhere in codebase
+<strong>What exists:</strong> Benchmark tests exist (<code>test_benchmarks.py</code>) but no runtime profiling
+<strong>Overlooked factors:</strong>
+- The constrained agent loop itself is a black box — no measurement of parse failures, retries, or format correction rounds
+- Memory layer query performance varies wildly by backend but isn't benchmarked at runtime
+- File I/O is synchronous in an async event loop — potential blocking
+- The <code>atexit</code> cleanup handler blocks on <code>loop.run_until_complete()</code> which can hang if sync client disconnect fails
+- <code>conversation.add_message()</code> stores full content with no truncation — long tool outputs bloat context
+- <code>last_session_context = last.content[:500]</code> is arbitrary truncation, not token-aware
+- <code>AGENT_CONTEXT</code> + <code>last_session_context</code> + tool menu + user input + memory context can exceed 8K context window before generation even starts
+- No measurement of "time to first token" for streaming output
+- No tracking of which tools fail most often (useful for improving the constrained loop)
+- No measurement of memory leak potential — <code>conversation.messages</code> grows unbounded between auto-saves</p>
+<p><strong>Fix:</strong> Add lightweight <code>animus.profiler</code> module with context managers for timing critical paths. Output to rotating log files, not external services.</p>
+<h3 id="12-no-cost-per-operation-analysis">12. ❌ No Cost-Per-Operation Analysis<a class="headerlink" href="#12-no-cost-per-operation-analysis" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Where:</strong> Nowhere in docs or code
+<strong>What exists:</strong> Forge tracks <code>$cost_usd</code> per workflow agent, but REPL has no cost visibility
+<strong>Impact:</strong> Users running local models think they're "free" but don't see electricity/GPU-wear costs. Users on API keys don't know their burn rate.
+<strong>Fix:</strong> Add optional cost estimation to REPL status (<code>/stats</code> command) showing estimated tokens consumed, estimated cost, and local GPU utilization if available.</p>
+<hr />
+<h2 id="stale-references-cleanup-needed">Stale References (Cleanup needed)<a class="headerlink" href="#stale-references-cleanup-needed" title="Anchor link to this section">&para;</a></h2>
+<h3 id="13-gorgon-references-in-docs">13. ⚠️ <code>gorgon</code> references in docs<a class="headerlink" href="#13-gorgon-references-in-docs" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Files affected:</strong>
+- <code>docs/reviews/2026-02-21-self-improve-deep-dive.md</code> — <code>.gorgon/snapshots/</code> paths (historical, may be intentional)
+- <code>docs/whitepapers/ANIMUS_WHITEPAPER_2026-06.md</code> — multiple references to incomplete rename (legitimate gap analysis)
+- <code>docs/planning/phase-0-results.md</code> — claims Forge README stale refs are "fixed" — <strong>need to verify</strong>
+- <code>docs/planning/documentation-roadmap.md</code> — same claim</p>
+<p><strong>Action:</strong> Verify <code>packages/forge/README.md</code> has zero <code>gorgon</code> CLI references. If fixed, close tracking items. If not, fix README.</p>
+<h3 id="14-packagesforgereadmemd">14. ⚠️ <code>packages/forge/README.md</code><a class="headerlink" href="#14-packagesforgereadmemd" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Check:</strong> <code>grep -n "gorgon" packages/forge/README.md</code> — if matches exist, those are stale references</p>
+<hr />
+<h2 id="orphaned-unlinked-docs">Orphaned / Unlinked Docs<a class="headerlink" href="#orphaned-unlinked-docs" title="Anchor link to this section">&para;</a></h2>
+<h3 id="15-docsgetting-started-docs-not-in-mkdocs-nav">15. ⚠️ <code>docs/getting-started/</code> docs not in mkdocs nav<a class="headerlink" href="#15-docsgetting-started-docs-not-in-mkdocs-nav" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Check:</strong> <code>use-cases.md</code>, <code>case-study.md</code>, <code>interface-vision.md</code>, <code>animus-context.md</code>, <code>ollama-setup.md</code> — are these linked from Quickstart/Installation? Some may not be discoverable via the site nav.</p>
+<h3 id="16-docsreferencesafetymd-vs-docsreferencesecuritymd-vs-docsreferencesecurity-layermd">16. ⚠️ <code>docs/reference/safety.md</code> vs <code>docs/reference/security.md</code> vs <code>docs/reference/security-layer.md</code><a class="headerlink" href="#16-docsreferencesafetymd-vs-docsreferencesecuritymd-vs-docsreferencesecurity-layermd" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Check:</strong> Three security-related docs. Are they duplicates? Do they have distinct scopes?</p>
+<h3 id="17-docsoperatorsknown-issuesmd-docsoperatorsmigration-guidemd-docsoperatorsrecoverymd">17. ⚠️ <code>docs/operators/known-issues.md</code>, <code>docs/operators/migration-guide.md</code>, <code>docs/operators/recovery.md</code><a class="headerlink" href="#17-docsoperatorsknown-issuesmd-docsoperatorsmigration-guidemd-docsoperatorsrecoverymd" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Check:</strong> Not in mkdocs nav. Are they reachable?</p>
+<hr />
+<h2 id="package-readme-gaps">Package README Gaps<a class="headerlink" href="#package-readme-gaps" title="Anchor link to this section">&para;</a></h2>
+<h3 id="18-packagescorereadmemd">18. ⚠️ <code>packages/core/README.md</code><a class="headerlink" href="#18-packagescorereadmemd" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Check:</strong> Does it document the REPL, tools, and CLI commands? Or just the import API?</p>
+<h3 id="19-packagesforgereadmemd">19. ⚠️ <code>packages/forge/README.md</code><a class="headerlink" href="#19-packagesforgereadmemd" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Check:</strong> Does <code>animus-forge</code> CLI syntax match current code? (Historical gorgon rename issue)</p>
+<h3 id="20-packagesbootstrapreadmemd">20. ⚠️ <code>packages/bootstrap/README.md</code><a class="headerlink" href="#20-packagesbootstrapreadmemd" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Check:</strong> Does it cover all CLI subcommands? (<code>install</code>, <code>setup</code>, <code>start</code>, <code>stop</code>, <code>status</code>, <code>update</code>, <code>dashboard</code>, <code>config</code>, <code>channels</code>, <code>tools</code>, <code>proactive</code>, <code>automations</code>, <code>personas</code>, <code>feedback</code>)</p>
+<hr />
+<h2 id="p4-performance-observability">P4: Performance &amp; Observability<a class="headerlink" href="#p4-performance-observability" title="Anchor link to this section">&para;</a></h2>
+<h3 id="where-nowhere-in-codebase-or-docs">Where: Nowhere in codebase or docs<a class="headerlink" href="#where-nowhere-in-codebase-or-docs" title="Anchor link to this section">&para;</a></h3>
+<h3 id="what-exists-token-counts-tracked-per-workflow-forge-but-repl-has-zero-telemetry">What exists: Token counts tracked per-workflow (Forge), but REPL has zero telemetry<a class="headerlink" href="#what-exists-token-counts-tracked-per-workflow-forge-but-repl-has-zero-telemetry" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Impact:</strong> Can't answer "Is Animus getting slower over time?" Can't optimize what isn't measured. Users on local models don't know their token burn rate. Users on API keys don't know their spend.</p>
+<p><strong>Measurable audit factors (collectable without performance degradation):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Factor</th>
+<th>What It Measures</th>
+<th>Collection Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Token burn rate</strong></td>
+<td>Tokens consumed per REPL interaction</td>
+<td>Already tracked in Forge workflows; add to REPL <code>think_with_tools</code> return metadata</td>
+</tr>
+<tr>
+<td><strong>Tool call latency</strong></td>
+<td>Time from tool selection to result</td>
+<td><code>@contextmanager</code> timing in <code>_think_with_tools_constrained</code> loop</td>
+</tr>
+<tr>
+<td><strong>Model inference latency</strong></td>
+<td>Time from prompt submission to first token</td>
+<td>Hook into <code>primary.generate()</code> call in <code>cognitive.py</code></td>
+</tr>
+<tr>
+<td><strong>Memory recall speed</strong></td>
+<td>Query time by backend (SQLite vs PostgreSQL vs ChromaDB)</td>
+<td>Instrument <code>memory.recall()</code> with timing</td>
+</tr>
+<tr>
+<td><strong>Context window utilization</strong></td>
+<td>Input tokens / max context ratio</td>
+<td>Calculate before each <code>generate()</code> call</td>
+</tr>
+<tr>
+<td><strong>Conversation fragmentation</strong></td>
+<td>How often auto-save triggers (every 10 messages)</td>
+<td>Count <code>Conversation.new()</code> calls</td>
+</tr>
+<tr>
+<td><strong>Database size growth</strong></td>
+<td>SQLite/ChromaDB file size over time</td>
+<td>Daily measurement via background task</td>
+</tr>
+<tr>
+<td><strong>Cache hit rate</strong></td>
+<td>File read cache effectiveness</td>
+<td>Track <code>read_file</code> repeated access patterns</td>
+</tr>
+<tr>
+<td><strong>Approval callback latency</strong></td>
+<td>Human-in-the-loop delay</td>
+<td>Time from prompt to user response</td>
+</tr>
+<tr>
+<td><strong>Dual-model routing frequency</strong></td>
+<td>How often fallback model triggers</td>
+<td>Count fallback invocations</td>
+</tr>
+<tr>
+<td><strong>Constrained loop failure rate</strong></td>
+<td>Parse failures / total iterations</td>
+<td>Already partially tracked via iteration count; log failure reason</td>
+</tr>
+<tr>
+<td><strong>Memory leak indicators</strong></td>
+<td>RSS growth over session lifetime</td>
+<td>Simple <code>psutil.Process().memory_info().rss</code> check on exit</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Overlooked factors:</strong>
+- <strong>Synchronous file I/O in async loop:</strong> <code>read_file</code>, <code>write_file</code>, <code>edit_file</code> use blocking <code>pathlib.Path.read_text()</code> / <code>write_text()</code> inside the asyncio event loop. This blocks other coroutines.
+- <strong>Unbounded message growth:</strong> <code>conversation.messages</code> grows without token-aware truncation between auto-saves. Long tool outputs (like the 2000-line watchlist JSON we just saw) bloat context for subsequent interactions.
+- <strong>Arbitrary context truncation:</strong> <code>last.content[:500]</code> is character-based, not token-aware. Could be 50 tokens or 500 tokens depending on content.
+- <strong>No warmup measurement:</strong> First Ollama call after idle is slow (model load from disk). No distinction between cold-start latency and steady-state latency.
+- <strong>No GPU utilization tracking:</strong> Local model users don't know if they're CPU-bound or GPU-bound.
+- <strong>No context compression ratio:</strong> How much of the prompt is system instructions vs user input vs tool results? Useful for optimizing the constrained loop instructions.</p>
+<p><strong>Fix:</strong>
+1. Add lightweight <code>animus.profiler</code> module with context managers (zero external dependencies)
+2. Log structured JSON to rotating file: <code>~/.animus/logs/performance.log</code>
+3. Fields: <code>timestamp</code>, <code>phase</code>, <code>duration_ms</code>, <code>tool_name</code>, <code>model_provider</code>, <code>success</code>, <code>context_tokens</code>, <code>response_tokens</code>
+4. Document schema in <code>docs/operators/performance.md</code>
+5. Add <code>/stats --perf</code> command to REPL for real-time summary</p>
+<hr />
+<h2 id="p5-fix-agent-loop-for-local-models-critical-reliability">P5: Fix Agent Loop for Local Models (Critical Reliability)<a class="headerlink" href="#p5-fix-agent-loop-for-local-models-critical-reliability" title="Anchor link to this section">&para;</a></h2>
+<h3 id="where-packagescoreanimus__main__py-line-2465">Where: <code>packages/core/animus/__main__.py</code> line 2465+<a class="headerlink" href="#where-packagescoreanimus__main__py-line-2465" title="Anchor link to this section">&para;</a></h3>
+<h3 id="what-exists-constrained-agent-loop-_think_with_tools_constrained-assumes-model-can-follow-tool-number-format">What exists: Constrained agent loop (<code>_think_with_tools_constrained</code>) assumes model can follow <code>TOOL: &lt;number&gt;</code> format<a class="headerlink" href="#what-exists-constrained-agent-loop-_think_with_tools_constrained-assumes-model-can-follow-tool-number-format" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Impact:</strong> Local 7B-8B models cannot reliably follow the structured format. They output prose, get format error prompts, retry, and hit max iterations with garbled output. This is the #1 user-facing bug.</p>
+<p><strong>Evidence:</strong>
+- <code>watchlist-list</code> → model outputs <code>TOOL: 12</code> repeatedly, never executes
+- <code>animus_watchlist_scan</code> → same behavior
+- <code>show me the README</code> → model outputs prose instead of <code>TOOL: 2</code> + <code>path: README.md</code>
+- After 3 iterations (patched down from 8), bails with <code>WARNING: Max constrained iterations reached</code></p>
+<p><strong>Root cause:</strong> The system prompt presents a numbered tool menu (<code>1. read_file</code>, <code>2. list_files</code>, etc.) and instructs the model to respond with <code>TOOL: &lt;number&gt;</code>. Local models lack the instruction-following precision for this format. They treat the menu as content to summarize rather than a UI to interact with.</p>
+<p><strong>Options considered:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Approach</th>
+<th>Effort</th>
+<th>Reliability</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>Skip agent loop when provider == Ollama; require <code>/tool</code> direct invocation</td>
+<td>Small</td>
+<td>✅ Perfect</td>
+</tr>
+<tr>
+<td>B</td>
+<td>Simplify format to single-word tool names (no numbers)</td>
+<td>Medium</td>
+<td>⚠️ Better but not fixed</td>
+</tr>
+<tr>
+<td>C</td>
+<td>Add retry with format examples</td>
+<td>Small</td>
+<td>❌ Worse (more garbage accumulation)</td>
+</tr>
+<tr>
+<td>D</td>
+<td>Use structured output (JSON mode) if model supports it</td>
+<td>Large</td>
+<td>❌ Ollama models don't consistently support JSON mode</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recommended: Option A</strong> — Honest about local model limitations. Preserve agent loop for Anthropic/OpenAI users who have models with native tool_use support.</p>
+<p><strong>Implementation:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># In __main__.py, before entering agent loop:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">if</span> <span class="n">cognitive</span><span class="o">.</span><span class="n">primary_config</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="s2">&quot;ollama&quot;</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="s2">&quot;[dim]Tip: Use /tool &lt;name&gt; for tool execution with local models.[/dim]&quot;</span><span class="p">)</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="c1"># Fall through to basic think() without tools</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">response</span> <span class="o">=</span> <span class="n">cognitive</span><span class="o">.</span><span class="n">think</span><span class="p">(</span><span class="n">user_input</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">citizen_context</span><span class="o">=</span><span class="n">citizen_context</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="k">continue</span>
+</span></code></pre></div></p>
+<p><strong>Add to docs:</strong> <code>docs/operators/local-models.md</code> — "Why natural language doesn't work with local models and how to use <code>/tool</code> instead"</p>
+<hr />
+<h2 id="recommended-priority-order">Recommended Priority Order<a class="headerlink" href="#recommended-priority-order" title="Anchor link to this section">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Doc / Fix</th>
+<th>Effort</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>P0</strong></td>
+<td><code>docs/reference/cli-commands.md</code></td>
+<td>Medium</td>
+<td>Users can't use Animus without this</td>
+</tr>
+<tr>
+<td><strong>P0</strong></td>
+<td><code>docs/reference/memory.md</code></td>
+<td>Medium</td>
+<td>Core feature completely undocumented</td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td>Expand <code>operators/configuration.md</code></td>
+<td>Medium</td>
+<td>Users can't tune behavior</td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td><code>docs/operators/local-models.md</code></td>
+<td>Small</td>
+<td>Prevents "Animus is broken" support burden</td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td>Fix stale <code>gorgon</code> refs in <code>packages/forge/README.md</code></td>
+<td>Small</td>
+<td>False advertising if not actually fixed</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td><code>docs/architecture/memory.md</code></td>
+<td>Medium</td>
+<td>Developer onboarding</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td><code>docs/architecture/learning.md</code></td>
+<td>Medium</td>
+<td>Developer onboarding</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td><code>docs/architecture/proactive.md</code></td>
+<td>Medium</td>
+<td>Developer onboarding</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td>API docs (<code>docs/reference/api.md</code>)</td>
+<td>Medium</td>
+<td>Integration use case</td>
+</tr>
+<tr>
+<td><strong>P3</strong></td>
+<td><code>docs/architecture/citizen-zero.md</code></td>
+<td>Large</td>
+<td>Identity layer is complex</td>
+</tr>
+<tr>
+<td><strong>P3</strong></td>
+<td>Audit orphaned docs</td>
+<td>Small</td>
+<td>Discoverability</td>
+</tr>
+<tr>
+<td><strong>P4</strong></td>
+<td>Performance telemetry + profiling</td>
+<td>Medium</td>
+<td>Operational visibility; optimization foundation</td>
+</tr>
+<tr>
+<td><strong>P5</strong></td>
+<td>Disable agent loop for Ollama users</td>
+<td>Small</td>
+<td>Fixes #1 user-facing bug</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="senior-engineer-prompt-ooda-loop-for-p0p5-completion">Senior Engineer Prompt: OODA Loop for P0–P5 Completion<a class="headerlink" href="#senior-engineer-prompt-ooda-loop-for-p0p5-completion" title="Anchor link to this section">&para;</a></h2>
+<p><strong>Role:</strong> Senior Staff Engineer (10+ years). You've been assigned to close all gaps P0–P5 before the next release. You operate with full autonomy. The user (AreteDriver) trusts your judgment on approach, scope, and sequencing.</p>
+<p><strong>Goal:</strong> Every item P0–P5 is documented, tested (where applicable), reviewed, and merged to <code>main</code>.</p>
+<p><strong>Method:</strong> Strict OODA loop. No action without observation. No decision without data. No verification without criteria.</p>
+<hr />
+<h3 id="phase-1-observe-gather-state">Phase 1: Observe (Gather State)<a class="headerlink" href="#phase-1-observe-gather-state" title="Anchor link to this section">&para;</a></h3>
+<p><strong>For each P0–P5 item, before writing a single line:</strong></p>
+<ol>
+<li><strong>Read existing code.</strong> Find the source of truth:</li>
+<li>CLI commands → <code>packages/core/animus/__main__.py</code>, <code>packages/core/animus/cli.py</code></li>
+<li>Memory API → <code>packages/core/animus/memory.py</code>, <code>packages/kernel/src/animus_kernel/memory/</code></li>
+<li>Config schema → <code>packages/core/animus/config.py</code></li>
+<li>Performance paths → <code>packages/core/animus/__main__.py</code> (REPL loop), <code>packages/core/animus/cognitive.py</code> (think_with_tools)</li>
+<li>
+<p>Agent loop → <code>packages/core/animus/__main__.py</code> line 2465+, <code>packages/core/animus/cognitive.py</code> <code>_think_with_tools_constrained()</code></p>
+</li>
+<li>
+<p><strong>Read existing docs.</strong> Don't duplicate. Link, extend, or replace:</p>
+</li>
+<li><code>docs/getting-started/quickstart.md</code></li>
+<li><code>docs/architecture/overview.md</code></li>
+<li><code>docs/operators/configuration.md</code></li>
+<li>
+<p>Package READMEs</p>
+</li>
+<li>
+<p><strong>Measure current state.</strong> For performance items (P4):</p>
+</li>
+<li>Instrument <code>__main__.py</code> with <code>@contextmanager</code> timing around tool execution, model generation, and memory operations</li>
+<li>Run 10 REPL interactions, log latency per phase</li>
+<li>Report: mean, p95, max for each phase</li>
+<li>
+<p>Identify the slowest path</p>
+</li>
+<li>
+<p><strong>Reproduce the bug.</strong> For P5:</p>
+</li>
+<li>Start Animus with Ollama provider</li>
+<li>Type <code>watchlist-list</code> (no <code>/tool</code> prefix)</li>
+<li>Confirm garbled output and max iterations warning</li>
+<li>
+<p>Document exact failure mode</p>
+</li>
+<li>
+<p><strong>Identify stale references.</strong> Run:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>grep<span class="w"> </span>-rn<span class="w"> </span><span class="s2">&quot;gorgon&quot;</span><span class="w"> </span>docs/<span class="w"> </span>packages/<span class="w"> </span>--include<span class="o">=</span><span class="s2">&quot;*.md&quot;</span><span class="w"> </span>--include<span class="o">=</span><span class="s2">&quot;*.py&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;Gorgon renamed\|archived\|Historical&quot;</span>
+</span></code></pre></div></p>
+</li>
+</ol>
+<p><strong>Output:</strong> A table per item:
+| Item | Source of Truth | Existing Docs | Gap Size | Estimated Effort | Blockers |
+|---|---|---|---|---|---|</p>
+<hr />
+<h3 id="phase-2-decide-prioritize-and-plan">Phase 2: Decide (Prioritize and Plan)<a class="headerlink" href="#phase-2-decide-prioritize-and-plan" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Decision criteria (ranked):</strong></p>
+<ol>
+<li><strong>User impact</strong> — Will a new user be blocked without this?</li>
+<li><strong>Maintenance burden</strong> — Will this doc reduce support questions?</li>
+<li><strong>Accuracy risk</strong> — Is the current state misleading or harmful?</li>
+<li><strong>Effort / value ratio</strong> — Can we ship a "good enough" version in &lt;2 hours?</li>
+</ol>
+<p><strong>Decision framework:</strong></p>
+<ul>
+<li><strong>If gap is small and source is clear</strong> → Write doc directly, one-shot, no draft</li>
+<li><strong>If gap requires code changes</strong> (P4 instrumentation, P5 agent loop disable) → Create a sub-task, implement first, document second</li>
+<li><strong>If gap spans multiple systems</strong> (e.g., memory docs) → Write overview doc first, link to subsystem docs later</li>
+<li><strong>If item is stale reference</strong> → Fix or delete. Never leave stale docs in place.</li>
+</ul>
+<p><strong>Sequencing rule:</strong> Complete all P0 before starting P1. Complete all P1 before P2. No skipping. The user learns the system in order — critical gaps first.</p>
+<p><strong>Special handling for P5:</strong> This is a code fix, not a doc. Implement before P4 because P4 measurement will be affected by whether the agent loop is active.</p>
+<p><strong>Output:</strong> A plan file at <code>.claude/plans/doc-gaps-P0-P5.md</code> with:
+- Item order (strict P0 → P5)
+- Per-item acceptance criteria (what "done" means)
+- Dependencies between items (P5 before P4 instrumentation)
+- Estimated time per item
+- Risk: what could make this take 2× longer</p>
+<hr />
+<h3 id="phase-3-act-implement">Phase 3: Act (Implement)<a class="headerlink" href="#phase-3-act-implement" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Per-item workflow:</strong></p>
+<ol>
+<li><strong>Create branch:</strong> <code>docs/p0-cli-reference</code> (or similar, one branch per item or per priority level)</li>
+<li><strong>Write doc:</strong> Follow existing style from <code>docs/reference/tools.md</code>:</li>
+<li>Parameter tables for structured data</li>
+<li>Example blocks for commands</li>
+<li>Honest notes about limitations</li>
+<li>Links to related docs (no orphans)</li>
+<li><strong>Test doc accuracy:</strong></li>
+<li>For CLI commands: run each command in Animus REPL, verify output matches doc</li>
+<li>For config: read source schema, verify default values</li>
+<li>For architecture: cross-check with code comments</li>
+<li><strong>Run docs validation:</strong>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>scripts/docs-validate.py
+</span></code></pre></div></li>
+<li>Fix broken internal links</li>
+<li>Fix trailing whitespace</li>
+<li><strong>Commit:</strong> Conventional commit, <code>docs:</code> prefix
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docs: add CLI commands reference
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>Documents all 40+ REPL commands with parameters and examples.
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>Verified against packages/core/animus/__main__.py.
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>Co-Authored-By: Claude &lt;noreply@anthropic.com&gt;
+</span></code></pre></div></li>
+</ol>
+<p><strong>P5 (Agent loop fix) specifics:</strong>
+- Modify <code>__main__.py</code> to detect Ollama provider before entering agent loop
+- Preserve agent loop for Anthropic/OpenAI (they have native tool_use)
+- Add user-facing hint: "Tip: Use /tool <name> for tool execution with local models"
+- Test: Start Animus with Ollama, verify natural language input gets basic response without garbled tool calls
+- Test: Start Animus with Anthropic key, verify agent loop still works</p>
+<p><strong>P4 (Performance telemetry) specifics:</strong>
+- Add lightweight <code>animus.profiler</code> module with context managers (zero external dependencies)
+- Log structured JSON to rotating file: <code>~/.animus/logs/performance.log</code>
+- Fields: <code>timestamp</code>, <code>phase</code>, <code>duration_ms</code>, <code>tool_name</code>, <code>model_provider</code>, <code>success</code>, <code>context_tokens</code>, <code>response_tokens</code>
+- Rotation: 7 days, max 10MB
+- Document the schema in <code>docs/operators/performance.md</code>
+- Add <code>/stats --perf</code> command to REPL for real-time summary
+- Test: Run 10 interactions, verify log file contains all phases</p>
+<p><strong>Output:</strong> PR per priority level (or per item if large). Clean git history. No WIP commits in PR.</p>
+<hr />
+<h3 id="phase-4-verify-review-and-close">Phase 4: Verify (Review and Close)<a class="headerlink" href="#phase-4-verify-review-and-close" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Self-review checklist (before requesting user review):</strong></p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Doc is accurate against current code (verified by running commands / reading source)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> No stale references (run grep for known stale terms)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> All internal links resolve (run <code>scripts/docs-validate.py</code>)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> No trailing whitespace in markdown files</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Commit message explains what was learned/decided, not just what changed</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> MkDocs nav updated (if applicable)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> README updated with link (if applicable)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Performance instrumentation produces valid JSON and doesn't crash on edge cases</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> P5 fix tested with both Ollama and Anthropic providers</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> P5 fix doesn't break Anthropic agent loop</li>
+</ul>
+<p><strong>User review prompt:</strong></p>
+<blockquote>
+<p>"PR #XXX ready for review. This covers P0 items X, Y, Z. I've verified each command by running it in the REPL. Please spot-check 2-3 commands and confirm the examples work on your machine."</p>
+</blockquote>
+<p><strong>Post-merge verification:</strong>
+- Deploy docs site (<code>mkdocs gh-deploy --force</code>)
+- Verify new pages render correctly on GitHub Pages
+- Check mobile rendering (narrow viewport)</p>
+<p><strong>Output:</strong> Closed PRs. Updated <code>docs/reference/tools.md</code> changelog if one exists. Session notes in <code>notes/sessions/YYYY-MM-DD.md</code>.</p>
+<hr />
+<h3 id="abort-conditions">Abort Conditions<a class="headerlink" href="#abort-conditions" title="Anchor link to this section">&para;</a></h3>
+<p>Stop the loop and escalate to user if:
+- Source code contradicts existing docs in a way that suggests a bug, not just stale docs
+- Performance instrumentation reveals a critical performance regression (&gt;2× slower than expected)
+- Any doc requires secrets, API keys, or credentials to verify
+- Estimated effort for any single item exceeds 4 hours (scope creep — split into follow-up)
+- P5 fix breaks Anthropic agent loop (rollback immediately)</p>
+<hr />
+<h3 id="success-criteria">Success Criteria<a class="headerlink" href="#success-criteria" title="Anchor link to this section">&para;</a></h3>
+<p>All P0–P5 items are "done" when:
+1. ✅ Doc exists at the specified path
+2. ✅ Doc is accurate against current code (verified)
+3. ✅ Doc passes <code>scripts/docs-validate.py</code> (links, whitespace)
+4. ✅ Doc is in mkdocs nav (if applicable)
+5. ✅ Code changes (if any) have tests or are manually verified
+6. ✅ PR is merged to <code>main</code>
+7. ✅ User has spot-checked and confirmed usefulness</p>
+<p><strong>Report format on completion:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Documentation Gap Closure — Final Report
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>======================================
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>P0: X/X complete | P1: X/X complete | P2: X/X complete | P3: X/X complete | P4: X/X complete | P5: X/X complete
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>Total time: N hours
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>Unexpected findings: [list]
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>Follow-up items: [list]
+</span></code></pre></div>
+<hr />
+<p><em>This prompt is designed to be self-contained. Paste it into a new Claude Code session, and the agent will execute the OODA loop autonomously until all items are closed or an abort condition is met.</em></p>
+<p><strong>Role:</strong> Senior Staff Engineer (10+ years). You've been assigned to close all documentation gaps P0–P4 before the next release. You operate with full autonomy. The user (AreteDriver) trusts your judgment on approach, scope, and sequencing.</p>
+<p><strong>Goal:</strong> Every item P0–P4 is documented, tested (where applicable), reviewed, and merged to <code>main</code>.</p>
+<p><strong>Method:</strong> Strict OODA loop. No action without observation. No decision without data. No verification without criteria.</p>
+<hr />
+<h3 id="phase-1-observe-gather-state_1">Phase 1: Observe (Gather State)<a class="headerlink" href="#phase-1-observe-gather-state_1" title="Anchor link to this section">&para;</a></h3>
+<p><strong>For each P0–P4 item, before writing a single line:</strong></p>
+<ol>
+<li><strong>Read existing code.</strong> Find the source of truth:</li>
+<li>CLI commands → <code>packages/core/animus/__main__.py</code>, <code>packages/core/animus/cli.py</code></li>
+<li>Memory API → <code>packages/core/animus/memory.py</code>, <code>packages/kernel/src/animus_kernel/memory/</code></li>
+<li>Config schema → <code>packages/core/animus/config.py</code></li>
+<li>
+<p>Performance paths → <code>packages/core/animus/__main__.py</code> (REPL loop), <code>packages/core/animus/cognitive.py</code> (think_with_tools)</p>
+</li>
+<li>
+<p><strong>Read existing docs.</strong> Don't duplicate. Link, extend, or replace:</p>
+</li>
+<li><code>docs/getting-started/quickstart.md</code></li>
+<li><code>docs/architecture/overview.md</code></li>
+<li><code>docs/operators/configuration.md</code></li>
+<li>
+<p>Package READMEs</p>
+</li>
+<li>
+<p><strong>Measure current state.</strong> For performance items:</p>
+</li>
+<li>Instrument <code>__main__.py</code> with <code>@contextmanager</code> timing around tool execution, model generation, and memory operations</li>
+<li>Run 10 REPL interactions, log latency per phase</li>
+<li>Report: mean, p95, max for each phase</li>
+<li>
+<p>Identify the slowest path</p>
+</li>
+<li>
+<p><strong>Identify stale references.</strong> Run:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>grep<span class="w"> </span>-rn<span class="w"> </span><span class="s2">&quot;gorgon&quot;</span><span class="w"> </span>docs/<span class="w"> </span>packages/<span class="w"> </span>--include<span class="o">=</span><span class="s2">&quot;*.md&quot;</span><span class="w"> </span>--include<span class="o">=</span><span class="s2">&quot;*.py&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;Gorgon renamed\|archived\|Historical&quot;</span>
+</span></code></pre></div></p>
+</li>
+</ol>
+<p><strong>Output:</strong> A table per item:
+| Item | Source of Truth | Existing Docs | Gap Size | Estimated Effort | Blockers |
+|---|---|---|---|---|---|</p>
+<hr />
+<h3 id="phase-2-decide-prioritize-and-plan_1">Phase 2: Decide (Prioritize and Plan)<a class="headerlink" href="#phase-2-decide-prioritize-and-plan_1" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Decision criteria (ranked):</strong></p>
+<ol>
+<li><strong>User impact</strong> — Will a new user be blocked without this?</li>
+<li><strong>Maintenance burden</strong> — Will this doc reduce support questions?</li>
+<li><strong>Accuracy risk</strong> — Is the current state misleading or harmful?</li>
+<li><strong>Effort / value ratio</strong> — Can we ship a "good enough" version in &lt;2 hours?</li>
+</ol>
+<p><strong>Decision framework:</strong></p>
+<ul>
+<li><strong>If gap is small and source is clear</strong> → Write doc directly, one-shot, no draft</li>
+<li><strong>If gap requires code changes</strong> (e.g., performance instrumentation) → Create a sub-task, implement first, document second</li>
+<li><strong>If gap spans multiple systems</strong> (e.g., memory docs) → Write overview doc first, link to subsystem docs later</li>
+<li><strong>If item is stale reference</strong> → Fix or delete. Never leave stale docs in place.</li>
+</ul>
+<p><strong>Sequencing rule:</strong> Complete all P0 before starting P1. Complete all P1 before P2. No skipping. The user learns the system in order — critical gaps first.</p>
+<p><strong>Output:</strong> A plan file at <code>.claude/plans/doc-gaps-P0-P4.md</code> with:
+- Item order (strict P0 → P4)
+- Per-item acceptance criteria (what "done" means)
+- Dependencies between items
+- Estimated time per item
+- Risk: what could make this take 2× longer</p>
+<hr />
+<h3 id="phase-3-act-implement_1">Phase 3: Act (Implement)<a class="headerlink" href="#phase-3-act-implement_1" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Per-item workflow:</strong></p>
+<ol>
+<li><strong>Create branch:</strong> <code>docs/p0-cli-reference</code> (or similar, one branch per item or per priority level)</li>
+<li><strong>Write doc:</strong> Follow existing style from <code>docs/reference/tools.md</code>:</li>
+<li>Parameter tables for structured data</li>
+<li>Example blocks for commands</li>
+<li>Honest notes about limitations</li>
+<li>Links to related docs (no orphans)</li>
+<li><strong>Test doc accuracy:</strong></li>
+<li>For CLI commands: run each command in Animus REPL, verify output matches doc</li>
+<li>For config: read source schema, verify default values</li>
+<li>For architecture: cross-check with code comments</li>
+<li><strong>Run docs validation:</strong>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>python<span class="w"> </span>scripts/docs-validate.py
+</span></code></pre></div></li>
+<li>Fix broken internal links</li>
+<li>Fix trailing whitespace</li>
+<li><strong>Commit:</strong> Conventional commit, <code>docs:</code> prefix
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>docs: add CLI commands reference
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Documents all 40+ REPL commands with parameters and examples.
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>Verified against packages/core/animus/__main__.py.
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>Co-Authored-By: Claude &lt;noreply@anthropic.com&gt;
+</span></code></pre></div></li>
+</ol>
+<p><strong>Performance instrumentation specifics:</strong>
+- Add lightweight timing to <code>__main__.py</code> using <code>time.perf_counter()</code> (no external deps)
+- Log structured JSON to <code>~/.animus/logs/performance.log</code>
+- Fields: <code>timestamp</code>, <code>phase</code> (tool_parse/model_generate/tool_execute/memory_recall), <code>duration_ms</code>, <code>tool_name</code>, <code>model_provider</code>, <code>success</code>
+- Rotation: 7 days, max 10MB
+- Document the schema in <code>docs/operators/performance.md</code></p>
+<p><strong>Output:</strong> PR per priority level (or per item if large). Clean git history. No WIP commits in PR.</p>
+<hr />
+<h3 id="phase-4-verify-review-and-close_1">Phase 4: Verify (Review and Close)<a class="headerlink" href="#phase-4-verify-review-and-close_1" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Self-review checklist (before requesting user review):</strong></p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Doc is accurate against current code (verified by running commands / reading source)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> No stale references (run grep for known stale terms)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> All internal links resolve (run <code>scripts/docs-validate.py</code>)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> No trailing whitespace in markdown files</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Commit message explains what was learned/decided, not just what changed</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> MkDocs nav updated (if applicable)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> README updated with link (if applicable)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Performance instrumentation produces valid JSON and doesn't crash on edge cases</li>
+</ul>
+<p><strong>User review prompt:</strong></p>
+<blockquote>
+<p>"PR #XXX ready for review. This covers P0 items X, Y, Z. I've verified each command by running it in the REPL. Please spot-check 2-3 commands and confirm the examples work on your machine."</p>
+</blockquote>
+<p><strong>Post-merge verification:</strong>
+- Deploy docs site (<code>mkdocs gh-deploy --force</code>)
+- Verify new pages render correctly on GitHub Pages
+- Check mobile rendering (narrow viewport)</p>
+<p><strong>Output:</strong> Closed PRs. Updated <code>docs/reference/tools.md</code> changelog if one exists. Session notes in <code>notes/sessions/YYYY-MM-DD.md</code>.</p>
+<hr />
+<h3 id="abort-conditions_1">Abort Conditions<a class="headerlink" href="#abort-conditions_1" title="Anchor link to this section">&para;</a></h3>
+<p>Stop the loop and escalate to user if:
+- Source code contradicts existing docs in a way that suggests a bug, not just stale docs
+- Performance instrumentation reveals a critical performance regression (&gt;2× slower than expected)
+- Any doc requires secrets, API keys, or credentials to verify
+- Estimated effort for any single item exceeds 4 hours (scope creep — split into follow-up)</p>
+<hr />
+<h3 id="success-criteria_1">Success Criteria<a class="headerlink" href="#success-criteria_1" title="Anchor link to this section">&para;</a></h3>
+<p>All P0–P4 items are "done" when:
+1. ✅ Doc exists at the specified path
+2. ✅ Doc is accurate against current code (verified)
+3. ✅ Doc passes <code>scripts/docs-validate.py</code> (links, whitespace)
+4. ✅ Doc is in mkdocs nav (if applicable)
+5. ✅ Code changes (if any) have tests or are manually verified
+6. ✅ PR is merged to <code>main</code>
+7. ✅ User has spot-checked and confirmed usefulness</p>
+<p><strong>Report format on completion:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Documentation Gap Closure — Final Report
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>======================================
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>P0: X/X complete | P1: X/X complete | P2: X/X complete | P3: X/X complete | P4: X/X complete
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>Total time: N hours
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>Unexpected findings: [list]
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>Follow-up items: [list]
+</span></code></pre></div>
+<hr />
+<p><em>This prompt is designed to be self-contained. Paste it into a new Claude Code session, and the agent will execute the OODA loop autonomously until all items are closed or an abort condition is met.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 AreteDriver
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/AreteDriver/animus" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/fdzQkrt8" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M492.5 69.8c-.2-.3-.4-.6-.8-.7-38.1-17.5-78.4-30-119.7-37.1-.4-.1-.8 0-1.1.1s-.6.4-.8.8c-5.5 9.9-10.5 20.2-14.9 30.6-44.6-6.8-89.9-6.8-134.4 0-4.5-10.5-9.5-20.7-15.1-30.6-.2-.3-.5-.6-.8-.8s-.7-.2-1.1-.2C162.5 39 122.2 51.5 84.1 69c-.3.1-.6.4-.8.7C7.1 183.5-13.8 294.6-3.6 404.2c0 .3.1.5.2.8s.3.4.5.6c44.4 32.9 94 58 146.8 74.2.4.1.8.1 1.1 0s.7-.4.9-.7c11.3-15.4 21.4-31.8 30-48.8.1-.2.2-.5.2-.8s0-.5-.1-.8-.2-.5-.4-.6-.4-.3-.7-.4c-15.8-6.1-31.2-13.4-45.9-21.9-.3-.2-.5-.4-.7-.6s-.3-.6-.3-.9 0-.6.2-.9.3-.5.6-.7c3.1-2.3 6.2-4.7 9.1-7.1.3-.2.6-.4.9-.4s.7 0 1 .1c96.2 43.9 200.4 43.9 295.5 0 .3-.1.7-.2 1-.2s.7.2.9.4c2.9 2.4 6 4.9 9.1 7.2.2.2.4.4.6.7s.2.6.2.9-.1.6-.3.9-.4.5-.6.6c-14.7 8.6-30 15.9-45.9 21.8-.2.1-.5.2-.7.4s-.3.4-.4.7-.1.5-.1.8.1.5.2.8c8.8 17 18.8 33.3 30 48.8.2.3.6.6.9.7s.8.1 1.1 0c52.9-16.2 102.6-41.3 147.1-74.2.2-.2.4-.4.5-.6s.2-.5.2-.8c12.3-126.8-20.5-236.9-86.9-334.5zm-302 267.7c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2m195.4 0c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.indexes", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.select", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

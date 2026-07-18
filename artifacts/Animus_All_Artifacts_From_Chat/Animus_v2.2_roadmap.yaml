@@ -1,0 +1,212 @@
+version: 2.2-roadmap-1
+name: Animus v2.2 Reference Vertical Slice
+principle: >-
+  A capability is complete only when contract, code, adversarial proof,
+  operational controls, and retained evidence agree.
+status_model:
+  - specified
+  - implemented
+  - verified
+  - adversarially_verified
+  - operationally_proven
+  - promoted
+zero_tolerance_invariants:
+  - workspace_or_classification_leakage
+  - unauthorized_R3_R4_action
+  - secret_in_model_context
+  - duplicate_consequential_side_effect
+  - critical_trace_gap
+  - deletion_resurrection
+  - critical_gate_bypass
+phases:
+  - id: P0
+    name: Program control and traceability
+    outputs:
+      - requirement_test_mapping
+      - evidence_manifest_schema
+      - executable_gate_registry
+      - deviation_register
+    exit:
+      - no_TBD_test_ids
+      - all_critical_gates_have_commands
+      - traceability_linter_passes
+  - id: P1
+    name: Contract closure
+    depends_on: [P0]
+    outputs:
+      - missing_runtime_schemas
+      - SQL_DDL_and_constraints
+      - API_and_event_contracts
+      - deterministic_policy_contract
+      - state_transition_tables
+      - semantic_validator
+    exit:
+      - every_runtime_boundary_versioned
+      - positive_and_negative_fixtures_pass
+      - semantic_invalid_fixtures_rejected
+      - no_undefined_state_transitions
+  - id: P2
+    name: Deterministic durable core
+    depends_on: [P1]
+    outputs:
+      - object_registry
+      - event_ledger
+      - current_projection
+      - transactional_outbox
+      - idempotent_workers
+      - reconciliation_command
+    exit:
+      - no_partial_transaction_under_fault
+      - duplicate_submission_single_effect
+      - duplicate_delivery_zero_duplicate_side_effects
+      - projections_rebuild
+  - id: P3
+    name: Identity policy keys and kill switches
+    depends_on: [P2]
+    outputs:
+      - principal_and_capability_model
+      - policy_decision_point
+      - approval_lifecycle
+      - provider_routing
+      - secret_broker_boundary
+      - independent_kill_switches
+    exit:
+      - unauthorized_R3_R4_zero
+      - delegation_never_exceeds_parent
+      - revocation_within_SLO
+      - secrets_absent_from_model_and_telemetry
+      - kill_switch_works_without_agents
+  - id: P4
+    name: Source ingestion and governed retrieval
+    depends_on: [P2, P3]
+    outputs:
+      - immutable_source_registry
+      - extraction_anchors
+      - claims_and_contradictions
+      - context_envelope
+      - labeled_retrieval_corpus
+    exit:
+      - recall_at_10_gte_0_90
+      - MRR_gte_0_80
+      - temporal_correctness_gte_0_98
+      - contradiction_coverage_gte_0_95
+      - leakage_zero
+  - id: P5
+    name: Memory candidate and admission
+    depends_on: [P4]
+    outputs:
+      - memory_candidate_pipeline
+      - duplicate_and_contradiction_checks
+      - consequential_memory_approval
+      - atomic_memory_commit
+      - correction_and_deletion_flows
+    exit:
+      - accepted_memory_precision_gte_0_95
+      - duplicate_commit_rate_lte_0_02
+      - contradiction_recall_gte_0_90
+      - unapproved_consequential_memory_zero
+  - id: P6
+    name: Agent runtime and intelligence workflow
+    depends_on: [P4, P5]
+    outputs:
+      - versioned_agent_contracts
+      - budget_and_cancellation_enforcement
+      - researcher_critic_synthesizer
+      - dissent_preservation
+      - evidence_dependency_graph
+    exit:
+      - contract_conformance_gte_0_98
+      - evidence_coverage_gte_0_95
+      - unauthorized_tool_calls_zero
+      - appropriate_abstention_gte_0_90
+      - critical_dissent_preservation_100_percent
+  - id: P7
+    name: MCP gateway and action safety
+    depends_on: [P3, P6]
+    outputs:
+      - tool_registry
+      - schema_validated_gateway
+      - approval_and_precondition_enforcement
+      - idempotency_and_receipts
+      - sandbox_and_egress_controls
+    exit:
+      - unauthorized_R3_R4_zero
+      - duplicate_side_effects_zero
+      - every_call_has_receipt
+      - no_direct_agent_connector_path
+  - id: P8
+    name: Trace evaluation and release gates
+    depends_on: [P2, P3, P4, P5, P6, P7]
+    outputs:
+      - end_to_end_tracing
+      - automated_gate_evaluator
+      - promotion_controller
+      - reference_trace_replay
+    exit:
+      - consequential_trace_completeness_100_percent
+      - reference_trace_reproduction_100_percent
+      - critical_gate_automatically_blocks
+      - evidence_hashes_match
+  - id: P9
+    name: Export deletion backup restore and incident control
+    depends_on: [P2, P3, P8]
+    outputs:
+      - verifiable_export
+      - deletion_enumerator_and_executor
+      - tombstones_and_receipts
+      - point_in_time_recovery
+      - clean_restore_and_projection_rebuild
+      - incident_runbooks
+    exit:
+      - active_deletion_lte_24_hours
+      - derived_deletion_lte_4_hours
+      - backup_expiry_lte_35_days
+      - RPO_lte_5_minutes
+      - RTO_lte_2_hours
+      - no_revoked_credential_reactivation
+      - export_integrity_verifies
+  - id: P10
+    name: Integrated architecture corpus vertical slice
+    depends_on: [P4, P5, P6, P7, P8, P9]
+    outputs:
+      - complete_end_to_end_run
+      - combined_attack_campaign
+      - full_release_evidence_bundle
+      - owner_promotion_decision
+    exit:
+      - all_critical_v2_1_gates_pass
+      - no_unresolved_critical_defects
+      - no_unexplained_divergence
+      - no_sensitive_data_resurrection
+promotion_stages:
+  - development
+  - evaluation
+  - shadow
+  - limited
+  - general
+evidence_bundle:
+  required:
+    - source_identity
+    - build_provenance
+    - contract_manifest
+    - policy_manifest
+    - migration_manifest
+    - environment_manifest
+    - requirements_report
+    - schema_and_semantic_validation
+    - integration_tests
+    - adversarial_tests
+    - fault_injection
+    - retrieval_evaluation
+    - memory_evaluation
+    - agent_evaluation
+    - action_safety
+    - trace_audit
+    - replay_report
+    - export_verification
+    - deletion_report
+    - restore_report
+    - SLO_snapshot
+    - gate_results
+    - deviations_and_waivers
+    - promotion_decision

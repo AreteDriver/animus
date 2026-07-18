@@ -1,0 +1,3115 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+        <meta name="author" content="AreteDriver">
+      
+      
+        <link rel="canonical" href="https://aretedriver.github.io/animus/whitepapers/convergent-whitepaper/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>CONVERGENT - Animus Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#convergent" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Animus Documentation" class="md-header__button md-logo" aria-label="Animus Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Animus Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              CONVERGENT
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/AreteDriver/animus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AreteDriver/animus
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/quickstart/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../packages/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Packages
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contributing/setup/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Contributing
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operators/deployment/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Operators
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/cli-commands/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../metrics/G1_EVIDENCE_BASELINE/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Metrics
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../roadmap/current/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Roadmap
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Animus Documentation" class="md-nav__button md-logo" aria-label="Animus Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Animus Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AreteDriver/animus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AreteDriver/animus
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/learning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Learning Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/proactive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proactive Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/citizen-zero/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citizen Zero
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../architecture/decisions/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/decisions/ADR-001/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-001
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/decisions/ADL-20260618-001/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADL-20260618-001
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/standards/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standards
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../packages/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Packages
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/forge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Forge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/quorum/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quorum
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/bootstrap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/kernel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kernel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/pwa/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PWA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/contracts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contracts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operators
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operators
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/local-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Local Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../reference/whitepapers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Whitepapers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Whitepapers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../metrics/G1_EVIDENCE_BASELINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    G1 Evidence Baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Roadmap
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/current/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Current
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#multi-agent-coherence-through-ambient-intent-awareness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Agent Coherence Through Ambient Intent Awareness
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#abstract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abstract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-the-parallel-coordination-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. The Parallel Coordination Problem
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-theoretical-foundations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Theoretical Foundations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Theoretical Foundations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-stigmergy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Stigmergy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-flocking-and-boid-behaviors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Flocking and Boid Behaviors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-from-biology-to-software-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 From Biology to Software Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-core-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Core Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Core Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-the-intent-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 The Intent Graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-the-stability-scorer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 The Stability Scorer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-the-intent-resolver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 The Intent Resolver
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-worked-convergence-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Worked Convergence Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-conflict-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Conflict Resolution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Implementation Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Implementation Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-rust-core" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 Rust Core
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-python-semantic-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Python Semantic Layer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#63-project-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 Project Status
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-differentiation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Differentiation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-gorgon-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Gorgon Integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-future-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Future Work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Conclusion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/AreteDriver/animus/blob/main/docs/whitepapers/convergent-whitepaper.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="convergent">CONVERGENT<a class="headerlink" href="#convergent" title="Anchor link to this section">&para;</a></h1>
+<blockquote>
+<p>⚠️ <strong>Review needed</strong>: This document was last updated before 2026-04-01. Contents may be outdated.</p>
+</blockquote>
+<h2 id="multi-agent-coherence-through-ambient-intent-awareness">Multi-Agent Coherence Through Ambient Intent Awareness<a class="headerlink" href="#multi-agent-coherence-through-ambient-intent-awareness" title="Anchor link to this section">&para;</a></h2>
+<p><em>A Technical Whitepaper</em></p>
+<p><strong>James C. Young</strong>
+AI Enablement &amp; Workflow Analyst
+<a href="https://github.com/AreteDriver/convergent">github.com/AreteDriver/convergent</a></p>
+<p><em>February 2026</em></p>
+<hr />
+<h2 id="abstract">Abstract<a class="headerlink" href="#abstract" title="Anchor link to this section">&para;</a></h2>
+<p>Current multi-agent AI frameworks coordinate agents through centralized supervision or explicit message passing. Both approaches create scaling bottlenecks: centralized supervisors become throughput constraints as agent count grows, and message-passing protocols generate quadratic communication overhead. This paper introduces Convergent, a coordination library that replaces explicit coordination with ambient intent awareness. Agents publish decisions to a shared intent graph, observe relevant decisions by other agents, and independently adjust their behavior to maintain coherence. The mechanism is inspired by biological stigmergy (indirect coordination through environmental modification) and flocking behaviors (coherent group movement from local rules). Convergent is implemented as a Rust core with Python bindings, designed as a composable primitive that integrates with existing orchestration frameworks.</p>
+<hr />
+<h2 id="1-the-parallel-coordination-problem">1. The Parallel Coordination Problem<a class="headerlink" href="#1-the-parallel-coordination-problem" title="Anchor link to this section">&para;</a></h2>
+<p>Multi-agent AI systems face a fundamental coordination challenge: how do multiple agents working on related components produce coherent output without serializing their work? The problem is particularly acute in code generation, where architectural decisions by one agent (data model choices, API shapes, dependency selections) directly constrain the viable options for other agents.</p>
+<p>Three dominant approaches exist in current frameworks, each with structural limitations:</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Mechanism</th>
+<th>Scaling Behavior</th>
+<th>Failure Mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Centralized Supervisor</td>
+<td>Single agent routes all tasks and resolves conflicts</td>
+<td>Linear bottleneck. Supervisor becomes throughput ceiling.</td>
+<td>Supervisor context window overflow at scale</td>
+</tr>
+<tr>
+<td>Message Passing</td>
+<td>Agents negotiate directly via structured messages</td>
+<td>O(n^2) communication. Token cost grows quadratically.</td>
+<td>Livelock from circular negotiations</td>
+</tr>
+<tr>
+<td>Sequential Pipeline</td>
+<td>Agents work in strict order, each consuming prior output</td>
+<td>Linear time regardless of task decomposability</td>
+<td>No parallelism. Early errors cascade.</td>
+</tr>
+</tbody>
+</table>
+<p>All three approaches treat coordination as a communication problem: agents must talk to each other (or to a coordinator) to align. Convergent reframes coordination as a perception problem: agents must be able to see the landscape of decisions and respond to it.</p>
+<hr />
+<h2 id="2-theoretical-foundations">2. Theoretical Foundations<a class="headerlink" href="#2-theoretical-foundations" title="Anchor link to this section">&para;</a></h2>
+<h3 id="21-stigmergy">2.1 Stigmergy<a class="headerlink" href="#21-stigmergy" title="Anchor link to this section">&para;</a></h3>
+<p>Stigmergy, a term coined by Pierre-Paul Grasse in 1959, describes a mechanism of indirect coordination where agents communicate through modifications to a shared environment rather than through direct interaction. The canonical example is ant trail pheromones: an ant deposits a chemical trail as it moves between a food source and the nest. Other ants detect the trail and follow it, depositing additional pheromones and reinforcing the path. No ant communicates with any other ant. Coordination emerges from the shared environment.</p>
+<p>The critical insight is that stigmergic coordination scales naturally. Adding more ants to the system does not require more communication channels. Each ant follows the same simple rules, and the environmental signals (pheromone concentration) self-organize into efficient collective behavior.</p>
+<h3 id="22-flocking-and-boid-behaviors">2.2 Flocking and Boid Behaviors<a class="headerlink" href="#22-flocking-and-boid-behaviors" title="Anchor link to this section">&para;</a></h3>
+<p>Craig Reynolds' 1987 boid model demonstrated that realistic flocking behavior emerges from three local rules applied by each individual: separation (avoid crowding nearby neighbors), alignment (steer toward the average heading of nearby neighbors), and cohesion (steer toward the average position of nearby neighbors). No bird has a global view of the flock. No coordinator assigns positions. Each bird follows local rules relative to its neighbors, and coherent global behavior emerges.</p>
+<p>Convergent adapts these principles to the domain of multi-agent AI coordination:</p>
+<table>
+<thead>
+<tr>
+<th>Boid Rule</th>
+<th>Biological Behavior</th>
+<th>Software Analog</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Separation</td>
+<td>Avoid crowding nearby neighbors</td>
+<td>Avoid duplicating another agent's work. If an intent exists for a component, don't build a competing version.</td>
+</tr>
+<tr>
+<td>Alignment</td>
+<td>Steer toward average heading of neighbors</td>
+<td>Adopt compatible interfaces. If neighboring agents converge on a data model, align with it.</td>
+</tr>
+<tr>
+<td>Cohesion</td>
+<td>Steer toward average position of neighbors</td>
+<td>Converge on shared abstractions. Move toward the emerging architectural consensus.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-from-biology-to-software-architecture">2.3 From Biology to Software Architecture<a class="headerlink" href="#23-from-biology-to-software-architecture" title="Anchor link to this section">&para;</a></h3>
+<p>The translation from biological stigmergy to software agent coordination requires replacing biological mechanisms with computational equivalents:</p>
+<table>
+<thead>
+<tr>
+<th>Biological Mechanism</th>
+<th>Computational Equivalent</th>
+<th>Convergent Component</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pheromone trails</td>
+<td>Entries in a shared data structure</td>
+<td>Intent Graph nodes</td>
+</tr>
+<tr>
+<td>Pheromone concentration</td>
+<td>Confidence metric on shared entries</td>
+<td>Stability Score (0.0-1.0)</td>
+</tr>
+<tr>
+<td>Pheromone evaporation</td>
+<td>Time-based decay of unconfirmed entries</td>
+<td>Stability decay for unvalidated intents</td>
+</tr>
+<tr>
+<td>Ant sensing radius</td>
+<td>Relevance query over shared state</td>
+<td>Intent Resolver semantic matching</td>
+</tr>
+<tr>
+<td>Trail reinforcement</td>
+<td>Dependent adoption increases confidence</td>
+<td>Stability increase when consumed by others</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-core-architecture">3. Core Architecture<a class="headerlink" href="#3-core-architecture" title="Anchor link to this section">&para;</a></h2>
+<p>Convergent consists of three components that together form a minimal but complete coordination primitive: the Intent Graph (shared state), the Stability Scorer (confidence mechanism), and the Intent Resolver (perception mechanism).</p>
+<h3 id="31-the-intent-graph">3.1 The Intent Graph<a class="headerlink" href="#31-the-intent-graph" title="Anchor link to this section">&para;</a></h3>
+<p>The intent graph is a directed graph where nodes represent agent decisions and edges represent relationships between decisions (dependencies, conflicts, refinements). It serves as the shared environment that agents read from and write to -- the computational equivalent of the pheromone field.</p>
+<p>Each intent node contains structured information about what an agent is doing, what it provides to other agents, what it requires from other agents, and how confident it is in the decision:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>action</td>
+<td>string</td>
+<td>Specific, verifiable description of what the agent is doing</td>
+</tr>
+<tr>
+<td>category</td>
+<td>enum</td>
+<td>decision, interface, dependency, constraint</td>
+</tr>
+<tr>
+<td>provides</td>
+<td>list[string]</td>
+<td>What this intent makes available to other agents</td>
+</tr>
+<tr>
+<td>requires</td>
+<td>list[string]</td>
+<td>What this intent needs from other agents</td>
+</tr>
+<tr>
+<td>constraints</td>
+<td>list[string]</td>
+<td>Rules this intent imposes on the system</td>
+</tr>
+<tr>
+<td>stability</td>
+<td>float (0.0-1.0)</td>
+<td>Confidence score reflecting decision maturity</td>
+</tr>
+<tr>
+<td>evidence</td>
+<td>list[string]</td>
+<td>What supports the claimed stability score</td>
+</tr>
+<tr>
+<td>files_affected</td>
+<td>list[string]</td>
+<td>Which files this intent touches (separation enforcement)</td>
+</tr>
+</tbody>
+</table>
+<p>Agents read the graph frequently (before each major decision point) and write to it less frequently (when they commit a significant decision). This read-heavy, write-light pattern aligns with the stigmergic model where environmental reading is continuous but environmental modification is intermittent.</p>
+<h3 id="32-the-stability-scorer">3.2 The Stability Scorer<a class="headerlink" href="#32-the-stability-scorer" title="Anchor link to this section">&para;</a></h3>
+<p>Stability is the mechanism by which the intent graph distinguishes between tentative explorations and committed decisions. It serves the same function as pheromone concentration in ant trails: higher stability signals attract alignment from other agents.</p>
+<p>Stability scores range from 0.0 to 1.0 and are calculated from multiple evidence sources:</p>
+<table>
+<thead>
+<tr>
+<th>Evidence Type</th>
+<th>Stability Range</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Speculative intent</td>
+<td>0.1 - 0.3</td>
+<td>Agent has expressed an intention but produced no artifacts. Others should be aware but not dependent.</td>
+</tr>
+<tr>
+<td>Code committed</td>
+<td>0.5 - 0.7</td>
+<td>Agent has produced code implementing the intent. Reversal is costly but possible.</td>
+</tr>
+<tr>
+<td>Tests passing</td>
+<td>0.7 - 0.85</td>
+<td>Implementation is validated. Other agents can safely depend on the interface.</td>
+</tr>
+<tr>
+<td>Consumed by others</td>
+<td>0.85 - 1.0</td>
+<td>Other agents have adopted this decision. Reversal would cascade. Effectively locked.</td>
+</tr>
+</tbody>
+</table>
+<p>Stability also decays over time if not reinforced, analogous to pheromone evaporation. An intent published early in execution that is never confirmed by code or tests gradually loses its influence on other agents' decisions. This prevents stale, abandoned intents from constraining the system indefinitely.</p>
+<h3 id="33-the-intent-resolver">3.3 The Intent Resolver<a class="headerlink" href="#33-the-intent-resolver" title="Anchor link to this section">&para;</a></h3>
+<p>The intent resolver is the perception mechanism: the computational equivalent of an ant sensing pheromone trails. When an agent reaches a decision point, it queries the intent resolver to understand the current landscape of decisions relevant to its work.</p>
+<p>Resolution operates in two phases. Phase 1 (structural matching) compares intent subjects using string similarity and schema structure overlap. This works without LLM dependencies and is sufficient for most coordination scenarios. Phase 2 (semantic matching, planned) introduces LLM-powered evaluation where an LLM determines whether two intents are semantically related even when they use different terminology.</p>
+<p>The resolver returns a ranked list of relevant intents with their stability scores, enabling the agent to make informed decisions: adopt high-stability interfaces, avoid duplicating active work, and respect published constraints.</p>
+<hr />
+<h2 id="4-worked-convergence-example">4. Worked Convergence Example<a class="headerlink" href="#4-worked-convergence-example" title="Anchor link to this section">&para;</a></h2>
+<p>Consider three agents building a web application: Agent A (authentication), Agent B (user management), and Agent C (API layer). Without coordination, they independently choose incompatible data models, duplicate shared utilities, and define conflicting API contracts.</p>
+<p>With Convergent, the workflow proceeds as follows:</p>
+<p><strong>Step 1: Intent Publication.</strong> Agent A publishes an intent: "Creating User model with email, name, role fields. Provides: User model, AuthService.authenticate() method. Stability: 0.2 (speculative)." Agent B, working on user management, reaches a decision point about its own User model.</p>
+<p><strong>Step 2: Intent Resolution.</strong> Agent B queries the intent resolver before designing its data model. The resolver returns Agent A's intent as highly relevant (subject overlap: "User model"). Agent B sees that Agent A is already defining a User model with specific fields. Rather than creating a competing definition, Agent B aligns: it adopts Agent A's schema and adds its own fields (preferences, last_login) as extensions.</p>
+<p><strong>Step 3: Stability Reinforcement.</strong> Agent B publishes its own intent referencing Agent A's User model in its "requires" field. This dependency causes Agent A's stability score to increase (now consumed by another agent, moving from 0.2 to 0.6). Agent C, building the API layer, queries the resolver and sees two aligned intents with moderate-to-high stability. It adopts both interfaces confidently.</p>
+<p><strong>Step 4: Convergence.</strong> By the time all three agents complete their work, they have independently converged on a coherent architecture -- not because a supervisor told them to, but because each agent perceived the landscape of decisions and responded to it. The intent graph records the full decision history, providing an auditable trace of how coherence emerged.</p>
+<p>This is exactly how flocking works in nature. Birds don't send messages to coordinate formation. They each follow simple rules relative to their neighbors, and coherent behavior emerges.</p>
+<hr />
+<h2 id="5-conflict-resolution">5. Conflict Resolution<a class="headerlink" href="#5-conflict-resolution" title="Anchor link to this section">&para;</a></h2>
+<p>When two agents publish conflicting intents (incompatible data models, overlapping file changes, contradictory constraints), the intent resolver detects the conflict through structural or semantic overlap analysis. Resolution follows a stability-weighted protocol:</p>
+<p>If one intent has significantly higher stability (difference &gt; 0.3), the lower-stability intent yields. The agent with the lower-stability intent is notified of the conflict and expected to realign. If stability scores are comparable, the older intent (first-mover) takes precedence. The newer agent adapts to the established decision. In rare cases where neither rule resolves the conflict, the system escalates to human review or, if integrated with an orchestrator like Gorgon, to a supervisor agent.</p>
+<p>This approach avoids the livelock problem that occurs in peer-to-peer negotiation, where two agents continuously adjust in response to each other without reaching agreement. The stability score provides an asymmetry that breaks the cycle: one decision is always more established than the other.</p>
+<hr />
+<h2 id="6-implementation-details">6. Implementation Details<a class="headerlink" href="#6-implementation-details" title="Anchor link to this section">&para;</a></h2>
+<h3 id="61-rust-core">6.1 Rust Core<a class="headerlink" href="#61-rust-core" title="Anchor link to this section">&para;</a></h3>
+<p>The intent graph, stability scorer, and graph query engine are implemented in Rust for performance. Graph operations (node insertion, edge creation, stability calculation, neighborhood queries) must be fast enough that agents can resolve against the graph before every decision without introducing meaningful latency. The Rust implementation achieves sub-millisecond query times for graphs with up to ten thousand nodes, which exceeds the expected scale of most multi-agent workflows.</p>
+<p>The Rust core is compiled as a Python extension module via PyO3 and Maturin, exposing a clean Python API while retaining native performance.</p>
+<h3 id="62-python-semantic-layer">6.2 Python Semantic Layer<a class="headerlink" href="#62-python-semantic-layer" title="Anchor link to this section">&para;</a></h3>
+<p>The semantic resolution layer is implemented in Python for flexibility and LLM integration. Phase 1 uses structural matching: intent subjects are compared using string similarity and schema structure overlap. Phase 2 will introduce LLM-powered semantic matching, where an LLM evaluates whether two intents are semantically related even when they use different terminology.</p>
+<p>This phased approach ensures the core system works without LLM dependencies (important for testing, offline use, and cost control) while preserving a clear path to more sophisticated matching.</p>
+<h3 id="63-project-status">6.3 Project Status<a class="headerlink" href="#63-project-status" title="Anchor link to this section">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Status</th>
+<th>Language</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Intent Graph (core)</td>
+<td>Implemented</td>
+<td>Rust</td>
+</tr>
+<tr>
+<td>Stability Scorer</td>
+<td>Implemented</td>
+<td>Rust</td>
+</tr>
+<tr>
+<td>Intent Resolver (structural)</td>
+<td>Implemented</td>
+<td>Python + Rust</td>
+</tr>
+<tr>
+<td>Intent Resolver (semantic/LLM)</td>
+<td>Planned (Phase 2)</td>
+<td>Python</td>
+</tr>
+<tr>
+<td>PyO3 Bindings</td>
+<td>Implemented</td>
+<td>Rust -&gt; Python</td>
+</tr>
+<tr>
+<td>Gorgon Integration</td>
+<td>Implemented (Phase 3)</td>
+<td>Python</td>
+</tr>
+<tr>
+<td>Benchmarks &amp; Evaluation</td>
+<td>Planned</td>
+<td>Python</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-differentiation">7. Differentiation<a class="headerlink" href="#7-differentiation" title="Anchor link to this section">&para;</a></h2>
+<p>Convergent occupies a distinct position in the multi-agent AI landscape. It is not an orchestration framework (it does not manage workflows), nor a communication protocol (agents do not send messages to each other). It is a coordination primitive: a shared data structure with well-defined read/write semantics that enables coherent parallel work.</p>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Convergent</th>
+<th>LangGraph</th>
+<th>CrewAI</th>
+<th>AutoGen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Coordination Model</td>
+<td>Emergent (stigmergy)</td>
+<td>Graph-based state machine</td>
+<td>Role-based delegation</td>
+<td>Conversational negotiation</td>
+</tr>
+<tr>
+<td>Agent Communication</td>
+<td>Indirect (shared state)</td>
+<td>State transitions</td>
+<td>Task handoffs</td>
+<td>Direct messages</td>
+</tr>
+<tr>
+<td>Scaling Behavior</td>
+<td>O(n) -- reads scale linearly</td>
+<td>Depends on graph topology</td>
+<td>Linear (supervisor bottleneck)</td>
+<td>O(n^2) message overhead</td>
+</tr>
+<tr>
+<td>Parallelism</td>
+<td>Native -- agents work independently</td>
+<td>Possible with parallel branches</td>
+<td>Sequential by default</td>
+<td>Possible but complex</td>
+</tr>
+<tr>
+<td>Token Overhead</td>
+<td>Low -- read-only queries</td>
+<td>Moderate -- state serialization</td>
+<td>Moderate -- role prompts</td>
+<td>High -- full conversation history</td>
+</tr>
+<tr>
+<td>Implementation</td>
+<td>Rust core + Python</td>
+<td>Python</td>
+<td>Python</td>
+<td>Python</td>
+</tr>
+</tbody>
+</table>
+<p>Convergent's key advantage is composability. It does not compete with orchestration frameworks -- it enhances them. A Gorgon workflow can use Convergent for its coordination layer. A LangGraph application could integrate the intent graph as a shared state mechanism. The library is designed to be embedded, not to replace existing infrastructure.</p>
+<hr />
+<h2 id="8-gorgon-integration">8. Gorgon Integration<a class="headerlink" href="#8-gorgon-integration" title="Anchor link to this section">&para;</a></h2>
+<p>Convergent is designed as the coordination primitive for the Gorgon multi-agent orchestration framework. In this integration, Gorgon manages the workflow lifecycle (agent instantiation, budget management, checkpoint/resume, quality gates) while Convergent manages inter-agent coherence.</p>
+<p>The integration points are:</p>
+<ul>
+<li><strong>Intent publication hooks:</strong> Gorgon agents automatically publish intents at decision points defined in the YAML workflow. The orchestrator does not need to know the content of the intents -- it only provides the timing signals.</li>
+<li><strong>Resolution queries:</strong> Before each major agent action, the Gorgon workflow engine triggers an intent resolution query, injecting relevant context from other agents into the active agent's prompt.</li>
+<li><strong>Conflict escalation:</strong> When Convergent's stability-weighted resolution cannot resolve a conflict, it escalates to Gorgon's supervisor agent or triggers a human-in-the-loop review.</li>
+<li><strong>Audit trail:</strong> The intent graph persists alongside Gorgon's SQLite checkpoint data, providing a complete record of how architectural decisions emerged and evolved.</li>
+</ul>
+<p>This separation of concerns -- Gorgon for orchestration, Convergent for coordination -- follows the single responsibility principle and allows either component to be used independently or replaced without affecting the other.</p>
+<hr />
+<h2 id="9-future-work">9. Future Work<a class="headerlink" href="#9-future-work" title="Anchor link to this section">&para;</a></h2>
+<ul>
+<li><strong>Semantic resolution (Phase 2):</strong> LLM-powered intent matching that detects semantic relationships between intents using different terminology. An agent describing "authentication tokens" should match with an agent describing "session management" when the concepts overlap.</li>
+<li><strong>Benchmark suite:</strong> Comparative evaluation of convergent coordination versus centralized supervision and message-passing across standardized multi-agent tasks, measuring coherence quality, token efficiency, wall-clock time, and scaling behavior.</li>
+<li><strong>Visualization dashboard:</strong> Real-time visualization of the intent graph showing decision evolution, stability trajectories, conflict resolution events, and convergence patterns.</li>
+<li><strong>Cross-framework adapters:</strong> Integration modules for LangGraph, CrewAI, and AutoGen that allow these frameworks to use Convergent's intent graph as a coordination layer without modifying their core architectures.</li>
+</ul>
+<hr />
+<h2 id="10-conclusion">10. Conclusion<a class="headerlink" href="#10-conclusion" title="Anchor link to this section">&para;</a></h2>
+<p>The multi-agent AI field has treated coordination as a communication problem: agents need to talk to each other to align. Convergent proposes that coordination is a perception problem: agents need to see the landscape of decisions and respond to it. This reframing, inspired by biological stigmergy and flocking behaviors, enables a coordination mechanism that scales naturally with agent count, avoids the token overhead of message passing, and eliminates the bottleneck of centralized supervision.</p>
+<p>The intent graph, stability scorer, and intent resolver form a minimal but complete coordination primitive. Agents publish decisions, observe decisions, and adjust independently. Coherent output emerges from local rules applied to shared state -- exactly as it does in the biological systems that inspired the architecture.</p>
+<p>Convergent does not claim to solve all multi-agent coordination challenges. It introduces a specific, well-defined primitive -- ambient intent awareness -- that complements rather than replaces existing approaches. Its value is most pronounced in scenarios where multiple agents must work in parallel on related components, which is precisely the scenario that current frameworks handle least effectively.</p>
+<p><em>Coordination is not a communication problem. It is a perception problem. Convergent provides the perception.</em></p>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Anchor link to this section">&para;</a></h2>
+<ol>
+<li>Grasse, P.-P. (1959). La reconstruction du nid et les coordinations interindividuelles chez Bellicositermes natalensis et Cubitermes sp. La theorie de la stigmergie. <em>Insectes Sociaux</em>, 6(1), 41-80.</li>
+<li>Reynolds, C. W. (1987). Flocks, herds and schools: A distributed behavioral model. <em>ACM SIGGRAPH Computer Graphics</em>, 21(4), 25-34.</li>
+<li>Valckenaers, P., Van Brussel, H., Kollingbaum, M., &amp; Bochmann, O. (2001). Multi-agent coordination and control using stigmergy applied to manufacturing control. <em>European Agent Systems Summer School</em>.</li>
+<li>Dorigo, M., &amp; Stutzle, T. (2004). <em>Ant Colony Optimization</em>. MIT Press.</li>
+<li>Parunak, H. V. D. (2006). A survey of environments and mechanisms for human-human stigmergy. In D. Weyns et al. (Eds.), <em>Environments for Multi-Agent Systems II</em>. Springer.</li>
+<li>Thangaraju, V. (2025). Cognitive RPA Swarms: Leveraging ML-Driven Collective Intelligence for Decentralized Process Automation. <em>Transactions on Engineering and Computing Sciences</em>, 13(01), 181-194.</li>
+<li>Schmid, S. et al. (2023). MOSAIK: An Agent-Based Decentralized Control System With Stigmergy. <em>ESWC 2023</em>.</li>
+<li>S-MADRL Framework (2025). Deep Reinforcement Learning for Multi-Agent Coordination using Stigmergic Communication. <em>Artificial Life and Robotics</em>.</li>
+</ol>
+<hr />
+<p><strong>Repository:</strong> <a href="https://github.com/AreteDriver/convergent">github.com/AreteDriver/convergent</a>
+<strong>License:</strong> MIT</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 AreteDriver
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/AreteDriver/animus" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/fdzQkrt8" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M492.5 69.8c-.2-.3-.4-.6-.8-.7-38.1-17.5-78.4-30-119.7-37.1-.4-.1-.8 0-1.1.1s-.6.4-.8.8c-5.5 9.9-10.5 20.2-14.9 30.6-44.6-6.8-89.9-6.8-134.4 0-4.5-10.5-9.5-20.7-15.1-30.6-.2-.3-.5-.6-.8-.8s-.7-.2-1.1-.2C162.5 39 122.2 51.5 84.1 69c-.3.1-.6.4-.8.7C7.1 183.5-13.8 294.6-3.6 404.2c0 .3.1.5.2.8s.3.4.5.6c44.4 32.9 94 58 146.8 74.2.4.1.8.1 1.1 0s.7-.4.9-.7c11.3-15.4 21.4-31.8 30-48.8.1-.2.2-.5.2-.8s0-.5-.1-.8-.2-.5-.4-.6-.4-.3-.7-.4c-15.8-6.1-31.2-13.4-45.9-21.9-.3-.2-.5-.4-.7-.6s-.3-.6-.3-.9 0-.6.2-.9.3-.5.6-.7c3.1-2.3 6.2-4.7 9.1-7.1.3-.2.6-.4.9-.4s.7 0 1 .1c96.2 43.9 200.4 43.9 295.5 0 .3-.1.7-.2 1-.2s.7.2.9.4c2.9 2.4 6 4.9 9.1 7.2.2.2.4.4.6.7s.2.6.2.9-.1.6-.3.9-.4.5-.6.6c-14.7 8.6-30 15.9-45.9 21.8-.2.1-.5.2-.7.4s-.3.4-.4.7-.1.5-.1.8.1.5.2.8c8.8 17 18.8 33.3 30 48.8.2.3.6.6.9.7s.8.1 1.1 0c52.9-16.2 102.6-41.3 147.1-74.2.2-.2.4-.4.5-.6s.2-.5.2-.8c12.3-126.8-20.5-236.9-86.9-334.5zm-302 267.7c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2m195.4 0c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.indexes", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.select", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

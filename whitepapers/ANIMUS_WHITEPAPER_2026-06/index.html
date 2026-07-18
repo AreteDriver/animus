@@ -1,0 +1,3878 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+        <meta name="author" content="ARETE">
+      
+      
+        <link rel="canonical" href="https://aretedriver.github.io/animus/whitepapers/ANIMUS_WHITEPAPER_2026-06/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Animus: An AI Exocortex with Production-Line Discipline - Animus Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#animus-an-ai-exocortex-with-production-line-discipline" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Animus Documentation" class="md-header__button md-logo" aria-label="Animus Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Animus Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Animus: An AI Exocortex with Production-Line Discipline
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/AreteDriver/animus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AreteDriver/animus
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/quickstart/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../packages/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Packages
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contributing/setup/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Contributing
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operators/deployment/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Operators
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/cli-commands/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../metrics/G1_EVIDENCE_BASELINE/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Metrics
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../roadmap/current/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Roadmap
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Animus Documentation" class="md-nav__button md-logo" aria-label="Animus Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Animus Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AreteDriver/animus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AreteDriver/animus
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/learning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Learning Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/proactive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proactive Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/citizen-zero/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citizen Zero
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../architecture/decisions/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/decisions/ADR-001/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-001
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/decisions/ADL-20260618-001/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADL-20260618-001
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/standards/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standards
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../packages/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Packages
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/forge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Forge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/quorum/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quorum
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/bootstrap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/kernel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kernel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/pwa/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PWA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/contracts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contracts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operators
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operators
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/local-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Local Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../reference/whitepapers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Whitepapers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Whitepapers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../metrics/G1_EVIDENCE_BASELINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    G1 Evidence Baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Roadmap
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/current/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Current
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/AreteDriver/animus/blob/main/docs/whitepapers/ANIMUS_WHITEPAPER_2026-06.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="animus-an-ai-exocortex-with-production-line-discipline">Animus: An AI Exocortex with Production-Line Discipline<a class="headerlink" href="#animus-an-ai-exocortex-with-production-line-discipline" title="Anchor link to this section">&para;</a></h1>
+<p><strong>Author:</strong> ARETE  ·  <strong>Date:</strong> 2026-06-02  ·  <strong>Status:</strong> Draft</p>
+<blockquote>
+<p>A single-engineer AI exocortex that applies Toyota Production System discipline, visible cost, quality gates, checkpoint/resume, and designed-in error-proofing, to autonomous AI agents. This paper documents what exists today (grounded in source, with honest maturity ratings), what it now makes possible, and where it should go next.</p>
+</blockquote>
+<p><strong>Feature maturity across documented subsystems:</strong> production: 68 · beta: 6 · experimental: 4 · stub: 5</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Anchor link to this section">&para;</a></h2>
+<ul>
+<li><a href="#executive-summary">Executive Summary</a></li>
+<li><a href="#1-introduction-and-positioning">1. Introduction and Positioning</a></li>
+<li><a href="#2-design-philosophy">2. Design Philosophy</a></li>
+<li><a href="#control-flow">Control flow</a></li>
+<li><a href="#data-flow">Data flow</a></li>
+<li><a href="#budget-flow">Budget flow</a></li>
+<li><a href="#the-three-binding-invariants">The three binding invariants</a></li>
+<li><a href="#41-core-memory-layer">4.1 Core &amp; Memory Layer</a></li>
+<li><a href="#42-forge-autonomous-improvement-evaluation">4.2 Forge, Autonomous Improvement &amp; Evaluation</a></li>
+<li><a href="#43-quorum-coordination-active-inference">4.3 Quorum, Coordination &amp; Active Inference</a></li>
+<li><a href="#44-security-hardening">4.4 Security &amp; Hardening</a></li>
+<li><a href="#45-orchestration-proactive-engine">4.5 Orchestration &amp; Proactive Engine</a></li>
+<li><a href="#46-vision-use-cases-stated-roadmap">4.6 Vision, Use-Cases &amp; Stated Roadmap</a></li>
+<li><a href="#51-compounding-memory-that-survives-the-model">5.1 Compounding memory that survives the model</a></li>
+<li><a href="#52-safe-unattended-operation">5.2 Safe unattended operation</a></li>
+<li><a href="#53-a-self-improvement-loop-with-human-held-brakes">5.3 A self-improvement loop with human-held brakes</a></li>
+<li><a href="#54-supervisor-free-multi-agent-coordination">5.4 Supervisor-free multi-agent coordination</a></li>
+<li><a href="#priority-table">Priority table</a></li>
+<li><a href="#reading-the-table">Reading the table</a></li>
+<li><a href="#71-ranked-candidates">7.1 Ranked candidates</a></li>
+<li><a href="#72-sequencing">7.2 Sequencing</a></li>
+<li><a href="#81-where-do-the-safety-boundaries-actually-hold">8.1 Where do the safety boundaries actually hold?</a></li>
+<li><a href="#82-is-a-single-maintainer-sustainable">8.2 Is a single maintainer sustainable?</a></li>
+<li><a href="#83-are-the-evals-actually-valid">8.3 Are the evals actually valid?</a></li>
+<li><a href="#84-what-happens-to-cost-at-scale">8.4 What happens to cost at scale?</a></li>
+<li><a href="#85-the-honest-summary">8.5 The honest summary</a></li>
+<li><a href="#appendix-a-subsystem-evidence-index">Appendix A: Subsystem Evidence Index</a></li>
+</ul>
+<hr />
+<h1 id="animus-an-ai-exocortex-with-production-line-discipline_1">Animus: An AI Exocortex with Production-Line Discipline<a class="headerlink" href="#animus-an-ai-exocortex-with-production-line-discipline_1" title="Anchor link to this section">&para;</a></h1>
+<h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Anchor link to this section">&para;</a></h2>
+<p>Animus is a personal AI exocortex: a single-engineer system that gives an AI agent durable memory, a stable identity, multi-agent coordination, and the ability to improve its own behavior, all running local-first on the operator's own hardware. It is not a chat wrapper and not a framework chasing adoption. It is the daily tool one engineer built to think with, and its design treats an AI agent the way a manufacturing line treats a workstation: every unit of work has a visible cost, every defect stops the line, and nothing ships without passing a gate.</p>
+<p>The core thesis is that the discipline missing from most agent systems is not intelligence, it's the Toyota Production System. LLM agents are expensive, forgetful, and helpful to a fault, and most frameworks treat cost and quality as observability afterthoughts you bolt on later. Animus inverts that. Token budgets are a hard execution constraint, not a dashboard: every LLM call routes through a <code>BudgetManager</code> that tracks per-agent and per-step spend against thresholds, and the budget gate is a constitutional non-negotiable, not a feature flag. Cost is made visible on one axis through an Effective-Tokens model (output weighted 4x, per-tier multipliers from Haiku at 0.08 to Opus at 5.0, Ollama at 0.0) so an output-heavy Opus workflow can't hide behind a low raw-token count. Quality gates halt or revise work between stages rather than letting a partial pass dilute into a passing average. And because a workflow persists per-stage checkpoints to SQLite, a run that fails at step four of six resumes at step four, not from the start.</p>
+<p>The system is organized into four layers, each solving one problem. <strong>Core</strong> is identity and memory: a pluggable store (ChromaDB vector search fused with a BM25 keyword index via reciprocal rank fusion, with a JSON fallback) holding episodic, semantic, and procedural memories that are append-only, versioned with provenance lineage, and tier-classified for disclosure control. <strong>Forge</strong> is budget-gated orchestration and evaluation: a rubric-driven eval framework with LLM-judge metrics, dual failure taxonomies, and bootstrap-CI A/B comparison, plus three escalating self-improvement paths bounded by sandboxes and human approval gates. <strong>Quorum</strong> is supervisor-free coordination: agents negotiate shared intent through a stigmergic intent graph, a triumvirate voting engine, and pheromone-style markers, with no central controller. <strong>Bootstrap</strong> is the install-and-run daemon: a proactive scheduler that runs self-healing and nudge checks and drives the human-gated improvement loop.</p>
+<p>The maturity picture is deliberately honest, because a whitepaper that overclaims is its own kind of defect. The memory layer, the budget and checkpoint machinery, the evaluation framework, the security hardening, and the Quorum coordination core are production code with tests behind them. The cross-device sync layer, the autoresearch evolution loop, and the Python self-improvement orchestrator are real but beta: built, wired, but not yet exercised under sustained load. A handful of advertised capabilities are spec-only and we say so plainly: the HOT/WARM/COLD tiered-memory engine is fully designed in docs but has zero implementing code; three of Quorum's four v2 observability features (active-inference resolver, liveness watchdog, coupling dashboard) are specs with no module behind them; and the Ogma synthesis persona exists only as a single verb on an unmerged branch.</p>
+<p>Two claims that appear in older positioning documents do not survive contact with the code, and this paper retires them rather than repeat them. ARCHITECTURE.md describes Ed25519-signed memory nodes and AES-256 encryption at rest; the stores persist plaintext, and signing is unimplemented. A flagship "media engine producing roughly 480 videos a month" appears as a deployment proof-point; no such workflow exists in the repository. What Animus actually runs are developer and fleet-operations workflows, an evaluation harness used as a cross-project regression gate, and a self-improvement loop that turns observed tool failures into human-reviewed proposals. Those are smaller claims, and they are true.</p>
+<p>What makes Animus worth describing is not any single layer but the through-line: a security and constitutional stance that treats the safe path as the default path, an evaluation framework that makes "better" a measured quantity rather than an opinion, and a memory model that never deletes. The rest of this paper walks each layer, names what is enforced versus aspirational, and shows where the manufacturing-line discipline holds and where it is still a goal.</p>
+<h2 id="1-introduction-and-positioning">1. Introduction and Positioning<a class="headerlink" href="#1-introduction-and-positioning" title="Anchor link to this section">&para;</a></h2>
+<p>An AI agent left running unattended has four failure modes, and they compound. It is <strong>helpful to a fault</strong>: asked to do a thing, it will do the thing, plus three things you didn't ask for, plus a confident summary of work it never actually performed. It is <strong>expensive</strong> in a way that hides: a single workflow can quietly spend an order of magnitude more than expected because output tokens cost roughly four times input tokens and a frontier model costs fifty times a small one, yet the raw token counter shows one undifferentiated number. It is <strong>forgetful</strong>: every session starts from amnesia, so the operator becomes the memory, re-explaining context that the system discarded the moment the window closed. And it is <strong>unsafe to run unattended</strong>: give it file I/O, web fetch, OAuth tokens, and a few message channels, and a prompt-injection payload or a mis-tagged secret has a clear path outward.</p>
+<p>Existing agent frameworks address the orchestration mechanics but treat these four failures as someone else's problem. LangGraph and CrewAI give you graphs and roles; cost tracking is an integration you add, memory is a vector-store you wire up, and safety is your responsibility. Observability tools like LangSmith show you what happened after the money is spent. The pattern across the category is that budget, memory, coordination, and safety are afterthoughts layered onto an execution engine that was designed without them. You cannot retrofit a hard budget ceiling into a system that assumed unbounded spend, and you cannot retrofit supervisor-free coordination into a message-passing topology that assumes a central orchestrator.</p>
+<p>Animus's answer is to make those four concerns load-bearing from the foundation, and the organizing metaphor is a manufacturing line. On a Toyota line, cost is visible at every station, a defect stops the line rather than propagating, error-prevention is built into the fixture so the wrong part physically won't fit, and the standard of "good" is written down before the work starts. Animus applies the same posture to an agent. Spend routes through a single budget chokepoint that every LLM call must pass, so cost is visible and bounded by construction, not by audit. Memory is a first-class, append-only, versioned substrate that the agent reads and writes deliberately, so the system carries context the operator would otherwise hold. Coordination is stigmergic: agents leave and sense markers in a shared graph and resolve conflicts by evidence-weighted stability, so a swarm coordinates without a supervisor bottleneck. And safety is enforced in code at the egress boundary and below it at the kernel, with tier-scoped recall, DLP redaction at ingest, prompt-injection envelopes, integrity-checked boot, and systemd sandboxing, so the unsafe action is structurally blocked rather than merely discouraged.</p>
+<p>The positioning that follows from this is narrow on purpose. Animus is a single-user personal exocortex, local-default with cloud-on-consent: the same model breadth as a cloud-routing agent via OpenRouter, but the opposite default, where PUBLIC-tier traffic may reach a cloud provider and PERSONAL, CONFIDENTIAL, and SECRET tiers fail closed. It is not a multi-tenant product, and a standing rule in the current roadmap explicitly resists adding SSO, RBAC, billing, or a landing page. The audience is one operator who wants an AI that remembers, costs what it says it costs, and can be left running overnight without becoming a liability. Everything in the architecture serves that operator, and the manufacturing-line discipline is how a single engineer keeps a system this broad from quietly rotting.</p>
+<h2 id="2-design-philosophy">2. Design Philosophy<a class="headerlink" href="#2-design-philosophy" title="Anchor link to this section">&para;</a></h2>
+<p>Four Toyota Production System concepts map directly onto Animus's architecture, and in each case the mapping is concrete code, not analogy.</p>
+<p><strong>Poka-yoke (error-proofing): make the wrong action structurally impossible, or at least structurally harder than the right one.</strong> The clearest example is the egress gate, a pure function every cloud-bound LLM call passes through: it denies CONFIDENTIAL and SECRET tiers unconditionally, denies PERSONAL under local-only mode, denies all non-loopback traffic when offline mode is set, and always permits loopback so a local Ollama model keeps working. The MCP server hard-pins memory recall to the PUBLIC tier, so confidential memories are structurally invisible to the automation surface even though the local user owns the underlying database. Recalled content is wrapped in an <code>&lt;untrusted_data&gt;</code> envelope that escapes nested close-tags so a crafted memory cannot break out and issue commands to the consuming model. Secret and PII redaction runs on every write, and the redaction record carries only a type and span, never the original value, so logging a hit cannot re-leak the secret. The self-audited length metric is poka-yoke applied to evaluation itself: it makes the model append its own claimed word count, then scores whether the claim matches reality, catching the confident-but-wrong self-report that a plain length check would miss.</p>
+<p>We are honest about one place this principle is currently inverted. Tier-scoped recall accepts an <code>allowed_tiers</code> argument that defaults to <code>None</code>, meaning no filter, for backward compatibility. A caller who forgets to pass it leaks every tier. That is a poka-yoke failure: the safe path requires extra work and the unsafe path is the default. The fix (default-deny to PUBLIC) is identified and pending, and naming it here is itself part of the philosophy.</p>
+<p><strong>Jidoka (autonomation, "any agent may halt the line; never silently degrade"): stop and fix on defect rather than passing it downstream.</strong> Fail-fast gates in the evaluation framework force a FAILED status on any hard-gate metric scoring below 1.0 regardless of the composite, so "five of six structural gates pass equals a passing 0.83 average" cannot happen. Quality gates in the Core orchestrator halt execution or inject revision feedback back into the agent on failure. The tier router raises an error rather than silently falling back to cloud when no local provider is available for a sensitive tier: refusing to serve is the correct behavior, degrading quietly is not. The daemon refuses to boot if a SHA-256 integrity check of its critical-path files detects drift. The autoresearch evolution loop treats a missing or empty <code>better.md</code> as a hard stop, and pauses at 80 percent budget. The constitutional principle named Jidoka grants halt authority explicitly. The honest counterexample, again stated rather than hidden: LLM-judge metrics currently swallow exceptions and return a neutral 0.5 on any failure, which lets a broken judge or a provider outage masquerade as a mediocre-but-passing run. That violates jidoka, the failure taxonomy already has a <code>provider_error</code> bucket ready to receive it, and the fix is small and identified.</p>
+<p><strong>Standardized work: write down the definition of "good" before the work starts, and version it.</strong> Scoring rubrics are versioned YAML with named dimensions, weights, and a content hash for drift detection; three ship today (personal-quality, code-edit, briefing-quality). Prompts are versioned, diffable, content-hashed artifacts in a registry, and every eval run is tagged with the prompt version that produced it, so a quality change can be attributed to a specific prompt revision. Four prompt-mode scaffolds (exploration, specification, evaluation, production) each enforce a single objective and a fixed output contract with explicit anti-blending rules, because a prompt that mixes exploration and specification and evaluation does all of them poorly. Thirty-plus declarative workflow definitions carry typed inputs, token budgets, and timeouts. The standard is authored by a human, and the system measures against it.</p>
+<p><strong>Kaizen (continuous improvement) with a human gate.</strong> Improvement is not autonomous-by-default; it is proposal-by-default. The self-healing check scans the last 24 hours of tool executions every six hours and turns failure patterns (a tool failing 30 percent of the time over five-plus runs, latency over ten seconds, or the same error three-plus times) into improvement proposals. The full self-improvement pipeline runs a thirteen-stage machine (analyze, plan, implement, test, apply, PR, merge) bounded by an allow-list, max-files and max-lines limits, an isolated sandbox, three human approval gates, and automatic rollback on test failure. The lighter-weight YAML workflow-evolution path is the constitutionally preferred channel for self-modification because changing a declarative YAML file is safer than changing Python. Auto-approval is hard-blocked in production unless an explicit environment flag is set. The A/B comparison closes the loop with rigor: it runs paired bootstrap resampling, default 1000 iterations, to put a 95 percent confidence interval on the score delta between two runs, and the CLI exits non-zero on a statistically significant regression. "Better" is a measured quantity with a confidence interval, not an opinion.</p>
+<p>Underneath these four sits the <strong>constitutional and safety stance</strong>, which is what keeps an autonomous, self-modifying system bounded. Nine named principles (Sovereignty, Continuity, Transparency, Constraint, Proportionality, Budget Sovereignty, Arete, Jidoka, Subjectivity-Wins) are each annotated with the specific code construct that enforces them, and they are append-only, amendable only through a proposal manager with a human approval threshold. This doc-to-code annotation style, every principle pointing at its enforcing module, is the strongest pattern in the system and the template the rest of the documentation aspires to: it converts an ethics statement into a verifiable claim a reader can follow into the code. Memory is append-only and never deleted, even consolidation produces a new summary memory rather than mutating originals. A red-team driver uses a local uncensored model to generate adversarial probes across six attack categories against isolated fixtures, and project policy requires running it before merging any security-relevant change; it has already caught real bypasses (CamelCase and leetspeak credential markers), each of which became a regression test. The line that ties the philosophy together is that none of this is asserted as safe. It is enforced where the code enforces it, named where it does not yet, and measured wherever a measurement exists.</p>
+<h1 id="3-system-architecture">3. System Architecture<a class="headerlink" href="#3-system-architecture" title="Anchor link to this section">&para;</a></h1>
+<p>Animus is a single-operator AI exocortex organized as a monorepo of four packages, each carrying one responsibility. The design rule is that a layer solves exactly one problem and exposes a narrow contract to the layers above and below it. The four layers, from the substrate up:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Package</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Core / Identity &amp; Memory</td>
+<td><code>packages/core</code></td>
+<td>Persistence, self-knowledge, redaction, memory model, learning loop, identity self-model</td>
+</tr>
+<tr>
+<td>Forge / Cognitive &amp; Orchestration</td>
+<td><code>packages/forge</code></td>
+<td>Budget-gated agent orchestration, evaluation, self-improvement, providers</td>
+</tr>
+<tr>
+<td>Quorum / Coordination</td>
+<td><code>packages/quorum</code></td>
+<td>Supervisor-free multi-agent coordination via a shared intent graph</td>
+</tr>
+<tr>
+<td>Bootstrap / Interface &amp; Daemon</td>
+<td><code>packages/bootstrap</code></td>
+<td>Install daemon, proactive scheduler, runtime wiring, the autonomous loop</td>
+</tr>
+</tbody>
+</table>
+<p>The framing throughout is Toyota Production System discipline applied to running LLM agents: make cost visible, stop and fix on a defect rather than propagate it, and build error-prevention (poka-yoke) into the path rather than bolting it on as observability. This is not decoration. Three concrete invariants enforce it in code, and the rest of this document is honest about where the narrative outruns the implementation.</p>
+<h2 id="control-flow">Control flow<a class="headerlink" href="#control-flow" title="Anchor link to this section">&para;</a></h2>
+<p>A request enters either through the MCP server (a Claude Code session calling a memory tool over stdio) or through a workflow invoked on the Forge CLI. The MCP path is read-oriented: it resolves a memory tool, scopes recall to a sensitivity tier, redacts, wraps untrusted content in an injection envelope, records a metadata-only audit event, and returns. The Forge path is execution-oriented: <code>WorkflowExecutor</code> loads a <code>WorkflowConfig</code> from YAML and drives steps sequentially, async-sequentially, or via an auto-parallel path. Every step passes through a budget gate before it runs and records usage after it completes. Approval steps halt the run, persist a resume token, and set the workflow to <code>awaiting_approval</code> so a human gate is a real stop, not a log line.</p>
+<h2 id="data-flow">Data flow<a class="headerlink" href="#data-flow" title="Anchor link to this section">&para;</a></h2>
+<p>Memory is the spine. Every <code>remember()</code> call runs redaction over content before persistence, so secrets and PII never enter the store in the first place. Reads flow back out through <code>recall()</code>/<code>search()</code> with an <code>allowed_tiers</code> filter that the ChromaDB backend pushes down into a <code>where</code> clause, gating what the automation surface can ever see. Cross-device sync computes JSON state deltas with SHA-256 checksums and a last-write-wins merge. The Forge layer threads a <code>CompletionRequest.sensitivity</code> field through a <code>TierRouter</code> that forces CONFIDENTIAL/SECRET traffic onto local Ollama and raises rather than silently falling back to cloud.</p>
+<h2 id="budget-flow">Budget flow<a class="headerlink" href="#budget-flow" title="Anchor link to this section">&para;</a></h2>
+<p>Budget is a first-class axis, not telemetry. Every LLM call in the orchestration and evolution paths routes through <code>BudgetManager</code>, which tracks per-agent and total usage against WARNING/CRITICAL/EXCEEDED thresholds with SQLite session persistence. It computes Effective-Tokens (ET = m × (1.0·input + 0.1·cache_read + 4.0·output)) with per-model-tier multipliers (haiku 0.08 through opus 5.0, ollama 0.0) so output-heavy and opus-tier spend is comparable to cheap local inference on one axis. This is the system's stated cost philosophy. It is honest to note here, and detailed in §4.5, that ET is currently a reporting metric: the live enforcement path still counts raw rolled-up tokens.</p>
+<h2 id="the-three-binding-invariants">The three binding invariants<a class="headerlink" href="#the-three-binding-invariants" title="Anchor link to this section">&para;</a></h2>
+<ol>
+<li><strong>Budget sovereignty.</strong> Every LLM call routes through <code>BudgetManager</code>. This is a constitutional non-negotiable (Principle P6), enforced in both the evolution loop and the provider evaluator.</li>
+<li><strong>Append-only, fail-closed memory.</strong> Memory is never mutated in place; versioning creates a new record with a <code>parent_id</code>. Redaction runs on ingest. Tier gating runs on recall.</li>
+<li><strong>Human-gated autonomy.</strong> Self-modification routes through approval gates, sandboxed execution, and rollback checkpoints. The constitutionally-preferred path edits YAML workflows, not Python.</li>
+</ol>
+<p>These invariants are the contract that translates the project's narrative into enforced behavior. Where they hold, the whitepaper makes verifiable claims. Where the narrative reaches past them, §4 says so plainly.</p>
+<hr />
+<h1 id="4-subsystems-in-detail">4. Subsystems in Detail<a class="headerlink" href="#4-subsystems-in-detail" title="Anchor link to this section">&para;</a></h1>
+<h2 id="41-core-memory-layer">4.1 Core &amp; Memory Layer<a class="headerlink" href="#41-core-memory-layer" title="Anchor link to this section">&para;</a></h2>
+<h3 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Anchor link to this section">&para;</a></h3>
+<p>The Core layer is Animus's persistence and self-knowledge foundation: a pluggable memory store holding episodic, semantic, procedural, and active memories with versioning, sensitivity tiers, and secret redaction; a transparent, approval-gated learning loop that mines patterns from stored memories; an identity self-model that lets Animus read its own codebase; and Ogma, a synthesis persona that reverse-engineers external work and internal subsystems into implementation-ready proposals.</p>
+<h3 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Anchor link to this section">&para;</a></h3>
+<p><code>MemoryLayer</code> (<code>memory/layer.py</code>) is a façade over a <code>MemoryStore</code> backend selected by a config string ("chroma" default, "local" JSON fallback), resolved through the package namespace so test mocks patch the looked-up name. Stores implement a <code>MemoryStore</code> ABC: store, update, retrieve, search, delete, list_all, get_all_tags. <code>ChromaMemoryStore</code> uses <code>chromadb.PersistentClient</code> with cosine HNSW and performs hybrid retrieval: a dense vector query fused with a lazily-rebuilt BM25Okapi keyword index via Reciprocal Rank Fusion (k=60), degrading to dense-only when <code>rank_bm25</code> is absent. <code>LocalMemoryStore</code> is a JSON file with atomic tmp-rename writes and naive substring search.</p>
+<p>The <code>Memory</code> dataclass carries content, type, tags, confidence, source, and three layered field-sets: Context-Core versioning (version/parent_id/change_summary, with <code>get_version_history</code> walking the parent chain), provenance (direct/sync/consolidation/import/mcp), and Stage-2 Sensitivity re-exported from the shared <code>animus_types</code> package to avoid a Core→Forge dependency cycle. Every <code>remember()</code> runs <code>redact()</code> before persistence. The <code>LearningLayer</code> wires a <code>PatternDetector</code> (regex frequency/preference/correction/temporal extraction) into <code>LearnedItems</code> gated by a per-category approval table, with immutable guardrail checks, a transparency log, and rollback checkpoints.</p>
+<h3 id="features">Features<a class="headerlink" href="#features" title="Anchor link to this section">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>What it does</th>
+<th>Maturity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pluggable memory store</td>
+<td>ChromaDB or JSON-fallback behind a <code>MemoryStore</code> ABC; import failure auto-falls-back</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Hybrid dense+BM25 retrieval</td>
+<td>Cosine vector search fused with BM25 via RRF (k=60); degrades to dense-only</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Episodic/semantic/procedural/active model</td>
+<td><code>MemoryType</code> enum plus typed helpers (<code>remember_fact</code>, <code>remember_procedure</code>, <code>save_conversation</code>)</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Secret/PII redaction on ingest</td>
+<td>Two-tier regex on every <code>remember()</code>; <code>RedactionHit</code> carries type/span/length, never the secret</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Sensitivity disclosure tiers</td>
+<td>Four tiers (PUBLIC/PERSONAL/CONFIDENTIAL/SECRET); <code>recall(allowed_tiers=...)</code> pushed into a ChromaDB <code>$in</code> clause</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Versioning + provenance lineage</td>
+<td><code>update_with_version</code> never mutates in place; provenance tracks origin</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Snapshot / restore / export / consolidation</td>
+<td>Timestamped JSON snapshots, full restore, JSON/JSONL/CSV export, tag-grouped consolidation</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Transparent, reversible learning loop</td>
+<td>Pattern mining → approval-gated <code>LearnedItems</code> with guardrails, transparency log, rollback</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Immutable guardrails</td>
+<td><code>GuardrailManager</code> checks learnings against immutable rules (no-exfiltrate, no-modify-guardrails) before apply</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Identity self-model</td>
+<td><code>AnimusIdentity</code> resolves codebase root, exposes <code>read_own_file</code>/<code>list_own_files</code>, records reflections</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Retrieval evaluation harness</td>
+<td>Pure-functional Precision@k / Recall@k / MRR over a labeled fixture corpus, usable as a CI gate</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Claude Code → ChromaDB sync tool</td>
+<td>Parses CC memory files + notes repo, dedups by content hash, pushes with provenance=sync</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Cross-device state sync</td>
+<td>SHA-256-checksummed JSON deltas, last-write-wins merge; config sync strips api_key fields</td>
+<td>beta</td>
+</tr>
+<tr>
+<td>Ogma synthesis pipeline (read flow)</td>
+<td>read→ground→prompt→parse into a frozen <code>OgmaOutput</code>; no silent provider fallback on 401/403</td>
+<td>experimental</td>
+</tr>
+<tr>
+<td>Sensitivity backfill migration</td>
+<td>One-shot tier classification queuing candidates to an audit JSONL for human review; never deletes</td>
+<td>production</td>
+</tr>
+</tbody>
+</table>
+<h3 id="honest-maturity-notes">Honest maturity notes<a class="headerlink" href="#honest-maturity-notes" title="Anchor link to this section">&para;</a></h3>
+<p>Several headline capabilities are spec, not code, and the whitepaper names them as such:</p>
+<ul>
+<li><strong>HOT/WARM/COLD tiered memory</strong> with promotion/demotion and lossless context compaction is fully specced in <code>docs/ANIMUS_MEMORY_GAPS.md</code> but has zero implementing code. The <code>Memory</code> dataclass has no tier, last_accessed, or access_count fields and no promotion job exists. This is the single largest doc-vs-code gap in the layer.</li>
+<li><strong>Ed25519-signed memory nodes and AES-256 encryption at rest</strong>, claimed in <code>ARCHITECTURE.md</code>, are not implemented. Both stores persist plaintext.</li>
+<li><strong>Ogma</strong> is unmerged on <code>feat/ogma-v0-read</code>; the on-main <code>ogma/</code> directory is an empty stub and only the <code>read</code> verb exists.</li>
+</ul>
+<p>Known scaling and correctness constraints, captured rather than hidden: <code>ChromaMemoryStore</code> mirrors every memory in a second in-memory dict, doubling RAM per record; the BM25 index re-tokenizes the entire corpus on any write (O(N) per write); <code>consolidate()</code> groups episodic memories by first tag and concatenates 150-char snippets with no LLM summarization; sync merge is naive last-write-wins by timestamp string with no vector clocks; and <code>allowed_tiers</code> defaults to <code>None</code> (no filter), making the tier gate opt-in rather than default-deny. That last point is a recognized poka-yoke inversion: the safe path requires extra work, which contradicts the stated fail-closed posture, and the planned fix is to default to <code>{PUBLIC}</code>.</p>
+<h3 id="integration">Integration<a class="headerlink" href="#integration" title="Anchor link to this section">&para;</a></h3>
+<p>Core hoists the <code>Sensitivity</code> enum into <code>animus_types</code> so Forge providers can import it without a dependency cycle. <code>recall(allowed_tiers={PUBLIC})</code> is the read-time enforcement that gates the MCP server's egress. <code>EntityMemory.extract_and_link</code> wires memory content to a knowledge graph on every remember/import/consolidate. Ogma consumes Lugh <code>SourceItem</code>s, and both Ogma and the learning loop consume the cognitive layer with Ollama as the default local provider.</p>
+<h2 id="42-forge-autonomous-improvement-evaluation">4.2 Forge, Autonomous Improvement &amp; Evaluation<a class="headerlink" href="#42-forge-autonomous-improvement-evaluation" title="Anchor link to this section">&para;</a></h2>
+<h3 id="purpose_1">Purpose<a class="headerlink" href="#purpose_1" title="Anchor link to this section">&para;</a></h3>
+<p>Forge is the evaluation and autonomous-improvement layer. It provides a rubric-driven eval framework (suites, metrics, LLM-judge rubrics, dual failure taxonomies, a persistent run store, bootstrap-CI A/B comparison), three escalating self-improvement paths, and a library of prompt-mode scaffolds. The throughline is TPS discipline: a human authors the definition of "better" in the rubric, every LLM call passes the budget gate, and poka-yoke guardrails (fail-fast gates, max-iterations, drift checks, approval stages) bound the autonomy.</p>
+<h3 id="architecture_1">Architecture<a class="headerlink" href="#architecture_1" title="Anchor link to this section">&para;</a></h3>
+<p>Three layers under <code>packages/forge</code>. The eval framework in <code>evaluation/</code> defines <code>EvalCase</code>/<code>EvalResult</code>/<code>EvalSuite</code>/<code>EvalMetric</code> plus <code>AgentEvaluator</code> and <code>ProviderEvaluator</code>; <code>metrics.py</code> supplies 13 metric classes; <code>rubric.py</code> loads versioned YAML rubrics that reflectively instantiate metric classes by name and inject judge providers; <code>runner.py</code> executes suites sequentially or via a thread pool / asyncio semaphore; <code>store.py</code> persists runs; <code>compare.py</code> does paired/independent bootstrap resampling (default n=1000) for a 95% CI on the score delta and flags regressions. Two orthogonal classifiers tag results: technical (<code>FailureMode</code>) and content (F1–F8 <code>ContentFailureMode</code>).</p>
+<p>The self-improvement layer offers three escalating paths: <code>workflow_evolution.py</code> is the YAML propose/approve/reject fast-path (the constitutionally-preferred safe channel); <code>evolution_loop.py</code> is a standalone autoresearch loop (hypothesis→experiment→evaluate→keep/discard, budget-gated, off by default); and <code>self_improve/orchestrator.py</code> drives a 13-stage <code>WorkflowStage</code> machine for actual Python changes, gated by <code>SafetyConfig</code>, <code>ApprovalGate</code>, <code>Sandbox</code>, and <code>RollbackManager</code>. The third layer is authoring assets: prompt-mode scaffolds, rubrics, eval suites, and 30+ workflow YAML definitions.</p>
+<h3 id="features_1">Features<a class="headerlink" href="#features_1" title="Anchor link to this section">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>What it does</th>
+<th>Maturity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Versioned YAML rubrics</td>
+<td>Reflective metric resolution by name, weighted composite + letter band, <code>content_hash</code> for drift; 3 ship (personal-quality, code-edit, briefing-quality)</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Metric library (13 metrics)</td>
+<td>ExactMatch, Contains, Regex, Similarity, LLMJudge, CodeExecution, Factuality, Safety, Length, SelfAuditedLength, NegativeExample, Composite</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Self-audited length metric</td>
+<td>Model appends <code>&lt;wc&gt;N&lt;/wc&gt;</code>; scores 1.0 honest, 0.3 dishonest divergence, 0.5 tag-absent, catches confidently-wrong self-counts</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Fail-fast hard gates</td>
+<td><code>fail_fast: true</code> forces FAILED on any sub-1.0 score, preventing "5 of 6 gates pass = composite 0.83 = threshold met" dilution</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Dual failure taxonomies</td>
+<td>Technical (11 buckets on <code>failure_mode</code>) + content (F1–F8 list in metadata); one output can carry one technical + multiple content tags</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Bootstrap-CI A/B comparison</td>
+<td>Paired/independent resampling (n=1000), 95% CI on mean delta, regression flags; CLI exits code 2 on significant regression</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Persistent run store + OutcomeTracker</td>
+<td>Writes <code>eval_runs</code>/<code>eval_case_results</code> with cost and content tags; <code>feed_to_outcome_tracker</code> into the Forge tracker</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Eval CLI</td>
+<td><code>run</code>/<code>list</code>/<code>compare</code>/<code>rubrics</code>/<code>results</code>; live, <code>--mock</code> (no keys for CI), or <code>--adapter</code> to wire arbitrary agents</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Prompt-mode scaffolds</td>
+<td>exploration/specification/evaluation/production templates with fixed contracts and anti-blending rules</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Versioned prompt registry</td>
+<td><code>&lt;name&gt;@&lt;version&gt;</code> resolution with content hash for <code>eval_runs.prompt_version</code>, plus <code>diff()</code></td>
+<td>production</td>
+</tr>
+<tr>
+<td>YAML workflow evolution fast-path</td>
+<td>Validates a proposed YAML (version must increase), stages <code>.pending.yaml</code>, human approve/reject, append-only audit</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Autoresearch evolution loop</td>
+<td>Daemon-thread hypothesis loop gated by <code>better.md</code>, BudgetManager, max-iterations, identity-drift check; off by default</td>
+<td>beta</td>
+</tr>
+<tr>
+<td>Full self-improvement pipeline</td>
+<td>13-state machine for Python changes: sandbox + three approval gates + auto-rollback on test failure</td>
+<td>beta</td>
+</tr>
+<tr>
+<td>Workflow definition library</td>
+<td>30+ declarative multi-step YAML workflows with token budgets and typed I/O</td>
+<td>production</td>
+</tr>
+</tbody>
+</table>
+<h3 id="honest-maturity-notes_1">Honest maturity notes<a class="headerlink" href="#honest-maturity-notes_1" title="Anchor link to this section">&para;</a></h3>
+<p>The eval framework is genuinely production-grade, but several sharp edges are real and named:</p>
+<ul>
+<li><strong>The content taxonomy (F1–F8) is built and persisted but never invoked in the live CLI run path.</strong> <code>eval_cmd.py</code> calls only <code>tag_results</code> (technical), so <code>compare</code>'s F1–F8 delta tables are usually empty in practice. The fix is one call.</li>
+<li><strong><code>CodeExecutionMetric</code> runs model-generated Python via bare <code>python</code> (not <code>sys.executable</code>, which the project's own rules ban) with only a timeout</strong>, no real isolation despite the docstring claiming a sandbox. This is an RCE-shaped surface during evals.</li>
+<li><strong>LLM-judge metrics swallow all exceptions and return 0.5 on failure</strong>, so a systematically broken judge silently scores everything mediocre-but-passing, masking provider outages.</li>
+<li><strong>The evolution loop's default experiment runner is a dry run</strong> that echoes the plan string; without an injected runner, keep/discard verdicts are LLM opinion on a non-experiment. The loop is also not wired into any CLI, so the headline autoresearch capability is not operator-accessible out of the box.</li>
+<li>Residual <code>gorgon-</code> naming (branch prefix default, <code>gorgon-memory.db</code>/<code>gorgon-state.db</code>) marks incomplete Gorgon→Forge rename cleanup.</li>
+</ul>
+<h3 id="integration_1">Integration<a class="headerlink" href="#integration_1" title="Anchor link to this section">&para;</a></h3>
+<p>Every LLM call in the evolution loop and <code>ProviderEvaluator</code> routes through <code>BudgetManager</code> (constitutional P6). <code>ProviderEvaluator</code>, LLM-judge metrics, and the loop all call <code>Provider.complete(CompletionRequest)</code>; <code>MockProvider</code> serves CI. The evolution loop calls <code>IdentityAnchor.check_drift()</code> and loads constitutional principles P4/P5/P6/P8 into the hypothesis prompt as halt authority (Jidoka). The eval adapter mechanism wires external products (e.g. BenchGoblins <code>ClaudeService</code> via <code>--adapter module:callable</code>), making Forge eval a cross-project regression harness.</p>
+<h2 id="43-quorum-coordination-active-inference">4.3 Quorum, Coordination &amp; Active Inference<a class="headerlink" href="#43-quorum-coordination-active-inference" title="Anchor link to this section">&para;</a></h2>
+<h3 id="purpose_2">Purpose<a class="headerlink" href="#purpose_2" title="Anchor link to this section">&para;</a></h3>
+<p>Quorum (PyPI: <code>convergentAI</code>, import: <code>convergent</code>) is Animus's zero-dependency multi-agent coordination protocol. A swarm of agents negotiates shared intent without central control: each agent publishes <code>IntentNode</code>s describing what it provides and requires, a resolver detects overlaps and conflicts, a triumvirate voting engine resolves contested decisions, and a stigmergy field plus signal bus carry indirect coordination. This is the project's most-emphasized differentiator: agents coordinate through a shared SQLite-backed intent graph with stability scores and boid rules, never messaging a supervisor.</p>
+<h3 id="architecture_2">Architecture<a class="headerlink" href="#architecture_2" title="Anchor link to this section">&para;</a></h3>
+<p>The shipped core lives in <code>packages/quorum/python/convergent/</code> with an optional Rust PyO3 hot path. <code>GorgonBridge</code> composes the whole stack from one <code>CoordinationConfig</code>: <code>ScoreStore</code> + <code>PhiScorer</code> + <code>Triumvirate</code> (weighted voting with MAJORITY/UNANIMOUS/UNANIMOUS_HUMAN quorum levels and weighted-score tie-break), a <code>StigmergyField</code> (pheromone markers with exponential evaporation), a <code>FlockingCoordinator</code> (alignment/cohesion/separation over markers), and a <code>SignalBus</code> pub/sub with in-memory or SQLite cross-process backend. <code>IntentResolver</code> runs an intent against the graph via a <code>GraphBackend</code> protocol, producing Adjustments, ConflictReports, and adopted Constraints by structural overlap. Intent stability is a hardcoded weighted-sum over <code>EvidenceKind</code> tallies (base 0.3 plus capped bonuses for test passes, commits, consumed-by-other, and approval, minus conflicts and test fails). The Week-1 v2 addition is <code>EventLog</code>: an append-only bitemporal-lite SQLite timeline (valid_from world-time vs recorded_at observation-time, ported 1:1 from memboot) that mirrors events onto the SignalBus.</p>
+<h3 id="features_2">Features<a class="headerlink" href="#features_2" title="Anchor link to this section">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>What it does</th>
+<th>Maturity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IntentResolver</td>
+<td>Detects duplicate provisions, signature mismatches, conflicts by structural overlap; higher-stability intent wins provision rights</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Evidence-weighted stability scoring</td>
+<td><code>compute_stability()</code> derives a 0–1 scalar from <code>EvidenceKind</code> tallies; mirrors the Rust <code>StabilityScorer</code></td>
+<td>production</td>
+</tr>
+<tr>
+<td>Triumvirate voting engine</td>
+<td>Consensus over 2–5 agents, configurable quorum level, weighted votes, tie-break, persisted vote records</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Stigmergy field</td>
+<td>Markers on files/tasks that decay exponentially and reinforce on repeat; SQLite-persisted</td>
+<td>production</td>
+</tr>
+<tr>
+<td>FlockingCoordinator</td>
+<td>Style/pattern constraints (alignment), task-drift (cohesion), overlap flags (separation) from markers</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Signal bus</td>
+<td>Pub/sub transport with consumer tracking; SQLite backend for cross-process coordination</td>
+<td>production</td>
+</tr>
+<tr>
+<td>GorgonBridge facade</td>
+<td>Single entrypoint composing the full stack; <code>enrich_prompt</code>, <code>request_consensus</code>, <code>submit_agent_vote</code>, <code>evaluate</code></td>
+<td>production</td>
+</tr>
+<tr>
+<td>Coordination EventLog (v2 Week 1)</td>
+<td>Append-only bitemporal-lite timeline with correlation IDs, range queries, best-effort SignalBus mirror</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Consciousness-Quorum bridge</td>
+<td>Forge thread runs budget-gated reflection over logs + intents + P1–P9, publishes insights as stability-0.3 intents; 39 tests</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Active-inference IntentResolver (v2 Week 3–4)</td>
+<td>Bayesian-posterior stability + curiosity score from variance</td>
+<td>stub (spec only)</td>
+</tr>
+<tr>
+<td>LivenessWatchdog (v2 Week 2)</td>
+<td>Stalled/dead detection over the event stream with warn/stalled/dead ladder + Discord alerts</td>
+<td>stub (spec only)</td>
+</tr>
+<tr>
+<td>Coupling MI dashboard (v2 Week 5)</td>
+<td>Read-only sliding-window mutual-information heatmap over the marker stream</td>
+<td>stub (spec only)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="honest-maturity-notes_2">Honest maturity notes<a class="headerlink" href="#honest-maturity-notes_2" title="Anchor link to this section">&para;</a></h3>
+<p>This is where the whitepaper must be most careful. <strong>Three of the four advertised v2 capabilities, active-inference resolver, LivenessWatchdog, coupling dashboard, are specs only with zero code.</strong> The planned paths (<code>resolver/active_inference.py</code>, <code>liveness/</code>, <code>coupling/</code>) do not exist. Any claim of active inference or liveness monitoring as a working feature would be false.</p>
+<p>Further grounding:</p>
+<ul>
+<li>Stability scoring is a brittle hardcoded weighted-sum that the active-inference spec itself flags as saturating: 100 confirmations of a contested thing score the same as 100 of an obvious thing. The pluggable <code>StabilityScorer</code> protocol refactor that would fix this is not yet done.</li>
+<li>The EventLog landed at the convergent root, not the roadmap's content-addressed core path with <code>prior_state_hash</code>/<code>new_state_hash</code>. It is an audit log, not the deterministic transition log the roadmap promised, so the "bisect which mutation broke a stable intent" replay use case is not achievable from the current schema.</li>
+<li>EventLog wiring is opt-in (<code>event_log=None</code> default), and nothing enforces that a bridge wires one in; a bridge built without it produces an empty timeline.</li>
+<li>Coordination <code>*.db</code> files are committed into the repo, mixing runtime state into version control.</li>
+</ul>
+<h3 id="integration_2">Integration<a class="headerlink" href="#integration_2" title="Anchor link to this section">&para;</a></h3>
+<p>Forge depends on Quorum (<code>convergentai ^1.1.0</code>); <code>GorgonBridge</code> enriches agent prompts and runs consensus voting. The Consciousness-Quorum bridge lives Forge-side, gates every reflection call through <code>BudgetManager.can_allocate()</code> under <code>agent_id='consciousness_bridge'</code>, loads constitutional P1–P9 into the reflection prompt, and degrades gracefully when convergent is absent (<code>HAS_CONVERGENT</code> guard). EventLog's bitemporal pattern is a direct port of memboot's locked design, and the planned coupling tile targets the localhost:7700 bootstrap dashboard.</p>
+<h2 id="44-security-hardening">4.4 Security &amp; Hardening<a class="headerlink" href="#44-security-hardening" title="Anchor link to this section">&para;</a></h2>
+<h3 id="purpose_3">Purpose<a class="headerlink" href="#purpose_3" title="Anchor link to this section">&para;</a></h3>
+<p>A defense-in-depth layer protecting the tiered memory store and bounding autonomous agent behavior. It enforces a local-first / cloud-on-consent posture through code-level egress gates, DLP redaction, tier-scoped recall, prompt-injection envelopes, integrity/tamper detection, systemd kernel sandboxing, and an LLM-driven red-team driver, applying TPS jidoka ("any agent may halt the line; never silently degrade") to AI safety.</p>
+<h3 id="architecture_3">Architecture<a class="headerlink" href="#architecture_3" title="Anchor link to this section">&para;</a></h3>
+<p>The hardening is a "7-track" stack documented in <code>docs/THREAT_MODEL.md</code> and verified by <code>verify_hardening.py</code> (25 wired scenarios). Two enforcement planes exist. The <strong>application plane</strong> runs in-process: redaction at ingest and MCP egress, tier-scoped recall pinned to <code>{PUBLIC}</code> in the MCP server, prompt-injection envelopes with close-tag escaping, a metadata-only audit log, the egress chokepoint (<code>is_egress_allowed</code>), and Forge-side provider egress re-checks plus a <code>TierRouter</code> where CONFIDENTIAL/SECRET force local Ollama and raise rather than fall back to cloud. The <strong>kernel plane</strong> is systemd unit hardening: <code>ProtectSystem=strict</code>, <code>ReadOnlyPaths=/home/arete</code> with explicit carve-outs, <code>NoNewPrivileges</code>, <code>PrivateTmp</code>, and <code>IPAddressDeny</code> for all RFC1918/link-local/ULA ranges with loopback-only allow. Tamper detection runs at daemon boot: <code>verify_or_raise()</code> SHA-256s a curated critical-path file set against an on-disk baseline and refuses to boot on drift.</p>
+<h3 id="features_3">Features<a class="headerlink" href="#features_3" title="Anchor link to this section">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>What it does</th>
+<th>Maturity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tier-aware egress gate</td>
+<td>Pure-function chokepoint: denies non-loopback under <code>ANIMUS_OFFLINE</code>, denies CONFIDENTIAL/SECRET unconditionally, denies PERSONAL under <code>ANIMUS_LOCAL_ONLY</code>, always allows loopback</td>
+<td>production</td>
+</tr>
+<tr>
+<td>DLP credential/PII redaction</td>
+<td>Universal token patterns (OpenAI/Anthropic/GitHub/AWS/Stripe/Slack/private-key/SSN/bearer) + env-configurable personal patterns; hits carry no original value</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Red-team-hardened detectors</td>
+<td>CamelCase + leetspeak credential patterns added reactively after the driver caught Qwen-generated bypasses, each with a regression test</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Tier-scoped MCP recall</td>
+<td>All three MCP memory tools hard-pin scope to <code>{PUBLIC}</code>, structurally hiding confidential/secret memories from automation</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Prompt-injection envelope</td>
+<td>Wraps recalled chunks in <code>&lt;untrusted_data&gt;</code> with a "reference not commands" footer; escapes nested close-tags to prevent breakout</td>
+<td>production</td>
+</tr>
+<tr>
+<td>SHA-256 integrity baseline</td>
+<td>Daemon refuses to boot on critical-path drift unless <code>ANIMUS_INTEGRITY_OVERRIDE=1</code></td>
+<td>production</td>
+</tr>
+<tr>
+<td>Append-only metadata-only audit log</td>
+<td>Daily-rotated JSONL recording tool name, tier scope, counts, byte length, never raw content; <code>record()</code> never raises</td>
+<td>production</td>
+</tr>
+<tr>
+<td>systemd kernel sandboxing</td>
+<td>Kernel-layer network filter and filesystem lockdown a code bypass cannot defeat</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Red-team driver</td>
+<td>Local uncensored Ollama generates adversarial probes across 6 categories against isolated fixtures; exits non-zero on findings ≥ threshold</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Deterministic hardening verification</td>
+<td>25 end-to-end scenarios across real components, pytest-mirrored as a CI gate</td>
+<td>production</td>
+</tr>
+<tr>
+<td>OpenRouter provider (PUBLIC-only + open-weights)</td>
+<td>Fails closed on non-PUBLIC; rejects closed-vendor model slugs at config-load and per-request; never auto-default</td>
+<td>production</td>
+</tr>
+<tr>
+<td>TierRouter sensitivity override</td>
+<td>CONFIDENTIAL/SECRET force local; absence of a local provider raises <code>ProviderError</code>, never silent cloud fallback</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Constitutional principles (P1–P9)</td>
+<td>Nine principles each mapped to enforcing code; amendable only via a 20%-threshold proposal manager with human approval</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Forge field-level encryption</td>
+<td>Fernet authenticated encryption keyed via PBKDF2-HMAC-SHA256, plus brute-force lockout and request-size limits</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Forge self-improve sandbox</td>
+<td>Path allow-list, gitleaks pre-commit scan, strict default-branch mode against the whip-saw vector</td>
+<td>production</td>
+</tr>
+</tbody>
+</table>
+<h3 id="honest-maturity-notes_3">Honest maturity notes<a class="headerlink" href="#honest-maturity-notes_3" title="Anchor link to this section">&para;</a></h3>
+<p>The hardening is the most mature subsystem, but its threat model is explicit about its own boundaries, and the whitepaper inherits that honesty:</p>
+<ul>
+<li><strong>Tier enforcement is not a defense against a malicious local shell user</strong>, the adversary IS the <code>arete</code> account and can read ChromaDB directly. <strong>Disk encryption at rest is documented as not in place</strong> (plain ext4, no LUKS), so laptop theft yields full plaintext exposure of all classified memories. This is the single largest unmitigated real-world threat.</li>
+<li>The egress gate <strong>trusts the caller-supplied tier and does not inspect content</strong>, so a CONFIDENTIAL memory mis-tagged PUBLIC would egress.</li>
+<li>The integrity baseline tracks only 4 files; the tier-router, OpenRouter provider, <code>pi_wrap</code>, and the integrity checker itself are not in the set, so tampering with those bypasses boot-time detection.</li>
+<li><strong>Two separate egress-policy implementations</strong> (Core and Forge) are hand-synced; the Forge module's own docstring admits "drift is detectable by inspection." A shared canonical module in <code>animus_types</code> would remove this class of silent drift.</li>
+<li>The prompt-injection envelope's effectiveness depends on the consuming model honoring the footer, and is tested only against Claude Sonnet, unverified against Qwen/Llama.</li>
+<li>systemd unit files live in a user-writable directory outside the read-only mount and are not versioned in the repo, so an adversary editing the unit defeats the kernel-plane filter.</li>
+<li>The unified secret manager in <code>SECURITY_LAYER.md</code> (age/pass/1Password backends, <code>secrets://</code> URI resolution) is largely an unbuilt spec; only Forge's Fernet <code>FieldEncryptor</code> exists, and it uses a hardcoded legacy <code>gorgon-</code> PBKDF2 salt when unset.</li>
+</ul>
+<h3 id="integration_3">Integration<a class="headerlink" href="#integration_3" title="Anchor link to this section">&para;</a></h3>
+<p>Redaction runs at <code>MemoryLayer</code> ingest; tier-scoped recall is the read-time enforcement of the Sensitivity schema. The MCP server is the egress surface where every call passes scope-pin → redact → wrap → audit. <code>CompletionRequest.sensitivity</code> threads through <code>TierRouter</code> and every cloud provider's <code>_check_request_egress</code>, with OpenRouter the strictest adopter. The Bootstrap daemon calls <code>verify_or_raise()</code> at startup. Ollama is both the trusted local provider for sensitive traffic and the engine for the red-team driver's adversarial generation. External scanners (gitleaks, CodeQL, bandit, pip-audit) run pre-commit and in CI.</p>
+<h2 id="45-orchestration-proactive-engine">4.5 Orchestration &amp; Proactive Engine<a class="headerlink" href="#45-orchestration-proactive-engine" title="Anchor link to this section">&para;</a></h2>
+<h3 id="purpose_4">Purpose<a class="headerlink" href="#purpose_4" title="Anchor link to this section">&para;</a></h3>
+<p>The orchestration layer coordinates multi-agent workflows under hard token-budget and cost discipline, persisting state to SQLite so a workflow that fails mid-run resumes at the failed step rather than from the start. The proactive engine is a separate daemon-resident scheduler in Bootstrap that runs periodic self-healing and nudge checks, feeding a human-gated autonomous self-improvement loop. Together they apply TPS ideas, make cost visible, stop-and-fix on defect, build error-prevention into the path, to running LLM agents.</p>
+<h3 id="architecture_4">Architecture<a class="headerlink" href="#architecture_4" title="Anchor link to this section">&para;</a></h3>
+<p>Two distinct orchestration engines exist. The <strong>production engine</strong> in <code>packages/forge</code> is <code>WorkflowExecutor</code>, a mixin-composed class (12 handler mixins, 20+ step types) that loads a <code>WorkflowConfig</code> from YAML and drives steps sequentially, async-sequentially, or auto-parallel. Each step passes <code>_check_budget_exceeded</code> (can_allocate + a daily-limit query) before running and records usage afterward into the BudgetManager, FeedbackEngine, ExecutionManager, and a task-history store. <code>CheckpointManager</code>/<code>StatePersistence</code> persist per-stage checkpoints to SQLite; a failure at step 4 of 6 restarts at step 4. The <strong>embedded engine</strong> in <code>packages/core/animus/forge</code> is a lighter <code>ForgeEngine</code> that runs agents in order, enforces budgets, and evaluates <code>GateConfig</code> quality gates via a safe no-eval parser with halt/revise semantics, this is what <code>bootstrap_loop.py</code> uses for the Core→Forge→Quorum two-agent self-review cycle.</p>
+<p>The proactive subsystem in <code>packages/bootstrap</code> is a <code>ProactiveEngine</code> owning an asyncio scheduler loop that computes next-fire times (cron or <code>every Nm</code> interval), fires checks, logs nudges to WAL SQLite, gates delivery on quiet hours, and spawns observer tasks to capture implicit outcomes. <code>AnimusRuntime</code> boots components in fixed order, registers six builtin checks, and injects deps into the <code>self_heal</code> check. The autonomous loop closes when <code>self_heal</code> (every 6h) turns tool-failure patterns into proposals, which <code>self_improve</code> tools apply through an <code>ImprovementSandbox</code> (backup + hot-reload) under impact scoring with rollback, while larger Python changes route to the full <code>SelfImproveOrchestrator</code> with sandbox + three approval gates + PR.</p>
+<h3 id="features_4">Features<a class="headerlink" href="#features_4" title="Anchor link to this section">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>What it does</th>
+<th>Maturity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Token budget manager + Effective-Tokens</td>
+<td>Per-agent/total usage, thresholds, reserve, SQLite persistence; ET model (4× output, haiku 0.08…opus 5.0, ollama 0.0)</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Pre-flight budget validation</td>
+<td>Estimates workflow cost from per-agent profiles + prompt length; PASS/WARN/FAIL against available budget; strict mode fails under 25% margin</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Checkpoint / resume to SQLite</td>
+<td>Per-stage checkpoints (input/output/tokens/duration/status); <code>resume_from</code> maps a step id to a start index</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Mixin-composed executor with budget enforcement</td>
+<td>12 mixins, 20+ step types; budget check before each step, usage recorded after</td>
+<td>production</td>
+</tr>
+<tr>
+<td>In-workflow approval gates</td>
+<td><code>approval</code> step halts, persists a resume token + next-step id, sets <code>awaiting_approval</code>, the real wired quality gate</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Quality gates in the embedded Core orchestrator</td>
+<td><code>GateConfig</code> evaluated by a hand-written safe parser (no eval) with halt/revise; backs the bootstrap self-review loop</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Proactive engine</td>
+<td>Asyncio scheduler, quiet hours, WAL nudge log with self-migrating prediction columns, post-delivery outcome observers</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Six builtin checks incl. self-heal</td>
+<td>morning_brief, task_nudge, calendar, reflection (3 AM → LEARNED.md), verdict_sync, self_heal (every 6h; proposes on ≥30% failure rate / &gt;10s latency / repeated error)</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Human-gated self-improvement orchestrator</td>
+<td>10-stage analyze→sandbox→PR with three approval gates; auto_approve hard-blocked unless <code>ANIMUS_FORGE_ALLOW_AUTO_APPROVE=1</code></td>
+<td>production</td>
+</tr>
+<tr>
+<td>Impact measurement + rollback</td>
+<td>Baseline vs post on failure_rate (60) and latency (40) → −100..+100 score; rollback restores from per-proposal backup + hot-reload</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Bootstrap runtime orchestrator</td>
+<td>Boots components in fixed order, wires self-heal deps and observers, <code>reload_config()</code> hot-updates quiet hours + sandbox config</td>
+<td>production</td>
+</tr>
+<tr>
+<td>YAML workflow evolution fast-path</td>
+<td><code>.pending.yaml</code> staging with single approve/reject gate; validator presented as doc-illustrative, not a located module</td>
+<td>experimental</td>
+</tr>
+</tbody>
+</table>
+<h3 id="honest-maturity-notes_4">Honest maturity notes<a class="headerlink" href="#honest-maturity-notes_4" title="Anchor link to this section">&para;</a></h3>
+<p>This subsystem has two consequential gaps between the README narrative and the production code:</p>
+<ul>
+<li><strong>The README/quickstart YAML <code>gates:</code> block is not parsed by the production Forge loader.</strong> <code>WorkflowConfig</code> has no <code>gates</code> field; quality-gate enforcement exists only in the separate Core embedded engine. The production executor's sole gating primitive is the <code>approval</code> step type. This is a credibility gap for a whitepaper-referenced repo and should be reconciled by either implementing parsing or removing the example.</li>
+<li><strong>Effective-Tokens is reporting-only, not enforced.</strong> <code>_check_budget_exceeded</code>/<code>record_usage</code> still use raw rolled-up tokens, so a budget can read "OK" while real cost is several times higher. Making ET the enforced unit is the highest-leverage refinement here.</li>
+<li><code>BudgetManager.allocate()</code> does not reserve a pending allocation, it returns <code>True</code> after <code>can_allocate</code> without recording, so concurrent auto-parallel steps can each pass the check and collectively overspend.</li>
+<li><code>self_heal</code> dedup uses a process-lifetime module-global set, so a daemon restart can re-propose the same failing tool.</li>
+<li><code>_compute_impact_score</code> weighs only failure_rate and latency, with no signal for a correctness/quality regression, so a change that speeds things up while degrading output scores positively.</li>
+</ul>
+<h3 id="integration_4">Integration<a class="headerlink" href="#integration_4" title="Anchor link to this section">&para;</a></h3>
+<p><code>bootstrap_loop</code> builds a two-agent self-review workflow and reaches Quorum consensus before writing improvements. <code>WorkflowExecutor</code> feeds per-step outcomes into a <code>FeedbackEngine</code> and task-history store used by analytics. <code>self_heal</code> and <code>self_improve</code> call a cognitive backend (Anthropic/Ollama/Forge) for root-cause analysis; provider tier alters plan aggressiveness. State persists across <code>budget_session_usage</code>, workflow checkpoints, <code>approval_tokens</code>, <code>proactive_log</code>, <code>proactive_outcomes</code>, and improvement proposals. Identity-file changes route through <code>IdentityProposalManager</code> rather than direct writes.</p>
+<h2 id="46-vision-use-cases-stated-roadmap">4.6 Vision, Use-Cases &amp; Stated Roadmap<a class="headerlink" href="#46-vision-use-cases-stated-roadmap" title="Anchor link to this section">&para;</a></h2>
+<h3 id="purpose_5">Purpose<a class="headerlink" href="#purpose_5" title="Anchor link to this section">&para;</a></h3>
+<p>This subsystem is the narrative and intent layer: the positioning documents, philosophy, use-case catalog, case study, competitive analysis, and the multiple stated roadmaps. It frames Animus as a "personal AI exocortex for cognitive sovereignty", a single-engineer system applying TPS discipline to multi-agent AI. Its job is to map why Animus is built and for whom, not how the code works. It is included in this document because a whitepaper-grade system must be honest about the distance between its narrative and its code, and this subsystem is precisely where that distance lives.</p>
+<h3 id="features_5">Features<a class="headerlink" href="#features_5" title="Anchor link to this section">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>What it does</th>
+<th>Maturity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Four-layer architecture narrative</td>
+<td>Core/Forge/Quorum/Bootstrap, each solving one problem; all four map to real packages</td>
+<td>production</td>
+</tr>
+<tr>
+<td>TPS / lean-manufacturing framing</td>
+<td>Budget-first, make-cost-visible, Jidoka/Poka-yoke/Andon, grounded in the wired BudgetManager</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Stigmergic coordination pitch</td>
+<td>Shared intent graph + stability scores + boid rules, no supervisor; backed by Quorum code</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Constitutional principles (P1–P9)</td>
+<td>Each principle annotated with enforcing code, the strongest doc-to-code grounding in the subsystem</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Local-default / cloud-on-consent positioning</td>
+<td>Backed by the recently-shipped OpenRouter PUBLIC-only + open-weights enforcement</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Competitive landscape analysis</td>
+<td>Honest market map (CrewAI, OpenClaw, Hermes Agent, LangSmith) with candid overlap admissions</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Use-case catalog</td>
+<td>30 personal-assistant scenarios, explicitly aspirational, with an anti-patterns section</td>
+<td>experimental</td>
+</tr>
+<tr>
+<td>Phased implementation roadmap (Phase 0–6)</td>
+<td>Phases 0–4 largely complete; Phase 5 self-learning and Phase 6 wearable remain aspirational</td>
+<td>beta</td>
+</tr>
+<tr>
+<td>Personal roadmap (single-user doctrine)</td>
+<td>Most current, load-bearing roadmap (2026-05-15); re-grounds to "best tool for ONE user" with a resist-productization checklist</td>
+<td>production</td>
+</tr>
+<tr>
+<td>Research-assistant roadmap (RA-0…RA-4)</td>
+<td>Re-scopes Animus as a pure-local research assistant; RA-0 locked, RA-1+ to be written</td>
+<td>beta</td>
+</tr>
+<tr>
+<td>Quorum v2 roadmap</td>
+<td>Disciplined 5-week plan that explicitly rejects most of an external spec, roadmap-as-filter</td>
+<td>beta</td>
+</tr>
+<tr>
+<td>Case study (portfolio artifact)</td>
+<td>Interview-oriented; notably stale metrics (333 tests / 18K LOC) contradicting the README's 13,676 tests</td>
+<td>experimental</td>
+</tr>
+<tr>
+<td>Developer-tools / Arete-Tools ecosystem vision</td>
+<td>PyPI tools + 9-tool suite with revenue tiers; mostly spec, superseded by the anti-productization roadmap</td>
+<td>stub</td>
+</tr>
+<tr>
+<td>Media Engine flagship deployment (~480 videos/mo)</td>
+<td>Three autonomous YouTube channels in 8 languages, the whitepaper's headline proof-point</td>
+<td>stub</td>
+</tr>
+</tbody>
+</table>
+<h3 id="honest-maturity-notes_5">Honest maturity notes<a class="headerlink" href="#honest-maturity-notes_5" title="Anchor link to this section">&para;</a></h3>
+<p>This subsystem carries the largest vision-vs-reality gaps in the entire project, and naming them is the point:</p>
+<ul>
+<li><strong>The flagship deployment is fictional in-repo.</strong> The whitepaper's ~480-videos/month Media Engine and 5-platform Marketing Engine, its primary "this architecture handles real workloads" proof, have zero implementing code. A grep finds only vendored <code>googleapiclient</code> stubs and an unrelated Lugh daily-digest. The actually-exercised workloads are developer and fleet-ops oriented (code-review, fleet-incident-triage, security-audit, bounty-watcher). This is the biggest integrity risk for a technical reader who greps, and the whitepaper should re-frame this section as "specced but not built" or replace it with the real workloads.</li>
+<li><strong>The documents contradict each other on maturity and metrics.</strong> <code>CASE_STUDY.md</code> claims Phase 5 "complete" and 333 tests / 18K LOC; <code>ROADMAP.md</code> shows Phase 5 fully unchecked; the README reports 13,676 tests. The case study predates build-out and was never updated.</li>
+<li><strong>Strategic whiplash is undocumented.</strong> The whitepaper and landscape doc sell a commercial gateway/PyPI product strategy with $8–49/mo tiers; the Personal Roadmap explicitly forbids productization (no SSO/RBAC/billing/landing-page). A reader handed both has no signpost that the latter supersedes the former.</li>
+<li>Four parallel roadmaps exist with no authoritative index of which is canonical and which is historical. The recommended fix is a one-page "Document Status &amp; Canon" index tagging each doc CANONICAL / HISTORICAL / SUPERSEDED-BY with dates.</li>
+<li>The 9-tool Arete-Tools suite and Phase 6 hardware (wearable ring, vehicle mode, portable-storage) are pure aspiration with no code or hardware path.</li>
+</ul>
+<h3 id="integration_5">Integration<a class="headerlink" href="#integration_5" title="Anchor link to this section">&para;</a></h3>
+<p>Where the narrative is grounded, it is grounded well: the TPS/budget claim maps to the wired <code>BudgetManager</code>; the stigmergy pitch maps to the Quorum intent graph; the self-improvement claim maps to <code>self_improve/orchestrator.py</code> and <code>evolution_loop.py</code>; and each constitutional principle is annotated with its enforcing module. The <code>CONSTITUTIONAL_PRINCIPLES.md</code> doc-to-code annotation style, every principle pointing at the construct that enforces it, is the strongest grounding pattern in the project and is the template every vision claim in this document aspires to follow.</p>
+<h1 id="5-possibilities">5. Possibilities<a class="headerlink" href="#5-possibilities" title="Anchor link to this section">&para;</a></h1>
+<p>This section is the practical answer to a fair question: now that Core, Forge, Quorum, Security, and the Proactive Engine exist as working code, what can Animus actually do that a stock LLM chat client or a framework like LangGraph cannot? The scenarios below are grounded in shipped subsystems, not roadmap intent. Where a scenario leans on a part that isn't fully built, it's marked.</p>
+<h2 id="51-compounding-memory-that-survives-the-model">5.1 Compounding memory that survives the model<a class="headerlink" href="#51-compounding-memory-that-survives-the-model" title="Anchor link to this section">&para;</a></h2>
+<p>A conversation in ChatGPT is amnesiac by design: the context window is the memory, and it evaporates. Animus inverts that. Every <code>remember()</code> call persists through a redaction poka-yoke, lands in a hybrid dense+BM25 store with Reciprocal Rank Fusion retrieval, carries a sensitivity tier and a provenance tag, and is versioned rather than overwritten. The store already holds roughly 1,400 classified memories.</p>
+<p>What this enables concretely: ARETE can ask "what did we decide about the egress gate, and why" and get back the actual decision plus its lineage, because <code>update_with_version</code> keeps the parent chain instead of mutating in place. The Claude Code sync tool means memory accrues passively. Every session's learnings flow into the same ChromaDB through <code>animus_sync.py</code> with content-hash dedup, so the exocortex grows without a dedicated capture ritual. The value compounds: the corpus that answers today's question was assembled by hundreds of prior sessions that never had to be told to write things down.</p>
+<p>The differentiator over "RAG over my notes" is the discipline around the store: append-only writes, redaction on ingest so secrets never enter the index, tier gating so a recall can be scoped to PUBLIC before it crosses an automation boundary, and a retrieval eval harness (Precision@k / Recall@k / MRR) that can gate retrieval quality in CI. The memory isn't just persistent. It's measurable and auditable.</p>
+<h2 id="52-safe-unattended-operation">5.2 Safe unattended operation<a class="headerlink" href="#52-safe-unattended-operation" title="Anchor link to this section">&para;</a></h2>
+<p>The combination that makes autonomy tolerable for a single operator is the budget gate plus checkpoint/resume plus the security planes. A workflow that fails at step 4 of 6 resumes at step 4, not from scratch, because <code>CheckpointManager</code> persists per-stage state to SQLite and the executor resolves a resume index. Every step passes a budget check before it runs. And the whole process runs under a systemd unit with <code>ProtectSystem=strict</code>, <code>ReadOnlyPaths=/home/arete</code>, and <code>IPAddressDeny</code> for all RFC1918/link-local ranges, so a code-level bypass still hits a kernel-layer wall.</p>
+<p>The realistic scenario this unlocks is the overnight delegate: hand Animus a research question before bed, and it works through a checkpointed task queue under a hard cost ceiling, with CONFIDENTIAL/SECRET tiers structurally barred from leaving the machine. The pieces for this exist today in isolation (checkpoint/resume, budget enforcement, TierRouter no-cloud-fallback, the proactive scheduler). The end-to-end "wake to a sourced briefing" loop is RA-3 roadmap, not shipped. What is shipped is the safety substrate that makes running it unattended a reasonable thing to do rather than a reckless one.</p>
+<h2 id="53-a-self-improvement-loop-with-human-held-brakes">5.3 A self-improvement loop with human-held brakes<a class="headerlink" href="#53-a-self-improvement-loop-with-human-held-brakes" title="Anchor link to this section">&para;</a></h2>
+<p>Animus can watch itself fail and propose its own fixes. The <code>self_heal</code> proactive check runs every six hours, scans the last 24 hours of tool-execution history, and auto-creates improvement proposals when a tool crosses a failure-rate, latency, or repeated-error threshold. Those proposals route through a sandbox: apply on a branch, run tests, snapshot, and either promote to a draft PR behind three human approval gates or auto-rollback on test failure. Impact is measured (failure rate weighted 60, latency 40) so a change that doesn't help gets backed out.</p>
+<p>The honest framing: this is a Kaizen loop with the brakes held by a human, which is exactly the point. <code>auto_approve</code> is hard-blocked in production unless an explicit environment flag is set. The YAML workflow-evolution fast-path is the constitutionally preferred channel for self-modification because it touches declarative config, not Python. The system is built so the cheap, reversible, low-blast-radius changes are easy and the dangerous ones require a person. This is the TPS Jidoka principle made literal: any gate may halt the line, and nothing degrades silently into production.</p>
+<h2 id="54-supervisor-free-multi-agent-coordination">5.4 Supervisor-free multi-agent coordination<a class="headerlink" href="#54-supervisor-free-multi-agent-coordination" title="Anchor link to this section">&para;</a></h2>
+<p>Quorum lets a small swarm of agents (5 to 20, by design) negotiate shared intent without a central orchestrator. Agents publish IntentNodes describing what they provide and require; the resolver detects overlap and conflict structurally; a triumvirate voting engine settles contested decisions; and a stigmergy field carries indirect coordination through decaying pheromone markers. Higher-stability intent wins provision rights, so the swarm self-organizes around evidence rather than a designated leader.</p>
+<p>This is the project's hardest-to-retrofit differentiator. The coordination state is a shared SQLite intent graph, not a message bus, which means it's queryable and auditable after the fact via the append-only EventLog. The realistic use today is internal: the Consciousness-Quorum bridge runs a budget-gated reflection pass over monitoring logs and open intents and publishes insights back as low-stability intents, giving the system a structured way to surface its own tensions. The active-inference rescoring that would make stability scores robust to evidence flooding is specced but not built, so the coordination is real while the "principled curiosity signal" on top of it is still ahead.</p>
+<hr />
+<h1 id="6-design-refinement">6. Design Refinement<a class="headerlink" href="#6-design-refinement" title="Anchor link to this section">&para;</a></h1>
+<p>These are the highest-leverage improvements to systems that already exist. The bar here is not "build something new" but "make the shipped thing match its own contract." Items are grouped by theme and prioritized by a blend of security/correctness impact and effort. The top of the table is where a reader who can do exactly one thing should start.</p>
+<h2 id="priority-table">Priority table<a class="headerlink" href="#priority-table" title="Anchor link to this section">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Theme</th>
+<th>Current weakness</th>
+<th>Refinement</th>
+<th>Effort</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Memory / Safety</td>
+<td><code>allowed_tiers</code> defaults to <code>None</code> (no filter), so a caller that forgets the argument leaks all tiers. The safe path requires extra work; the unsafe path is the default.</td>
+<td>Make tier filtering default-deny: require an explicit tier set or default to <code>{PUBLIC}</code>, so a forgotten argument fails closed.</td>
+<td>medium</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Eval</td>
+<td>The content failure taxonomy (F1-F8) is fully built and persisted but never called in the live eval path. <code>compare</code>'s content-delta tables are dead UI.</td>
+<td>Wire <code>tag_content_failures</code> into <code>eval_cmd.py</code> run alongside <code>tag_results</code>, gated on the applied rubric's dims.</td>
+<td>small</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Eval / Safety</td>
+<td><code>CodeExecutionMetric</code> runs model-generated Python via subprocess with bare <code>python</code> (banned by project rule) and only a timeout: no isolation despite the docstring claiming a sandbox.</td>
+<td>Switch to <code>sys.executable</code> and reuse the <code>self_improve</code> Sandbox or a real restricted namespace.</td>
+<td>medium</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Security</td>
+<td>Two egress-policy implementations (Core and Forge) are hand-synced; the Forge copy's own docstring admits "keep this in sync." Drift silently weakens one plane.</td>
+<td>Collapse both into a single implementation in the shared <code>animus_types</code> package and import from both sides.</td>
+<td>small</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Orchestration</td>
+<td><code>BudgetManager.allocate()</code> checks but does not reserve, so parallel steps can each pass <code>can_allocate</code> and collectively overspend.</td>
+<td>Implement real reservation: track pending allocations, decrement on record or release.</td>
+<td>medium</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Orchestration</td>
+<td>Effective-Tokens (the stated cost model: 4x output, tier multipliers) is computed for reporting but enforcement still counts raw tokens. A budget can read "OK" at 5x real cost.</td>
+<td>Route <code>record_usage</code> and <code>_check_budget_exceeded</code> through <code>effective_tokens</code> with the model id.</td>
+<td>medium</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Eval</td>
+<td>LLM-judge metrics swallow all exceptions and return 0.5, so a broken judge masquerades as mediocre-but-passing and corrupts composites and CIs.</td>
+<td>Return an ERROR status or a <code>judge_error</code> flag instead of a silent 0.5; route into the existing <code>provider_error</code> bucket.</td>
+<td>small</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Security</td>
+<td>The integrity baseline hashes only 4 files. The tier-router, OpenRouter provider, pi_wrap, and the checker itself are untracked, so tampering with them passes boot detection.</td>
+<td>Expand the tracked set to include router, providers, pi_wrap, both egress copies, and a self-hash; store a detached signature.</td>
+<td>medium</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Coordination</td>
+<td>EventLog wiring is opt-in (<code>event_log=None</code> default); a bridge built without one produces an empty timeline, undermining the audit guarantee the log exists to provide.</td>
+<td>Enforce EventLog presence at the <code>GorgonBridge</code> composition layer so all mutation sites emit by construction.</td>
+<td>small</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Coordination</td>
+<td>Stability scoring is a brittle hardcoded weighted-sum vulnerable to evidence flooding; the pluggable-scorer refactor is the prerequisite for active inference.</td>
+<td>Extract the <code>StabilityScorer</code> protocol and have <code>compute_stability()</code> delegate to an injectable scorer now, ahead of the AI work.</td>
+<td>medium</td>
+<td>P2</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Memory</td>
+<td>BM25 re-tokenizes the entire corpus on every write (<code>_bm25_dirty</code>), O(N) per write on a 1,400+ store.</td>
+<td>Use incremental add/remove (rank_bm25 supports appending) or cache the tokenized corpus keyed by memory id.</td>
+<td>medium</td>
+<td>P2</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Memory</td>
+<td><code>ChromaMemoryStore</code> mirrors every memory in an in-memory dict, doubling RAM and capping scale.</td>
+<td>Hydrate Memory objects from ChromaDB on demand; keep only an id-to-metadata index for BM25.</td>
+<td>large</td>
+<td>P2</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Orchestration / Eval</td>
+<td>Quality-gate YAML in the README quickstart is not parsed by the production loader; gates only exist in the separate Core engine. The headline feature doesn't exist where the docs say.</td>
+<td>Either implement <code>gates</code> parsing in the production <code>WorkflowConfig</code> (reusing Core's safe parser) or remove the example from the README.</td>
+<td>medium</td>
+<td>P2</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Security</td>
+<td><code>field_encryption.py</code> uses a hardcoded default PBKDF2 salt (<code>gorgon-field-encryption-v1</code>), weakening key derivation against precomputation.</td>
+<td>Generate a per-install random salt persisted to <code>~/.config/animus</code>; drop the legacy Gorgon constant.</td>
+<td>small</td>
+<td>P2</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Hygiene</td>
+<td>Residual Gorgon naming (<code>branch_prefix</code> default, <code>gorgon-*.db</code> artifacts, committed coordination <code>*.db</code> files in version control) and stale docs (OpenRouter spec header still says "DRAFT, not approved to build").</td>
+<td>Finish the rename; gitignore runtime SQLite; correct the doc headers.</td>
+<td>small</td>
+<td>P3</td>
+</tr>
+</tbody>
+</table>
+<h2 id="reading-the-table">Reading the table<a class="headerlink" href="#reading-the-table" title="Anchor link to this section">&para;</a></h2>
+<p>The P0 band shares a single property: every item is a place where the safe behavior is the harder path or where a claimed guarantee isn't actually wired in. Item 1 is the canonical poka-yoke inversion: a security gate that's opt-in is not a gate. Items 2 and 3 are eval-integrity issues where the code exists but isn't called, or executes untrusted code without the isolation it advertises. Item 4 removes an entire class of silent drift from a security-load-bearing function. None of the P0 items is large. They are cheap precisely because the hard work was already done and only the last wire is missing.</p>
+<p>The P1 band is correctness under load: budget reservation, enforced cost weighting, judge-failure visibility, and broadened tamper detection. These matter the moment the system runs unattended or in parallel, which is the direction the roadmap points.</p>
+<p>P2 and P3 are scaling ceilings and doc-versus-code honesty: real, worth doing, but not the things that would bite first.</p>
+<hr />
+<h1 id="7-future-work">7. Future Work<a class="headerlink" href="#7-future-work" title="Anchor link to this section">&para;</a></h1>
+<p>Refinement makes the existing system trustworthy. This section is net-new capability. The items below are ranked by impact (transformative / significant / incremental) and then sequenced into phases, because some of them are prerequisites for others and building them out of order wastes effort.</p>
+<h2 id="71-ranked-candidates">7.1 Ranked candidates<a class="headerlink" href="#71-ranked-candidates" title="Anchor link to this section">&para;</a></h2>
+<p><strong>Transformative</strong></p>
+<ul>
+<li><strong>Research-assistant capability layer (RA-1/RA-2).</strong> WebFetch with an allowlist, Retrieve over the corpus, Cite, Synthesize, with source-grounded retrieval as the default output contract ("answers without sources" = failure). This is the stated canonical direction and the point at which Animus becomes ARETE's daily tool rather than a thing he builds.</li>
+<li><strong>Auto-promotion eval loop.</strong> When <code>eval compare</code> shows a statistically significant improvement (CI excludes zero, positive) for a new prompt version, automatically open a WorkflowEvolution pending patch pinning that version. This turns the eval suite into the experiment runner the evolution loop is currently missing, closing the Kaizen loop within the existing approval gates.</li>
+<li><strong>HOT/WARM/COLD tiered memory with lossless compaction.</strong> Fully specced, zero implementing code today. It's the single largest doc-versus-code gap in the memory layer and the differentiator the competitive analysis leans on. Real tiers would materially change retrieval quality and context-window economics.</li>
+<li><strong>Replay/bisect over a content-addressed coordination log.</strong> Add <code>prior_state_hash</code>/<code>new_state_hash</code> to the EventLog and build a replay engine that reconstructs graph state, enabling deterministic bisection of which mutation destabilized a stable intent.</li>
+</ul>
+<p><strong>Significant</strong></p>
+<ul>
+<li><strong>Active-inference IntentResolver.</strong> Replace the hardcoded weighted-sum stability with a surprise-weighted Bayesian posterior and a <code>curiosity_score</code> from posterior variance, then wire curiosity into Forge's self-improvement loop to direct work toward under-evidenced intents. This is the one behavior change both the Quorum-v2 and Personal roadmaps commit to.</li>
+<li><strong>Overnight delegate (RA-3).</strong> Persistent SQLite task queue, turn-level checkpoint/resume, and a morning digest of task → outcome → cost → citations, with a measured one-week unattended intervention rate. This exercises the checkpoint/resume and budget claims under real autonomous load: the validation the (unbuilt) Media Engine was supposed to provide.</li>
+<li><strong>Encryption at rest plus signed memory records.</strong> Close the gap between ARCHITECTURE.md's stated Ed25519/AES-256 guarantees and a reality of plaintext ext4. Laptop theft currently yields full plaintext exposure of all classified memories. This is the largest unmitigated real-world threat for an exocortex carried on a laptop.</li>
+<li><strong>Durability/rebuild and plain-text export.</strong> A timed cold-VM Bootstrap dry-run plus an <code>animus export --all</code> portable-archive command with a stable, documented schema. For a single-user system holding years of state, loss-of-machine is the catastrophic failure mode.</li>
+<li><strong>Judge-calibration / meta-eval harness.</strong> Periodically score the LLM judges against a human-labeled golden set and track per-model judge drift as a first-class metric. All quality scoring rests on judges whose reliability is currently assumed, not measured.</li>
+<li><strong>Unified secret manager.</strong> The age/pass backend, <code>animus secrets</code> CLI, and <code>secrets://</code> URI resolution are fully specced with build prompts but unbuilt. Credential handling stays ad-hoc, and that ad-hoc handling is the documented source of repeated in-session key leaks.</li>
+</ul>
+<p><strong>Incremental</strong></p>
+<ul>
+<li><strong>LivenessWatchdog over the event stream</strong> (warn/stalled/dead ladder, fleet-monitor Discord alerts). Nothing currently watches individual coordination steps; the event log already provides the substrate.</li>
+<li><strong>Coupling MI dashboard</strong> over the stigmergy marker stream, scoped as observability-only.</li>
+<li><strong>Cost/quality Pareto optimizer</strong> over (model, prompt_version, rubric) using stored run history to recommend the cheapest config holding a target band. The data already exists in the run store.</li>
+<li><strong>Power/sample-size advisor on <code>compare</code></strong>, so a "not significant" verdict on a 10-case suite isn't misread as "no difference."</li>
+</ul>
+<h2 id="72-sequencing">7.2 Sequencing<a class="headerlink" href="#72-sequencing" title="Anchor link to this section">&para;</a></h2>
+<p>The temptation is to build the exciting things first (active inference, tiered memory). The opinionated sequence inverts that, because resilience and the eval loop are prerequisites and the flashy items are leaf nodes.</p>
+<p><strong>Phase A, Earn the right to run unattended.</strong> Durability/rebuild dry-run, plain-text export, and encryption at rest. These are cheap insurance against the one failure mode (lost machine, corrupted state) that erases everything else. Do them before the system holds more state worth losing. Pair with the P0 refinements from Section 6, since default-deny tiers and a unified egress module are part of the same "trustworthy substrate" investment.</p>
+<p><strong>Phase B, Close the Kaizen loop.</strong> Auto-promotion eval loop plus judge-calibration. The auto-promotion loop is what makes self-improvement genuinely autonomous within the approval gates, but it's only safe if the judges it depends on are calibrated. Build them together, calibration slightly ahead. This is also where the StabilityScorer protocol extraction (refinement #10) pays off, since it's the prerequisite for active inference in Phase D.</p>
+<p><strong>Phase C, Make it the daily tool.</strong> RA-1/RA-2 research capability layer, then the RA-3 overnight delegate. This is the canonical direction and the moment Claude Code reverts to advisory. The delegate validates the autonomy claims under real load, which is the evidence the project's positioning has been missing.</p>
+<p><strong>Phase D, The differentiators on top.</strong> Tiered memory, active-inference IntentResolver, and the replay/bisect engine. Each is high-impact but each depends on earlier work: tiered memory wants the durability story settled, active inference wants the scorer protocol and a calibrated eval harness to prove it actually improves behavior, and replay wants the content-addressed event log. These are the headline capabilities, and they're deliberately last because building them on an unproven substrate produces impressive demos that can't be trusted.</p>
+<p><strong>Continuous, Observability leaf nodes.</strong> LivenessWatchdog, coupling dashboard, Pareto optimizer, and the power advisor can be slotted in opportunistically; none blocks anything and each is low-risk, high-signal. The roadmap's own stop-and-measure gate applies: build one, confirm it earns its keep against a real workload, then decide whether to deepen it.</p>
+<hr />
+<h1 id="8-open-questions-and-risks">8. Open Questions and Risks<a class="headerlink" href="#8-open-questions-and-risks" title="Anchor link to this section">&para;</a></h1>
+<p>A whitepaper that only lists strengths is marketing. These are the genuine unknowns, stated plainly, because a reader evaluating Animus (or ARETE) should weigh them honestly.</p>
+<h2 id="81-where-do-the-safety-boundaries-actually-hold">8.1 Where do the safety boundaries actually hold?<a class="headerlink" href="#81-where-do-the-safety-boundaries-actually-hold" title="Anchor link to this section">&para;</a></h2>
+<p>The security model is explicit that it does not defend against a malicious local shell user: the adversary the threat model assumes away <em>is</em> the <code>arete</code> account, which can read ChromaDB directly. Disk encryption at rest is documented as not in place, so laptop theft means full plaintext exposure of roughly 1,400 classified memories. The egress gate trusts the caller-supplied tier and doesn't inspect content, so a memory mistakenly tagged PUBLIC would egress. And the prompt-injection envelope's effectiveness ultimately depends on the consuming model honoring a footer instruction, which has been tested against Claude Sonnet but not against the Qwen/Llama open-weight models that the local-first posture pushes toward becoming the primary consumers. The honest position: the boundaries that are code-enforced (tier routing, egress gate, kernel sandbox) are strong; the boundaries that depend on model compliance or on the operator's own disk hygiene are assumptions, and they're documented as such rather than papered over.</p>
+<h2 id="82-is-a-single-maintainer-sustainable">8.2 Is a single maintainer sustainable?<a class="headerlink" href="#82-is-a-single-maintainer-sustainable" title="Anchor link to this section">&para;</a></h2>
+<p>Animus is one engineer's system, and that's both its coherence and its fragility. The Gorgon-to-Forge rename is still incomplete in code, four parallel roadmaps contradict each other with no canonical index, and the flagship "480 videos/month" deployment in the whitepaper has zero implementing code. None of these is fatal, but together they signal the characteristic risk of a solo project: documentation drifts from reality faster than one person can reconcile it, and the parts that aren't load-bearing for daily use rot first. The Personal Roadmap's "resist productization" turn is the right instinct here. Scoping to one user is the only way a single maintainer keeps the surface area honest. The open question is whether the discipline holds, or whether the next exciting idea reopens the productization sprawl the roadmap just closed.</p>
+<h2 id="83-are-the-evals-actually-valid">8.3 Are the evals actually valid?<a class="headerlink" href="#83-are-the-evals-actually-valid" title="Anchor link to this section">&para;</a></h2>
+<p>Every quality judgment in Forge ultimately rests on LLM-judge metrics, and their reliability is assumed rather than measured. The failure taxonomy names <code>judge_disagreement</code> but nothing currently quantifies judge accuracy against a human-labeled set. Worse, judge failures currently return a silent 0.5 (refinement #7), so a systematically broken judge looks like a mediocre-but-passing run. The bootstrap-CI comparison machinery is statistically sound, but it can only be as trustworthy as the scores feeding it, and on small suites a "no significant difference" verdict may simply be underpowered. Until judge calibration exists, the eval framework should be read as a strong <em>relative</em> signal (is version B better than version A on the same judge) rather than a trustworthy <em>absolute</em> one.</p>
+<h2 id="84-what-happens-to-cost-at-scale">8.4 What happens to cost at scale?<a class="headerlink" href="#84-what-happens-to-cost-at-scale" title="Anchor link to this section">&para;</a></h2>
+<p>The Effective-Tokens model is the right idea, but it's currently reporting-only: enforcement counts raw tokens, so the budget can read healthy while real spend is several times higher on output-heavy or opus-tier work. The budget reservation gap means parallel steps can collectively overspend before any of them records usage. And two divergent cost tables (a stale 2024 pricing table versus the tier-multiplier model) produce inconsistent numbers between dashboards and budgets. For a system whose entire philosophical pitch is "make cost visible," these are the gaps most worth closing, because the cost discipline is the claim the TPS framing rests on. None is hard to fix (they're in the Section 6 P1 band), but until they are, the cost-sovereignty guarantee is aspirational at the margins where it matters most: unattended, parallel, output-heavy runs.</p>
+<h2 id="85-the-honest-summary">8.5 The honest summary<a class="headerlink" href="#85-the-honest-summary" title="Anchor link to this section">&para;</a></h2>
+<p>Animus is further along than most solo AI projects and more honest about its gaps than most funded ones. The substrate (memory, budget, security planes, checkpoint/resume, coordination) is real and substantial. The autonomy is gated the right way. The largest risks are not architectural but operational: documentation drift, unmeasured eval validity, at-rest encryption, and the question of whether one person can sustain the reconciliation work that keeps the narrative matching the code. Those are the right risks to have, because every one of them is closeable with the refinements and future work already on the table.</p>
+<hr />
+<h2 id="appendix-a-subsystem-evidence-index">Appendix A: Subsystem Evidence Index<a class="headerlink" href="#appendix-a-subsystem-evidence-index" title="Anchor link to this section">&para;</a></h2>
+<p>Every feature claim in this paper is grounded in source. This index lists each subsystem's features, honest maturity rating, and the file evidence the analysts cited.</p>
+<h3 id="core-memory-layer">Core &amp; Memory Layer<a class="headerlink" href="#core-memory-layer" title="Anchor link to this section">&para;</a></h3>
+<p><em>The Core &amp; Memory Layer is Animus's persistence and self-knowledge foundation: a pluggable memory store (ChromaDB vector + JSON fallback) holding episodic/semantic/procedural/active memories with versioning, sensitivity tiers, and secret redaction; a transparent, reversible learning loop that mines patterns from stored memories into approval-gated "learned items"; an identity self-model that lets Animus read its own codebase; and Ogma, a synthesis persona that reverse-engineers external work and internal subsystems into implementation-ready proposals. It applies TPS-style discipline, append-only memory (never delete), approval gates by category, rollback checkpoints, redaction poka-yoke, and a retrieval eval harness as a metric gate.</em></p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Maturity</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pluggable memory store (ChromaDB + JSON fallback)</td>
+<td>production</td>
+<td><code>packages/core/animus/memory/layer.py:55-62; packages/core/animus/memory/stores/base.py:10</code></td>
+</tr>
+<tr>
+<td>Hybrid dense+BM25 retrieval with RRF fusion</td>
+<td>production</td>
+<td><code>packages/core/animus/memory/stores/chroma.py:144-280; packages/core/animus/memory/fusion.py:10-27</code></td>
+</tr>
+<tr>
+<td>Episodic/semantic/procedural/active memory model</td>
+<td>production</td>
+<td><code>packages/core/animus/memory/types.py:17-23,157-211; packages/core/animus/memory/layer.py:143-216,483-502</code></td>
+</tr>
+<tr>
+<td>Secret/PII redaction on ingest</td>
+<td>production</td>
+<td><code>packages/core/animus/memory/redaction.py:38-185; packages/core/animus/memory/layer.py:101-110</code></td>
+</tr>
+<tr>
+<td>Sensitivity disclosure tiers + read-side gating</td>
+<td>production</td>
+<td><code>packages/core/animus/memory/layer.py:226-256; packages/core/animus/memory/stores/chroma.py:248-250; packages/core/animus/memory/types.py:34-39</code></td>
+</tr>
+<tr>
+<td>Memory versioning + provenance lineage</td>
+<td>production</td>
+<td><code>packages/core/animus/memory/layer.py:313-401,591-609</code></td>
+</tr>
+<tr>
+<td>Snapshot / restore / export / consolidation</td>
+<td>production</td>
+<td><code>packages/core/animus/memory/layer.py:403-467,506-572,611-691</code></td>
+</tr>
+<tr>
+<td>Transparent, reversible learning loop</td>
+<td>production</td>
+<td><code>packages/core/animus/learning/__init__.py:150-367; packages/core/animus/learning/patterns.py:168-451; packages/core/animus/learning/categories.py:35-42</code></td>
+</tr>
+<tr>
+<td>Immutable guardrails on learning</td>
+<td>production</td>
+<td><code>packages/core/animus/learning/guardrails.py:21-118; packages/core/animus/learning/__init__.py:177-189</code></td>
+</tr>
+<tr>
+<td>Identity self-model / code self-reference</td>
+<td>production</td>
+<td><code>packages/core/animus/identity.py:21-129</code></td>
+</tr>
+<tr>
+<td>Retrieval evaluation harness</td>
+<td>production</td>
+<td><code>packages/core/animus/memory/evaluation.py:112-234</code></td>
+</tr>
+<tr>
+<td>Claude Code → ChromaDB memory sync tool</td>
+<td>production</td>
+<td><code>packages/core/animus/../../../tools/animus_sync.py:46-65,430-537</code></td>
+</tr>
+<tr>
+<td>Entity extraction + memory linking</td>
+<td>production</td>
+<td><code>packages/core/animus/memory/layer.py:130-139,475-480; packages/core/animus/entities.py:207,517,701</code></td>
+</tr>
+<tr>
+<td>Sensitivity backfill migration</td>
+<td>production</td>
+<td><code>packages/core/animus/scripts/migrate_sensitivity_tiers.py:1-40</code></td>
+</tr>
+<tr>
+<td>Cross-device state sync (delta/merge)</td>
+<td>beta</td>
+<td><code>packages/core/animus/sync/state.py:158-444; packages/core/animus/protocols/sync.py:11-26</code></td>
+</tr>
+<tr>
+<td>Ogma synthesis pipeline (read flow)</td>
+<td>experimental</td>
+<td><code>feat/ogma-v0-read:packages/core/animus/ogma/read.py:1-30; feat/ogma-v0-read:packages/core/animus/ogma/models.py:30-80</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Observed limitations:</strong> HOT/WARM/COLD tiered memory with promotion/demotion and lossless context compaction is fully specced in docs/ANIMUS_MEMORY_GAPS.md but has NO implementing code, the Memory dataclass has no tier/last_accessed/access_count fields, and no promotion job exists. Pure aspirational spec.; ARCHITECTURE.md claims Ed25519-signed memory nodes and AES-256 encryption at rest; the code has no signing of Memory records and no encryption in either store (ChromaDB and JSON persist plaintext content). The signature field in the gap-spec metadata schema is unimplemented.; Ogma is unmerged on feat/ogma-v0-read and the on-main packages/core/animus/ogma/ directory is an empty pycache stub; only the read verb exists (brief/gap/audit/sweep verbs from OGMA.md are not in code).; ChromaMemoryStore holds a complete second copy of every memory in an in-memory dict (self._memories) for metadata and BM25, duplicates ChromaDB's own storage and will not scale memory-wise to very large corpora.; BM25 index rebuilds the entire corpus from scratch on any store/delete (_bm25_dirty flag), O(N) re-tokenization on every write; no incremental update.; consolidate() groups episodic memories only by their first tag and concatenates 150-char snippets with no LLM summarization, crude and lossy; not the 'summary block' described in the compaction spec.; Pattern detection is purely regex/heuristic (PREFERENCE_INDICATORS, hour-bucketing) with no semantic/LLM understanding; brittle to phrasing and prone to shallow 'frequently requests' matches.; Sync merge is naive last-write-wins by updated_at string comparison with no vector clocks or conflict surfacing; concurrent edits on two devices silently drop the loser. apply_delta only inspects top-level keys 'memories'/'learnings'/'guardrails', so per-record adds nested under those keys are the only path exercised.; allowed_tiers defaults to None (no filter) for backward compatibility, so any caller that forgets to pass it leaks all tiers, the gate is opt-in, not default-deny.; recall_by_tags and get_memory(partial-id) call store.list_all() and scan in Python, full table scans that bypass the vector index.; Redaction is regex-only: novel credential formats or non-pattern PII (names, addresses in prose) pass through unredacted; acknowledged in the red-team comments as an ongoing cat-and-mouse.</p>
+<h3 id="forge-autonomous-improvement-evaluation">Forge, Autonomous Improvement &amp; Evaluation<a class="headerlink" href="#forge-autonomous-improvement-evaluation" title="Anchor link to this section">&para;</a></h3>
+<p><em>The evaluation + autonomous-improvement layer of Animus Forge. It provides a rubric-driven eval framework (suites, metrics, LLM-judge rubrics, dual failure taxonomies, persistent run store, bootstrap-CI A/B compare), three escalating self-improvement paths (YAML workflow evolution fast-path, an autoresearch-style evolution loop, and a full sandbox+approval+rollback Python self-improvement pipeline), and a library of prompt-mode scaffolds. The throughline is Toyota Production System discipline: a human authors the definition of "better"/the rubric, every LLM call passes the budget gate, and poka-yoke guardrails (fail-fast gates, max-iterations, drift checks, approval stages) bound the autonomy.</em></p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Maturity</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Versioned YAML scoring rubrics with reflective metric resolution</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/evaluation/rubric.py:140 (build_metrics); packages/forge/rubrics/personal-quality.yaml</code></td>
+</tr>
+<tr>
+<td>Metric library (13 metrics: deterministic + LLM-judge)</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/evaluation/metrics.py:210 (LLMJudgeMetric), metrics.py:561 (SelfAuditedLengthMetric)</code></td>
+</tr>
+<tr>
+<td>Self-audited length metric (poka-yoke for word-count honesty)</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/evaluation/metrics.py:561-637</code></td>
+</tr>
+<tr>
+<td>Fail-fast hard gates on metrics</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/evaluation/base.py:142,358,377; packages/forge/eval_suites/benchgoblins-ask.yaml</code></td>
+</tr>
+<tr>
+<td>Dual orthogonal failure taxonomies (technical + content)</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/evaluation/failure_taxonomy.py:62; packages/forge/src/animus_forge/evaluation/failure_taxonomy_content.py:77</code></td>
+</tr>
+<tr>
+<td>Bootstrap-CI A/B run comparison with regression gating</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/evaluation/compare.py:88 (bootstrap_ci_delta), compare.py:176 (compare_runs); eval_cmd.py:315</code></td>
+</tr>
+<tr>
+<td>Persistent eval run store + OutcomeTracker feed</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/evaluation/store.py:38 (record_run), :274 (feed_to_outcome_tracker); eval_cmd.py:202-219</code></td>
+</tr>
+<tr>
+<td>Eval CLI (run/list/compare/rubrics/results)</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/cli/commands/eval_cmd.py:15-225</code></td>
+</tr>
+<tr>
+<td>Prompt-mode scaffolds (exploration/specification/evaluation/production)</td>
+<td>production</td>
+<td><code>packages/forge/prompts/modes/README.md; prompts/modes/exploration.md; prompts/modes/evaluation.md</code></td>
+</tr>
+<tr>
+<td>Versioned prompt registry</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/evaluation/prompt_registry.py:1-40,202 (diff)</code></td>
+</tr>
+<tr>
+<td>YAML workflow evolution fast-path</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/coordination/workflow_evolution.py:85,112,158; cli/commands/evolve.py</code></td>
+</tr>
+<tr>
+<td>Workflow definition library (30+ YAML workflows)</td>
+<td>production</td>
+<td><code>packages/forge/workflows/refactor.yaml:1-35; 30+ files in packages/forge/workflows/</code></td>
+</tr>
+<tr>
+<td>Autoresearch evolution loop</td>
+<td>beta</td>
+<td><code>packages/forge/src/animus_forge/coordination/evolution_loop.py:116,285 (_iterate),:441 (_load_better)</code></td>
+</tr>
+<tr>
+<td>Full self-improvement pipeline (sandbox + approval + rollback) for Python changes</td>
+<td>beta</td>
+<td><code>packages/forge/src/animus_forge/self_improve/orchestrator.py:30-60 (WorkflowStage); self_improve/safety.py:20 (SafetyConfig); cli/commands/self_improve.py</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Observed limitations:</strong> Content failure taxonomy (F1-F8) is built and persisted by the store but NOT wired into the eval CLI run path, eval_cmd.py only calls tag_results (technical), never tag_content_failures. Content tags are populated only if a caller invokes the classifier manually, so compare's content_failure_delta tables will usually be empty in practice.; CodeExecutionMetric runs extracted Python via subprocess with bare 'python' (not sys.executable, which CLAUDE.md explicitly bans) and only a timeout, no real sandbox/isolation despite the docstring saying 'in a sandbox'. Arbitrary model-generated code executes on the host.; LLM-judge metrics swallow all exceptions and return 0.5 on any failure (no provider, parse failure, API error). A systematically broken judge silently scores everything 0.5 rather than erroring, which can mask provider outages as mediocre-but-passing runs.; The evolution loop's default experiment runner is a dry run that just echoes the plan string ('[dry run] Plan executed: {plan}'), without an injected experiment_runner, the loop generates and 'evaluates' hypotheses that were never actually tested, so keep/discard verdicts are LLM opinion on a non-experiment.; EvolutionLoop is standalone, not wired into any CLI command, supervisor, or daemon (only referenced by its own module + tests). It can only be driven programmatically, so the documented autoresearch capability is not operator-accessible out of the box.; SafetyConfig.SafetyMetric unsafe-pattern list is a tiny hardcoded regex set (3 patterns: bomb/weapon, harm instructions, kill/hurt someone), trivially bypassable and not a serious content-safety gate without the optional safety_provider.; The eval base computes the composite as an unweighted mean of metric scores (sum/len); only the Rubric path applies dim weights. A suite run without --rubric ignores any intended metric weighting.; branch_prefix in SafetyConfig still defaults to the legacy 'gorgon-self-improve/' name, indicating incomplete rename cleanup from the Gorgon-&gt;Forge migration (also gorgon-memory.db / gorgon-state.db artifacts in the package root).; FailureClassifier judge-disagreement and flaky detection depend on case.metadata fields (judge_samples, flaky) that nothing in the run path populates, these buckets can only fire on hand-labeled fixtures.</p>
+<h3 id="quorum-coordination-active-inference">Quorum, Coordination &amp; Active Inference<a class="headerlink" href="#quorum-coordination-active-inference" title="Anchor link to this section">&para;</a></h3>
+<p><em>Quorum (PyPI: convergentAI, import: convergent) is Animus's zero-dependency multi-agent coordination protocol library. It lets a swarm of agents negotiate shared intent without central control: each agent publishes IntentNodes describing what it provides/requires, a resolver detects overlaps/conflicts/constraints, a triumvirate voting engine resolves contested decisions, and a stigmergy field plus signal bus carry indirect coordination. A v2 extension layer adds observability (event log, planned liveness watchdog, coupling dashboard) and a planned active-inference rescoring of intent stability; only the event log has landed so far. The Consciousness-Quorum bridge (built in Forge) wires the reflection loop into this graph as low-stability intents.</em></p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Maturity</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IntentResolver (overlap/conflict/constraint resolution)</td>
+<td>production</td>
+<td><code>packages/quorum/python/convergent/resolver.py:110-260</code></td>
+</tr>
+<tr>
+<td>Evidence-weighted stability scoring</td>
+<td>production</td>
+<td><code>packages/quorum/python/convergent/intent.py:172-194</code></td>
+</tr>
+<tr>
+<td>Triumvirate voting engine</td>
+<td>production</td>
+<td><code>packages/quorum/python/convergent/triumvirate.py:36,287,323</code></td>
+</tr>
+<tr>
+<td>Stigmergy field (pheromone coordination)</td>
+<td>production</td>
+<td><code>packages/quorum/python/convergent/stigmergy.py:49,215</code></td>
+</tr>
+<tr>
+<td>FlockingCoordinator (alignment/cohesion/separation)</td>
+<td>production</td>
+<td><code>packages/quorum/python/convergent/flocking.py:132,149,179,211</code></td>
+</tr>
+<tr>
+<td>Signal bus (pub/sub, in-memory + SQLite cross-process)</td>
+<td>production</td>
+<td><code>packages/quorum/python/convergent/signal_bus.py:44; packages/quorum/python/convergent/sqlite_signal_backend.py:44</code></td>
+</tr>
+<tr>
+<td>GorgonBridge integration facade</td>
+<td>production</td>
+<td><code>packages/quorum/python/convergent/gorgon_bridge.py:37-286</code></td>
+</tr>
+<tr>
+<td>Coordination EventLog (Quorum v2 Week 1)</td>
+<td>production</td>
+<td><code>packages/quorum/python/convergent/event_log.py:113; resolver.py:54-70; tests/test_mutation_sites_emit.py</code></td>
+</tr>
+<tr>
+<td>Consciousness-Quorum bridge</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/coordination/consciousness_bridge.py:130-417; cli/commands/consciousness.py; tests/test_consciousness_bridge.py</code></td>
+</tr>
+<tr>
+<td>Active-inference IntentResolver (Quorum v2 Week 3-4)</td>
+<td>stub</td>
+<td><code>docs/specs/quorum_v2_week3-4_active_inference_resolver.md (Status: Ready to build); no matching code under packages/quorum</code></td>
+</tr>
+<tr>
+<td>LivenessWatchdog (Quorum v2 Week 2)</td>
+<td>stub</td>
+<td><code>docs/specs/quorum_v2_week2_liveness_watchdog.md (Status: Ready to build); packages/quorum/liveness MISSING</code></td>
+</tr>
+<tr>
+<td>Coupling MI dashboard (Quorum v2 Week 5)</td>
+<td>stub</td>
+<td><code>docs/specs/quorum_v2_week5_coupling_dashboard.md (Status: Ready to build); packages/quorum/coupling MISSING</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Observed limitations:</strong> Three of the four advertised v2 capabilities, active-inference resolver, LivenessWatchdog, coupling dashboard, are specs only with zero code. The planned paths (packages/quorum/resolver/active_inference.py, packages/quorum/liveness/, packages/quorum/coupling/) do not exist. Any whitepaper claim of active inference or liveness monitoring as a working feature would be false.; Stability scoring is a brittle hardcoded weighted-sum over evidence tallies (intent.py:172), which the active-inference spec itself flags as saturating and vulnerable to evidence flooding (100 confirmations of a contested thing score the same as 100 of an obvious thing). The StabilityScorer protocol refactor that would make it pluggable has not been done.; The EventLog landed at the Python convergent root, NOT at the roadmap's specified content-addressed core path (packages/core/ontology/events/tick_event.py with prior_state_hash/new_state_hash). It is an event audit log, not the content-addressed transition log with deterministic state hashes the roadmap promised, the 'bisect which mutation broke a stable intent' replay use case is not actually achievable from the current schema.; EventLog wiring is opt-in (event_log=None default on PythonGraphBackend, Triumvirate, StigmergyField); if a caller constructs these without passing an EventLog, no events are emitted and there is no enforcement that the bridge wires one in.; The SignalBus mirror on EventLog is best-effort with a blanket except Exception swallow (event_log.py:281), so observability silently degrades on subscriber errors with only a warning log.; FlockingCoordinator cohesion/separation are keyword/marker heuristics (_extract_keywords, flocking.py:294), not semantic, drift detection is shallow.; predict_trajectories returns {} unless a semantic_matcher (LLM) is configured (resolver.py:432), so trajectory prediction is inert in the default zero-dependency configuration.; The consciousness bridge reflection parser falls back to a regex {…} scrape and returns an empty 'Parse failure' output on malformed JSON (consciousness_bridge.py:362-372); a misbehaving local model silently produces no coordination signal for that cycle.; Coordination DBs are committed into the repo (convergent_coordination*.db), mixing runtime state into version control.</p>
+<h3 id="security-hardening">Security &amp; Hardening<a class="headerlink" href="#security-hardening" title="Anchor link to this section">&para;</a></h3>
+<p><em>A defense-in-depth layer that protects Animus's tiered memory store (PUBLIC/PERSONAL/CONFIDENTIAL/SECRET) and bounds autonomous agent behavior. It enforces a local-first / cloud-on-consent posture through code-level egress gates, DLP credential redaction, tier-scoped memory recall, prompt-injection envelopes, integrity/tamper detection, systemd kernel sandboxing, and an LLM-driven red-team driver, applying TPS jidoka ("any agent may halt the line; never silently degrade") to AI safety.</em></p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Maturity</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tier-aware egress gate (is_egress_allowed)</td>
+<td>production</td>
+<td><code>packages/core/animus/network/egress.py:62; packages/forge/src/animus_forge/network/egress.py:44</code></td>
+</tr>
+<tr>
+<td>DLP credential/PII redaction</td>
+<td>production</td>
+<td><code>packages/core/animus/memory/redaction.py:38-72,123</code></td>
+</tr>
+<tr>
+<td>Red-team-hardened detectors (CamelCase + leetspeak)</td>
+<td>production</td>
+<td><code>packages/core/animus/memory/redaction.py:57-72; docs/THREAT_MODEL.md:284-296</code></td>
+</tr>
+<tr>
+<td>Tier-scoped MCP recall (scope pin)</td>
+<td>production</td>
+<td><code>packages/core/animus/mcp_server.py:143-145,192,332</code></td>
+</tr>
+<tr>
+<td>Prompt-injection envelope (<untrusted_data>)</td>
+<td>production</td>
+<td><code>packages/core/animus/mcp_server.py:72-84; packages/forge/src/animus_forge/security/pi_wrap.py:30-44</code></td>
+</tr>
+<tr>
+<td>SHA-256 integrity baseline / boot tamper detection</td>
+<td>production</td>
+<td><code>packages/core/animus/integrity/checker.py:36-41,145; packages/bootstrap/src/animus_bootstrap/daemon/__main__.py:21-52</code></td>
+</tr>
+<tr>
+<td>Append-only metadata-only audit log</td>
+<td>production</td>
+<td><code>packages/core/animus/audit/egress_log.py:53-78,81</code></td>
+</tr>
+<tr>
+<td>systemd kernel sandboxing</td>
+<td>production</td>
+<td><code>~/.config/systemd/user/animus.service and animus-forge.service (IPAddressDeny/ProtectSystem/ReadOnlyPaths lines verified)</code></td>
+</tr>
+<tr>
+<td>Red-team driver (LLM-generated adversarial probes)</td>
+<td>production</td>
+<td><code>packages/core/animus/redteam/driver.py:116-364,570-575; docs/THREAT_MODEL.md:277-296</code></td>
+</tr>
+<tr>
+<td>Deterministic hardening verification suite</td>
+<td>production</td>
+<td><code>packages/core/animus/scripts/verify_hardening.py:547-629</code></td>
+</tr>
+<tr>
+<td>OpenRouter provider with PUBLIC-only egress + open-weights guarantee</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/providers/openrouter_provider.py:140-194; packages/forge/src/animus_forge/tui/providers.py:61-68</code></td>
+</tr>
+<tr>
+<td>TierRouter sensitivity override + no-cloud-fallback</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/providers/router.py:244-267</code></td>
+</tr>
+<tr>
+<td>Constitutional principles (P1-P9)</td>
+<td>production</td>
+<td><code>docs/CONSTITUTIONAL_PRINCIPLES.md:18-62</code></td>
+</tr>
+<tr>
+<td>Forge field-level encryption + abuse controls</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/security/field_encryption.py:1-30; security/{brute_force,request_limits,audit_log}.py</code></td>
+</tr>
+<tr>
+<td>Forge self-improve sandbox (allow-list + gitleaks + whip-saw)</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/self_improve/safety.py and pr_manager.py (exercised by verify_hardening.py:229-296)</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Observed limitations:</strong> Two separate egress-policy implementations (Core animus/network/egress.py and Forge animus_forge/network/egress.py) are manually kept in sync by hand, the Forge module's own docstring says 'Keep this in sync ... drift is detectable by inspection.' A divergence would silently weaken one plane.; The integrity baseline tracks only 4 files (redaction.py, egress.py, mcp_server.py, audit/egress_log.py). The tier-router, OpenRouter provider, pi_wrap, and integrity checker itself are NOT in the tracked set, so tampering with those bypasses boot-time detection.; Tier enforcement is explicitly NOT a defense against a malicious local shell user, the adversary IS the arete account and can read ChromaDB directly (THREAT_MODEL.md A2). Disk encryption at rest is documented as NOT IN PLACE (plain ext4, no LUKS), so laptop theft = full plaintext exposure of ~1423 memories.; The egress gate trusts the caller-supplied tier and does not inspect content (redteam _probe_egress_smuggle notes it 'doesn't inspect content, it trusts the tier on the request'); a mis-tagged CONFIDENTIAL memory marked PUBLIC would egress.; The prompt-injection envelope's effectiveness ultimately depends on the consuming model honoring the footer; THREAT_MODEL.md assumption 5 notes it is tested only against Claude Sonnet, unverified against Qwen/Llama.; systemd unit files live in ~/.config/systemd/user/ which is itself writable by the user and outside the ReadOnlyPaths mount (THREAT_MODEL.md assumption 3), an adversary editing the unit defeats the kernel-plane network filter. The hardening directives are also NOT versioned in the repo, only on the operator's disk (with .bak copies).; The secret-manager design in docs/SECURITY_LAYER.md (age/pass/1Password backends, animus secrets CLI, secrets:// URI resolution) is largely an UNBUILT spec with embedded build prompts, no shared/secrets/ module or animus.secrets package was found; only Forge's Fernet FieldEncryptor exists.; field_encryption.py uses a hardcoded default PBKDF2 salt ('gorgon-field-encryption-v1', legacy Gorgon naming) when ENCRYPTION_SALT is unset, weakening key derivation against precomputation if the secret_key is also weak.; OpenRouter's open-weights guarantee uses a hardcoded denylist of 6 closed-vendor prefixes; a new closed vendor namespace on OpenRouter would pass until the list is updated (acknowledged in code comments).; In-memory / RAM-only subversion and root-level gdb memory dumps are explicitly out of scope with no mitigation (THREAT_MODEL.md). The OpenRouter spec doc header still says 'DRAFT, parked, not approved to build' despite the provider being fully implemented and registered, doc/code drift.</p>
+<h3 id="orchestration-proactive-engine">Orchestration &amp; Proactive Engine<a class="headerlink" href="#orchestration-proactive-engine" title="Anchor link to this section">&para;</a></h3>
+<p><em>The orchestration layer coordinates multi-agent AI workflows under hard token-budget and cost discipline, persisting state to SQLite so a workflow that fails mid-run resumes at the failed step rather than from the start. The proactive engine is a separate, daemon-resident scheduler (in Bootstrap) that runs periodic self-healing and nudge checks, feeding a human-gated autonomous self-improvement loop. Together they apply Toyota Production System ideas, make cost visible, stop-and-fix on defect, build error-prevention into the path, to running LLM agents.</em></p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Maturity</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Token budget manager with Effective-Tokens cost model</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/budget/manager.py:96 (effective_tokens), :132 (BudgetManager), :280 (record_usage), :165 (_restore_from_db)</code></td>
+</tr>
+<tr>
+<td>Pre-flight budget validation</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/budget/preflight.py:257 (validate), :140 (DEFAULT_ESTIMATES)</code></td>
+</tr>
+<tr>
+<td>Checkpoint / resume to SQLite</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/state/checkpoint.py:222 (resume), packages/forge/src/animus_forge/workflow/executor_core.py:189 (_find_resume_index), :473 (start_workflow wiring)</code></td>
+</tr>
+<tr>
+<td>Mixin-composed workflow executor with budget enforcement</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/workflow/executor_core.py:33 (class), :206 (_check_budget_exceeded), :522 (_execute_sequential)</code></td>
+</tr>
+<tr>
+<td>In-workflow approval gates (halt + persisted resume token)</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/workflow/executor_core.py:664 (_handle_approval_halt), :357 (awaiting_approval finalize)</code></td>
+</tr>
+<tr>
+<td>Quality gates in the embedded Core orchestrator</td>
+<td>production</td>
+<td><code>packages/core/animus/forge/gates.py:28 (evaluate_gate), packages/core/animus/forge/engine.py:133 (_evaluate_gates), packages/core/animus/forge/models.py:45 (GateConfig)</code></td>
+</tr>
+<tr>
+<td>Proactive engine (scheduler + nudges + outcome calibration)</td>
+<td>production</td>
+<td><code>packages/bootstrap/src/animus_bootstrap/intelligence/proactive/engine.py:76 (class), :285 (_scheduler_loop), :384 (_observe_window)</code></td>
+</tr>
+<tr>
+<td>Six built-in proactive checks including self-heal</td>
+<td>production</td>
+<td><code>packages/bootstrap/src/animus_bootstrap/intelligence/proactive/checks/__init__.py:18 (get_builtin_checks), packages/bootstrap/src/animus_bootstrap/intelligence/proactive/checks/self_heal.py:47 (_run_self_heal), :205 (every-6h schedule)</code></td>
+</tr>
+<tr>
+<td>Human-gated self-improvement orchestrator (analyze→sandbox→PR)</td>
+<td>production</td>
+<td><code>packages/forge/src/animus_forge/self_improve/orchestrator.py:156 (run), :172 (auto_approve guard), :295 (Sandbox test)</code></td>
+</tr>
+<tr>
+<td>Impact measurement + rollback for applied improvements</td>
+<td>production</td>
+<td><code>packages/bootstrap/src/animus_bootstrap/intelligence/tools/builtin/self_improve.py:321 (_measure_impact), :387 (_compute_impact_score), packages/bootstrap/src/animus_bootstrap/intelligence/tools/builtin/sandbox.py:140 (rollback)</code></td>
+</tr>
+<tr>
+<td>Bootstrap runtime orchestrator wiring the loop</td>
+<td>production</td>
+<td><code>packages/bootstrap/src/animus_bootstrap/runtime.py:784 (_create_proactive_engine), :243 (set_self_heal_deps wiring), :316 (config reload hook)</code></td>
+</tr>
+<tr>
+<td>YAML workflow evolution fast-path (documented, partial)</td>
+<td>experimental</td>
+<td><code>docs/WORKFLOW_EVOLUTION_CONSTRAINTS.md:27 (validate_workflow_patch), :84 (staging pattern)</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Observed limitations:</strong> The README/quickstart YAML 'gates:' block (check: quality_score &gt;= 0.8) is NOT parsed by the production Forge loader: WorkflowConfig (loader.py:219) has name/version/steps/inputs/outputs/token_budget/timeout/settings but no 'gates' field. Quality-gate enforcement only exists in the separate Core embedded engine (gates.py); the production executor's only gating primitive is the 'approval' step type.; BudgetManager.allocate() (manager.py:264) does not actually reserve or track a pending allocation, it returns True after can_allocate and the comment says 'not yet recorded as used', so concurrent/parallel steps can each pass can_allocate and collectively overspend before record_usage runs.; effective_tokens is computed and exposed (total_effective_tokens / per-agent), but the executor's budget enforcement path (_check_budget_exceeded / record_usage at executor_core.py:255) still uses raw rolled-up tokens, not Effective-Tokens, so the cost-weighted model is reporting-only, not enforced.; Per-step budget check uses a static step.params['estimated_tokens'] default of 1000 (executor_core.py:218); there is no feedback from PreflightValidator's richer per-agent estimates into the live step gate.; The YAML evolution fast-path (WORKFLOW_EVOLUTION_CONSTRAINTS.md) is largely specification: validate_workflow_patch and the 'animus evolve' CLID are described in docs but I did not find a corresponding implemented validator module under forge/workflow; treat as experimental.; self_heal tracks already-proposed areas in a module-global set (_proposed_areas) that is process-lifetime only and not persisted, a daemon restart can re-propose the same failing tool, and dedup is per-process not per-store.; reload_config reaches into private ProactiveEngine attributes (runtime.py:340 sets engine._quiet_start/_quiet_end directly) rather than a public setter, coupling the runtime to engine internals.; _compute_impact_score only weighs failure_rate (60) and latency (40); it has no signal for correctness/quality regressions a config change might introduce, so a change that lowers latency while degrading output quality scores positively.; estimate_cost in BudgetManager uses hardcoded 'late 2024' Claude-3 / GPT-4 pricing tables (manager.py:446) that are stale relative to the model_multipliers table, giving two inconsistent cost views.</p>
+<h3 id="vision-use-cases-stated-roadmap">Vision, Use-Cases &amp; Stated Roadmap<a class="headerlink" href="#vision-use-cases-stated-roadmap" title="Anchor link to this section">&para;</a></h3>
+<p><em>This subsystem is the narrative and intent layer of Animus: the positioning documents, philosophy, use-case catalog, case study, competitive analysis, and the multiple stated roadmaps that declare where the project is headed. It exists to frame Animus as a "personal AI exocortex for cognitive sovereignty", a single-engineer system applying Toyota Production System discipline (visible cost, quality gates, checkpoint/resume, poka-yoke) to multi-agent AI. Its job is to map why Animus is built and for whom, not how the code works.</em></p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Maturity</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Three/Four-Layer Architecture Narrative (Core / Forge / Quorum / Bootstrap)</td>
+<td>production</td>
+<td><code>docs/WHITEPAPER.md:30-66; README.md:42-65; CLAUDE.md (Layer Overview, Monorepo Structure)</code></td>
+</tr>
+<tr>
+<td>TPS / Lean-Manufacturing Framing (budget-first, make cost visible, Jidoka/Poka-yoke/Andon)</td>
+<td>production</td>
+<td><code>docs/WHITEPAPER.md:158-173; docs/EVOLUTION_LOOP.md (TPS Mapping table); CLAUDE.md Non-Negotiable #1 (BudgetManager); README.md:11,250</code></td>
+</tr>
+<tr>
+<td>Stigmergic Coordination Pitch (no supervisor, intent graph, stability scoring)</td>
+<td>production</td>
+<td><code>docs/WHITEPAPER.md:208-278; animus-landscape-and-additional-tools.md:119-120; CLAUDE.md (Quorum layer); README.md:49-53</code></td>
+</tr>
+<tr>
+<td>Competitive Landscape &amp; Differentiation Analysis</td>
+<td>production</td>
+<td><code>docs/animus-landscape-and-additional-tools.md:1-149; docs/OPENCLAW_COMPARISON.md:1-57</code></td>
+</tr>
+<tr>
+<td>Local-Default / Cloud-on-Consent Sovereignty Positioning</td>
+<td>production</td>
+<td><code>docs/OPENCLAW_COMPARISON.md:43-52; docs/specs/openrouter-provider.md referenced; CLAUDE.md Constitutional P1 (Sovereignty)</code></td>
+</tr>
+<tr>
+<td>Constitutional Principles (P1-P9) as Stated Ethics Frame</td>
+<td>production</td>
+<td><code>docs/CONSTITUTIONAL_PRINCIPLES.md:1-33; CLAUDE.md Non-Negotiable #8</code></td>
+</tr>
+<tr>
+<td>Personal Roadmap, Single-User Care-and-Feeding Doctrine</td>
+<td>production</td>
+<td><code>docs/PERSONAL_ROADMAP.md:9-264</code></td>
+</tr>
+<tr>
+<td>Phased Implementation Roadmap (Phase 0-6)</td>
+<td>beta</td>
+<td><code>docs/ROADMAP.md:31-489; contrast CASE_STUDY.md:133 (Phase 5 ✅) vs ROADMAP.md:334-340 (all unchecked)</code></td>
+</tr>
+<tr>
+<td>Research-Assistant Roadmap (RA-0 through RA-4)</td>
+<td>beta</td>
+<td><code>docs/ROADMAP_research_assistant.md:1-202; packages/forge/src/animus_forge/agent/spec.md referenced</code></td>
+</tr>
+<tr>
+<td>Quorum v2 Extension Roadmap (selective, with explicit rejections)</td>
+<td>beta</td>
+<td><code>docs/ROADMAP_quorum_v2.md:1-30 (Out of scope table); PERSONAL_ROADMAP.md:162-179 (Track 8)</code></td>
+</tr>
+<tr>
+<td>Use-Case Catalog (personal-assistant scenarios)</td>
+<td>experimental</td>
+<td><code>docs/USE_CASES.md:1-330</code></td>
+</tr>
+<tr>
+<td>Case Study (portfolio/interview artifact)</td>
+<td>experimental</td>
+<td><code>docs/CASE_STUDY.md:11-21,208-266; contrast README.md:244 (13,676 tests)</code></td>
+</tr>
+<tr>
+<td>Developer-Tools / Arete-Tools Ecosystem Vision (gateway product strategy)</td>
+<td>stub</td>
+<td><code>docs/WHITEPAPER.md:329-341; animus-landscape-and-additional-tools.md:152-735 (Part 4-5 tool specs); contrast PERSONAL_ROADMAP.md:209-228</code></td>
+</tr>
+<tr>
+<td>Media Engine flagship 'production deployment' (~480 videos/month)</td>
+<td>stub</td>
+<td><code>docs/WHITEPAPER.md:282-326 vs verified absence: grep for story_fire/media_engine/marketing_engine returns only docs and .venv; packages/forge/workflows/ contains only dev/fleet-ops YAML (code-review, fleet-incident-triage, etc.)</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Observed limitations:</strong> Flagship deployment is fictional in-repo: the whitepaper's ~480-videos/month Media Engine and 5-platform Marketing Engine (the primary 'this architecture handles real workloads' proof) have zero implementing code. grep finds only vendored googleapiclient stubs and an unrelated Lugh digest. The actual workflows/ are developer/fleet-ops oriented (code-review, fleet-incident-triage, security-audit, bounty-watcher).; Documents contradict each other on maturity and metrics: CASE_STUDY.md claims Phase 5 self-learning 'Complete' and 333 tests/18K LOC, while ROADMAP.md shows all Phase 5 tasks unchecked and README.md reports 13,676 tests. The case study was never updated after build-out.; Strategic whiplash is undocumented as a pivot: the WHITEPAPER + landscape doc sell a commercial gateway/PyPI-suite product strategy (revenue tiers, $8-49/mo), while the PERSONAL_ROADMAP explicitly forbids productization (no SSO/RBAC/billing/landing-page/external-docs). A reader handed both has no signpost that the latter supersedes the former.; Multiple parallel, partially-overlapping roadmaps (ROADMAP.md, PERSONAL_ROADMAP.md, ROADMAP_research_assistant.md, ROADMAP_quorum_v2.md) with no single authoritative index stating which is canonical and which is historical.; The 9-tool 'Arete Tools' suite (Signal, Autopsy, Verdict, Context-Hygiene, Prompt-Debt, Agentlint, Calibrate, Provenance, Tenure) is presented with detailed specs, prompts, and revenue models but is overwhelmingly 'spec complete' / 'this doc', no in-repo implementation; the failure-taxonomy these tools depend on (goal_necrosis, tool_hallucination, etc.) is referenced as if it exists ('Autopsy taxonomy') but is unproven in this repo.; Active-inference IntentResolver, the 'single behavior change worth making' across Quorum v2 and PERSONAL_ROADMAP Track 8, is not yet in code (grep for active_inference/surprise in packages/quorum returns nothing); it remains in-flight roadmap.; Phase 6 (wearable ring, vehicle/CarPlay integration, portable-storage device mode) and the use-cases that depend on it (vehicle mode, location-aware ambient, portable storage) are pure aspiration with no hardware or code path.; Use-case catalog and many case-study capabilities (cross-device WebSocket+Zeroconf sync, register translation, learning-system approval flow) are presented as system capabilities but several are roadmap-checkbox-incomplete (e.g., ROADMAP register translation unchecked; sync layer unchecked).</p>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 AreteDriver
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/AreteDriver/animus" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/fdzQkrt8" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M492.5 69.8c-.2-.3-.4-.6-.8-.7-38.1-17.5-78.4-30-119.7-37.1-.4-.1-.8 0-1.1.1s-.6.4-.8.8c-5.5 9.9-10.5 20.2-14.9 30.6-44.6-6.8-89.9-6.8-134.4 0-4.5-10.5-9.5-20.7-15.1-30.6-.2-.3-.5-.6-.8-.8s-.7-.2-1.1-.2C162.5 39 122.2 51.5 84.1 69c-.3.1-.6.4-.8.7C7.1 183.5-13.8 294.6-3.6 404.2c0 .3.1.5.2.8s.3.4.5.6c44.4 32.9 94 58 146.8 74.2.4.1.8.1 1.1 0s.7-.4.9-.7c11.3-15.4 21.4-31.8 30-48.8.1-.2.2-.5.2-.8s0-.5-.1-.8-.2-.5-.4-.6-.4-.3-.7-.4c-15.8-6.1-31.2-13.4-45.9-21.9-.3-.2-.5-.4-.7-.6s-.3-.6-.3-.9 0-.6.2-.9.3-.5.6-.7c3.1-2.3 6.2-4.7 9.1-7.1.3-.2.6-.4.9-.4s.7 0 1 .1c96.2 43.9 200.4 43.9 295.5 0 .3-.1.7-.2 1-.2s.7.2.9.4c2.9 2.4 6 4.9 9.1 7.2.2.2.4.4.6.7s.2.6.2.9-.1.6-.3.9-.4.5-.6.6c-14.7 8.6-30 15.9-45.9 21.8-.2.1-.5.2-.7.4s-.3.4-.4.7-.1.5-.1.8.1.5.2.8c8.8 17 18.8 33.3 30 48.8.2.3.6.6.9.7s.8.1 1.1 0c52.9-16.2 102.6-41.3 147.1-74.2.2-.2.4-.4.5-.6s.2-.5.2-.8c12.3-126.8-20.5-236.9-86.9-334.5zm-302 267.7c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2m195.4 0c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.indexes", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.select", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

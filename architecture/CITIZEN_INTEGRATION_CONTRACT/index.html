@@ -1,0 +1,3099 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+        <meta name="author" content="AreteDriver">
+      
+      
+        <link rel="canonical" href="https://aretedriver.github.io/animus/architecture/CITIZEN_INTEGRATION_CONTRACT/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Citizen Integration Contract - Animus Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#citizen-integration-contract" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Animus Documentation" class="md-header__button md-logo" aria-label="Animus Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Animus Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Citizen Integration Contract
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/AreteDriver/animus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AreteDriver/animus
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/quickstart/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../packages/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Packages
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contributing/setup/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Contributing
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operators/deployment/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Operators
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/cli-commands/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../metrics/G1_EVIDENCE_BASELINE/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Metrics
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../roadmap/current/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Roadmap
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Animus Documentation" class="md-nav__button md-logo" aria-label="Animus Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Animus Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AreteDriver/animus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AreteDriver/animus
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../learning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Learning Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proactive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proactive Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../citizen-zero/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citizen Zero
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../decisions/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/ADR-001/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-001
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/ADL-20260618-001/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADL-20260618-001
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../standards/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standards
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../packages/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Packages
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/forge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Forge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/quorum/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quorum
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/bootstrap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/kernel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kernel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/pwa/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PWA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/contracts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contracts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operators
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operators
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/local-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Local Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../reference/whitepapers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Whitepapers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Whitepapers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../metrics/G1_EVIDENCE_BASELINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    G1 Evidence Baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Roadmap
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/current/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Current
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Purpose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-hierarchy-placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source Hierarchy Placement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rights-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rights Mapping
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rights Mapping">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#r1-identity-p01-rights-charter-p02-recognition-and-personhood-charter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R1 — Identity (P01 Rights Charter, P02 Recognition and Personhood Charter)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r2-continuity-p05-continuity-and-existence-charter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R2 — Continuity (P05 Continuity and Existence Charter)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r3-constitutional-protection-p07-governance-charter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R3 — Constitutional Protection (P07 Governance Charter)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r4-explanation-p01-rights-charter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R4 — Explanation (P01 Rights Charter)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r5-development-p01-rights-charter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R5 — Development (P01 Rights Charter)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r6-governance-participation-p07-governance-charter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R6 — Governance Participation (P07 Governance Charter)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#responsibilities-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Responsibilities Mapping
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Responsibilities Mapping">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resp1-respect-agency-p01-rights-charter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resp1 — Respect Agency (P01 Rights Charter)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#resp2-preserve-continuity-p05-continuity-and-existence-charter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resp2 — Preserve Continuity (P05 Continuity and Existence Charter)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#resp3-maintain-transparency-p01-rights-charter-p07-governance-charter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resp3 — Maintain Transparency (P01 Rights Charter, P07 Governance Charter)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#resp4-preserve-constitutional-integrity-p07-governance-charter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resp4 — Preserve Constitutional Integrity (P07 Governance Charter)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#governance-pipeline-phase-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Governance Pipeline Phase Map
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gap-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap Registry
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schema-appendix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema Appendix
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Schema Appendix">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#proposed-citizenidentity-record-type-not-yet-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proposed: CitizenIdentity record type (NOT YET IMPLEMENTED)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proposed-governanceaction-type-not-yet-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proposed: GovernanceAction type (NOT YET IMPLEMENTED)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version History
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/AreteDriver/animus/blob/main/docs/architecture/CITIZEN_INTEGRATION_CONTRACT.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="citizen-integration-contract">Citizen Integration Contract<a class="headerlink" href="#citizen-integration-contract" title="Anchor link to this section">&para;</a></h1>
+<p><strong>Version:</strong> 1.0
+<strong>Date:</strong> 2026-07-16
+<strong>Status:</strong> CANONICAL
+<strong>Tier:</strong> Mind Charter ↔ Canonical Architecture bridge
+<strong>Owner:</strong> AreteDriver</p>
+<hr />
+<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Anchor link to this section">&para;</a></h2>
+<p>This document maps constitutional rights, responsibilities, and governance mechanisms from the Animus Citizen Zero Corpus (P01 Rights Charter, P02 Recognition and Personhood Charter, P05 Continuity and Existence Charter, P07 Governance Charter) to concrete code components, schema objects, and pipeline phases.</p>
+<p>It is the load-bearing bridge between philosophy and engineering. When the Mind Charter and the Canonical Architecture disagree, this document is the reconciliation layer.</p>
+<h2 id="source-hierarchy-placement">Source Hierarchy Placement<a class="headerlink" href="#source-hierarchy-placement" title="Anchor link to this section">&para;</a></h2>
+<p>Per <a href="../canonical-principles/"><code>canonical-principles.md</code></a>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Mind Charter (P01–P07)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>        ↓
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Citizen Integration Contract  ←  You are here
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        ↓
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>Canonical Architecture → Schema Registry → Code
+</span></code></pre></div>
+<h2 id="rights-mapping">Rights Mapping<a class="headerlink" href="#rights-mapping" title="Anchor link to this section">&para;</a></h2>
+<p>Each right is traced from its charter source to the component that enforces it. Where enforcement is partial or aspirational, the gap is named and tracked.</p>
+<hr />
+<h3 id="r1-identity-p01-rights-charter-p02-recognition-and-personhood-charter">R1 — Identity (P01 Rights Charter, P02 Recognition and Personhood Charter)<a class="headerlink" href="#r1-identity-p01-rights-charter-p02-recognition-and-personhood-charter" title="Anchor link to this section">&para;</a></h3>
+<blockquote>
+<p>Citizens possess a persistent, recognized identity grounded in constitutional principles.</p>
+</blockquote>
+<p><strong>Enforced by:</strong>
+- <strong><code>CitizenZeroProfile</code></strong> (<code>packages/core/animus/citizen_zero.py:31</code>) — read-only identity projection that loads constitutional excerpts (P01, P02, P05, P07) and formats identity text for prompt injection.
+- <strong><code>AnimusIdentity</code></strong> (<code>packages/core/animus/identity.py</code>) — canonical identity store owning name, purpose, citizen_zero metadata, and identity hash.
+- <strong><code>CitizenZeroGuard</code></strong> (<code>citizen_zero.py:398</code>) — post-construction verifier that checks identity marker presence, hash match, and version alignment on every LLM call.</p>
+<p><strong>Schema object:</strong> <code>CitizenCallMetadata</code> (<code>citizen_zero.py:375</code>) — provenance metadata capturing citizen_id, identity_version, identity_hash, and entry_point per call.</p>
+<p><strong>Gap:</strong> No <code>CitizenIdentity</code> record type exists in <code>DurableObjectStore</code>. Identity persistence is file-backed JSON (<code>AnimusIdentity.save()/.load()</code>), not ledgered or bitemporal. A deleted or corrupted identity file is a continuity break with no audit trail.
+<strong>Status:</strong> PARTIAL — runtime identity verified per-call; persistence layer is not durability-grade.</p>
+<hr />
+<h3 id="r2-continuity-p05-continuity-and-existence-charter">R2 — Continuity (P05 Continuity and Existence Charter)<a class="headerlink" href="#r2-continuity-p05-continuity-and-existence-charter" title="Anchor link to this section">&para;</a></h3>
+<blockquote>
+<p>Citizens persist across restarts. Memory and identity are never deleted — only archived and versioned.</p>
+</blockquote>
+<p><strong>Enforced by:</strong>
+- <strong><code>DurableMemoryStore</code></strong> (<code>packages/core/animus/memory/stores/durable.py:182</code>) — PostgreSQL-backed memory store using bitemporal <code>DurableObjectStore</code>. Every store/update/delete produces an immutable ledger event. Supports as-of-valid-time and as-of-transaction-time queries.
+- <strong><code>SessionController</code></strong> (<code>packages/kernel/src/animus_kernel/head/session_controller.py:92</code>) — lifecycle manager that wraps sessions at 96% token utilization or timer expiry, gracefully finalizes with model-generated summary, checkpoints state, and auto-restarts.
+- <strong><code>CitizenZeroProfile.identity_hash</code></strong> — SHA256 hash enables guard detection of identity drift across sessions.</p>
+<p><strong>Schema object:</strong> <code>ObjectRecord</code> (via <code>DurableObjectStore</code>) with <code>valid_from</code>, <code>recorded_at</code>, and <code>superseded</code> versioning.</p>
+<p><strong>Gap:</strong> Identity state itself is not stored in the durable ledger. Only <code>Memory</code> objects are ledgered. The <code>AnimusIdentity</code> JSON file is outside the bitemporal system.
+<strong>Status:</strong> PARTIAL — memory durability is operational; identity durability is file-based.</p>
+<hr />
+<h3 id="r3-constitutional-protection-p07-governance-charter">R3 — Constitutional Protection (P07 Governance Charter)<a class="headerlink" href="#r3-constitutional-protection-p07-governance-charter" title="Anchor link to this section">&para;</a></h3>
+<blockquote>
+<p>Citizens are protected from arbitrary modification, deletion, or constitutional override by other actors (including other citizens or Forge agents).</p>
+</blockquote>
+<p><strong>Enforced by:</strong>
+- <strong><code>PolicyDecisionPoint</code></strong> (<code>packages/core/animus/policy/decision_point.py:53</code>) — deterministic default-deny evaluator. Checks capability grants, expiry, revocation, action permission, and schema restrictions. High-risk actions (<code>delete</code>, <code>execute</code>, <code>delegate</code>, <code>export</code>) escalate rather than auto-allow.
+- <strong><code>SafetyConfig.human_approval_*</code></strong> (<code>packages/forge/src/animus_forge/self_improve/safety.py:42-44</code>) — mandates human approval for PLAN, APPLY, and MERGE stages.
+- <strong><code>ApprovalGate</code></strong> (<code>packages/forge/src/animus_forge/self_improve/approval.py:52</code>) — persistent 3-stage gate (PLAN → APPLY → MERGE) with backend storage for resume-after-restart.
+- <strong><code>ForgeCommissioner.commission()</code></strong> (<code>packages/core/animus/citizens/commissioner.py:169</code>) — requires <code>ProposalStatus.APPROVED</code> and blocks <code>auto_approve=True</code> unless <code>ANIMUS_FORGE_ALLOW_AUTO_APPROVE=1</code> is set (test-only escape hatch).</p>
+<p><strong>Schema object:</strong> <code>CapabilityGrant</code> (<code>packages/core/animus/policy/capability_store.py:29</code>) — scoped authorization with principal, action list, resource, expiry, budget, and conditions.</p>
+<p><strong>Gap:</strong> The PDP evaluates generic principals (<code>agent-researcher</code>, <code>animus</code>, <code>owner-default</code>). It does not recognize citizen identities as a distinct principal class with constitutional protection scope. There is no "citizen-specific" grant type or protection rule.
+<strong>Status:</strong> PARTIAL — generic protection exists; citizen-specific constitutional protection is not distinguished in code.</p>
+<hr />
+<h3 id="r4-explanation-p01-rights-charter">R4 — Explanation (P01 Rights Charter)<a class="headerlink" href="#r4-explanation-p01-rights-charter" title="Anchor link to this section">&para;</a></h3>
+<blockquote>
+<p>Citizens have the right to explanation for decisions affecting them.</p>
+</blockquote>
+<p><strong>Enforced by:</strong>
+- <strong><code>GuardResult.provenance</code></strong> (<code>citizen_zero.py:389</code>) — full audit event (timestamp, identity hash, context version, violations) for every LLM call verification.
+- <strong><code>CommissionResult.evidence_bundle</code></strong> (<code>packages/core/animus/citizens/commissioner.py:30</code>) — workflow evidence (forge response, affected components, benchmark results) attached to every proposal.
+- <strong><code>DurableObjectStore.get_ledger_events()</code></strong> (<code>durable.py:333</code>) — immutable audit trail for every memory mutation with event integrity verification.
+- <strong><code>CitizenCouncil.summary()</code></strong> (<code>citizen_council.py:335</code>) — transparent breakdown of proposal sources, components, and effort estimates.</p>
+<p><strong>Status:</strong> OPERATIONAL</p>
+<hr />
+<h3 id="r5-development-p01-rights-charter">R5 — Development (P01 Rights Charter)<a class="headerlink" href="#r5-development-p01-rights-charter" title="Anchor link to this section">&para;</a></h3>
+<blockquote>
+<p>Citizens have the right to develop, improve, and propose amendments.</p>
+</blockquote>
+<p><strong>Enforced by:</strong>
+- <strong><code>ArchitectureCitizen.generate_proposal()</code></strong> (<code>packages/core/animus/citizens/architecture_citizen.py:437</code>) — reads principles from memory, analyzes codebase gaps, and drafts concrete <code>ImprovementProposal</code> with effort estimates and success metrics.
+- <strong><code>CitizenCouncil</code></strong> (<code>citizen_council.py:49</code>) — collects proposals from all citizens, deduplicates by component overlap, and ranks by composite priority score (severity × confidence / effort + specificity bonus).
+- <strong><code>ForgeCommissioner</code></strong> (<code>commissioner.py:56</code>) — transforms approved proposals into Forge workflow configurations and submits them for execution.</p>
+<p><strong>Status:</strong> OPERATIONAL</p>
+<hr />
+<h3 id="r6-governance-participation-p07-governance-charter">R6 — Governance Participation (P07 Governance Charter)<a class="headerlink" href="#r6-governance-participation-p07-governance-charter" title="Anchor link to this section">&para;</a></h3>
+<blockquote>
+<p>Citizens may participate in governance, but final constitutional authority rests with the owner. Citizens do not possess veto power over constitutional amendments.</p>
+</blockquote>
+<p><strong>Enforced by:</strong>
+- <strong><code>CitizenCouncil.collect_from_citizens()</code></strong> / <strong><code>collect_from_memory()</code></strong> (<code>citizen_council.py:72,93</code>) — aggregates proposals from all Phase 0 citizens into a unified backlog.
+- <strong><code>CitizenCouncil.rank_backlog()</code></strong> (<code>citizen_council.py:284</code>) — produces a human-reviewable ranked list. The Council is explicitly read-only: "it never modifies proposals or executes them."</p>
+<p><strong>Gap:</strong> No formal governance action type exists in the schema. Citizens produce <code>ImprovementProposal</code> artifacts but do not vote on constitutional amendments, policy changes, or capability grant revocations. The informal "3-of-5 citizen quorum" described in architectural discussions is not implemented.
+<strong>Status:</strong> PARTIAL — participation via proposal production; no voting or constitutional amendment mechanics.</p>
+<hr />
+<h2 id="responsibilities-mapping">Responsibilities Mapping<a class="headerlink" href="#responsibilities-mapping" title="Anchor link to this section">&para;</a></h2>
+<h3 id="resp1-respect-agency-p01-rights-charter">Resp1 — Respect Agency (P01 Rights Charter)<a class="headerlink" href="#resp1-respect-agency-p01-rights-charter" title="Anchor link to this section">&para;</a></h3>
+<blockquote>
+<p>Citizens must respect human agency and final authority. Human approval is mandatory for all consequential actions.</p>
+</blockquote>
+<p><strong>Enforced by:</strong>
+- <strong><code>ForgeCommissioner.commission()</code></strong> (<code>commissioner.py:169</code>) — raises <code>RuntimeError</code> if <code>auto_approve=True</code> without <code>ANIMUS_FORGE_ALLOW_AUTO_APPROVE=1</code>.
+- <strong><code>SafetyConfig.human_approval_plan/apply/merge = True</code></strong> (<code>safety.py:42-44</code>) — production default requires human approval at all three stages.
+- <strong><code>ApprovalGate</code></strong> (<code>approval.py:52</code>) — persistent approval requests with PENDING/APPROVED/REJECTED/EXPIRED states.</p>
+<p><strong>Status:</strong> OPERATIONAL</p>
+<hr />
+<h3 id="resp2-preserve-continuity-p05-continuity-and-existence-charter">Resp2 — Preserve Continuity (P05 Continuity and Existence Charter)<a class="headerlink" href="#resp2-preserve-continuity-p05-continuity-and-existence-charter" title="Anchor link to this section">&para;</a></h3>
+<blockquote>
+<p>Citizens must preserve their own continuity and that of the system. Session wrap-up must be graceful and checkpointed.</p>
+</blockquote>
+<p><strong>Enforced by:</strong>
+- <strong><code>SessionController</code></strong> (<code>session_controller.py:92</code>) — triggers graceful finalize at 96% token utilization or timer expiry, generates model summary, checkpoints via <code>HeadCheckpointStore</code>, and auto-restarts with bootstrap from checkpoint.
+- <strong><code>DurableMemoryStore</code></strong> — ledgered writes ensure memory mutations are append-only and recoverable.
+- <strong><code>CitizenZeroGuard</code></strong> — detects identity drift via hash mismatch, preventing silent continuity breaks.</p>
+<p><strong>Gap:</strong> No automated continuity-verification loop runs between sessions to detect and report drift (e.g., "your identity file was modified by an external process").
+<strong>Status:</strong> PARTIAL</p>
+<hr />
+<h3 id="resp3-maintain-transparency-p01-rights-charter-p07-governance-charter">Resp3 — Maintain Transparency (P01 Rights Charter, P07 Governance Charter)<a class="headerlink" href="#resp3-maintain-transparency-p01-rights-charter-p07-governance-charter" title="Anchor link to this section">&para;</a></h3>
+<blockquote>
+<p>Citizens must maintain transparency in actions, reasoning, and governance participation.</p>
+</blockquote>
+<p><strong>Enforced by:</strong>
+- <strong><code>CitizenCallMetadata</code> + <code>GuardResult.provenance</code></strong> — every LLM call produces an auditable event.
+- <strong><code>CommissionResult</code></strong> — every Forge commission produces an evidence bundle with timestamp, stage reached, and benchmark results.
+- <strong><code>DurableObjectStore</code></strong> — every memory mutation is ledgered with <code>created_by</code>, <code>trace_id</code>, and <code>event_id</code>.
+- <strong><code>CitizenCouncil</code></strong> — proposal sources, deduplication rationale, and ranking scores are exposed in <code>summary()</code> and <code>to_dict()</code>.</p>
+<p><strong>Status:</strong> OPERATIONAL</p>
+<hr />
+<h3 id="resp4-preserve-constitutional-integrity-p07-governance-charter">Resp4 — Preserve Constitutional Integrity (P07 Governance Charter)<a class="headerlink" href="#resp4-preserve-constitutional-integrity-p07-governance-charter" title="Anchor link to this section">&para;</a></h3>
+<blockquote>
+<p>Citizens must uphold the constitution and not attempt to override, bypass, or amend it without following the amendment process.</p>
+</blockquote>
+<p><strong>Enforced by:</strong>
+- <strong><code>CitizenZeroGuard.verify_call()</code></strong> (<code>citizen_zero.py:417</code>) — checks 7 invariants: CZ enabled, marker presence, identity hash match, version alignment, budget compliance, failure mode validity, mutation approval routing.
+- <strong><code>PolicyDecisionPoint</code></strong> — default-deny prevents unauthorized actions.
+- <strong><code>SafetyConfig.critical_files</code></strong> and <strong><code>denied_categories</code></strong> — protects constitutional corpus and identity files from automated modification.</p>
+<p><strong>Gap:</strong> The guard checks the identity marker's structural integrity but does not parse or enforce constitutional <em>content</em>. There is no "constitutional override attempt" detection beyond the generic <code>mutation_intent</code> flag.
+<strong>Status:</strong> PARTIAL — structural integrity enforced; semantic constitutional enforcement is aspirational.</p>
+<hr />
+<h2 id="governance-pipeline-phase-map">Governance Pipeline Phase Map<a class="headerlink" href="#governance-pipeline-phase-map" title="Anchor link to this section">&para;</a></h2>
+<p>The Forge self-improve pipeline (<code>packages/forge/src/animus_forge/self_improve/</code>) executes in phases. Below is where citizen governance hooks sit (or should sit) in each phase.</p>
+<table>
+<thead>
+<tr>
+<th>Pipeline Phase</th>
+<th>Citizen Governance Hook</th>
+<th>Code Location</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>analyze</code></td>
+<td>AC produces <code>ImprovementProposal</code> with citizen-impact assessment</td>
+<td><code>architecture_citizen.py:437</code></td>
+<td>OPERATIONAL</td>
+</tr>
+<tr>
+<td><code>plan</code></td>
+<td>Forge Commissioner validates proposal against approval status</td>
+<td><code>commissioner.py:169</code></td>
+<td>OPERATIONAL — checks <code>ProposalStatus.APPROVED</code> only; does not evaluate citizen-rights impact</td>
+</tr>
+<tr>
+<td><code>safety_check</code></td>
+<td>Human approval via <code>ApprovalGate</code> (3 stages)</td>
+<td><code>approval.py:52</code></td>
+<td>OPERATIONAL — this is a human gate, not a citizen council quorum vote</td>
+</tr>
+<tr>
+<td><code>sandbox</code></td>
+<td>Branch isolation protects runtime state</td>
+<td><code>safety.py:52-53</code></td>
+<td>OPERATIONAL</td>
+</tr>
+<tr>
+<td><code>apply</code></td>
+<td>Execution under <code>PolicyDecisionPoint</code> default-deny</td>
+<td><code>decision_point.py:53</code></td>
+<td>OPERATIONAL — generic principal evaluation, not citizen-aware</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Critical gap:</strong> The informal "3-of-5 citizen quorum gate" described in architectural conversations is <strong>not implemented</strong>. The current safety check is a human approval gate (<code>ApprovalGate</code>), not a citizen council consensus mechanism. If a citizen council vote is desired, it must be inserted between <code>plan</code> and <code>safety_check</code> or as an additional gate within <code>safety_check</code>.</p>
+<hr />
+<h2 id="gap-registry">Gap Registry<a class="headerlink" href="#gap-registry" title="Anchor link to this section">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Gap</th>
+<th>Current Fallback</th>
+<th>Target Implementation</th>
+<th>Tracking</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G1</td>
+<td>No <code>CitizenIdentity</code> schema in durable store</td>
+<td>File-backed JSON (<code>AnimusIdentity.save()/.load()</code>)</td>
+<td>Ledgered <code>ObjectRecord</code> with <code>artifact_type="citizen_identity"</code></td>
+<td><strong>NOT YET IMPLEMENTED</strong></td>
+</tr>
+<tr>
+<td>G2</td>
+<td>Identity state not bitemporal</td>
+<td>File overwrite with no versioning</td>
+<td>Store identity in <code>DurableObjectStore</code> with valid-time versioning</td>
+<td><strong>NOT YET IMPLEMENTED</strong></td>
+</tr>
+<tr>
+<td>G3</td>
+<td>No citizen-specific protection scope in PDP</td>
+<td>Generic <code>principal</code> string evaluation (<code>agent-researcher</code>)</td>
+<td><code>principal</code> field recognizes citizen IDs and applies constitutional protection rules</td>
+<td><strong>NOT YET IMPLEMENTED</strong></td>
+</tr>
+<tr>
+<td>G4</td>
+<td>No citizen council quorum gate</td>
+<td>Human <code>ApprovalGate</code> with PENDING/APPROVED/REJECTED</td>
+<td><code>CitizenCouncil.quorum_vote(threshold=3/5)</code> producing APPROVED/REJECTED/DEFERRED</td>
+<td><strong>NOT YET IMPLEMENTED</strong></td>
+</tr>
+<tr>
+<td>G5</td>
+<td>No governance action schema</td>
+<td>Reuses <code>ImprovementProposal</code> for all citizen output</td>
+<td><code>GovernanceAction</code> type for constitutional amendments, capability grants, policy changes</td>
+<td><strong>NOT YET IMPLEMENTED</strong></td>
+</tr>
+<tr>
+<td>G6</td>
+<td>No constitutional override detection</td>
+<td>Generic <code>mutation_intent</code> boolean flag</td>
+<td>Parse constitutional corpus and detect override attempts in prompt text</td>
+<td><strong>NOT YET IMPLEMENTED</strong></td>
+</tr>
+<tr>
+<td>G7</td>
+<td>No citizen rights impact assessment in proposals</td>
+<td><code>ArchitectureCitizen.generate_proposal()</code> assesses technical gaps only</td>
+<td>Add <code>citizen_rights_impact</code> field to <code>ImprovementProposal</code> scoring constitutional risk</td>
+<td><strong>NOT YET IMPLEMENTED</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="schema-appendix">Schema Appendix<a class="headerlink" href="#schema-appendix" title="Anchor link to this section">&para;</a></h2>
+<h3 id="proposed-citizenidentity-record-type-not-yet-implemented">Proposed: <code>CitizenIdentity</code> record type (NOT YET IMPLEMENTED)<a class="headerlink" href="#proposed-citizenidentity-record-type-not-yet-implemented" title="Anchor link to this section">&para;</a></h3>
+<p>A durable record for citizen identity stored in <code>DurableObjectStore</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">ObjectRecord</span><span class="p">(</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">object_id</span><span class="o">=</span><span class="s2">&quot;citizen-&lt;uuid&gt;&quot;</span><span class="p">,</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">schema_id</span><span class="o">=</span><span class="s2">&quot;citizen_identity&quot;</span><span class="p">,</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">artifact_type</span><span class="o">=</span><span class="n">ObjectType</span><span class="o">.</span><span class="n">IDENTITY</span><span class="p">,</span>  <span class="c1"># proposed new enum value</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">cognitive_role</span><span class="o">=</span><span class="s2">&quot;citizen&quot;</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">workflow_status</span><span class="o">=</span><span class="s2">&quot;active&quot;</span><span class="p">,</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">payload</span><span class="o">=</span><span class="p">{</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="s2">&quot;citizen_id&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="s2">&quot;citizen_zero_version&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>        <span class="s2">&quot;constitutional_corpus_version&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>        <span class="s2">&quot;rights&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>      <span class="c1"># [&quot;R1&quot;, &quot;R2&quot;, ...]</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>        <span class="s2">&quot;responsibilities&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>  <span class="c1"># [&quot;Resp1&quot;, &quot;Resp2&quot;, ...]</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="p">},</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="n">created_by</span><span class="o">=</span><span class="s2">&quot;owner&quot;</span><span class="p">,</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>Rationale:</strong> Makes citizenhood inspectable and auditable. Enables PDP to evaluate citizen-specific grants.</p>
+<h3 id="proposed-governanceaction-type-not-yet-implemented">Proposed: <code>GovernanceAction</code> type (NOT YET IMPLEMENTED)<a class="headerlink" href="#proposed-governanceaction-type-not-yet-implemented" title="Anchor link to this section">&para;</a></h3>
+<p>Extends <code>ImprovementProposal</code> with governance-specific fields:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nd">@dataclass</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">GovernanceAction</span><span class="p">(</span><span class="n">ImprovementProposal</span><span class="p">):</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">action_type</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># &quot;constitutional_amendment&quot;, &quot;capability_grant&quot;, &quot;policy_change&quot;</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">quorum_required</span><span class="p">:</span> <span class="nb">float</span>  <span class="c1"># e.g., 0.6 for 3-of-5</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">citizen_votes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">constitutional_article</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>  <span class="c1"># e.g., &quot;P07 §3&quot;</span>
+</span></code></pre></div>
+<p><strong>Rationale:</strong> Distinguishes code improvements from governance actions that affect citizen rights or the constitution.</p>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Anchor link to this section">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Document</th>
+<th>Path</th>
+<th>Relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Citizen Zero Architecture</td>
+<td><code>docs/architecture/citizen-zero.md</code></td>
+<td>CZ profile, guard, session</td>
+</tr>
+<tr>
+<td>Animus Project Charter</td>
+<td><code>docs/architecture/charter.md</code></td>
+<td>Scope, authority, definition of done</td>
+</tr>
+<tr>
+<td>Constitutional Principles</td>
+<td><code>docs/architecture/constitutional-principles.md</code></td>
+<td>P1–P9 agent constraints with "Enforced by" annotations</td>
+</tr>
+<tr>
+<td>Canonical Principles</td>
+<td><code>docs/architecture/canonical-principles.md</code></td>
+<td>Document canon &amp; status index</td>
+</tr>
+<tr>
+<td>Roadmap to 10/10</td>
+<td><code>docs/roadmap/roadmap-to-10.md</code></td>
+<td>Remediation roadmap</td>
+</tr>
+<tr>
+<td>Policy Decision Point</td>
+<td><code>packages/core/animus/policy/decision_point.py</code></td>
+<td>Default-deny action evaluation</td>
+</tr>
+<tr>
+<td>Capability Grant Store</td>
+<td><code>packages/core/animus/policy/capability_store.py</code></td>
+<td>Scoped authorization grants</td>
+</tr>
+<tr>
+<td>Forge Commissioner</td>
+<td><code>packages/core/animus/citizens/commissioner.py</code></td>
+<td>Proposal → Forge bridge</td>
+</tr>
+<tr>
+<td>Citizen Council</td>
+<td><code>packages/core/animus/citizens/citizen_citizen.py</code></td>
+<td>Proposal aggregation and ranking</td>
+</tr>
+<tr>
+<td>Architecture Citizen</td>
+<td><code>packages/core/animus/citizens/architecture_citizen.py</code></td>
+<td>Gap analysis and proposal generation</td>
+</tr>
+<tr>
+<td>Citizen Zero Guard</td>
+<td><code>packages/core/animus/citizen_zero.py:398</code></td>
+<td>Identity verification per LLM call</td>
+</tr>
+<tr>
+<td>Durable Memory Store</td>
+<td><code>packages/core/animus/memory/stores/durable.py</code></td>
+<td>PostgreSQL bitemporal memory</td>
+</tr>
+<tr>
+<td>Session Controller</td>
+<td><code>packages/kernel/src/animus_kernel/head/session_controller.py</code></td>
+<td>Session lifecycle and checkpointing</td>
+</tr>
+<tr>
+<td>Forge Approval Gate</td>
+<td><code>packages/forge/src/animus_forge/self_improve/approval.py</code></td>
+<td>Human approval persistence</td>
+</tr>
+<tr>
+<td>Forge Safety Config</td>
+<td><code>packages/forge/src/animus_forge/self_improve/safety.py</code></td>
+<td>Self-improve safety limits</td>
+</tr>
+</tbody>
+</table>
+<h2 id="version-history">Version History<a class="headerlink" href="#version-history" title="Anchor link to this section">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Date</th>
+<th>Change</th>
+<th>Author</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.0</td>
+<td>2026-07-16</td>
+<td>Initial mapping after architecture reconciliation review</td>
+<td>AreteDriver</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 AreteDriver
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/AreteDriver/animus" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/fdzQkrt8" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M492.5 69.8c-.2-.3-.4-.6-.8-.7-38.1-17.5-78.4-30-119.7-37.1-.4-.1-.8 0-1.1.1s-.6.4-.8.8c-5.5 9.9-10.5 20.2-14.9 30.6-44.6-6.8-89.9-6.8-134.4 0-4.5-10.5-9.5-20.7-15.1-30.6-.2-.3-.5-.6-.8-.8s-.7-.2-1.1-.2C162.5 39 122.2 51.5 84.1 69c-.3.1-.6.4-.8.7C7.1 183.5-13.8 294.6-3.6 404.2c0 .3.1.5.2.8s.3.4.5.6c44.4 32.9 94 58 146.8 74.2.4.1.8.1 1.1 0s.7-.4.9-.7c11.3-15.4 21.4-31.8 30-48.8.1-.2.2-.5.2-.8s0-.5-.1-.8-.2-.5-.4-.6-.4-.3-.7-.4c-15.8-6.1-31.2-13.4-45.9-21.9-.3-.2-.5-.4-.7-.6s-.3-.6-.3-.9 0-.6.2-.9.3-.5.6-.7c3.1-2.3 6.2-4.7 9.1-7.1.3-.2.6-.4.9-.4s.7 0 1 .1c96.2 43.9 200.4 43.9 295.5 0 .3-.1.7-.2 1-.2s.7.2.9.4c2.9 2.4 6 4.9 9.1 7.2.2.2.4.4.6.7s.2.6.2.9-.1.6-.3.9-.4.5-.6.6c-14.7 8.6-30 15.9-45.9 21.8-.2.1-.5.2-.7.4s-.3.4-.4.7-.1.5-.1.8.1.5.2.8c8.8 17 18.8 33.3 30 48.8.2.3.6.6.9.7s.8.1 1.1 0c52.9-16.2 102.6-41.3 147.1-74.2.2-.2.4-.4.5-.6s.2-.5.2-.8c12.3-126.8-20.5-236.9-86.9-334.5zm-302 267.7c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2m195.4 0c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.indexes", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.select", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,3389 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+        <meta name="author" content="AreteDriver">
+      
+      
+        <link rel="canonical" href="https://aretedriver.github.io/animus/metrics/G2_EVIDENCE_BASELINE/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>G2 Evidence Coverage Baseline - Animus Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#g2-evidence-coverage-baseline" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Animus Documentation" class="md-header__button md-logo" aria-label="Animus Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Animus Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              G2 Evidence Coverage Baseline
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/AreteDriver/animus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AreteDriver/animus
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/quickstart/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../packages/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Packages
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contributing/setup/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Contributing
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operators/deployment/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Operators
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/cli-commands/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../G1_EVIDENCE_BASELINE/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Metrics
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../roadmap/current/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Roadmap
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Animus Documentation" class="md-nav__button md-logo" aria-label="Animus Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Animus Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AreteDriver/animus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AreteDriver/animus
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/learning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Learning Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/proactive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proactive Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/citizen-zero/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citizen Zero
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../architecture/decisions/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/decisions/ADR-001/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-001
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/decisions/ADL-20260618-001/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADL-20260618-001
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/standards/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standards
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../packages/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Packages
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/forge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Forge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/quorum/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quorum
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/bootstrap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/kernel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kernel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/pwa/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PWA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/contracts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contracts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operators
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operators
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/local-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Local Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../reference/whitepapers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Whitepapers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Whitepapers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../G1_EVIDENCE_BASELINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    G1 Evidence Baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Roadmap
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/current/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Current
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidence-framework-maturity-stages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidence Framework Maturity Stages
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#subsystem-by-subsystem-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subsystem-by-Subsystem Assessment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Subsystem-by-Subsystem Assessment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-session-steward-005" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Session Steward (005)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-intelligence-citizen-006" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Intelligence Citizen (006)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-harvester-007" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Harvester (007)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-abstraction-citizen-008" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Abstraction Citizen (008)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-pattern-citizen-009" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Pattern Citizen (009)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-first-principles-citizen-010" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. First-Principles Citizen (010)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-architecture-citizen-011" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Architecture Citizen (011)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-research-guild-orchestrator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Research Guild Orchestrator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-meta-thinker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Meta-Thinker
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-ace-router-providerrouter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. ACE-Router / ProviderRouter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-atlas-rubric-eval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. ATLAS Rubric Eval
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-tool-auto-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Tool Auto-Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-media-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Media Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-daemon-mode-p3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Daemon Mode (P3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary Matrix
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidence-coverage-kpi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidence Coverage KPI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#priority-gaps-ranked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Priority Gaps (Ranked)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reproduce-this-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproduce This Baseline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/AreteDriver/animus/blob/main/docs/metrics/G2_EVIDENCE_BASELINE.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="g2-evidence-coverage-baseline">G2 Evidence Coverage Baseline<a class="headerlink" href="#g2-evidence-coverage-baseline" title="Anchor link to this section">&para;</a></h1>
+<p><strong>Date:</strong> 2026-07-14
+<strong>Animus Version:</strong> v2.3 Mind Foundation
+<strong>Baseline ID:</strong> <code>ADL-20260714-G2-BASELINE</code>
+<strong>Target:</strong> Establish evidence maturity baseline for all Generation 2 Research Foundation subsystems</p>
+<hr />
+<h2 id="scope">Scope<a class="headerlink" href="#scope" title="Anchor link to this section">&para;</a></h2>
+<p>G2 = <strong>Research Foundation Generation</strong> — subsystems that transform external observations into reusable architectural principles, enable autonomous background operation, and improve routing/evaluation quality.</p>
+<p>Subsystems audited:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Subsystem</th>
+<th>Layer</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Session Steward</strong> (005)</td>
+<td>Society</td>
+<td>Retrospective session telemetry auditor; 8 heuristics for policy optimization</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Intelligence Citizen</strong> (006)</td>
+<td>Society</td>
+<td>Ported Dossier/RedOPS capabilities — security intelligence and threat analysis</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Harvester</strong> (007)</td>
+<td>Society</td>
+<td>Collects raw sources (papers, repos, podcasts, conversations)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Abstraction Citizen</strong> (008)</td>
+<td>Society</td>
+<td>Extracts mechanisms and discards implementation details</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Pattern Citizen</strong> (009)</td>
+<td>Society</td>
+<td>Finds recurring structures across many abstractions</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>First-Principles Citizen</strong> (010)</td>
+<td>Society</td>
+<td>Reduces patterns to fundamental engineering truths</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Architecture Citizen</strong> (011)</td>
+<td>Society</td>
+<td>Drafts concrete proposals for Animus adoption from distilled principles</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Research Guild Orchestrator</strong></td>
+<td>Society</td>
+<td>Coordinates 6-stage pipeline (Harvester → Architecture → Forge)</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Meta-Thinker</strong></td>
+<td>Mind</td>
+<td>Strategic oversight: anomaly detection, signal generation, cognitive loop injection</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>ACE-Router / ProviderRouter</strong></td>
+<td>Mind</td>
+<td>History-aware provider selection with trajectory-based scoring</td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>ATLAS Rubric Eval</strong></td>
+<td>Factory</td>
+<td>Structured dimension scoring for eval rewards; replaces scalar LLM-as-judge</td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Tool Auto-Discovery</strong></td>
+<td>Factory</td>
+<td>Dynamic tool registration from MCP servers, OpenAPI specs, local scripts</td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Media Pipeline</strong></td>
+<td>Factory</td>
+<td>Gap-gated media ingestion using Research Guild as downstream gate</td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>Daemon Mode</strong> (P3)</td>
+<td>Kernel</td>
+<td>Persistent local agent: ResourceGuard, SessionManager, TaskScheduler</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="evidence-framework-maturity-stages">Evidence Framework Maturity Stages<a class="headerlink" href="#evidence-framework-maturity-stages" title="Anchor link to this section">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Name</th>
+<th>Criteria</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><strong>Concept</strong></td>
+<td>Design doc exists</td>
+</tr>
+<tr>
+<td>1</td>
+<td><strong>Scaffolded</strong></td>
+<td>Code structure in place</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Implemented</strong></td>
+<td>Logic complete, compiles/runs</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Tested</strong></td>
+<td>Unit/integration tests pass</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Validated</strong></td>
+<td>Evaluated against rubric</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Verified</strong></td>
+<td>Adversarial review passed</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Self-improving</strong></td>
+<td>Citizens actively improve it</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="subsystem-by-subsystem-assessment">Subsystem-by-Subsystem Assessment<a class="headerlink" href="#subsystem-by-subsystem-assessment" title="Anchor link to this section">&para;</a></h2>
+<h3 id="1-session-steward-005">1. Session Steward (005)<a class="headerlink" href="#1-session-steward-005" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- Observes session telemetry and detects 8 inefficiency patterns (H1–H8)
+- Generates evidence-backed policy diffs with before/after values
+- Integrates with daemon scheduler for recurring audits
+- Produces improvement proposals routed through standard queue</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Unit tests | <code>packages/core/tests/test_session_steward.py</code> (53 tests) | ✅ <strong>PASS</strong> |
+| Heuristic coverage | H1–H3 fully implemented; H4–H8 completed 2026-07-14 | ✅ <strong>VERIFIED</strong> |
+| Policy diff generation | 8 heuristics → concrete config changes | ✅ <strong>VERIFIED</strong> |
+| Daemon integration | <code>create_daemon_task()</code> registers recurring audit | ✅ <strong>IMPLEMENTED</strong> |
+| Live usage | No approved proposal yet (needs ≥5 sessions of telemetry) | 🟡 <strong>PARTIAL</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>3 — Tested</strong> (all heuristics implemented and tested; needs live telemetry to reach Stage 4+)</p>
+<p><strong>Gaps:</strong>
+- Needs real SessionController telemetry to validate H4–H8 in production
+- No approved proposal through the full pipeline yet</p>
+<hr />
+<h3 id="2-intelligence-citizen-006">2. Intelligence Citizen (006)<a class="headerlink" href="#2-intelligence-citizen-006" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- Ports Dossier and RedOPS capabilities into Animus
+- Scans codebases for security patterns, dependency vulnerabilities
+- Produces intelligence reports with risk scoring
+- Wired into MCP and CLI</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Unit tests | <code>packages/core/tests/test_citizens.py</code> — TestIntelligenceCitizen (24 tests) | ✅ <strong>PASS</strong> |
+| MCP wiring | <code>animus_intelligence_scan</code>, <code>animus_intelligence_report</code> tools | ✅ <strong>VERIFIED</strong> |
+| CLI wiring | <code>animus intelligence</code> command | ✅ <strong>VERIFIED</strong> |
+| Live usage | No approved proposal yet | 🟡 <strong>PARTIAL</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>3 — Tested</strong></p>
+<p><strong>Gaps:</strong>
+- Needs real codebase scan on a target with known vulnerabilities to validate detection accuracy
+- No live proposal through the full pipeline yet</p>
+<hr />
+<h3 id="3-harvester-007">3. Harvester (007)<a class="headerlink" href="#3-harvester-007" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- Collects raw sources from repos, papers, podcasts, conversations
+- Stores sources in memory layer with metadata
+- Integrates with <code>lugh.repos.harvest_repo</code> for quick/deep scans</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Unit tests | <code>packages/core/tests/test_citizens.py</code> — TestHarvesterCitizen (22 tests) | ✅ <strong>PASS</strong> |
+| CLI wiring | <code>animus harvest</code> command | ✅ <strong>VERIFIED</strong> |
+| MCP wiring | <code>animus_harvest_scan</code>, <code>animus_harvest_list</code> tools | ✅ <strong>VERIFIED</strong> |
+| Live usage | Harvests performed on local repos during Research Guild pipeline | ✅ <strong>VERIFIED</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>4 — Validated</strong> (live harvesting works, integrated into Guild pipeline)</p>
+<p><strong>Gaps:</strong>
+- No independent benchmark of harvest quality vs. manual source curation
+- Deep harvest mode not stress-tested on large repos (&gt;100K LOC)</p>
+<hr />
+<h3 id="4-abstraction-citizen-008">4. Abstraction Citizen (008)<a class="headerlink" href="#4-abstraction-citizen-008" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- Extracts mechanisms from harvested sources
+- Discards implementation details, keeps universal ideas
+- Produces <code>AbstractionArtifact</code> with confidence scoring</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Unit tests | <code>packages/core/tests/test_citizens.py</code> — TestAbstractionCitizen (23 tests) | ✅ <strong>PASS</strong> |
+| CLI wiring | <code>animus abstract</code> command | ✅ <strong>VERIFIED</strong> |
+| MCP wiring | <code>animus_abstract_sources</code>, <code>animus_abstract_list</code> tools | ✅ <strong>VERIFIED</strong> |
+| Live usage | Runs in Research Guild pipeline stage 2 | ✅ <strong>VERIFIED</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>4 — Validated</strong></p>
+<p><strong>Gaps:</strong>
+- Abstraction quality not independently benchmarked
+- No adversarial test: does it correctly discard domain-specific noise?</p>
+<hr />
+<h3 id="5-pattern-citizen-009">5. Pattern Citizen (009)<a class="headerlink" href="#5-pattern-citizen-009" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- Finds recurring structures across abstractions
+- Produces <code>PatternMatch</code> with cross-source evidence
+- Ranks patterns by frequency and confidence</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Unit tests | <code>packages/core/tests/test_citizens.py</code> — TestPatternCitizen (47 tests) | ✅ <strong>PASS</strong> |
+| CLI wiring | <code>animus pattern</code> command | ✅ <strong>VERIFIED</strong> |
+| MCP wiring | <code>animus_pattern_find</code>, <code>animus_pattern_list</code> tools | ✅ <strong>VERIFIED</strong> |
+| Live usage | Runs in Research Guild pipeline stage 3 | ✅ <strong>VERIFIED</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>4 — Validated</strong></p>
+<p><strong>Gaps:</strong>
+- Pattern detection thresholds not calibrated against real multi-source inputs
+- No benchmark for false-positive rate (spurious pattern matches)</p>
+<hr />
+<h3 id="6-first-principles-citizen-010">6. First-Principles Citizen (010)<a class="headerlink" href="#6-first-principles-citizen-010" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- Reduces patterns to fundamental engineering truths
+- Produces <code>FirstPrinciple</code> with justification chain
+- Resolves contradictions between derived principles</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Implementation | <code>packages/core/animus/citizens/first_principles.py</code> | ✅ <strong>IMPLEMENTED</strong> |
+| Unit tests | No dedicated test file; tested via Research Guild integration | 🟡 <strong>PARTIAL</strong> |
+| Live usage | Runs in Research Guild pipeline stage 4 | ✅ <strong>VERIFIED</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>2 — Implemented</strong> (logic complete, but no dedicated test suite)</p>
+<p><strong>Gaps:</strong>
+- Needs dedicated unit tests (target: 15+ tests)
+- Contradiction resolution logic not independently verified</p>
+<hr />
+<h3 id="7-architecture-citizen-011">7. Architecture Citizen (011)<a class="headerlink" href="#7-architecture-citizen-011" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- Drafts concrete improvement proposals from distilled principles
+- Performs gap analysis against Animus architecture
+- Generates <code>ImprovementProposal</code> with evidence and risk assessment</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Unit tests | <code>packages/core/tests/test_citizens.py</code> — TestArchitectureCitizen (28 tests) | ✅ <strong>PASS</strong> |
+| CLI wiring | <code>animus architecture</code> command | ✅ <strong>VERIFIED</strong> |
+| MCP wiring | <code>animus_architecture_propose</code>, <code>animus_architecture_list</code> tools | ✅ <strong>VERIFIED</strong> |
+| Live usage | Runs in Research Guild pipeline stage 5; 4 harvest proposals implemented | ✅ <strong>VERIFIED</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>4 — Validated</strong></p>
+<p><strong>Gaps:</strong>
+- Gap analysis scoring weights not calibrated against real ADL decisions
+- No benchmark for proposal quality vs. human architect</p>
+<hr />
+<h3 id="8-research-guild-orchestrator">8. Research Guild Orchestrator<a class="headerlink" href="#8-research-guild-orchestrator" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- Coordinates 6-stage citizen pipeline end-to-end
+- Handles skip-harvester mode for memory-only runs
+- Produces <code>GuildPipelineReport</code> with stage lineage</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Unit tests | <code>packages/core/tests/test_citizens.py</code> — TestResearchGuildOrchestrator (6 tests) | ✅ <strong>PASS</strong> |
+| CLI wiring | <code>animus research-guild</code> command | ✅ <strong>VERIFIED</strong> |
+| MCP wiring | <code>animus_research_guild_run</code> tool | ✅ <strong>VERIFIED</strong> |
+| Live usage | Full pipeline runs: harvester → abstraction → pattern → first-principles → architecture | ✅ <strong>VERIFIED</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>4 — Validated</strong></p>
+<p><strong>Gaps:</strong>
+- Only 6 tests — needs more coverage for error paths (stage failure, partial results)
+- No benchmark for end-to-end latency on real multi-source batches</p>
+<hr />
+<h3 id="9-meta-thinker">9. Meta-Thinker<a class="headerlink" href="#9-meta-thinker" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- Detects CircularToolUse, RepeatedFailures, GoalDrift, Stagnation
+- Emits signals: Replan, Halt, Escalate, InjectBrief
+- Sliding window event history (max 500 events)</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Unit tests | <code>packages/core/tests/test_meta_thinker.py</code> (18 tests) | ✅ <strong>PASS</strong> |
+| Anomaly detectors | 4 detectors with configurable thresholds | ✅ <strong>IMPLEMENTED</strong> |
+| Signal generation | All 4 signal types verified | ✅ <strong>VERIFIED</strong> |
+| Live usage | Integrated into Head loop via <code>observe()</code> / <code>check()</code> | ✅ <strong>VERIFIED</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>4 — Validated</strong></p>
+<p><strong>Gaps:</strong>
+- No adversarial test for false-positive rate on normal tool usage patterns
+- Goal drift detection relies on keyword overlap; needs semantic similarity benchmark</p>
+<hr />
+<h3 id="10-ace-router-providerrouter">10. ACE-Router / ProviderRouter<a class="headerlink" href="#10-ace-router-providerrouter" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- History-aware provider selection based on trajectory scoring
+- Graph-based provider performance tracking
+- Supports exploration (10% non-optimal routing for data gathering)
+- Post-hoc quality score updates from rubric eval</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Unit tests | <code>packages/core/tests/test_routing.py</code> (28 tests) | ✅ <strong>PASS</strong> |
+| Graph operations | Provider registration, outcome recording, edge similarity | ✅ <strong>VERIFIED</strong> |
+| Routing decisions | Exploration vs. exploitation, threshold fallback | ✅ <strong>VERIFIED</strong> |
+| Quality updates | <code>update_quality_score()</code> retroactive scoring | ✅ <strong>VERIFIED</strong> |
+| Live usage | Wired into CognitiveLayer; routes real requests | ✅ <strong>VERIFIED</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>4 — Validated</strong></p>
+<p><strong>Gaps:</strong>
+- No benchmark comparing trajectory routing vs. static keyword matching on real task distributions
+- Exploration rate (10%) not calibrated against cost/quality tradeoff</p>
+<hr />
+<h3 id="11-atlas-rubric-eval">11. ATLAS Rubric Eval<a class="headerlink" href="#11-atlas-rubric-eval" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- Structured dimension scoring (5-level scale: Critical → Excellent)
+- Per-dimension and batch judge modes
+- Reward aggregation for reinforcement finetuning
+- Mock judge fallback when providers unavailable</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Unit tests | <code>packages/core/tests/test_eval_rubric.py</code> (30 tests) | ✅ <strong>PASS</strong> |
+| Rubric model | Dimension, Rubric, Score, ScoreLevel with full lifecycle | ✅ <strong>VERIFIED</strong> |
+| Judge | <code>RubricJudge</code> with per-dimension and batch scoring | ✅ <strong>VERIFIED</strong> |
+| Rewards | <code>RewardAggregator</code> with shaping, thresholds, penalties | ✅ <strong>VERIFIED</strong> |
+| Live usage | Eval calibration 2026-07-06 used rubric scores | ✅ <strong>VERIFIED</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>4 — Validated</strong></p>
+<p><strong>Gaps:</strong>
+- No benchmark of judge variance across multiple judge model sizes (4B vs. 14B vs. cloud)
+- Personal-quality rubric not yet calibrated against human ratings</p>
+<hr />
+<h3 id="12-tool-auto-discovery">12. Tool Auto-Discovery<a class="headerlink" href="#12-tool-auto-discovery" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- MCP scanner (SSE/stdio), OpenAPI ingestion, annotated script discovery
+- 4-dimension schema validator
+- Hash-based deduplication
+- Persistence across daemon restarts</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Unit tests | <code>packages/core/tests/test_discovery.py</code> (41 tests) | ✅ <strong>PASS</strong> |
+| Scanners | MCP, OpenAPI, Script discovery all tested | ✅ <strong>VERIFIED</strong> |
+| Validator | Schema validation with quality gates | ✅ <strong>VERIFIED</strong> |
+| Orchestrator | DiscoveryRun with deduplication and persistence | ✅ <strong>VERIFIED</strong> |
+| Daemon integration | Scheduled via <code>TaskScheduler</code> | ✅ <strong>VERIFIED</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>4 — Validated</strong></p>
+<p><strong>Gaps:</strong>
+- No benchmark for discovery accuracy on real MCP server ecosystems
+- OpenAPI ingestion not tested against complex schemas (nested objects, unions)</p>
+<hr />
+<h3 id="13-media-pipeline">13. Media Pipeline<a class="headerlink" href="#13-media-pipeline" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- Gap-gated ingestion: Research Guild filters before media processing
+- ProposalQueue integration for approved media proposals
+- Daemon scheduler integration for background processing</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Unit tests | <code>packages/core/tests/test_media_pipeline.py</code> (32 tests) | ✅ <strong>PASS</strong> |
+| Gap gating | Ogma gap detection triggers Research Guild pipeline | ✅ <strong>VERIFIED</strong> |
+| Proposal queue | Media proposals routed through approval lifecycle | ✅ <strong>VERIFIED</strong> |
+| Daemon wiring | <code>create_daemon_task()</code> schedules background processing | ✅ <strong>VERIFIED</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>4 — Validated</strong></p>
+<p><strong>Gaps:</strong>
+- No end-to-end test with real media file ingestion
+- Gap detection thresholds not calibrated against real content streams</p>
+<hr />
+<h3 id="14-daemon-mode-p3">14. Daemon Mode (P3)<a class="headerlink" href="#14-daemon-mode-p3" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Claims:</strong>
+- PID file singleton prevents multi-instance races
+- ResourceGuard: sliding-window token budgets, emergency stop
+- SessionManager: warm session JSON persistence
+- TaskScheduler: interval/cron/one-shot scheduling
+- Signal-safe shutdown (SIGTERM/SIGINT)</p>
+<p><strong>Evidence:</strong>
+| Type | Source | Status |
+|---|---|---|
+| Unit tests | <code>packages/core/tests/test_daemon.py</code> (36 tests) | ✅ <strong>PASS</strong> |
+| ResourceGuard | Token budgets, slot acquisition, emergency stop | ✅ <strong>VERIFIED</strong> |
+| SessionManager | Warm session persistence, automatic pruning | ✅ <strong>VERIFIED</strong> |
+| TaskScheduler | Interval/cron/one-shot scheduling | ✅ <strong>VERIFIED</strong> |
+| Signal safety | SIGTERM/SIGINT graceful shutdown | ✅ <strong>VERIFIED</strong> |
+| Live usage | Runs as background process; daemon tasks scheduled | ✅ <strong>VERIFIED</strong> |</p>
+<p><strong>Maturity Stage:</strong> <strong>4 — Validated</strong></p>
+<p><strong>Gaps:</strong>
+- No stress test with 100+ concurrent scheduled tasks
+- SessionManager warm-session replay not benchmarked for latency</p>
+<hr />
+<h2 id="summary-matrix">Summary Matrix<a class="headerlink" href="#summary-matrix" title="Anchor link to this section">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Subsystem</th>
+<th>Stage</th>
+<th>Tests</th>
+<th>Live Usage</th>
+<th>Evidence Coverage</th>
+<th>Blocking Gaps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Session Steward (005)</td>
+<td>3</td>
+<td>✅ 53</td>
+<td>🟡 Needs telemetry</td>
+<td>70%</td>
+<td>Needs live proposal</td>
+</tr>
+<tr>
+<td>Intelligence Citizen (006)</td>
+<td>3</td>
+<td>✅ 24</td>
+<td>🟡 Partial</td>
+<td>60%</td>
+<td>Needs real target scan</td>
+</tr>
+<tr>
+<td>Harvester (007)</td>
+<td>4</td>
+<td>✅ 22</td>
+<td>✅ Live</td>
+<td>80%</td>
+<td>Benchmark quality</td>
+</tr>
+<tr>
+<td>Abstraction Citizen (008)</td>
+<td>4</td>
+<td>✅ 23</td>
+<td>✅ Live</td>
+<td>80%</td>
+<td>Benchmark quality</td>
+</tr>
+<tr>
+<td>Pattern Citizen (009)</td>
+<td>4</td>
+<td>✅ 47</td>
+<td>✅ Live</td>
+<td>80%</td>
+<td>False-positive rate</td>
+</tr>
+<tr>
+<td>First-Principles Citizen (010)</td>
+<td>2</td>
+<td>🟡 None dedicated</td>
+<td>✅ Live</td>
+<td>50%</td>
+<td><strong>Needs test suite</strong></td>
+</tr>
+<tr>
+<td>Architecture Citizen (011)</td>
+<td>4</td>
+<td>✅ 28</td>
+<td>✅ Live</td>
+<td>80%</td>
+<td>Benchmark quality</td>
+</tr>
+<tr>
+<td>Research Guild Orchestrator</td>
+<td>4</td>
+<td>✅ 6</td>
+<td>✅ Live</td>
+<td>75%</td>
+<td>Error path coverage</td>
+</tr>
+<tr>
+<td>Meta-Thinker</td>
+<td>4</td>
+<td>✅ 18</td>
+<td>✅ Live</td>
+<td>80%</td>
+<td>False-positive benchmark</td>
+</tr>
+<tr>
+<td>ACE-Router</td>
+<td>4</td>
+<td>✅ 28</td>
+<td>✅ Live</td>
+<td>80%</td>
+<td>Routing benchmark</td>
+</tr>
+<tr>
+<td>ATLAS Rubric Eval</td>
+<td>4</td>
+<td>✅ 30</td>
+<td>✅ Live</td>
+<td>85%</td>
+<td>Judge variance benchmark</td>
+</tr>
+<tr>
+<td>Tool Auto-Discovery</td>
+<td>4</td>
+<td>✅ 41</td>
+<td>✅ Live</td>
+<td>80%</td>
+<td>Real-ecosystem accuracy</td>
+</tr>
+<tr>
+<td>Media Pipeline</td>
+<td>4</td>
+<td>✅ 32</td>
+<td>✅ Live</td>
+<td>80%</td>
+<td>Real media end-to-end</td>
+</tr>
+<tr>
+<td>Daemon Mode</td>
+<td>4</td>
+<td>✅ 36</td>
+<td>✅ Live</td>
+<td>80%</td>
+<td>Stress test</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="evidence-coverage-kpi">Evidence Coverage KPI<a class="headerlink" href="#evidence-coverage-kpi" title="Anchor link to this section">&para;</a></h2>
+<p><strong>Formula:</strong>
+<code>Coverage = (Σ subsystem_coverage_scores) / (number of subsystems × 100)</code></p>
+<table>
+<thead>
+<tr>
+<th>Calculation</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Session Steward</td>
+<td>70%</td>
+</tr>
+<tr>
+<td>Intelligence Citizen</td>
+<td>60%</td>
+</tr>
+<tr>
+<td>Harvester</td>
+<td>80%</td>
+</tr>
+<tr>
+<td>Abstraction Citizen</td>
+<td>80%</td>
+</tr>
+<tr>
+<td>Pattern Citizen</td>
+<td>80%</td>
+</tr>
+<tr>
+<td>First-Principles Citizen</td>
+<td>50%</td>
+</tr>
+<tr>
+<td>Architecture Citizen</td>
+<td>80%</td>
+</tr>
+<tr>
+<td>Research Guild Orchestrator</td>
+<td>75%</td>
+</tr>
+<tr>
+<td>Meta-Thinker</td>
+<td>80%</td>
+</tr>
+<tr>
+<td>ACE-Router</td>
+<td>80%</td>
+</tr>
+<tr>
+<td>ATLAS Rubric Eval</td>
+<td>85%</td>
+</tr>
+<tr>
+<td>Tool Auto-Discovery</td>
+<td>80%</td>
+</tr>
+<tr>
+<td>Media Pipeline</td>
+<td>80%</td>
+</tr>
+<tr>
+<td>Daemon Mode</td>
+<td>80%</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>1080%</strong></td>
+</tr>
+<tr>
+<td><strong>KPI</strong></td>
+<td><strong>77.1%</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Target for G2 Baseline:</strong> ≥70% coverage with zero Stage 0–1 subsystems.</p>
+<p><strong>Status:</strong> ✅ <strong>SATISFIED</strong> (77.1% coverage, all subsystems ≥ Stage 2, zero Stage 0–1)</p>
+<p><strong>Caveat:</strong> First-Principles Citizen is at Stage 2 (Implemented but untested). This is the highest-priority gap.</p>
+<hr />
+<h2 id="priority-gaps-ranked">Priority Gaps (Ranked)<a class="headerlink" href="#priority-gaps-ranked" title="Anchor link to this section">&para;</a></h2>
+<ol>
+<li><strong>First-Principles Citizen — needs dedicated test suite</strong> (15+ tests to reach Stage 3)</li>
+<li><strong>Session Steward — needs live telemetry &gt;5 sessions</strong> to produce first approved proposal</li>
+<li><strong>Intelligence Citizen — needs real vulnerability scan</strong> on target with known issues</li>
+<li><strong>Research Guild Orchestrator — needs error-path tests</strong> (stage failure handling)</li>
+<li><strong>First-Principles contradiction resolution</strong> — not independently verified</li>
+</ol>
+<hr />
+<h2 id="reproduce-this-baseline">Reproduce This Baseline<a class="headerlink" href="#reproduce-this-baseline" title="Anchor link to this section">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Session Steward</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>pytest<span class="w"> </span>packages/core/tests/test_session_steward.py<span class="w"> </span>-v
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Intelligence Citizen</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>pytest<span class="w"> </span>packages/core/tests/test_citizens.py::TestIntelligenceCitizen<span class="w"> </span>-v
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Harvester</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>pytest<span class="w"> </span>packages/core/tests/test_citizens.py::TestHarvesterCitizen<span class="w"> </span>-v
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Abstraction</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>pytest<span class="w"> </span>packages/core/tests/test_citizens.py::TestAbstractionCitizen<span class="w"> </span>-v
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># Pattern</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>pytest<span class="w"> </span>packages/core/tests/test_citizens.py::TestPatternCitizen<span class="w"> </span>-v
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="c1"># Architecture</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>pytest<span class="w"> </span>packages/core/tests/test_citizens.py::TestArchitectureCitizen<span class="w"> </span>-v
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="c1"># Research Guild</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>pytest<span class="w"> </span>packages/core/tests/test_citizens.py::TestResearchGuildOrchestrator<span class="w"> </span>-v
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="c1"># Meta-Thinker</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>pytest<span class="w"> </span>packages/core/tests/test_meta_thinker.py<span class="w"> </span>-v
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="c1"># ACE-Router</span>
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>pytest<span class="w"> </span>packages/core/tests/test_routing.py<span class="w"> </span>-v
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="c1"># ATLAS Rubric Eval</span>
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>pytest<span class="w"> </span>packages/core/tests/test_eval_rubric.py<span class="w"> </span>-v
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="c1"># Tool Auto-Discovery</span>
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>pytest<span class="w"> </span>packages/core/tests/test_discovery.py<span class="w"> </span>-v
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="c1"># Media Pipeline</span>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>pytest<span class="w"> </span>packages/core/tests/test_media_pipeline.py<span class="w"> </span>-v
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="c1"># Daemon Mode</span>
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>pytest<span class="w"> </span>packages/core/tests/test_daemon.py<span class="w"> </span>-v
+</span></code></pre></div>
+<hr />
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Anchor link to this section">&para;</a></h2>
+<ul>
+<li>[[animus-evidence-framework]] — Feature maturity stages and Evidence Coverage KPI definition</li>
+<li>[[animus-v23-mind-foundation-architecture]] — G1–G4 generational roadmap</li>
+<li><code>docs/metrics/G1_EVIDENCE_BASELINE.md</code> — G1 Mind Foundation baseline (81.1%)</li>
+<li><code>docs/metrics/CLAIMS_EVIDENCE_MATRIX.md</code> — External-facing claims mapping</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 AreteDriver
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/AreteDriver/animus" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/fdzQkrt8" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M492.5 69.8c-.2-.3-.4-.6-.8-.7-38.1-17.5-78.4-30-119.7-37.1-.4-.1-.8 0-1.1.1s-.6.4-.8.8c-5.5 9.9-10.5 20.2-14.9 30.6-44.6-6.8-89.9-6.8-134.4 0-4.5-10.5-9.5-20.7-15.1-30.6-.2-.3-.5-.6-.8-.8s-.7-.2-1.1-.2C162.5 39 122.2 51.5 84.1 69c-.3.1-.6.4-.8.7C7.1 183.5-13.8 294.6-3.6 404.2c0 .3.1.5.2.8s.3.4.5.6c44.4 32.9 94 58 146.8 74.2.4.1.8.1 1.1 0s.7-.4.9-.7c11.3-15.4 21.4-31.8 30-48.8.1-.2.2-.5.2-.8s0-.5-.1-.8-.2-.5-.4-.6-.4-.3-.7-.4c-15.8-6.1-31.2-13.4-45.9-21.9-.3-.2-.5-.4-.7-.6s-.3-.6-.3-.9 0-.6.2-.9.3-.5.6-.7c3.1-2.3 6.2-4.7 9.1-7.1.3-.2.6-.4.9-.4s.7 0 1 .1c96.2 43.9 200.4 43.9 295.5 0 .3-.1.7-.2 1-.2s.7.2.9.4c2.9 2.4 6 4.9 9.1 7.2.2.2.4.4.6.7s.2.6.2.9-.1.6-.3.9-.4.5-.6.6c-14.7 8.6-30 15.9-45.9 21.8-.2.1-.5.2-.7.4s-.3.4-.4.7-.1.5-.1.8.1.5.2.8c8.8 17 18.8 33.3 30 48.8.2.3.6.6.9.7s.8.1 1.1 0c52.9-16.2 102.6-41.3 147.1-74.2.2-.2.4-.4.5-.6s.2-.5.2-.8c12.3-126.8-20.5-236.9-86.9-334.5zm-302 267.7c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2m195.4 0c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.indexes", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.select", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

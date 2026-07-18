@@ -1,0 +1,3845 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+        <meta name="author" content="AreteDriver">
+      
+      
+        <link rel="canonical" href="https://aretedriver.github.io/animus/getting-started/interface-vision/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Animus — Bootstrap, Interface & UX Vision - Animus Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#animus-bootstrap-interface-ux-vision" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Animus Documentation" class="md-header__button md-logo" aria-label="Animus Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Animus Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Animus — Bootstrap, Interface &amp; UX Vision
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/AreteDriver/animus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AreteDriver/animus
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../quickstart/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../packages/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Packages
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contributing/setup/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Contributing
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operators/deployment/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Operators
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/cli-commands/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../metrics/G1_EVIDENCE_BASELINE/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Metrics
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../roadmap/current/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Roadmap
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Animus Documentation" class="md-nav__button md-logo" aria-label="Animus Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Animus Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AreteDriver/animus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AreteDriver/animus
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/learning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Learning Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/proactive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proactive Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/citizen-zero/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citizen Zero
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/packages/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../architecture/decisions/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/decisions/ADR-001/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-001
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/decisions/ADL-20260618-001/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADL-20260618-001
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/standards/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standards
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../packages/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packages
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Packages
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/forge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Forge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/quorum/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quorum
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/bootstrap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/kernel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kernel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/pwa/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PWA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../packages/contracts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contracts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operators
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operators
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/local-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Local Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operators/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../reference/whitepapers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Whitepapers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Whitepapers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../metrics/G1_EVIDENCE_BASELINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    G1 Evidence Baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Roadmap
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/current/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Current
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-bootstrap-mechanism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Bootstrap Mechanism
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Bootstrap Mechanism">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-what-it-does-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 What it does today
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-strengths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Strengths
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-weaknesses-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 Weaknesses / Gaps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-how-the-user-interacts-with-bootstrap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 How the user interacts with bootstrap
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-interface-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Interface Inventory
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Interface Inventory">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-surface-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Surface map
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-core-cli-python-m-animus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Core CLI (python -m animus)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-bootstrap-dashboard-localhost7700" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Bootstrap Dashboard (localhost:7700)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-pwa-packagespwa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 PWA (packages/pwa/)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-mcp-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 MCP Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#26-gateway-channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.6 Gateway Channels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-ux-ui-audit-honest-scores" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. UX / UI Audit — Honest Scores
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-interaction-model-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Interaction Model Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Interaction Model Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-the-exocortex-concept" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 The exocortex concept
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-current-model-app-you-launch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Current model: "App you launch"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-target-model-layer-that-surrounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Target model: "Layer that surrounds"
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-vision-true-to-concept" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Vision: "True to Concept"
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Vision: &#34;True to Concept&#34;">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-presence-always-there-never-in-the-way" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Presence — Always there, never in the way
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-memory-as-a-landscape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Memory as a landscape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-conversation-as-collaboration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Conversation as collaboration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54-initiative-without-intrusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 Initiative without intrusion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#55-cross-device-handoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.5 Cross-device handoff
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-roadmap-from-510-to-1010" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Roadmap: From 5/10 to 10/10
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Roadmap: From 5/10 to 10/10">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-i-design-foundation-weeks-14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase I — Design Foundation (weeks 1–4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-ii-pwa-the-daily-driver-weeks-38" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase II — PWA: The Daily Driver (weeks 3–8)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-iii-dashboard-redesign-weeks-610" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase III — Dashboard Redesign (weeks 6–10)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-iv-ambient-presence-weeks-914" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase IV — Ambient &amp; Presence (weeks 9–14)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-v-cross-device-continuity-weeks-1318" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase V — Cross-Device Continuity (weeks 13–18)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-vi-emotional-resonance-weeks-1722" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase VI — Emotional Resonance (weeks 17–22)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-vii-bootstrap-hardening-continuous-opportunistic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase VII — Bootstrap Hardening (continuous / opportunistic)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-success-metrics-1010-definition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Success Metrics (10/10 Definition)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-immediate-next-steps-what-to-do-monday" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Immediate Next Steps (What to do Monday)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-related-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Related Documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/AreteDriver/animus/blob/main/docs/getting-started/interface-vision.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="animus-bootstrap-interface-ux-vision">Animus — Bootstrap, Interface &amp; UX Vision<a class="headerlink" href="#animus-bootstrap-interface-ux-vision" title="Anchor link to this section">&para;</a></h1>
+<p><strong>Status:</strong> Canonical assessment · Created 2026-06-14 · Owner: ARETE<br />
+<strong>Scope:</strong> Bootstrap mechanism, every user-facing surface, honest UX audit, and the roadmap to make Animus feel like a true exocortex.</p>
+<hr />
+<h2 id="1-bootstrap-mechanism">1. Bootstrap Mechanism<a class="headerlink" href="#1-bootstrap-mechanism" title="Anchor link to this section">&para;</a></h2>
+<h3 id="11-what-it-does-today">1.1 What it does today<a class="headerlink" href="#11-what-it-does-today" title="Anchor link to this section">&para;</a></h3>
+<p>The bootstrap layer (<code>packages/bootstrap/</code>) is a self-contained install-and-run system. Its job is to take a raw machine and produce a running Animus daemon with zero manual configuration.</p>
+<p><strong>Flow:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>animus-bootstrap install
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  ├─ check deps (python 3.11+, pip, ollama/ffmpeg optional)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  ├─ install missing required deps via system package manager
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  ├─ register systemd / launchd / Windows service
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  ├─ run 9-step Rich wizard (welcome → identity → API keys → forge → memory
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  │   → device → sovereignty → channels)
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  ├─ start service
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  └─ open localhost:7700 dashboard
+</span></code></pre></div>
+<p><strong>Key components:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AnimusInstaller</code></td>
+<td><code>daemon/installer.py</code></td>
+<td>Detects OS/package manager, installs deps, registers services</td>
+</tr>
+<tr>
+<td><code>LinuxService</code> / <code>MacOSService</code> / <code>WindowsService</code></td>
+<td><code>daemon/platforms/*.py</code></td>
+<td>Generates systemd units, launchd plists, or Windows services</td>
+</tr>
+<tr>
+<td><code>AnimusWizard</code></td>
+<td><code>setup/wizard.py</code></td>
+<td>9-step TUI onboarding</td>
+</tr>
+<tr>
+<td><code>AnimusRuntime</code></td>
+<td><code>runtime.py</code></td>
+<td>Central orchestrator: boots identity, session manager, memory, tools, proactive engine, router, personas, gateway channels</td>
+</tr>
+<tr>
+<td>Dashboard app</td>
+<td><code>dashboard/app.py</code></td>
+<td>FastAPI + Jinja2 + HTMX + TailwindCSS, port 7700</td>
+</tr>
+<tr>
+<td><code>AnimusUpdater</code></td>
+<td><code>daemon/updater.py</code></td>
+<td>Checks GitHub for newer versions, applies updates</td>
+</tr>
+<tr>
+<td>Integrity gate</td>
+<td><code>daemon/__main__.py</code></td>
+<td>Refuses to boot if critical files drift (ed25519-signed manifest)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="12-strengths">1.2 Strengths<a class="headerlink" href="#12-strengths" title="Anchor link to this section">&para;</a></h3>
+<ul>
+<li><strong>One-command install.</strong> <code>animus-bootstrap install</code> is genuinely zero-config on a fresh Ubuntu/macOS machine.</li>
+<li><strong>Cross-platform services.</strong> systemd (Linux), launchd (macOS), and Windows service wrappers are all implemented.</li>
+<li><strong>Integrity on boot.</strong> The daemon verifies a cryptographic baseline before starting — tampered files → hard refusal with exit code 2/3.</li>
+<li><strong>gocryptfs vault integration.</strong> Encryption at rest is wired: <code>ExecStartPre</code> mounts the vault, <code>ExecStopPost</code> unmounts. TPM-sealed passphrase via <code>systemd-creds</code>.</li>
+<li><strong>Auto-updater.</strong> Version check against GitHub releases, with apply path.</li>
+</ul>
+<h3 id="13-weaknesses-gaps">1.3 Weaknesses / Gaps<a class="headerlink" href="#13-weaknesses-gaps" title="Anchor link to this section">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Severity</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wizard is terminal-only</td>
+<td>Medium</td>
+<td>Non-technical users hit a TUI before ever seeing a graphical interface. The first impression is a monospace wall of text.</td>
+</tr>
+<tr>
+<td>No install-time health verification</td>
+<td>Low</td>
+<td>After install, the service may fail silently (e.g., Ollama not running, API key invalid). The CLI says "started" but the runtime may be in degraded mode.</td>
+</tr>
+<tr>
+<td>Service logs are hard to reach</td>
+<td>Low</td>
+<td><code>journalctl --user -u animus</code> is the debug path. There's no <code>animus-bootstrap logs</code> or in-dashboard log viewer with search/filter.</td>
+</tr>
+<tr>
+<td>Updater is not transactional</td>
+<td>Medium</td>
+<td>Failed updates can leave the install in a half-updated state. No automatic rollback on update failure.</td>
+</tr>
+<tr>
+<td>No install sandbox / container path</td>
+<td>Low</td>
+<td>The only install path is system-native. No Docker/podman path for ephemeral or isolated installs.</td>
+</tr>
+<tr>
+<td>First-run identity generation is opaque</td>
+<td>Low</td>
+<td>The wizard asks for identity, but the resulting <code>CORE_VALUES.md</code> and identity files are invisible until the user knows to look in <code>~/.config/animus/identity/</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="14-how-the-user-interacts-with-bootstrap">1.4 How the user interacts with bootstrap<a class="headerlink" href="#14-how-the-user-interacts-with-bootstrap" title="Anchor link to this section">&para;</a></h3>
+<p><strong>Primary paths:</strong></p>
+<ol>
+<li><strong>First install:</strong> <code>animus-bootstrap install</code> → wizard → browser opens.</li>
+<li><strong>Daily ops:</strong> <code>animus-bootstrap start | stop | restart | status</code></li>
+<li><strong>Config tuning:</strong> <code>animus-bootstrap config get/set &lt;key&gt;</code></li>
+<li><strong>Channel mgmt:</strong> <code>animus-bootstrap channels enable/disable &lt;name&gt;</code></li>
+<li><strong>Persona mgmt:</strong> <code>animus-bootstrap personas add/list/delete/set-default</code></li>
+<li><strong>Feedback loop:</strong> <code>animus-bootstrap feedback add up/down</code> → <code>animus-bootstrap reflect</code></li>
+<li><strong>Direct dashboard:</strong> <code>animus-bootstrap dashboard</code> (skip service, run foreground)</li>
+</ol>
+<p><strong>Observation:</strong> Bootstrap is ops-first. It's excellent for the "install and administer" persona, but the <em>daily user</em> persona has no bootstrap interaction — they use the dashboard, PWA, or CLI.</p>
+<hr />
+<h2 id="2-interface-inventory">2. Interface Inventory<a class="headerlink" href="#2-interface-inventory" title="Anchor link to this section">&para;</a></h2>
+<h3 id="21-surface-map">2.1 Surface map<a class="headerlink" href="#21-surface-map" title="Anchor link to this section">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>┌─────────────────────────────────────────────────────────────────────────────┐
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>│                         USER INTERFACE SURFACES                              │
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├─────────────────────────────────────────────────────────────────────────────┤
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│  TERMINAL / CLI                                                             │
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>│  ├─ Core CLI          python -m animus          prompt-toolkit REPL       │
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>│  │                     40+ slash commands, rich panels, memory recall       │
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│  │                     think_with_tools() + approval callback              │
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>│  ├─ Bootstrap CLI     animus-bootstrap &lt;cmd&gt;    typer + rich tables        │
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>│  │                     install, setup, start, stop, status, dashboard     │
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>│  │                     config, channels, tools, proactive, automations     │
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>│  │                     personas, feedback, reflect                           │
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>│  └─ Forge CLI         animus-forge &lt;cmd&gt;        typer, workflow runner      │
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>│                       run, eval, compare, self-improve                        │
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>├─────────────────────────────────────────────────────────────────────────────┤
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>│  DESKTOP WEB                                                                  │
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>│  └─ Dashboard         http://localhost:7700     FastAPI + Jinja2 + HTMX     │
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>│                       20 pages: status, conversations, channels, config     │
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>│                       memory, logs, update, tools, automations, activity    │
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>│                       tasks, personas, routing, identity, proposals       │
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>│                       self-mod, forge, timers, feedback                    │
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>├─────────────────────────────────────────────────────────────────────────────┤
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>│  MOBILE / PWA                                                                 │
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>│  └─ PWA               https://host (or localhost)  React 19 + Vite          │
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>│                       4 views: Chat, Capture, Status, Personas              │
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>│                       WebSocket chat, push notifications, voice input       │
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>│                       share_target capture, bearer-token auth               │
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>├─────────────────────────────────────────────────────────────────────────────┤
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>│  IDE / EDITOR                                                                 │
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>│  └─ MCP Server        python -m animus.mcp_server  10 tools exposed         │
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>│                       memory (remember/recall/search/stats)                  │
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>│                       tasks (list/create/complete), brief, run_workflow      │
+</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>│                       Configured in ~/.claude/mcp.json                      │
+</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>├─────────────────────────────────────────────────────────────────────────────┤
+</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>│  MESSAGING / GATEWAY                                                          │
+</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>│  ├─ WebChat           WebSocket /ws/chat          Browser-based chat         │
+</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>│  ├─ Telegram          Bot token adapter          Bi-directional             │
+</span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a>│  ├─ Discord           Bot token adapter          Bi-directional             │
+</span><span id="__span-1-38"><a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>│  ├─ Slack             Bot token adapter          Bi-directional             │
+</span><span id="__span-1-39"><a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>│  ├─ Matrix            Client SDK adapter         Bi-directional             │
+</span><span id="__span-1-40"><a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>│  ├─ WhatsApp          Adapter stub               (not fully wired)          │
+</span><span id="__span-1-41"><a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a>│  ├─ Signal            Adapter stub               (not fully wired)          │
+</span><span id="__span-1-42"><a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>│  └─ Email             IMAP/SMTP adapter          Bi-directional             │
+</span><span id="__span-1-43"><a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a>├─────────────────────────────────────────────────────────────────────────────┤
+</span><span id="__span-1-44"><a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a>│  VOICE                                                                        │
+</span><span id="__span-1-45"><a id="__codelineno-1-45" name="__codelineno-1-45" href="#__codelineno-1-45"></a>│  └─ Core Voice        Whisper STT + pyttsx3/edge-tts TTS                     │
+</span><span id="__span-1-46"><a id="__codelineno-1-46" name="__codelineno-1-46" href="#__codelineno-1-46"></a>│                       /voice and /speak CLI commands                         │
+</span><span id="__span-1-47"><a id="__codelineno-1-47" name="__codelineno-1-47" href="#__codelineno-1-47"></a>│                       PWA speech recognition (Web Speech API)               │
+</span><span id="__span-1-48"><a id="__codelineno-1-48" name="__codelineno-1-48" href="#__codelineno-1-48"></a>└─────────────────────────────────────────────────────────────────────────────┘
+</span></code></pre></div>
+<h3 id="22-core-cli-python-m-animus">2.2 Core CLI (<code>python -m animus</code>)<a class="headerlink" href="#22-core-cli-python-m-animus" title="Anchor link to this section">&para;</a></h3>
+<p>The original interface. A prompt-toolkit REPL with:</p>
+<ul>
+<li><strong>Natural-language default:</strong> Type anything → routed to <code>think_with_tools()</code></li>
+<li><strong>Slash commands:</strong> <code>/help</code>, <code>/status</code>, <code>/stats</code>, <code>/memory</code>, <code>/tools</code>, <code>/voice</code>, <code>/speak</code>, <code>/calendar</code>, <code>/tasks</code>, <code>/build</code>, <code>/model</code>, <code>/auto</code>, <code>/quit</code></li>
+<li><strong>Rich output:</strong> Tables, panels, syntax-highlighted code</li>
+<li><strong>Memory recall:</strong> Every query is enriched with episodic/semantic/procedural recall</li>
+<li><strong>Approval gate:</strong> Sensitive tools prompt <code>Execute? [Y/n]</code> in terminal</li>
+<li><strong>Voice mode:</strong> <code>/voice</code> activates continuous listening</li>
+</ul>
+<p><strong>Verdict:</strong> Excellent for power users and developers. Poor for everyone else. It's a terminal app — intimidating, no discoverability, no visual hierarchy.</p>
+<h3 id="23-bootstrap-dashboard-localhost7700">2.3 Bootstrap Dashboard (<code>localhost:7700</code>)<a class="headerlink" href="#23-bootstrap-dashboard-localhost7700" title="Anchor link to this section">&para;</a></h3>
+<p>A FastAPI server serving server-rendered HTML with HTMX for partial updates. Dark theme (Tailwind custom colors: <code>#0f0f0f</code> bg, <code>#00ff88</code> accent, mono fonts).</p>
+<p><strong>Pages:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Purpose</th>
+<th>Quality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/</code> (home)</td>
+<td>Status cards: runtime, forge, memory, uptime</td>
+<td>Functional, utilitarian</td>
+</tr>
+<tr>
+<td><code>/conversations</code></td>
+<td>Chat via WebSocket or HTMX polling</td>
+<td>Basic message feed</td>
+</tr>
+<tr>
+<td><code>/channels</code></td>
+<td>Enable/disable messaging adapters</td>
+<td>Table of toggles</td>
+</tr>
+<tr>
+<td><code>/config</code></td>
+<td>View/edit config values</td>
+<td>Raw key-value editor</td>
+</tr>
+<tr>
+<td><code>/memory</code></td>
+<td>Browse/search memory</td>
+<td>Minimal</td>
+</tr>
+<tr>
+<td><code>/logs</code></td>
+<td>System logs</td>
+<td>Minimal</td>
+</tr>
+<tr>
+<td><code>/tools</code></td>
+<td>Registered tools + approval queue</td>
+<td>List view</td>
+</tr>
+<tr>
+<td><code>/automations</code></td>
+<td>Trigger/condition/action rules</td>
+<td>Minimal</td>
+</tr>
+<tr>
+<td><code>/activity</code></td>
+<td>Recent actions/events</td>
+<td>Feed</td>
+</tr>
+<tr>
+<td><code>/tasks</code></td>
+<td>Task list</td>
+<td>Minimal</td>
+</tr>
+<tr>
+<td><code>/personas</code></td>
+<td>Persona profiles</td>
+<td>Basic table + forms</td>
+</tr>
+<tr>
+<td><code>/routing</code></td>
+<td>Channel → persona routing rules</td>
+<td>Basic</td>
+</tr>
+<tr>
+<td><code>/identity</code></td>
+<td>Identity file viewer</td>
+<td>Raw text display</td>
+</tr>
+<tr>
+<td><code>/proposals</code></td>
+<td>Identity change proposals (20% threshold)</td>
+<td>Basic</td>
+</tr>
+<tr>
+<td><code>/self-mod</code></td>
+<td>Self-improvement status</td>
+<td>Minimal</td>
+</tr>
+<tr>
+<td><code>/forge</code></td>
+<td>Forge workflow status/link</td>
+<td>Redirect hint</td>
+</tr>
+<tr>
+<td><code>/timers</code></td>
+<td>Scheduled timers</td>
+<td>Minimal</td>
+</tr>
+<tr>
+<td><code>/feedback</code></td>
+<td>Feedback entries + stats</td>
+<td>Table</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Verdict:</strong> An ops dashboard masquerading as a user interface. It has <em>everything</em> but the kitchen sink, which means daily tasks are buried under admin cruft. The chat page exists but is not the default landing. The visual design is consistent (dark cyber) but rigid — no customization, no density modes, no collapsible sections.</p>
+<h3 id="24-pwa-packagespwa">2.4 PWA (<code>packages/pwa/</code>)<a class="headerlink" href="#24-pwa-packagespwa" title="Anchor link to this section">&para;</a></h3>
+<p>React 19 + Vite + TypeScript. Built as a true PWA with service worker, manifest, offline support, push notifications, and <code>share_target</code>.</p>
+<p><strong>Views:</strong></p>
+<table>
+<thead>
+<tr>
+<th>View</th>
+<th>Features</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Chat</strong></td>
+<td>WebSocket real-time, message history, voice input (Web Speech API), offline queuing, "Thinking..." indicator</td>
+</tr>
+<tr>
+<td><strong>Capture</strong></td>
+<td>Quick text entry → stored to memory, share_target integration (receive from other apps)</td>
+</tr>
+<tr>
+<td><strong>Status</strong></td>
+<td>Health polling, component list, push toggle, connection state</td>
+</tr>
+<tr>
+<td><strong>Personas</strong></td>
+<td>List personas, activate/deactivate</td>
+</tr>
+<tr>
+<td><strong>Login</strong></td>
+<td>Bearer token entry, validated against <code>/api/health</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architecture strengths:</strong>
+- WebSocket with offline queuing (messages buffered until reconnect)
+- Voice input via browser SpeechRecognition
+- Push subscription via VAPID
+- Share target for rapid capture from any mobile app
+- Responsive CSS with safe-area insets for notched phones</p>
+<p><strong>Verdict:</strong> The most "modern" interface, but it's <em>thin</em>. Four views is not enough for a daily exocortex. No memory browsing, no tool invocation UI, no calendar view, no task management, no workflow trigger, no decision support, no settings. It feels like a chat app with a capture button, not a cognitive layer.</p>
+<h3 id="25-mcp-server">2.5 MCP Server<a class="headerlink" href="#25-mcp-server" title="Anchor link to this section">&para;</a></h3>
+<p>Invisible to the eye, but critical. Provides 10 tools to Claude Code:</p>
+<ul>
+<li><code>animus_remember</code>, <code>animus_recall</code>, <code>animus_search_tags</code>, <code>animus_memory_stats</code></li>
+<li><code>animus_list_tasks</code>, <code>animus_create_task</code>, <code>animus_complete_task</code></li>
+<li><code>animus_brief</code> (context briefing)</li>
+<li><code>animus_run_workflow</code> (trigger Forge pipelines)</li>
+</ul>
+<p><strong>Verdict:</strong> Correctly designed. The integration is ambient — Claude Code sessions automatically have Animus memory without opening a separate window. This is the <em>closest</em> the system gets to true exocortex behavior: present without being opened.</p>
+<h3 id="26-gateway-channels">2.6 Gateway Channels<a class="headerlink" href="#26-gateway-channels" title="Anchor link to this section">&para;</a></h3>
+<p>Eight adapters. In practice, WebChat (browser), Telegram, Discord, and Email are the most likely to be used. WhatsApp and Signal are stubs.</p>
+<p><strong>Interaction model:</strong> Message-in → <code>IntelligentRouter</code> → cognitive backend → response-out.</p>
+<p><strong>Verdict:</strong> Powerful but under-designed from a UX standpoint. Each channel is a <em>pipe</em>, not a <em>surface</em>. There's no channel-native UI optimization (e.g., Discord embeds for memory cards, Telegram inline keyboards for approvals). The response is always plain text.</p>
+<hr />
+<h2 id="3-ux-ui-audit-honest-scores">3. UX / UI Audit — Honest Scores<a class="headerlink" href="#3-ux-ui-audit-honest-scores" title="Anchor link to this section">&para;</a></h2>
+<p>Scored 1–10. A 10 means "best in class, rivals commercial products." A 5 means "functional, not delightful." Below 5 means "friction blocks usage."</p>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Visual Coherence</strong></td>
+<td>4</td>
+<td>Three independent stacks (Rich/CLI, Tailwind/HTMX, React/CSS). Colors, typography, spacing, and motion do not translate across surfaces. No shared design system or component library.</td>
+</tr>
+<tr>
+<td><strong>Information Architecture</strong></td>
+<td>5</td>
+<td>Dashboard has 20 pages with no hierarchy — everything is equally prominent in the sidebar. No "simple mode." PWA has the opposite problem: too few entry points. CLI has 40+ commands with no command palette or fuzzy search.</td>
+</tr>
+<tr>
+<td><strong>Mobile Experience</strong></td>
+<td>5</td>
+<td>PWA is the only mobile path. It's installable, offline-capable, and has push. But it's missing too many features to be a daily driver. Dashboard is unusable on phone (sidebar, tables, small text).</td>
+</tr>
+<tr>
+<td><strong>Desktop Experience</strong></td>
+<td>5</td>
+<td>Dashboard is desktop-optimized but admin-heavy. No desktop native wrapper (Electron/Tauri), so no system tray, global shortcut, or native notifications.</td>
+</tr>
+<tr>
+<td><strong>Chat / Conversation</strong></td>
+<td>6</td>
+<td>Functional across CLI, dashboard, PWA, and channels. But: no markdown rendering in PWA, no code highlighting, no file attachments, no branching threads, no inline tool results, no message editing. "Thinking..." is the only status indicator.</td>
+</tr>
+<tr>
+<td><strong>Voice Interaction</strong></td>
+<td>5</td>
+<td>Core has Whisper + TTS. PWA has Web Speech API input. But no always-listening mode, no wake word, no voice-first UI (everything else requires screen).</td>
+</tr>
+<tr>
+<td><strong>Memory Visualization</strong></td>
+<td>3</td>
+<td>Memory is text-only everywhere. No graph view, no timeline, no spatial organization, no "related memories" preview. The user cannot <em>see</em> what Animus knows about them.</td>
+</tr>
+<tr>
+<td><strong>Onboarding</strong></td>
+<td>5</td>
+<td>Wizard covers all config but is TUI-only and feels like a questionnaire, not a conversation. No progressive disclosure — asks for API keys before explaining why. No interactive tutorial after install.</td>
+</tr>
+<tr>
+<td><strong>Proactive / Ambient</strong></td>
+<td>4</td>
+<td>Proactive engine exists (6 checks). Quiet hours are configurable. But the UX is notification-only — there's no ambient HUD, no glanceable status widget, no lock-screen presence. The user must open an app to see what Animus is thinking.</td>
+</tr>
+<tr>
+<td><strong>Accessibility</strong></td>
+<td>4</td>
+<td>PWA has basic ARIA labels and alt text. Dashboard uses semantic HTML but no focus management or skip links. CLI is inaccessible to screen readers (Rich panels are visual-only). No colorblind-friendly palettes.</td>
+</tr>
+<tr>
+<td><strong>Performance &amp; Reliability</strong></td>
+<td>7</td>
+<td>Fast boot, WebSocket reconnect with backoff, offline queuing in PWA. But no skeleton screens, no optimistic UI, no perceptible instant states. Dashboard HTMX swaps can feel sluggish without loading indicators.</td>
+</tr>
+<tr>
+<td><strong>Personalization</strong></td>
+<td>6</td>
+<td>Persona engine is robust (profiles, voice tones, domains, channel routing). But no UI for the user to <em>tune</em> personality on the fly (sliders for formality, verbosity, initiative). No visual themes beyond dark mode.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Aggregate UX Score: ~5/10.</strong><br />
+Functional, multi-surface, architecturally sound — but not cohesive, not ambient, and not emotionally resonant. It still feels like a <em>tool collection</em>, not a <em>cognitive layer</em>.</p>
+<hr />
+<h2 id="4-interaction-model-analysis">4. Interaction Model Analysis<a class="headerlink" href="#4-interaction-model-analysis" title="Anchor link to this section">&para;</a></h2>
+<h3 id="41-the-exocortex-concept">4.1 The exocortex concept<a class="headerlink" href="#41-the-exocortex-concept" title="Anchor link to this section">&para;</a></h3>
+<p>An exocortex is not an app you open. It is a layer that:</p>
+<ol>
+<li><strong>Surrounds</strong> you — present on all devices, always available, ambient.</li>
+<li><strong>Remembers</strong> — accumulates context across years, surfaces it without being asked.</li>
+<li><strong>Acts</strong> — takes initiative within guardrails, proposes rather than just responds.</li>
+<li><strong>Adapts</strong> — learns your patterns, preferences, and style.</li>
+<li><strong>Speaks your language</strong> — communicates in the register, channel, and timing you prefer.</li>
+</ol>
+<h3 id="42-current-model-app-you-launch">4.2 Current model: "App you launch"<a class="headerlink" href="#42-current-model-app-you-launch" title="Anchor link to this section">&para;</a></h3>
+<p>Today's Animus is <strong>pull-oriented</strong>:</p>
+<ul>
+<li>User opens CLI / dashboard / PWA / messaging app</li>
+<li>User asks a question or gives a command</li>
+<li>Animus responds</li>
+<li>User closes the app</li>
+</ul>
+<p>Even the proactive engine fits this model: it runs checks in the background, then <em>pushes a notification</em> — which the user pulls open to read.</p>
+<p>This is fundamentally a <strong>messaging app</strong> paradigm. It's not wrong, but it's insufficient for an exocortex.</p>
+<h3 id="43-target-model-layer-that-surrounds">4.3 Target model: "Layer that surrounds"<a class="headerlink" href="#43-target-model-layer-that-surrounds" title="Anchor link to this section">&para;</a></h3>
+<p>The shift required:</p>
+<table>
+<thead>
+<tr>
+<th>From</th>
+<th>To</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Open app → ask → get answer</td>
+<td>Need arises → Animus surfaces context <em>before</em> you ask</td>
+</tr>
+<tr>
+<td>Single-turn chat</td>
+<td>Continuous, threaded, branched conversations with persistence</td>
+</tr>
+<tr>
+<td>Notification = interruption</td>
+<td>Ambient suggestion = glanceable, dismissible, ranked by urgency</td>
+</tr>
+<tr>
+<td>Memory is a database you query</td>
+<td>Memory is a landscape you explore and prune</td>
+</tr>
+<tr>
+<td>Persona is a config file</td>
+<td>Persona is a relationship that evolves</td>
+</tr>
+<tr>
+<td>Tool use is hidden</td>
+<td>Tool use is transparent and collaborative</td>
+</tr>
+<tr>
+<td>One interface per device</td>
+<td>Context follows you; handoff is seamless</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-vision-true-to-concept">5. Vision: "True to Concept"<a class="headerlink" href="#5-vision-true-to-concept" title="Anchor link to this section">&para;</a></h2>
+<p>What does 10/10 look like for an Animus interface?</p>
+<h3 id="51-presence-always-there-never-in-the-way">5.1 Presence — Always there, never in the way<a class="headerlink" href="#51-presence-always-there-never-in-the-way" title="Anchor link to this section">&para;</a></h3>
+<ul>
+<li><strong>System tray / menu bar widget:</strong> A small orb or glyph that pulses when Animus is thinking. Hover shows recent thoughts. Click expands to quick capture or command palette.</li>
+<li><strong>Lock screen / notification shade:</strong> Morning digest, upcoming tasks, anomalies detected, briefings ready.</li>
+<li><strong>Ambient voice:</strong> Wake word activation ("Hey Animus") on desktop and mobile. Whisper runs locally so audio never leaves the device.</li>
+<li><strong>Wearable bridge:</strong> Apple Watch complication / WearOS tile showing memory count, pending tasks, and a quick-voice-capture button.</li>
+</ul>
+<h3 id="52-memory-as-a-landscape">5.2 Memory as a landscape<a class="headerlink" href="#52-memory-as-a-landscape" title="Anchor link to this section">&para;</a></h3>
+<ul>
+<li><strong>Memory graph:</strong> A visual network of people, projects, concepts, and events. Zoom in to see details, zoom out for patterns. Filter by time, type, confidence.</li>
+<li><strong>Timeline / lifelog:</strong> Horizontal scroll through your history. Click a day to see what you discussed, decided, and captured.</li>
+<li><strong>Knowledge domains:</strong> Radars or treemaps showing which domains Animus knows you well in (code, health, relationships, finance) and where knowledge is sparse.</li>
+<li><strong>Memory gardening UI:</strong> Review, strengthen, merge, or prune memories with swipe gestures. "This is important / This is outdated / This is wrong."</li>
+</ul>
+<h3 id="53-conversation-as-collaboration">5.3 Conversation as collaboration<a class="headerlink" href="#53-conversation-as-collaboration" title="Anchor link to this section">&para;</a></h3>
+<ul>
+<li><strong>Branched threads:</strong> Conversations fork. "Explore this idea further" branches without losing the main thread.</li>
+<li><strong>Inline artifacts:</strong> Code blocks, charts, decision matrices, file diffs rendered natively — not pasted as text.</li>
+<li><strong>Tool transparency:</strong> When Animus uses a tool, the user sees <em>what</em> it did, <em>why</em>, and can edit/retry/undo. Not a black box.</li>
+<li><strong>Co-editing:</strong> User and Animus edit the same document simultaneously. Changes are attributed and reversible.</li>
+</ul>
+<h3 id="54-initiative-without-intrusion">5.4 Initiative without intrusion<a class="headerlink" href="#54-initiative-without-intrusion" title="Anchor link to this section">&para;</a></h3>
+<ul>
+<li><strong>Urgency ranking:</strong> The proactive engine assigns a score (1–10) to every suggestion. 8+ = notification. 4–7 = badge/dot on the tray icon. 1–3 = logged silently, surfaced in daily digest.</li>
+<li><strong>User teaches interruption preferences:</strong> "Only interrupt me for calendar conflicts and security alerts." Learns from dismissals.</li>
+<li><strong>Briefings, not notifications:</strong> Morning briefing is a structured page (agenda, risks, opportunities, memory highlights), not a pile of alerts.</li>
+</ul>
+<h3 id="55-cross-device-handoff">5.5 Cross-device handoff<a class="headerlink" href="#55-cross-device-handoff" title="Anchor link to this section">&para;</a></h3>
+<ul>
+<li><strong>Session continuity:</strong> Start a thought on phone, finish on laptop. The context (draft message, half-written code, open research tabs) transfers automatically.</li>
+<li><strong>Awareness of which device:</strong> "You're on your phone — I'll keep this brief." vs. "You're at your desk — here's the full analysis with charts."</li>
+<li><strong>Conflict resolution UI:</strong> When two devices edit the same memory, a visual diff-merge tool appears. Not silent last-write-wins.</li>
+</ul>
+<hr />
+<h2 id="6-roadmap-from-510-to-1010">6. Roadmap: From 5/10 to 10/10<a class="headerlink" href="#6-roadmap-from-510-to-1010" title="Anchor link to this section">&para;</a></h2>
+<p><strong>Dependency rule:</strong> Phases are ordered. Do not start Phase N until Phase N‑1 exits. Within a phase, items are parallelizable unless marked sequential.</p>
+<p><strong>Pace:</strong> Personal project pace — weeks, not days. Each "session" is a focused block with a test or check as its done criterion.</p>
+<hr />
+<h3 id="phase-i-design-foundation-weeks-14">Phase I — Design Foundation (weeks 1–4)<a class="headerlink" href="#phase-i-design-foundation-weeks-14" title="Anchor link to this section">&para;</a></h3>
+<p><em>Unify the visual language and build the shared substrate.</em></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Item</th>
+<th>Acceptance</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>I1</td>
+<td><strong>Design system spec</strong> — colors, typography, spacing, motion, elevation, iconography. Covers all three stacks (CLI/Rich, Dashboard/HTMX, PWA/React). Documented in <code>docs/DESIGN_SYSTEM.md</code>.</td>
+<td>Three surfaces use the same tokens. A single source-of-truth CSS/JSON file is imported by dashboard and PWA; Rich styles reference the same hex codes.</td>
+<td>S</td>
+</tr>
+<tr>
+<td>I2</td>
+<td><strong>Component library</strong> — shared HTML/React components for cards, buttons, inputs, badges, tables, modals, toasts, skeleton screens. Start with 10 primitives.</td>
+<td>Components are in <code>packages/ui/</code> (web components or React). Used by both dashboard and PWA. Visual regressions caught by a single screenshot diff test.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>I3</td>
+<td><strong>Iconography set</strong> — 50 custom SVG icons for Animus concepts (memory, forge, quorum, persona, automation, etc.). Replace emoji in PWA nav.</td>
+<td>No emoji in production UI. Icons are accessible (aria-label, currentColor fill).</td>
+<td>S</td>
+</tr>
+<tr>
+<td>I4</td>
+<td><strong>Motion &amp; feedback spec</strong> — loading states, transitions, hover/active micro-interactions, optimistic UI patterns. No jarring full-page reloads.</td>
+<td>HTMX swaps fade/slide. Buttons show press states. Forms show skeleton screens while loading. Documented in design system.</td>
+<td>S</td>
+</tr>
+<tr>
+<td>I5</td>
+<td><strong>Accessibility baseline</strong> — WCAG 2.1 AA audit for PWA and dashboard. Focus traps, skip links, color contrast ≥ 4.5:1, reduced-motion support.</td>
+<td>Lighthouse accessibility score ≥ 90 for PWA. axe-core automated scan passes for dashboard critical paths.</td>
+<td>M</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Exit:</strong> All surfaces look like they belong to the same product. A user moving from PWA to dashboard to CLI feels continuity, not whiplash.</p>
+<hr />
+<h3 id="phase-ii-pwa-the-daily-driver-weeks-38">Phase II — PWA: The Daily Driver (weeks 3–8)<a class="headerlink" href="#phase-ii-pwa-the-daily-driver-weeks-38" title="Anchor link to this section">&para;</a></h3>
+<p><em>Overlap with Phase I starting week 3. Make the PWA the primary mobile and desktop daily interface.</em></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Item</th>
+<th>Acceptance</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>II1</td>
+<td><strong>Chat overhaul</strong> — markdown rendering with syntax highlighting, inline code execution preview, file attachment (photos/docs → memory), message editing, branching threads, search within conversation.</td>
+<td>Rendered markdown matches GitHub quality. Images display inline. Thread branches visually distinct.</td>
+<td>L</td>
+</tr>
+<tr>
+<td>II2</td>
+<td><strong>Memory browser</strong> — full-text search, tag filter, type filter, sort (recent/relevant/confidence). Card-based results with expand-for-detail. Swipe actions (pin/archive/delete).</td>
+<td>User can find any memory in &lt; 3 taps from home. Search returns in &lt; 500ms.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>II3</td>
+<td><strong>Timeline / lifelog</strong> — daily digest view, horizontal scroll, event clustering ("busy morning," "deep work block"). Tap to expand into conversation fragments and captures.</td>
+<td>30 days visible without scroll lag. Events grouped by AI-inferred context switches.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>II4</td>
+<td><strong>Tasks &amp; calendar</strong> — task list with priorities, due dates, check-off. Calendar view (day/week) showing Animus-scheduled blocks and external calendar integrations.</td>
+<td>Tasks sync with Core's TaskTracker. Calendar fetches from Google Calendar integration.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>II5</td>
+<td><strong>Tool invocation UI</strong> — when Animus wants to use a tool, show a card with params, allow edit-and-approve inline. Post-execution, show result summary with "undo."</td>
+<td>Tool approval feels like Siri Shortcuts — clear, cancellable, editable.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>II6</td>
+<td><strong>Capture v2</strong> — voice-first capture (hold mic button), photo capture with OCR, location tag, mood tag. Automatic categorization suggestion.</td>
+<td>3-second voice note → transcribed → categorized → stored. Photo text extracted on-device.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>II7</td>
+<td><strong>Settings &amp; onboarding</strong> — graphical onboarding (4-slide welcome + permission requests), settings pages for identity, personas, channels, privacy. No terminal required for first setup.</td>
+<td>New user installs PWA, completes setup without opening a terminal. Wizard is still available for advanced config.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>II8</td>
+<td><strong>Desktop PWA wrapper</strong> — install as standalone app (already supported), but add global shortcut (Cmd/Ctrl+Shift+A) to summon quick-capture overlay.</td>
+<td>Global hotkey opens a floating input bar (like Spotlight/Albert) anywhere on desktop.</td>
+<td>S</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Exit:</strong> The PWA is good enough to be the only interface for 80% of daily interactions. Users check it 10+ times a day.</p>
+<hr />
+<h3 id="phase-iii-dashboard-redesign-weeks-610">Phase III — Dashboard Redesign (weeks 6–10)<a class="headerlink" href="#phase-iii-dashboard-redesign-weeks-610" title="Anchor link to this section">&para;</a></h3>
+<p><em>Overlap with Phase II starting week 6. Transform the dashboard from ops panel to mission control.</em></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Item</th>
+<th>Acceptance</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>III1</td>
+<td><strong>Landing = Command Center</strong> — default page is a customizable grid of widgets: chat preview, memory highlights, upcoming tasks, proactive suggestions, system health mini-cards.</td>
+<td>User can drag to reorder widgets. Layout persists per-user.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>III2</td>
+<td><strong>Conversation-first navigation</strong> — chat is a persistent sidebar or floating panel, not a buried page. All other pages are reachable without losing chat context.</td>
+<td>Split-pane layout: chat on left, selected module on right (like Slack or Discord).</td>
+<td>L</td>
+</tr>
+<tr>
+<td>III3</td>
+<td><strong>Memory graph page</strong> — D3.js or Cytoscape force-directed graph of memories. Click to focus, double-click to open. Filter by domain, time, confidence.</td>
+<td>Renders 500 nodes at 60fps. Zoom/pan smooth.</td>
+<td>L</td>
+</tr>
+<tr>
+<td>III4</td>
+<td><strong>Workflow canvas</strong> — visual YAML editor for Forge workflows. Drag-and-drop nodes (agents, gates, checkpoints). Live validation and dry-run trigger.</td>
+<td>Non-technical users can build a 3-step workflow without reading docs.</td>
+<td>L</td>
+</tr>
+<tr>
+<td>III5</td>
+<td><strong>Decision support UI</strong> — decision framework rendered as pros/cons matrix, confidence sliders, outcome probability bars. Export to PDF/markdown.</td>
+<td>A decision page looks like a consulting deliverable, not a form.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>III6</td>
+<td><strong>Activity feed v2</strong> — filterable, searchable event log with timeline scrubber. Group related events. Link to source (memory, task, workflow run).</td>
+<td>User can trace "why did Animus suggest X?" in 2 clicks.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>III7</td>
+<td><strong>Density modes</strong> — compact (ops), comfortable (default), spacious (presentations). Font scale independent.</td>
+<td>Three density modes switch instantly, no reload.</td>
+<td>S</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Exit:</strong> The dashboard is where power users <em>live</em>. It competes with Notion or Obsidian in terms of information density and utility.</p>
+<hr />
+<h3 id="phase-iv-ambient-presence-weeks-914">Phase IV — Ambient &amp; Presence (weeks 9–14)<a class="headerlink" href="#phase-iv-ambient-presence-weeks-914" title="Anchor link to this section">&para;</a></h3>
+<p><em>Make Animus present without being opened.</em></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Item</th>
+<th>Acceptance</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IV1</td>
+<td><strong>System tray / menu bar agent</strong> — lightweight native wrapper (Tauri or Electron shell) around the PWA. Shows status orb, recent thoughts, quick capture, command palette.</td>
+<td>Runs on macOS, Linux (AppIndicator), Windows. &lt; 50MB RAM.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>IV2</td>
+<td><strong>Global quick-capture</strong> — system-wide hotkey summons a floating input (text or voice). Captures go straight to memory, no full app open.</td>
+<td>Latency &lt; 200ms from hotkey to ready-to-type.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>IV3</td>
+<td><strong>Native notifications</strong> — macOS/Windows/Linux native notification APIs (not just web push). Rich actions: "Approve," "Dismiss," "Remind me in 10 min."</td>
+<td>Notifications look native, with icons and action buttons.</td>
+<td>S</td>
+</tr>
+<tr>
+<td>IV4</td>
+<td><strong>Morning briefing</strong> — daily automated briefing generated by proactive engine. Delivered as a native notification/page at user-defined time. Structured: agenda, risks, memory highlights, tasks due.</td>
+<td>User glances at briefing for 30 seconds and knows their day.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>IV5</td>
+<td><strong>Ambient voice (desktop)</strong> — Always-listening wake word ("Hey Animus") using local Porcupine or Whisper.js. No cloud audio.</td>
+<td>False positive rate &lt; 1/day. Latency &lt; 800ms from wake to ready.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>IV6</td>
+<td><strong>Wearable bridge</strong> — Apple Watch app / WearOS tile. Complications: memory count, pending tasks, quick voice capture. Syncs via the PWA backend.</td>
+<td>Watch can capture voice and receive brief text replies without phone open.</td>
+<td>L</td>
+</tr>
+<tr>
+<td>IV7</td>
+<td><strong>Vehicle mode</strong> — CarPlay/Android Auto simplified UI. Voice-primary. Location-aware context. Driving-safe (large text, minimal visual).</td>
+<td>Driver can interact eyes-free. Maps integration for ETA-aware suggestions.</td>
+<td>L</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Exit:</strong> Animus feels <em>around</em> the user, not <em>in an app</em>. The average interaction time drops to &lt; 10 seconds because most context is surfaced proactively.</p>
+<hr />
+<h3 id="phase-v-cross-device-continuity-weeks-1318">Phase V — Cross-Device Continuity (weeks 13–18)<a class="headerlink" href="#phase-v-cross-device-continuity-weeks-1318" title="Anchor link to this section">&para;</a></h3>
+<p><em>Context follows the user.</em></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Item</th>
+<th>Acceptance</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V1</td>
+<td><strong>Session sync protocol</strong> — every device syncs <code>SyncableState</code> (conversations, drafts, open research, active tasks) via the Core sync layer. Encrypted, conflict-aware.</td>
+<td>Start on phone → open laptop → conversation is there, cursor position restored.</td>
+<td>L</td>
+</tr>
+<tr>
+<td>V2</td>
+<td><strong>Handoff UI</strong> — visual indicator of which device has "focus." Push current context to another device with one tap.</td>
+<td>"Continue on laptop" button in PWA moves session state.</td>
+<td>S</td>
+</tr>
+<tr>
+<td>V3</td>
+<td><strong>Conflict resolution UI</strong> — when two devices diverge (e.g., edited same task), show diff-merge tool. User picks winner or merges.</td>
+<td>Conflict is rare (&lt; 1% of syncs) but handled gracefully when it occurs.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>V4</td>
+<td><strong>Device-aware behavior</strong> — Animus adapts output length and modality based on device capabilities and user context (phone = brief, desktop = detailed, car = audio-only).</td>
+<td>Automatic; no manual mode switching required.</td>
+<td>M</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Exit:</strong> Users forget which device they started on. The boundary between phone, laptop, and watch disappears for Animbus interactions.</p>
+<hr />
+<h3 id="phase-vi-emotional-resonance-weeks-1722">Phase VI — Emotional Resonance (weeks 17–22)<a class="headerlink" href="#phase-vi-emotional-resonance-weeks-1722" title="Anchor link to this section">&para;</a></h3>
+<p><em>The polish that makes it feel like a companion, not software.</em></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Item</th>
+<th>Acceptance</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VI1</td>
+<td><strong>Sound design</strong> — custom audio identity: notification chimes (gentle, non-jarring), voice activation tone, error sounds. No stock system sounds.</td>
+<td>5-second soundscape test: a user hears a chime and knows "that's Animus, and it's low urgency."</td>
+<td>S</td>
+</tr>
+<tr>
+<td>VI2</td>
+<td><strong>Haptic language</strong> — PWA and watch use distinct haptic patterns for urgency levels, confirmations, and errors.</td>
+<td>3 patterns, distinguishable eyes-free.</td>
+<td>S</td>
+</tr>
+<tr>
+<td>VI3</td>
+<td><strong>Animation system</strong> — spring physics for UI transitions, typing indicators that feel alive, memory graph particles that settle organically.</td>
+<td>60fps on mid-range phone. Feels physical, not mechanical.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>VI4</td>
+<td><strong>Persona warmth</strong> — Persona engine gains emotional axes: warmth, humor, directness, enthusiasm. Visual avatar or glyph per persona.</td>
+<td>Switching personas changes not just text but tone, timing, and emoji/style.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>VI5</td>
+<td><strong>Relationship memory</strong> — Animus remembers how the user likes to interact ("you prefer short answers in the morning"). Surface this in a "Our Relationship" page.</td>
+<td>User sees a dashboard of "Animus knows you prefer X. Correct?"</td>
+<td>S</td>
+</tr>
+<tr>
+<td>VI6</td>
+<td><strong>Onboarding as friendship</strong> — First-run experience is a conversation, not a form. Animus asks about goals, learns name/pronouns/preferences through dialogue.</td>
+<td>User smiles during setup. Feels like meeting someone, not configuring software.</td>
+<td>M</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Exit:</strong> Users describe Animus as "my assistant" not "this app." Net Promoter Score proxy: user spontaneously recommends it to friends.</p>
+<hr />
+<h3 id="phase-vii-bootstrap-hardening-continuous-opportunistic">Phase VII — Bootstrap Hardening (continuous / opportunistic)<a class="headerlink" href="#phase-vii-bootstrap-hardening-continuous-opportunistic" title="Anchor link to this section">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Item</th>
+<th>Acceptance</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VII1</td>
+<td><strong>Graphical onboarding alternative</strong> — PWA-based first setup that writes the same config the wizard produces. Terminal wizard becomes "advanced mode."</td>
+<td>Non-technical users never see a terminal during install.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>VII2</td>
+<td><strong>Install health verification</strong> — after <code>animus-bootstrap install</code>, run a smoke test (API key valid? Ollama reachable? Memory DB writable?) and report pass/fail with remediation links.</td>
+<td>Install exits with clear red/yellow/green status, not just "done."</td>
+<td>S</td>
+</tr>
+<tr>
+<td>VII3</td>
+<td><strong>Transactional updater</strong> — updates are atomic: download to temp, verify checksum, swap, rollback on failure.</td>
+<td>Failed update auto-rolls back to prior version. No half-states.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>VII4</td>
+<td><strong>Docker path</strong> — <code>docker run -v animus-data:/data aretedriver/animus</code> as a fully supported install path.</td>
+<td>Single-command Docker start with persistent volume.</td>
+<td>S</td>
+</tr>
+<tr>
+<td>VII5</td>
+<td><strong>Bootstrap dashboard as PWA</strong> — The dashboard itself is served as a Progressive Web App (service worker, manifest), so desktop users can "install" it without a separate build.</td>
+<td>Dashboard is installable from Chrome/Edge "Install as app."</td>
+<td>S</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-success-metrics-1010-definition">7. Success Metrics (10/10 Definition)<a class="headerlink" href="#7-success-metrics-1010-definition" title="Anchor link to this section">&para;</a></h2>
+<p>How do we know we've arrived?</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Target</th>
+<th>Measurement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Daily active sessions (any surface)</td>
+<td>≥ 1 per waking hour</td>
+<td>Log aggregated, privacy-preserving</td>
+</tr>
+<tr>
+<td>Average interaction time</td>
+<td>≤ 15 seconds</td>
+<td>Unless explicitly in deep-work mode</td>
+</tr>
+<tr>
+<td>Proactive suggestion acceptance rate</td>
+<td>≥ 40%</td>
+<td>User acts on or approves surfaced suggestions</td>
+</tr>
+<tr>
+<td>Cross-device session continuity</td>
+<td>≥ 90%</td>
+<td>Context successfully handoff without user manually transferring</td>
+</tr>
+<tr>
+<td>User-reported "exocortex feeling"</td>
+<td>≥ 4.0 / 5.0</td>
+<td>Quarterly subjective survey (1 = "just an app", 5 = "part of my mind")</td>
+</tr>
+<tr>
+<td>Accessibility (Lighthouse)</td>
+<td>≥ 95</td>
+<td>PWA and dashboard</td>
+</tr>
+<tr>
+<td>Visual consistency score</td>
+<td>≥ 9/10</td>
+<td>Third-party blind comparison: "do these screens belong to the same app?"</td>
+</tr>
+<tr>
+<td>Onboarding completion rate</td>
+<td>≥ 80%</td>
+<td>Of users who start install, finish first meaningful interaction</td>
+</tr>
+<tr>
+<td>Voice interaction accuracy</td>
+<td>≥ 95%</td>
+<td>Whisper STT word-error rate on user voice</td>
+</tr>
+<tr>
+<td>Boot-to-ready time</td>
+<td>≤ 3 seconds</td>
+<td>From <code>animus-bootstrap start</code> to first responsive chat message</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-immediate-next-steps-what-to-do-monday">8. Immediate Next Steps (What to do Monday)<a class="headerlink" href="#8-immediate-next-steps-what-to-do-monday" title="Anchor link to this section">&para;</a></h2>
+<ol>
+<li><strong>Write the Design System spec</strong> (<code>docs/DESIGN_SYSTEM.md</code>). Colors, type, spacing, motion. Single source of truth.</li>
+<li><strong>Audit PWA CSS</strong> against the spec. Replace emoji nav with SVG icons. Unify border-radius, shadow, and transition tokens.</li>
+<li><strong>Add global shortcut support</strong> to the Bootstrap dashboard (a small Electron/Tauri shim or a desktop-native hotkey daemon). This is the fastest path to "ambient."</li>
+<li><strong>Build the Memory Browser view</strong> in the PWA. It's the highest-impact missing feature for daily usage.</li>
+<li><strong>Create a <code>packages/ui/</code> shared component package</strong> with Storybook (or Ladle) so dashboard and PWA share the same button, card, and input components.</li>
+</ol>
+<hr />
+<h2 id="9-related-documents">9. Related Documents<a class="headerlink" href="#9-related-documents" title="Anchor link to this section">&para;</a></h2>
+<ul>
+<li><code>docs/ROADMAP_TO_10.md</code> — Security, cost, eval, and correctness remediation (orthogonal to UX)</li>
+<li><code>docs/ARCHITECTURE.md</code> — System architecture overview</li>
+<li><code>docs/CONSTITUTIONAL_PRINCIPLES.md</code> — P1-P9 behavioral constraints</li>
+<li><code>packages/pwa/</code> — Current PWA implementation</li>
+<li><code>packages/bootstrap/src/animus_bootstrap/dashboard/</code> — Current dashboard implementation</li>
+<li><code>packages/core/animus/__main__.py</code> — Core CLI entry point</li>
+</ul>
+<hr />
+<p><em>End of document. Updated 2026-06-14. Canonical — when this changes, update the cross-references in ROADMAP_TO_10.md and CANON.md.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 AreteDriver
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/AreteDriver/animus" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/fdzQkrt8" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M492.5 69.8c-.2-.3-.4-.6-.8-.7-38.1-17.5-78.4-30-119.7-37.1-.4-.1-.8 0-1.1.1s-.6.4-.8.8c-5.5 9.9-10.5 20.2-14.9 30.6-44.6-6.8-89.9-6.8-134.4 0-4.5-10.5-9.5-20.7-15.1-30.6-.2-.3-.5-.6-.8-.8s-.7-.2-1.1-.2C162.5 39 122.2 51.5 84.1 69c-.3.1-.6.4-.8.7C7.1 183.5-13.8 294.6-3.6 404.2c0 .3.1.5.2.8s.3.4.5.6c44.4 32.9 94 58 146.8 74.2.4.1.8.1 1.1 0s.7-.4.9-.7c11.3-15.4 21.4-31.8 30-48.8.1-.2.2-.5.2-.8s0-.5-.1-.8-.2-.5-.4-.6-.4-.3-.7-.4c-15.8-6.1-31.2-13.4-45.9-21.9-.3-.2-.5-.4-.7-.6s-.3-.6-.3-.9 0-.6.2-.9.3-.5.6-.7c3.1-2.3 6.2-4.7 9.1-7.1.3-.2.6-.4.9-.4s.7 0 1 .1c96.2 43.9 200.4 43.9 295.5 0 .3-.1.7-.2 1-.2s.7.2.9.4c2.9 2.4 6 4.9 9.1 7.2.2.2.4.4.6.7s.2.6.2.9-.1.6-.3.9-.4.5-.6.6c-14.7 8.6-30 15.9-45.9 21.8-.2.1-.5.2-.7.4s-.3.4-.4.7-.1.5-.1.8.1.5.2.8c8.8 17 18.8 33.3 30 48.8.2.3.6.6.9.7s.8.1 1.1 0c52.9-16.2 102.6-41.3 147.1-74.2.2-.2.4-.4.5-.6s.2-.5.2-.8c12.3-126.8-20.5-236.9-86.9-334.5zm-302 267.7c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2m195.4 0c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.indexes", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.select", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
