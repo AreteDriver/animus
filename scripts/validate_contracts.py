@@ -153,10 +153,16 @@ def check_importability() -> None:
         try:
             __import__(f"animus_types.{module}", fromlist=["dummy"])
             importable += 1
+        except ImportError as exc:
+            warn(
+                f"animus_types.{module}: import failed ({exc}) "
+                "— install packages/types/ dependencies"
+            )
         except Exception as exc:
             error(f"animus_types.{module}: import failed ({exc})")
 
-    ok(f"{importable} schema modules importable")
+    if importable:
+        ok(f"{importable} schema modules importable")
 
 
 def check_round_trip(schemas: dict[str, dict]) -> None:
