@@ -15,6 +15,7 @@ repos:
         args: [--maxkb=1024]
       - id: check-merge-conflict
       - id: detect-private-key
+        exclude: ^docs/cookbook/
       - id: mixed-line-ending
 
   - repo: https://github.com/astral-sh/ruff-pre-commit

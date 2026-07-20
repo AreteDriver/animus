@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import sys
 from datetime import timedelta
+from pathlib import Path
 
 from animus.workflows.ingest import ingest
 
@@ -42,7 +43,7 @@ def _cmd_architect(args: argparse.Namespace) -> int:
         print("Citizens are disabled in configuration.", file=sys.stderr)
         return 1
 
-    cb_path = config.citizens.codebase_path or str(config.data_dir.parent)
+    cb_path = config.citizens.codebase_path or str(Path.cwd())
     log_dir = config.citizens.conversation_log_dir or None
     evidence_dir = config.citizens.evidence_dir or None
 
@@ -175,7 +176,7 @@ def _cmd_knowledge_curator(args: argparse.Namespace) -> int:
         print("Citizens are disabled in configuration.", file=sys.stderr)
         return 1
 
-    cb_path = args.codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+    cb_path = args.codebase_path or config.citizens.codebase_path or str(Path.cwd())
     memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if args.store else None
 
     curator = KnowledgeCuratorCitizen(
@@ -243,7 +244,7 @@ def _cmd_test_oracle(args: argparse.Namespace) -> int:
         print("Citizens are disabled in configuration.", file=sys.stderr)
         return 1
 
-    cb_path = args.codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+    cb_path = args.codebase_path or config.citizens.codebase_path or str(Path.cwd())
     memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if args.store else None
 
     oracle = TestOracleCitizen(
@@ -692,7 +693,7 @@ def _cmd_harvester(args: argparse.Namespace) -> int:
 
     store = getattr(args, "store", False)
     memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
-    cb_path = getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(config.data_dir.parent)
+    cb_path = getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(Path.cwd())
     harvester = HarvesterCitizen(
         memory_layer=memory,
         codebase_path=cb_path,
@@ -815,7 +816,7 @@ def _cmd_abstraction(args: argparse.Namespace) -> int:
     memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
     abstraction = AbstractionCitizen(
         memory_layer=memory,
-        codebase_path=args.codebase_path or config.citizens.codebase_path or str(config.data_dir.parent),
+        codebase_path=args.codebase_path or config.citizens.codebase_path or str(Path.cwd()),
     )
 
     sub = args.abstraction_command
@@ -907,7 +908,7 @@ def _cmd_pattern(args: argparse.Namespace) -> int:
     memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
     pattern = PatternCitizen(
         memory_layer=memory,
-        codebase_path=getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(config.data_dir.parent),
+        codebase_path=getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(Path.cwd()),
     )
 
     sub = args.pattern_command
@@ -989,7 +990,7 @@ def _cmd_first_principles(args: argparse.Namespace) -> int:
     memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
     fp = FirstPrinciplesCitizen(
         memory_layer=memory,
-        codebase_path=getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(config.data_dir.parent),
+        codebase_path=getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(Path.cwd()),
     )
 
     sub = args.first_principles_command
@@ -1071,7 +1072,7 @@ def _cmd_architecture_citizen(args: argparse.Namespace) -> int:
     memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
     arch = ArchitectureCitizen(
         memory_layer=memory,
-        codebase_path=getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(config.data_dir.parent),
+        codebase_path=getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(Path.cwd()),
     )
 
     sub = args.architecture_citizen_command
@@ -1155,7 +1156,7 @@ def _cmd_research_guild(args: argparse.Namespace) -> int:
     cb_path = (
         getattr(args, "codebase_path", "")
         or config.citizens.codebase_path
-        or str(config.data_dir.parent)
+        or str(Path.cwd())
     )
 
     orchestrator = ResearchGuildOrchestrator(
