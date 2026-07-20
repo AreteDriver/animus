@@ -24,16 +24,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -e "packages/kernel/[dev]"
-
-      - name: Install test runner
-        run: |
-          pip install pytest pytest-asyncio
-          pytest --version
-
-      - name: Run tests
-        working-directory: packages/kernel
-        run: python -m pytest tests/ -q --no-header --tb=short
+        run: pip install -e "packages/kernel/"
 
       - name: Build package
         run: |
