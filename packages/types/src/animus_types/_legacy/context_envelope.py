@@ -3,29 +3,28 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, confloat, conint, constr
 
 
 class SecurityCeiling(Enum):
-    public = 'public'
-    internal = 'internal'
-    confidential = 'confidential'
-    restricted = 'restricted'
+    public = "public"
+    internal = "internal"
+    confidential = "confidential"
+    restricted = "restricted"
 
 
 class Role(Enum):
-    evidence = 'evidence'
-    memory = 'memory'
-    knowledge = 'knowledge'
-    intelligence = 'intelligence'
+    evidence = "evidence"
+    memory = "memory"
+    knowledge = "knowledge"
+    intelligence = "intelligence"
 
 
 class Item(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     object_id: str
     object_version: conint(ge=1)
@@ -35,14 +34,14 @@ class Item(BaseModel):
 
 
 class Status(Enum):
-    open = 'open'
-    resolved = 'resolved'
-    accepted_tension = 'accepted_tension'
+    open = "open"
+    resolved = "resolved"
+    accepted_tension = "accepted_tension"
 
 
 class Contradiction(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     left_ref: str
     right_ref: str
@@ -51,17 +50,17 @@ class Contradiction(BaseModel):
 
 
 class Reason(Enum):
-    access_denied = 'access_denied'
-    stale = 'stale'
-    budget = 'budget'
-    low_relevance = 'low_relevance'
-    invalid = 'invalid'
-    unavailable = 'unavailable'
+    access_denied = "access_denied"
+    stale = "stale"
+    budget = "budget"
+    low_relevance = "low_relevance"
+    invalid = "invalid"
+    unavailable = "unavailable"
 
 
 class Omission(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     reason: Reason
     count: conint(ge=1)
@@ -69,7 +68,7 @@ class Omission(BaseModel):
 
 class Freshness(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     oldest_recorded_at: AwareDatetime
     newest_recorded_at: AwareDatetime
@@ -77,12 +76,12 @@ class Freshness(BaseModel):
 
 class AnimusContextEnvelope(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
-    envelope_id: constr(pattern=r'^ce-[a-z0-9_-]+$')
+    envelope_id: constr(pattern=r"^ce-[a-z0-9_-]+$")
     trace_id: constr(min_length=3)
-    owner_id: constr(pattern=r'^owner-[a-z0-9_-]+$')
-    workspace_id: constr(pattern=r'^ws-[a-z0-9_-]+$')
+    owner_id: constr(pattern=r"^owner-[a-z0-9_-]+$")
+    workspace_id: constr(pattern=r"^ws-[a-z0-9_-]+$")
     purpose: constr(min_length=1)
     query: constr(min_length=1)
     as_of: AwareDatetime

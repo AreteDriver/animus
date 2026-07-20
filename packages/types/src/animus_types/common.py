@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+
 from enum import Enum
 from typing import Any
 
@@ -10,85 +11,86 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, RootModel, conint, co
 
 
 class SubjectDomain(Enum):
-    self = "self"
-    world = "world"
-    project = "project"
-    operations = "operations"
+    self = 'self'
+    world = 'world'
+    project = 'project'
+    operations = 'operations'
 
 
 class ArtifactType(Enum):
-    source = "source"
-    observation = "observation"
-    claim = "claim"
-    entity = "entity"
-    event = "event"
-    signal = "signal"
-    pattern = "pattern"
-    hypothesis = "hypothesis"
-    assessment = "assessment"
-    forecast = "forecast"
-    decision = "decision"
-    action = "action"
-    outcome = "outcome"
-    lesson = "lesson"
-    memory_candidate = "memory_candidate"
-    approval_receipt = "approval_receipt"
-    action_receipt = "action_receipt"
-    context_envelope = "context_envelope"
-    trace = "trace"
+    source = 'source'
+    observation = 'observation'
+    claim = 'claim'
+    entity = 'entity'
+    event = 'event'
+    signal = 'signal'
+    pattern = 'pattern'
+    hypothesis = 'hypothesis'
+    assessment = 'assessment'
+    forecast = 'forecast'
+    decision = 'decision'
+    action = 'action'
+    outcome = 'outcome'
+    lesson = 'lesson'
+    memory_candidate = 'memory_candidate'
+    approval_receipt = 'approval_receipt'
+    action_receipt = 'action_receipt'
+    context_envelope = 'context_envelope'
+    trace = 'trace'
+    agent_contract = 'agent_contract'
 
 
 class CognitiveRole(Enum):
-    memory = "memory"
-    knowledge = "knowledge"
-    intelligence = "intelligence"
-    none = "none"
+    memory = 'memory'
+    knowledge = 'knowledge'
+    intelligence = 'intelligence'
+    none = 'none'
 
 
 class WorkflowStatus(Enum):
-    candidate = "candidate"
-    approved = "approved"
-    rejected = "rejected"
-    not_applicable = "not_applicable"
+    candidate = 'candidate'
+    approved = 'approved'
+    rejected = 'rejected'
+    not_applicable = 'not_applicable'
 
 
 class EpistemicStatus(Enum):
-    unverified = "unverified"
-    supported = "supported"
-    disputed = "disputed"
-    refuted = "refuted"
-    not_applicable = "not_applicable"
+    unverified = 'unverified'
+    supported = 'supported'
+    disputed = 'disputed'
+    refuted = 'refuted'
+    not_applicable = 'not_applicable'
 
 
 class LifecycleStatus(Enum):
-    active = "active"
-    superseded = "superseded"
-    deprecated = "deprecated"
-    archived = "archived"
-    deleted = "deleted"
+    active = 'active'
+    superseded = 'superseded'
+    deprecated = 'deprecated'
+    archived = 'archived'
+    deleted = 'deleted'
 
 
 class StorageTier(Enum):
-    hot = "hot"
-    warm = "warm"
-    cold = "cold"
+    hot = 'hot'
+    warm = 'warm'
+    cold = 'cold'
 
 
 class Presentation(Enum):
-    canonical = "canonical"
-    generated_view = "generated_view"
+    canonical = 'canonical'
+    generated_view = 'generated_view'
 
 
 class SecurityClass(Enum):
-    public = "public"
-    internal = "internal"
-    confidential = "confidential"
-    restricted = "restricted"
+    public = 'public'
+    internal = 'internal'
+    confidential = 'confidential'
+    restricted = 'restricted'
 
 
 class ValidTime(BaseModel):
     model_config = ConfigDict(
-        extra="forbid",
+        extra='forbid',
     )
     valid_from: AwareDatetime | None
     valid_to: AwareDatetime | None
@@ -96,7 +98,7 @@ class ValidTime(BaseModel):
 
 class TransactionTime(BaseModel):
     model_config = ConfigDict(
-        extra="forbid",
+        extra='forbid',
     )
     recorded_at: AwareDatetime
     superseded_at: AwareDatetime | None
@@ -104,7 +106,7 @@ class TransactionTime(BaseModel):
 
 class Provenance(BaseModel):
     model_config = ConfigDict(
-        extra="forbid",
+        extra='forbid',
     )
     created_by: constr(min_length=3)
     source_refs: list[str]
@@ -116,10 +118,10 @@ class Provenance(BaseModel):
 
 class Integrity(BaseModel):
     model_config = ConfigDict(
-        extra="forbid",
+        extra='forbid',
     )
-    content_sha256: constr(pattern=r"^[a-f0-9]{64}$")
-    previous_version_sha256: constr(pattern=r"^[a-f0-9]{64}$") | None = None
+    content_sha256: constr(pattern=r'^[a-f0-9]{64}$')
+    previous_version_sha256: constr(pattern=r'^[a-f0-9]{64}$') | None = None
 
 
 class Tag(RootModel[constr(min_length=1)]):
@@ -128,14 +130,14 @@ class Tag(RootModel[constr(min_length=1)]):
 
 class Common(BaseModel):
     model_config = ConfigDict(
-        extra="forbid",
+        extra='forbid',
     )
-    object_id: constr(pattern=r"^[a-z][a-z0-9_-]{2,127}$")
+    object_id: constr(pattern=r'^[a-z][a-z0-9_-]{2,127}$')
     object_version: conint(ge=1)
     schema_id: constr(min_length=3)
-    schema_version: constr(pattern=r"^[0-9]+\.[0-9]+\.[0-9]+$")
-    owner_id: constr(pattern=r"^owner-[a-z0-9_-]+$")
-    workspace_id: constr(pattern=r"^ws-[a-z0-9_-]+$")
+    schema_version: constr(pattern=r'^[0-9]+\.[0-9]+\.[0-9]+$')
+    owner_id: constr(pattern=r'^owner-[a-z0-9_-]+$')
+    workspace_id: constr(pattern=r'^ws-[a-z0-9_-]+$')
     subject_domain: SubjectDomain
     artifact_type: ArtifactType
     cognitive_role: CognitiveRole

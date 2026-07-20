@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Any
 
@@ -11,38 +10,38 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, constr
 
 
 class RiskClass(Enum):
-    R0 = 'R0'
-    R1 = 'R1'
-    R2 = 'R2'
-    R3 = 'R3'
-    R4 = 'R4'
+    R0 = "R0"
+    R1 = "R1"
+    R2 = "R2"
+    R3 = "R3"
+    R4 = "R4"
 
 
 class PolicyDecision(Enum):
-    allow = 'allow'
-    deny = 'deny'
-    require_approval = 'require_approval'
+    allow = "allow"
+    deny = "deny"
+    require_approval = "require_approval"
 
 
 class Status(Enum):
-    denied = 'denied'
-    pending = 'pending'
-    succeeded = 'succeeded'
-    failed = 'failed'
-    partially_succeeded = 'partially_succeeded'
-    compensated = 'compensated'
+    denied = "denied"
+    pending = "pending"
+    succeeded = "succeeded"
+    failed = "failed"
+    partially_succeeded = "partially_succeeded"
+    compensated = "compensated"
 
 
 class AnimusActionReceipt(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
-    receipt_id: constr(pattern=r'^ar-[a-z0-9_-]+$')
+    receipt_id: constr(pattern=r"^ar-[a-z0-9_-]+$")
     trace_id: constr(min_length=3)
     principal_id: constr(min_length=3)
     tool_id: constr(min_length=3)
     risk_class: RiskClass
-    request_hash: constr(pattern=r'^[a-f0-9]{64}$')
+    request_hash: constr(pattern=r"^[a-f0-9]{64}$")
     policy_decision: PolicyDecision
     approval_id: str | None
     idempotency_key: constr(min_length=8)

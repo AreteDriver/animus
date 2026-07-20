@@ -1,0 +1,755 @@
+{
+  "version": "1.0",
+  "root": "/home/arete/projects/animus/packages/core/animus",
+  "ingested_at": "2026-07-17T09:34:55.029615+00:00",
+  "files": {
+    "dashboard.py": {
+      "hash": "a0001b206cdff1ea",
+      "chunks": 4
+    },
+    "proactive.py": {
+      "hash": "b947cc2e91125744",
+      "chunks": 30
+    },
+    "identity.py": {
+      "hash": "7b39f4a4e1bfd4c3",
+      "chunks": 14
+    },
+    "task_outcomes.py": {
+      "hash": "319ee5a3cf94dd5a",
+      "chunks": 11
+    },
+    "__init__.py": {
+      "hash": "5a7da3c971423279",
+      "chunks": 1
+    },
+    "autonomous-loop.py": {
+      "hash": "9366b5f8a7d29940",
+      "chunks": 4
+    },
+    "forge_tools.py": {
+      "hash": "ff482d7a399d5bb8",
+      "chunks": 6
+    },
+    "api.py": {
+      "hash": "324cfab3b9d05ff3",
+      "chunks": 29
+    },
+    "config.py": {
+      "hash": "755e86797a299a27",
+      "chunks": 31
+    },
+    "profiler.py": {
+      "hash": "80c93ad745ed888e",
+      "chunks": 8
+    },
+    "bootstrap_loop.py": {
+      "hash": "58986e4746a0cf9f",
+      "chunks": 20
+    },
+    "logging.py": {
+      "hash": "cb62446e4915d110",
+      "chunks": 3
+    },
+    "tools.py": {
+      "hash": "e756b0a0339dc983",
+      "chunks": 33
+    },
+    "cognitive.py": {
+      "hash": "dc533b63a47fb13d",
+      "chunks": 45
+    },
+    "mcp_gating.py": {
+      "hash": "7b441996960c73e0",
+      "chunks": 15
+    },
+    "decision.py": {
+      "hash": "4d9b2b1eaa3d01af",
+      "chunks": 11
+    },
+    "entities.py": {
+      "hash": "250f4b3c20fc293f",
+      "chunks": 33
+    },
+    "tasks.py": {
+      "hash": "74f65d6cdb19e7ce",
+      "chunks": 19
+    },
+    "register.py": {
+      "hash": "c6c1a0dcd14b9e8e",
+      "chunks": 12
+    },
+    "mcp_server.py": {
+      "hash": "1dd3fa6a3da7ebde",
+      "chunks": 6
+    },
+    "cli.py": {
+      "hash": "dd7594ef3a3091ae",
+      "chunks": 24
+    },
+    "voice.py": {
+      "hash": "5af013caad39f009",
+      "chunks": 22
+    },
+    "__main__.py": {
+      "hash": "a6496bacbeda509d",
+      "chunks": 10
+    },
+    "citizen_zero.py": {
+      "hash": "1da38460e5ace67c",
+      "chunks": 37
+    },
+    "autonomous.py": {
+      "hash": "2f00876053ccefe8",
+      "chunks": 19
+    },
+    "memory/layer.py": {
+      "hash": "f0290cef070b9288",
+      "chunks": 31
+    },
+    "memory/__init__.py": {
+      "hash": "5a491974d65d60ff",
+      "chunks": 1
+    },
+    "memory/tier.py": {
+      "hash": "cef52064ff9be0a6",
+      "chunks": 6
+    },
+    "memory/fusion.py": {
+      "hash": "67d96e21ba298246",
+      "chunks": 2
+    },
+    "memory/evaluation.py": {
+      "hash": "67cdd0e531147c43",
+      "chunks": 10
+    },
+    "memory/redaction.py": {
+      "hash": "43534d2c6ffb0d04",
+      "chunks": 6
+    },
+    "memory/types.py": {
+      "hash": "556129c026caba81",
+      "chunks": 14
+    },
+    "learning/__init__.py": {
+      "hash": "301d8c6f1af2c3e8",
+      "chunks": 28
+    },
+    "learning/guardrails.py": {
+      "hash": "72937f67da4e2feb",
+      "chunks": 20
+    },
+    "learning/categories.py": {
+      "hash": "aa3d29a440e6c46d",
+      "chunks": 10
+    },
+    "learning/patterns.py": {
+      "hash": "1dba531e8d522b2f",
+      "chunks": 16
+    },
+    "learning/preferences.py": {
+      "hash": "6a4011bebb2a5fa6",
+      "chunks": 14
+    },
+    "learning/approval.py": {
+      "hash": "2c5d4a754df6fe11",
+      "chunks": 24
+    },
+    "learning/transparency.py": {
+      "hash": "6f280a7566002ff6",
+      "chunks": 13
+    },
+    "learning/rollback.py": {
+      "hash": "c568aa36115af876",
+      "chunks": 15
+    },
+    "network/__init__.py": {
+      "hash": "a33b8d95c1fc8084",
+      "chunks": 1
+    },
+    "network/egress.py": {
+      "hash": "7ee0cc7412a8461f",
+      "chunks": 1
+    },
+    "forge/loader.py": {
+      "hash": "d85245343d8ae1f4",
+      "chunks": 5
+    },
+    "forge/models.py": {
+      "hash": "2cdbabe93153a98a",
+      "chunks": 10
+    },
+    "forge/agent.py": {
+      "hash": "98ff08fc0e3ba306",
+      "chunks": 8
+    },
+    "forge/engine.py": {
+      "hash": "9fc906b154c0d873",
+      "chunks": 13
+    },
+    "forge/gates.py": {
+      "hash": "b39b4e42090f6140",
+      "chunks": 4
+    },
+    "forge/__init__.py": {
+      "hash": "7a5184da41c62e8c",
+      "chunks": 2
+    },
+    "forge/checkpoint.py": {
+      "hash": "70ec9d4fff42cfea",
+      "chunks": 8
+    },
+    "forge/budget.py": {
+      "hash": "ab5d9912a107fefb",
+      "chunks": 2
+    },
+    "routing/scorer.py": {
+      "hash": "f462bad2a217d333",
+      "chunks": 8
+    },
+    "routing/router.py": {
+      "hash": "c8a875a6f779f929",
+      "chunks": 14
+    },
+    "routing/__init__.py": {
+      "hash": "d34dba036fd7e1a9",
+      "chunks": 1
+    },
+    "routing/graph.py": {
+      "hash": "9f14fdca93625c04",
+      "chunks": 15
+    },
+    "ogma/models.py": {
+      "hash": "2a05d1d84c9cb83e",
+      "chunks": 15
+    },
+    "ogma/read.py": {
+      "hash": "24dec27c867fd146",
+      "chunks": 9
+    },
+    "ogma/__init__.py": {
+      "hash": "6e6a7c80aeeb0a7b",
+      "chunks": 1
+    },
+    "ogma/grounding.py": {
+      "hash": "877bea1ba2f34286",
+      "chunks": 7
+    },
+    "ogma/cli.py": {
+      "hash": "f6f9136282782f28",
+      "chunks": 4
+    },
+    "protocols/__init__.py": {
+      "hash": "0327f2554bbd5be4",
+      "chunks": 1
+    },
+    "protocols/intelligence.py": {
+      "hash": "1104857330195c30",
+      "chunks": 2
+    },
+    "protocols/sync.py": {
+      "hash": "0050f94474370965",
+      "chunks": 2
+    },
+    "protocols/memory.py": {
+      "hash": "1859835ade94d8bd",
+      "chunks": 2
+    },
+    "protocols/safety.py": {
+      "hash": "fe67cb5a742a7c91",
+      "chunks": 2
+    },
+    "durability/__init__.py": {
+      "hash": "34e56169fdad4100",
+      "chunks": 1
+    },
+    "durability/postgres_store.py": {
+      "hash": "4e420988f13fbce8",
+      "chunks": 33
+    },
+    "durability/cli.py": {
+      "hash": "01d7d9b1c19ed304",
+      "chunks": 6
+    },
+    "durability/export.py": {
+      "hash": "68985ca889e37577",
+      "chunks": 11
+    },
+    "daemon/__init__.py": {
+      "hash": "30114f5ea25cfe4a",
+      "chunks": 1
+    },
+    "daemon/session_manager.py": {
+      "hash": "c098c3c9184a74a6",
+      "chunks": 16
+    },
+    "daemon/resource_guard.py": {
+      "hash": "ede3d6d0c125dcfb",
+      "chunks": 12
+    },
+    "daemon/core.py": {
+      "hash": "aee44d30bc71a06b",
+      "chunks": 28
+    },
+    "daemon/events.py": {
+      "hash": "532e1eb738341a9e",
+      "chunks": 20
+    },
+    "daemon/scheduler.py": {
+      "hash": "21646aea6dc6cff1",
+      "chunks": 22
+    },
+    "policy/capability_store.py": {
+      "hash": "a344519ad89724af",
+      "chunks": 3
+    },
+    "policy/decision_point.py": {
+      "hash": "7b38ec8eb5ec3efb",
+      "chunks": 7
+    },
+    "policy/__init__.py": {
+      "hash": "93b38be07a7798c9",
+      "chunks": 1
+    },
+    "scripts/__init__.py": {
+      "hash": "6a04424e3e635704",
+      "chunks": 1
+    },
+    "scripts/migrate_sensitivity_tiers.py": {
+      "hash": "0468521b9d9f34af",
+      "chunks": 5
+    },
+    "scripts/verify_hardening.py": {
+      "hash": "16baec85a0938175",
+      "chunks": 30
+    },
+    "scripts/commit_backfill_review.py": {
+      "hash": "30b9daa568fdf035",
+      "chunks": 4
+    },
+    "eval/rewards.py": {
+      "hash": "58bb1eda019c7cc0",
+      "chunks": 8
+    },
+    "eval/__init__.py": {
+      "hash": "463c344691365746",
+      "chunks": 1
+    },
+    "eval/rubric.py": {
+      "hash": "6f6d0d9f6ae05284",
+      "chunks": 11
+    },
+    "eval/judge.py": {
+      "hash": "c907002e3cb87db2",
+      "chunks": 17
+    },
+    "code/chunking.py": {
+      "hash": "679c4c041c28c20a",
+      "chunks": 12
+    },
+    "code/__init__.py": {
+      "hash": "5d59dc0aab1f9c51",
+      "chunks": 1
+    },
+    "meta/signals.py": {
+      "hash": "dcea79e9d63ac3f5",
+      "chunks": 8
+    },
+    "meta/__init__.py": {
+      "hash": "66081d2013a4fba8",
+      "chunks": 1
+    },
+    "meta/thinker.py": {
+      "hash": "63914720d0d65d6e",
+      "chunks": 11
+    },
+    "meta/anomalies.py": {
+      "hash": "837e5691cc099c28",
+      "chunks": 7
+    },
+    "meta/events.py": {
+      "hash": "4bc860c89a85f6ea",
+      "chunks": 7
+    },
+    "mission/citizen_mixin.py": {
+      "hash": "261a0889ca7fbb19",
+      "chunks": 2
+    },
+    "mission/__init__.py": {
+      "hash": "7a7f3b78b3889d13",
+      "chunks": 1
+    },
+    "mission/system.py": {
+      "hash": "ec73031ec986e74d",
+      "chunks": 24
+    },
+    "mission/runtime.py": {
+      "hash": "f016b3f066f4a653",
+      "chunks": 15
+    },
+    "mission/order.py": {
+      "hash": "03512858dd9d21fe",
+      "chunks": 11
+    },
+    "redteam/driver.py": {
+      "hash": "ccbffc73dfbf1895",
+      "chunks": 18
+    },
+    "redteam/__init__.py": {
+      "hash": "5d7781dbad644ac5",
+      "chunks": 1
+    },
+    "redteam/standing.py": {
+      "hash": "b62027dad1f92cbb",
+      "chunks": 13
+    },
+    "sync/protocol.py": {
+      "hash": "b9704669f3690f97",
+      "chunks": 17
+    },
+    "sync/state.py": {
+      "hash": "a118555d3f4e2582",
+      "chunks": 27
+    },
+    "sync/client.py": {
+      "hash": "f8d41335ca34a4bb",
+      "chunks": 15
+    },
+    "sync/__init__.py": {
+      "hash": "517735a451b20584",
+      "chunks": 1
+    },
+    "sync/server.py": {
+      "hash": "3dd755aa33ee9ffe",
+      "chunks": 22
+    },
+    "sync/discovery.py": {
+      "hash": "db2998282a2fd8d6",
+      "chunks": 16
+    },
+    "swarm/models.py": {
+      "hash": "5f51f60aae299286",
+      "chunks": 6
+    },
+    "swarm/engine.py": {
+      "hash": "0d777f4ee2074620",
+      "chunks": 16
+    },
+    "swarm/__init__.py": {
+      "hash": "f0c10e60a9d59655",
+      "chunks": 1
+    },
+    "swarm/graph.py": {
+      "hash": "0e543ed8bb28a209",
+      "chunks": 4
+    },
+    "swarm/intent.py": {
+      "hash": "f27b0999d180d616",
+      "chunks": 3
+    },
+    "workflows/__init__.py": {
+      "hash": "74cad80acaa5a6ff",
+      "chunks": 1
+    },
+    "workflows/code_ingest.py": {
+      "hash": "f967a24138480f50",
+      "chunks": 6
+    },
+    "workflows/ingest.py": {
+      "hash": "a122018da2773209",
+      "chunks": 18
+    },
+    "dossier/models.py": {
+      "hash": "44a25b47b3b31b0a",
+      "chunks": 14
+    },
+    "dossier/__init__.py": {
+      "hash": "e0e0ae42d407e8ac",
+      "chunks": 1
+    },
+    "dossier/graph.py": {
+      "hash": "3943e16465de491f",
+      "chunks": 19
+    },
+    "dossier/ner.py": {
+      "hash": "6b5bd0db25928ae3",
+      "chunks": 12
+    },
+    "citizens/first_principles.py": {
+      "hash": "c09f6c3f39667c6f",
+      "chunks": 13
+    },
+    "citizens/citizen_council.py": {
+      "hash": "2603b9864d6d8f8d",
+      "chunks": 16
+    },
+    "citizens/__init__.py": {
+      "hash": "2e6f759f93ef2c4b",
+      "chunks": 1
+    },
+    "citizens/proposal.py": {
+      "hash": "a64700fcd71a4a18",
+      "chunks": 10
+    },
+    "citizens/commissioner.py": {
+      "hash": "5a43352a4a28abbb",
+      "chunks": 14
+    },
+    "citizens/knowledge_curator.py": {
+      "hash": "0d4f4406afb72f44",
+      "chunks": 17
+    },
+    "citizens/architect.py": {
+      "hash": "2ed997f383c9edf6",
+      "chunks": 33
+    },
+    "citizens/pattern.py": {
+      "hash": "6a4ef33f7466b657",
+      "chunks": 16
+    },
+    "citizens/intelligence.py": {
+      "hash": "bf9f8512c120925d",
+      "chunks": 22
+    },
+    "citizens/conversation_designer.py": {
+      "hash": "95c6e9e532d20548",
+      "chunks": 16
+    },
+    "citizens/eval_evidence.py": {
+      "hash": "427b5b04d440d31e",
+      "chunks": 10
+    },
+    "citizens/media.py": {
+      "hash": "e12372266560a453",
+      "chunks": 22
+    },
+    "citizens/harvester.py": {
+      "hash": "13cdebbb44a6384f",
+      "chunks": 19
+    },
+    "citizens/session_steward.py": {
+      "hash": "79c6c0adbb40d79a",
+      "chunks": 28
+    },
+    "citizens/architecture_citizen.py": {
+      "hash": "be567152927acb9b",
+      "chunks": 18
+    },
+    "citizens/research_guild.py": {
+      "hash": "eaa27943ce4afb24",
+      "chunks": 12
+    },
+    "citizens/abstraction.py": {
+      "hash": "02c354a167e88a32",
+      "chunks": 16
+    },
+    "citizens/proposal_queue.py": {
+      "hash": "a1f3a54b860a44ca",
+      "chunks": 26
+    },
+    "integrity/__init__.py": {
+      "hash": "80ccc03d5efe70ea",
+      "chunks": 1
+    },
+    "integrity/cli.py": {
+      "hash": "592f7d5795d98ea5",
+      "chunks": 5
+    },
+    "integrity/checker.py": {
+      "hash": "2bc34c87ec2ba83f",
+      "chunks": 23
+    },
+    "lugh/models.py": {
+      "hash": "91455869738c7fce",
+      "chunks": 3
+    },
+    "lugh/drift_client.py": {
+      "hash": "28dec88395f86356",
+      "chunks": 2
+    },
+    "lugh/__init__.py": {
+      "hash": "c5e36ba18aca703e",
+      "chunks": 1
+    },
+    "lugh/watchlist_tools.py": {
+      "hash": "e4b4d57e617bf7c5",
+      "chunks": 5
+    },
+    "lugh/repos.py": {
+      "hash": "2bc5cdcb837d21ca",
+      "chunks": 18
+    },
+    "lugh/cache.py": {
+      "hash": "e7f2e3adffc3fa37",
+      "chunks": 5
+    },
+    "lugh/digest.py": {
+      "hash": "a1d3d311bead3081",
+      "chunks": 14
+    },
+    "lugh/cli.py": {
+      "hash": "5806663c1d304750",
+      "chunks": 3
+    },
+    "lugh/transcripts.py": {
+      "hash": "20c127ad3744dbf4",
+      "chunks": 15
+    },
+    "lugh/watchlist.py": {
+      "hash": "fc6745b6659c1658",
+      "chunks": 12
+    },
+    "integrations/webhooks.py": {
+      "hash": "5c309141c8fbe6a6",
+      "chunks": 17
+    },
+    "integrations/oauth.py": {
+      "hash": "3e654af36e191a88",
+      "chunks": 9
+    },
+    "integrations/__init__.py": {
+      "hash": "ea2cc27b1641a844",
+      "chunks": 1
+    },
+    "integrations/arete_bridge.py": {
+      "hash": "f34d3992e849217b",
+      "chunks": 4
+    },
+    "integrations/manager.py": {
+      "hash": "46aa099af428054e",
+      "chunks": 24
+    },
+    "integrations/base.py": {
+      "hash": "16dd84ae0df94ebc",
+      "chunks": 17
+    },
+    "integrations/filesystem.py": {
+      "hash": "5868572fae0d42aa",
+      "chunks": 16
+    },
+    "integrations/todoist.py": {
+      "hash": "c22aef26aa31a153",
+      "chunks": 12
+    },
+    "discovery/__init__.py": {
+      "hash": "f9c01a2e6c1de3cd",
+      "chunks": 1
+    },
+    "discovery/validator.py": {
+      "hash": "458113698c67a4a3",
+      "chunks": 10
+    },
+    "discovery/openapi_discovery.py": {
+      "hash": "7111a4a4343adc98",
+      "chunks": 9
+    },
+    "discovery/orchestrator.py": {
+      "hash": "3716e6e68f02568b",
+      "chunks": 14
+    },
+    "discovery/mcp_scanner.py": {
+      "hash": "2a4796f74af77167",
+      "chunks": 8
+    },
+    "discovery/script_discovery.py": {
+      "hash": "7e7ef80c64e55b6a",
+      "chunks": 11
+    },
+    "audit/__init__.py": {
+      "hash": "7f8d59c68b765f78",
+      "chunks": 1
+    },
+    "audit/egress_log.py": {
+      "hash": "368dc9b280f0536f",
+      "chunks": 3
+    },
+    "memory/stores/__init__.py": {
+      "hash": "b8a34311c5b974d7",
+      "chunks": 1
+    },
+    "memory/stores/chroma.py": {
+      "hash": "c22e17c6b3a321ac",
+      "chunks": 15
+    },
+    "memory/stores/durable.py": {
+      "hash": "8b26ef6e39ec5ce6",
+      "chunks": 24
+    },
+    "memory/stores/base.py": {
+      "hash": "447907a843544068",
+      "chunks": 2
+    },
+    "memory/stores/local.py": {
+      "hash": "dba7a2670b50b739",
+      "chunks": 12
+    },
+    "eval/rubrics/personal_quality.py": {
+      "hash": "a576ab01c7cbd760",
+      "chunks": 2
+    },
+    "lugh/sources/search.py": {
+      "hash": "c324077d9c6387f1",
+      "chunks": 8
+    },
+    "lugh/sources/__init__.py": {
+      "hash": "cbc17c10e39640b6",
+      "chunks": 1
+    },
+    "lugh/sources/youtube.py": {
+      "hash": "1cb6f91188a08112",
+      "chunks": 17
+    },
+    "lugh/sources/rss.py": {
+      "hash": "7079b563e1321d4b",
+      "chunks": 10
+    },
+    "lugh/sources/podcasts.py": {
+      "hash": "1e8d9aff56238e4a",
+      "chunks": 8
+    },
+    "lugh/sources/registry.py": {
+      "hash": "87f0d0536e6f8c84",
+      "chunks": 11
+    },
+    "lugh/sources/cli.py": {
+      "hash": "11188bef0e3fb5f2",
+      "chunks": 12
+    },
+    "lugh/sources/mer.py": {
+      "hash": "0d782841fa4d38b3",
+      "chunks": 5
+    },
+    "lugh/sources/relevance.py": {
+      "hash": "5550af526a3f30db",
+      "chunks": 4
+    },
+    "lugh/sources/base.py": {
+      "hash": "3a2cd2151a3d471c",
+      "chunks": 14
+    },
+    "lugh/sources/arxiv.py": {
+      "hash": "1f5b556287ae5c95",
+      "chunks": 6
+    },
+    "lugh/sources/hn.py": {
+      "hash": "1169203c0c9b631d",
+      "chunks": 11
+    },
+    "integrations/google/gmail.py": {
+      "hash": "7df4ac236fc163c5",
+      "chunks": 14
+    },
+    "integrations/google/__init__.py": {
+      "hash": "cc18622fa4731932",
+      "chunks": 1
+    },
+    "integrations/google/calendar.py": {
+      "hash": "25e05f005f35d9a3",
+      "chunks": 12
+    },
+    "redteam/systemd/README.md": {
+      "hash": "12c21c4be298882c",
+      "chunks": 11
+    }
+  }
+}

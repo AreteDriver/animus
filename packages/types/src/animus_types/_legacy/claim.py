@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Literal
 
@@ -13,17 +12,17 @@ from .common import Common
 
 
 class ClaimKind(Enum):
-    factual = 'factual'
-    causal = 'causal'
-    interpretive = 'interpretive'
-    normative = 'normative'
-    identity = 'identity'
-    requirement = 'requirement'
+    factual = "factual"
+    causal = "causal"
+    interpretive = "interpretive"
+    normative = "normative"
+    identity = "identity"
+    requirement = "requirement"
 
 
 class Payload(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     proposition: constr(min_length=1)
     claim_kind: ClaimKind
@@ -34,6 +33,6 @@ class Payload(BaseModel):
 
 
 class AnimusClaimObject(Common):
-    artifact_type: Literal['claim'] | None = None
-    schema_id: Literal['https://animus.local/schemas/claim.schema.json'] | None = None
+    artifact_type: Literal["claim"] | None = None
+    schema_id: Literal["https://animus.local/schemas/claim.schema.json"] | None = None
     payload: Payload | None = None

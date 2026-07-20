@@ -78,6 +78,28 @@ jobs:
       - name: Run pre-commit
         run: pre-commit run --all-files --show-diff-on-failure
 
+  contracts:
+    name: Contract Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install contracts package
+        run: pip install -e packages/contracts/
+
+      - name: Validate schemas
+        run: python3 scripts/validate_contracts.py
+
+      - name: Test generated types
+        run: |
+          pip install -e packages/types/
+          pytest packages/types/tests/test_schemas.py -v --tb=short
+
   type-check:
     name: Type Check (mypy)
     runs-on: ubuntu-latest
