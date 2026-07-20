@@ -95,10 +95,12 @@ jobs:
           pip install -e packages/types/
 
       - name: Validate schemas
-        run: python3 scripts/validate_contracts.py
+        run: python scripts/validate_contracts.py
 
       - name: Test generated types
-        run: pytest packages/types/tests/test_schemas.py -v --tb=short
+        run: |
+          pip install pytest
+          pytest packages/types/tests/test_schemas.py -v --tb=short
 
   type-check:
     name: Type Check (mypy)
