@@ -26,8 +26,13 @@ jobs:
       - name: Install dependencies
         run: pip install -e "packages/kernel/[dev]"
 
+      - name: Install test runner
+        run: |
+          pip install pytest pytest-asyncio
+          pytest --version
+
       - name: Run tests
-        run: pytest packages/kernel/tests/ -q --no-header --tb=short
+        run: python -m pytest packages/kernel/tests/ -q --no-header --tb=short
 
       - name: Build package
         run: |
