@@ -9,7 +9,9 @@
 [![PyPI - convergentAI](https://img.shields.io/pypi/v/convergentAI?label=convergentAI&color=blue)](https://pypi.org/project/convergentAI/)
 ![License](https://img.shields.io/github/license/AreteDriver/animus)
 
-Animus coordinates AI agents across complex workflows — with the operational discipline of a manufacturing line. Every agent has a token budget. Every workflow has a cost ceiling. If a pipeline fails at step 4 of 6, it restarts at step 4, not step 1. Inspired by the Toyota Production System: make cost visible, make waste impossible to ignore.
+Running AI agents in production creates three predictable failures: **costs spiral** because no one tracks token spend, **pipelines break halfway through** and restart from scratch wasting compute, and **multi-agent systems bottleneck** on a single supervisor that burns tokens just watching. Animus fixes this with manufacturing-line discipline — every agent gets a token budget, every workflow checkpoints state to SQLite for resume on failure, and agent coordination uses shared intent graphs instead of a central supervisor.
+
+Before software I spent 17 years in manufacturing and logistics (IBM, Toyota Production System). The same principles apply here: make cost visible, make waste impossible to ignore, stop and fix before propagating errors.
 
 **Platform: Linux only** for the public open-source launch. macOS support is on the roadmap; Windows is out of scope.
 
@@ -61,7 +63,7 @@ Production orchestration for AI agent pipelines. Define workflows in YAML, assig
 
 ### Quorum — Agent Coordination Protocol
 
-Decentralized multi-agent coordination without a supervisor bottleneck. Agents read a shared intent graph and self-adjust based on stability scores — no inter-agent messaging required. Includes triumvirate voting, flocking behaviors, and optional Rust PyO3 backend for performance.
+Decentralized multi-agent coordination without a supervisor bottleneck. Agents read a shared intent graph and self-adjust based on stability scores — no inter-agent messaging required. Includes triumvirate voting, emergent coordination patterns, and optional Rust PyO3 backend for performance.
 
 [`packages/quorum/`](packages/quorum/) | `import convergent` | [PyPI: convergentAI](https://pypi.org/project/convergentAI/)
 
@@ -79,13 +81,15 @@ One-command install, Rich-based onboarding wizard, FastAPI+HTMX ops dashboard at
 
 ---
 
-## Core Principles
+## Core Design Decisions
 
-- **Persistence** — context accumulates across sessions, devices, and years
-- **Local-first control** — your data stays on your hardware by default, with cryptographic audit trails
-- **Portability** — moves with you across all devices
-- **Model independence** — swap models without losing memory or context
-- **Deterministic behavior** — reproducible outputs, versioned configs, measured outcomes
+These are visible in the code, not aspirational:
+
+- **Checkpoint/resume by default** — Every Forge workflow persists state to SQLite. If step 4 of 6 fails, restart at step 4. No wasted compute. The state machine is in `packages/forge/src/animus_forge/executor.py`.
+- **Token budgets per agent** — Every agent declaration includes a `budget` field. The executor enforces it. No surprise API bills. See `packages/forge/workflows/*.yml` for examples.
+- **Quality gates before merge** — Deterministic scoring (tool/completeness/structure) with adversarial test harness. A feature doesn't ship unless the gate passes. Implemented in `packages/forge/src/animus_forge/gates/`.
+- **Provider-agnostic dispatch** — LLM calls go through a shared interface. Swap Claude for OpenAI or Ollama without touching agent code. Native tool use dispatches by provider. See `packages/core/animus/inference/`.
+- **Local-first memory** — Episodic, semantic, and procedural memory via ChromaDB/SQLite. Your data stays on your hardware unless you configure a PostgreSQL backend. No cloud dependency for personal use.
 
 ---
 
@@ -331,7 +335,7 @@ Active development. Architecture stable. v2.3.0 (migrating to v2.1 baseline) rel
 
 **Budget-first execution.** Every agent has a token budget. Every workflow has a cost ceiling. Inspired by Toyota Production System — make cost visible, make waste impossible to ignore.
 
-**No supervisor bottleneck.** The industry default for multi-agent coordination is a supervisor that watches everything. This burns tokens on monitoring and creates a single point of failure. Quorum replaces this with environmental awareness — agents observe shared state and independently converge, the way flocking birds coordinate without a lead bird.
+**No supervisor bottleneck.** The industry default for multi-agent coordination is a supervisor that watches everything. This burns tokens on monitoring and creates a single point of failure. Quorum replaces this with environmental awareness — agents read a shared intent graph and self-adjust based on stability scores. No inter-agent messaging required.
 
 **Checkpoint/resume.** All Forge workflows persist state to SQLite. If a pipeline fails at step 4 of 6, it restarts at step 4. No wasted compute.
 
