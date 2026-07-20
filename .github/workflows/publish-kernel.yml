@@ -32,7 +32,8 @@ jobs:
           pytest --version
 
       - name: Run tests
-        run: python -m pytest packages/kernel/tests/ -q --no-header --tb=short
+        working-directory: packages/kernel
+        run: python -m pytest tests/ -q --no-header --tb=short
 
       - name: Build package
         run: |
