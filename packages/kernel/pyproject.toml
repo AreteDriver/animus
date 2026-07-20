@@ -16,8 +16,12 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
 ]
 dependencies = [
     "pydantic >=2.0",
@@ -26,14 +30,13 @@ dependencies = [
     "typer >=0.12",
     "sqlalchemy >=2.0",
     "psycopg2-binary >=2.9",
-    # Provider deps — optional
-    "openai >=1.30; extra == 'openai'",
-    "anthropic >=0.28; extra == 'anthropic'",
 ]
 
 [project.optional-dependencies]
-all = ["openai", "anthropic"]
-dev = ["pytest >=8.0", "pytest-asyncio >=0.23", "ruff >=0.4", "mypy >=1.10"]
+openai = ["openai >=1.30"]
+anthropic = ["anthropic >=0.28"]
+all = ["openai >=1.30", "anthropic >=0.28"]
+dev = ["pytest >=8.0", "pytest-asyncio >=0.23", "pytest-cov >=6.0", "ruff >=0.4", "mypy >=1.10"]
 
 [project.urls]
 Homepage = "https://github.com/AreteDriver/animus"
@@ -64,3 +67,17 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 plugins = ["pydantic.mypy"]
+
+[tool.coverage.run]
+source = ["src/animus_kernel"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/benchmarks/*",
+]
+
+[tool.coverage.report]
+precision = 1
+skip_covered = false
+show_missing = true
+fail_under = 21

@@ -1,0 +1,42 @@
+name: Publish Kernel to TestPyPI
+
+on:
+  push:
+    branches: [main]
+    tags: ["kernel-v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-testpypi:
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e "packages/kernel/[dev]"
+
+      - name: Run tests
+        run: pytest packages/kernel/tests/ -q --no-header --tb=short
+
+      - name: Build package
+        run: |
+          pip install build
+          python -m build packages/kernel/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: packages/kernel/dist/

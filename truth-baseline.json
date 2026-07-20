@@ -1,8 +1,8 @@
 {
   "project": "animus",
-  "timestamp": "2026-07-01T12:47:54.358075+00:00",
+  "timestamp": "2026-07-20T05:01:57.896623+00:00",
   "summary": {
-    "pass": 25,
+    "pass": 39,
     "fail": 0,
     "skip": 1,
     "error": 0
@@ -39,9 +39,9 @@
       "check_type": "count",
       "status": "PASS",
       "expected": null,
-      "actual": 20,
+      "actual": 25,
       "claim_source": "",
-      "message": "Found 20 files matching ['packages/**/*.schema.json']"
+      "message": "Found 25 files matching ['packages/**/*.schema.json']"
     },
     {
       "name": "adr_directory",
@@ -62,18 +62,18 @@
       "check_type": "test_count",
       "status": "PASS",
       "expected": 1,
-      "actual": 2832,
+      "actual": 3512,
       "claim_source": "",
-      "message": "Collected 2832 tests; expected >= 1"
+      "message": "Collected 3512 tests; expected >= 1"
     },
     {
       "name": "forge_tests",
       "check_type": "test_count",
       "status": "PASS",
       "expected": 1,
-      "actual": 10473,
+      "actual": 10496,
       "claim_source": "",
-      "message": "Collected 10473 tests; expected >= 1"
+      "message": "Collected 10496 tests; expected >= 1"
     },
     {
       "name": "root_architecture_dirs",
@@ -158,7 +158,7 @@
         "types": "0.1.0"
       },
       "claim_source": "",
-      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'0.8.0', '1.2.0', '0.1.0', '1.9.0', '2.3.0'} (expected failure)"
+      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'0.8.0', '1.2.0', '2.3.0', '1.9.0', '0.1.0'} (expected failure)"
     },
     {
       "name": "compatibility_matrix",
@@ -173,6 +173,19 @@
       },
       "claim_source": "",
       "message": "All paths match expectation"
+    },
+    {
+      "name": "cross_package_compatibility",
+      "check_type": "compat_check",
+      "status": "PASS",
+      "expected": "compatibility check passes",
+      "actual": {
+        "returncode": 0,
+        "stdout": "Packages found: 7\n  animus-bootstrap     0.8.0\n  animus-contracts     0.1.0\n  animus-core          2.3.0\n  animus-forge         1.9.0\n  animus-kernel        0.1.0\n  animus-types         0.1.0\n  convergentai         1.2.0\n\nPASS — all compatibility checks satisfied.",
+        "stderr": ""
+      },
+      "claim_source": "scripts/check_compatibility.py",
+      "message": "Compatibility OK"
     },
     {
       "name": "initial_migration",
@@ -217,22 +230,184 @@
       "message": "All paths match expectation"
     },
     {
+      "name": "kernel_publish_workflow",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        ".github/workflows/publish-kernel.yml"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "kernel_changelog",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "packages/kernel/CHANGELOG.md"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "kernel_dockerfile",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "packages/kernel/Dockerfile"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "kernel_dockerignore",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "packages/kernel/.dockerignore"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "kernel_api_docs",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "docs/reference/kernel-api.md"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "precommit_ci_job",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        ".github/workflows/ci.yml"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "benchmark_regression_gate",
+      "check_type": "regex_match",
+      "status": "PASS",
+      "expected": "fail-on-alert: true",
+      "actual": "fail-on-alert: true",
+      "claim_source": "",
+      "message": "Extracted 'fail-on-alert: true' from .github/workflows/ci.yml; expected == 'fail-on-alert: true'"
+    },
+    {
+      "name": "sbom_generation",
+      "check_type": "regex_match",
+      "status": "PASS",
+      "expected": "cyclonedx-py environment",
+      "actual": "cyclonedx-py environment",
+      "claim_source": "",
+      "message": "Extracted 'cyclonedx-py environment' from .github/workflows/ci.yml; expected == 'cyclonedx-py environment'"
+    },
+    {
+      "name": "multiarch_docker",
+      "check_type": "regex_match",
+      "status": "PASS",
+      "expected": "platforms: linux/amd64,linux/arm64",
+      "actual": "platforms: linux/amd64,linux/arm64",
+      "claim_source": "",
+      "message": "Extracted 'platforms: linux/amd64,linux/arm64' from .github/workflows/ci.yml; expected == 'platforms: linux/amd64,linux/arm64'"
+    },
+    {
+      "name": "benchmark_profiler_script",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        "scripts/profile_benchmarks.py"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "database_version_matrix",
+      "check_type": "regex_match",
+      "status": "PASS",
+      "expected": "postgres-version:",
+      "actual": "postgres-version:",
+      "claim_source": "",
+      "message": "Extracted 'postgres-version:' from .github/workflows/ci.yml; expected == 'postgres-version:'"
+    },
+    {
+      "name": "dependabot_config",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        ".github/dependabot.yml"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
+      "name": "dependabot_auto_approve",
+      "check_type": "file_exists",
+      "status": "PASS",
+      "expected": [
+        ".github/workflows/dependabot-auto-approve.yml"
+      ],
+      "actual": {
+        "missing": [],
+        "unexpected": []
+      },
+      "claim_source": "",
+      "message": "All paths match expectation"
+    },
+    {
       "name": "database_tests",
       "check_type": "test_count",
       "status": "PASS",
       "expected": 1,
-      "actual": 4,
+      "actual": 22,
       "claim_source": "",
-      "message": "Collected 4 tests; expected >= 1"
+      "message": "Collected 22 tests; expected >= 1"
     },
     {
       "name": "kernel_tests",
       "check_type": "test_count",
       "status": "PASS",
       "expected": 1,
-      "actual": 107,
+      "actual": 357,
       "claim_source": "",
-      "message": "Collected 107 tests; expected >= 1"
+      "message": "Collected 357 tests; expected >= 1"
     },
     {
       "name": "traceability_linter",

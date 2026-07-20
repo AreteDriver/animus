@@ -1,27 +1,43 @@
 # Animus Compatibility Matrix
 
-**Last verified**: 2026-06-27
-**Verification method**: `python -m pytest -c pyproject.toml packages/*/tests --collect-only` passes for all packages
+**Last verified**: 2026-07-19
+**Verification method**: `python scripts/check_compatibility.py` + full regression suite
 
 ## Packages
 
-| Package | PyPI Name | Version | Last verified commit | Notes |
+| Package | PyPI Name | Version | Maturity | Notes |
 |---|---|---|---|---|
-| `core` | `animus-core` | 2.3.0 | `f28ee74` | Root version; CLI + memory operational |
-| `forge` | `animus-forge` | 1.9.0 | `f28ee74` | Workflow orchestration; extracted kernel in 2026-03 |
-| `bootstrap` | `animus-bootstrap` | 0.8.0 | `f28ee74` | Install daemon + dashboard; depends on `core`, `types` |
-| `quorum` | `convergentAI` | 1.2.0 | `f28ee74` | Rust core + Python bindings; name mismatch documented in ADR-001 |
-| `types` | `animus-types` | 0.1.0 | `f28ee74` | Zero-prod-deps shared types; now includes 20 generated schema models |
-| `kernel` | `animus-kernel` | 0.1.0 | `f28ee74` | Extracted from Forge 2026-03; 99 tests, needs coverage |
-| `pwa` | `animus-pwa` (npm) | 0.1.0 | `f28ee74` | TypeScript frontend; no Python tests |
-| `contracts` | `animus-contracts` | 0.1.0 | `f28ee74` | Pure JSON schemas; no runtime deps |
+| `core` | `animus-core` | 2.3.0 | Production/Stable | Root version; CLI + memory operational |
+| `forge` | `animus-forge` | 1.9.0 | Production/Stable | Workflow orchestration; extracted kernel in 2026-03 |
+| `bootstrap` | `animus-bootstrap` | 0.8.0 | Alpha | Install daemon + dashboard |
+| `quorum` | `convergentAI` | 1.2.0 | Production/Stable | Rust core + Python bindings; name mismatch documented in ADR-001 |
+| `types` | `animus-types` | 0.1.0 | Beta | Zero-prod-deps shared types; now includes 20 generated schema models |
+| `kernel` | `animus-kernel` | 0.1.0 | Alpha | Extracted from Forge 2026-03; 357 tests green |
+| `pwa` | `animus-pwa` (npm) | 0.1.0 | Alpha | TypeScript frontend; 25 Vitest tests green |
+| `contracts` | `animus-contracts` | 0.1.0 | Alpha | Pure JSON schemas + runtime validator; 116 tests green |
+
+## Compatibility Promise
+
+The following version ranges are guaranteed to work together. CI enforces this via `scripts/check_compatibility.py`.
+
+| Consumer | Requires | Verified Range |
+|---|---|---|
+| `core` 2.3.x | `types` | `0.1.x` |
+| `forge` 1.9.x | `types` | `0.1.x` |
+| `forge` 1.9.x | `quorum` | `1.2.x` |
+
+**No compatibility promise** yet for:
+- `kernel` — internal API still evolving; no downstream consumers
+- `contracts` — schema-only; version pinned by consumer
+- `pwa` — frontend; coupled to bootstrap API, not versioned together
 
 ## Inter-Package Dependencies
 
 ```
-core ────────► types (animus-types>=0.1.0)
-forge ───────► types
-bootstrap ───► core, types
+core ────────► types (animus-types>=0.1.0,<1)
+forge ───────► types (animus-types>=0.1.0,<1)
+forge ───────► quorum (convergentai>=1.1.0,<2)
+bootstrap ───► (none declared in pyproject.toml; runtime coupling to core/types)
 kernel ──────► types (embedded copy; will unify)
 quorum ──────► (none — Rust + standalone Python)
 pwa ─────────► (none — TypeScript frontend)
@@ -59,7 +75,7 @@ Recommended: Option 3 until Phase 2 Durable Core stabilizes, then evaluate Optio
 Run this command to confirm the matrix is still accurate:
 
 ```bash
-python scripts/truth-baseline.py
+python scripts/check_compatibility.py
 ```
 
-If `version_alignment` reports PASS, all versions match. If FAIL, update this file with the new mismatches.
+If the script reports PASS, all versions match the matrix. If FAIL, update this file and the script together.

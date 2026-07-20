@@ -98,6 +98,11 @@ name = "compatibility_matrix"
 paths = ["COMPATIBILITY_MATRIX.md"]
 should_exist = true
 
+[[checks]]
+type = "compat_check"
+name = "cross_package_compatibility"
+script = "scripts/check_compatibility.py"
+
 # Phase 2: Durable Core
 [[checks]]
 type = "file_exists"
@@ -115,6 +120,92 @@ should_exist = true
 type = "file_exists"
 name = "infra_env_example"
 paths = ["infra/.env.example"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "kernel_publish_workflow"
+paths = [".github/workflows/publish-kernel.yml"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "kernel_changelog"
+paths = ["packages/kernel/CHANGELOG.md"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "kernel_dockerfile"
+paths = ["packages/kernel/Dockerfile"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "kernel_dockerignore"
+paths = ["packages/kernel/.dockerignore"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "kernel_api_docs"
+paths = ["docs/reference/kernel-api.md"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "precommit_ci_job"
+paths = [".github/workflows/ci.yml"]
+should_exist = true
+
+[[checks]]
+type = "regex_match"
+name = "benchmark_regression_gate"
+file = ".github/workflows/ci.yml"
+pattern = "fail-on-alert: true"
+expected = "fail-on-alert: true"
+op = "=="
+
+[[checks]]
+type = "regex_match"
+name = "sbom_generation"
+file = ".github/workflows/ci.yml"
+pattern = "cyclonedx-py environment"
+expected = "cyclonedx-py environment"
+op = "=="
+
+[[checks]]
+type = "regex_match"
+name = "multiarch_docker"
+file = ".github/workflows/ci.yml"
+pattern = "platforms: linux/amd64,linux/arm64"
+expected = "platforms: linux/amd64,linux/arm64"
+op = "=="
+
+[[checks]]
+type = "file_exists"
+name = "benchmark_profiler_script"
+paths = ["scripts/profile_benchmarks.py"]
+should_exist = true
+
+[[checks]]
+type = "regex_match"
+name = "database_version_matrix"
+file = ".github/workflows/ci.yml"
+pattern = "postgres-version:"
+expected = "postgres-version:"
+op = "=="
+
+[[checks]]
+type = "file_exists"
+name = "dependabot_config"
+paths = [".github/dependabot.yml"]
+should_exist = true
+
+[[checks]]
+type = "file_exists"
+name = "dependabot_auto_approve"
+paths = [".github/workflows/dependabot-auto-approve.yml"]
 should_exist = true
 
 [[checks]]

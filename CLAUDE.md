@@ -7,7 +7,7 @@ Personal AI exocortex with multi-agent orchestration and coordination protocol.
 - **Version**: 2.3.0
 - **Python**: >=3.10 (Core), >=3.11 (Bootstrap), >=3.12 (Forge)
 - **Layout**: Multi-package monorepo — `packages/core`, `packages/forge`, `packages/quorum`, `packages/bootstrap`, `packages/pwa`
-- **Tests**: 14,596+ across 4 packages (Core 2109, Forge 9720, Quorum 926, Bootstrap 1841+)
+- **Tests**: 14,712+ across 5 packages (Core 2109, Forge 9720, Quorum 926, Bootstrap 1841+, Contracts 116)
 - **Coverage**: 97% per package
 - **License**: MIT
 
@@ -51,7 +51,7 @@ animus/
 │       └── pyproject.toml
 ├── docs/
 │   └── whitepapers/             # Architecture whitepapers (all 3 layers)
-├── .github/workflows/           # CI: lint + test-core + test-quorum + test-forge + test-bootstrap + security
+├── .github/workflows/           # CI: lint + type-check + test-core + test-quorum + test-types + test-contracts + test-forge + test-bootstrap + security
 └── pyproject.toml               # Workspace root (dev scripts only)
 ```
 
@@ -96,6 +96,33 @@ ruff check packages/ && ruff format --check packages/
 ```
 
 Each package has its own ruff config in its pyproject.toml.
+
+## Pre-commit Hooks
+
+Install once after cloning:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Run manually across all files:
+
+```bash
+pre-commit run --all-files
+```
+
+## Type Checking (Mypy Ratchet)
+
+Type checking is blocking in CI. Baseline counts are stored in `scripts/.mypy-baseline.json`.
+
+```bash
+# Check current counts against baseline
+python scripts/mypy-ratchet.py core kernel forge bootstrap
+
+# Re-baseline after intentional fixes
+python scripts/mypy-ratchet.py --init
+```
 
 ## Package Identity
 

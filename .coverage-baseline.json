@@ -1,0 +1,7 @@
+{
+  "kernel": {
+    "allowed": 21.3,
+    "directory": "packages/kernel/tests",
+    "source": "packages/kernel/src/animus_kernel"
+  }
+}

@@ -24,7 +24,13 @@ The autonomous builder engine. Extracted from the Animus monorepo for standalone
 ## Installation
 
 ```bash
-pip install -e packages/kernel
+pip install animus-kernel
+```
+
+For development:
+
+```bash
+pip install -e ".[dev]"
 ```
 
 ## Usage

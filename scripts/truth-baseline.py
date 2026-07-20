@@ -628,6 +628,23 @@ def check_version_alignment(cfg: dict[str, Any]) -> CheckResult:
 
 # ── Dispatcher ───────────────────────────────────────────────────────────────
 
+def check_compat_check(cfg: dict[str, Any]) -> CheckResult:
+    """Run the compatibility check script and report result."""
+    name = cfg["name"]
+    script = cfg.get("script", "scripts/check_compatibility.py")
+    rc, stdout, stderr = _run(f"{sys.executable} {script}")
+    passed = rc == 0
+    return CheckResult(
+        name=name,
+        check_type="compat_check",
+        status="PASS" if passed else "FAIL",
+        expected="compatibility check passes",
+        actual={"returncode": rc, "stdout": stdout.strip(), "stderr": stderr.strip()},
+        claim_source=script,
+        message="Compatibility OK" if passed else f"Compatibility check failed (rc={rc}): {stderr.strip() or stdout.strip()}",
+    )
+
+
 CHECK_DISPATCH = {
     "count": check_count,
     "version_consistency": check_version_consistency,
@@ -639,6 +656,7 @@ CHECK_DISPATCH = {
     "json_path": check_json_path,
     "package_unused": check_package_unused,
     "markdown_claim": check_markdown_claim,
+    "compat_check": check_compat_check,
 }
 
 

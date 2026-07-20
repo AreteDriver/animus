@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from animus_kernel.memory.stores.durable import DurableMemoryStore
-from animus_kernel.memory.types import Memory, MemoryType, Sensitivity
+from animus_kernel.memory.types import Memory, MemoryTier, MemoryType, Sensitivity
 
 # Use SQLite in-memory for tests — SQLAlchemy abstracts the dialect.
 _TEST_DB_URL = "sqlite:///:memory:"
@@ -44,14 +44,15 @@ def store(tmp_path: Path):
         os.environ["ANIMUS_DATABASE_URL"] = old_env
 
 
-def _make_memory(content: str = "hello world") -> Memory:
-    return Memory.create(
-        content=content,
-        memory_type=MemoryType.SEMANTIC,
-        tags=["test"],
-        source="stated",
-        confidence=1.0,
-    )
+def _make_memory(content: str = "hello world", **kwargs) -> Memory:
+    defaults = {
+        "memory_type": MemoryType.SEMANTIC,
+        "tags": ["test"],
+        "source": "stated",
+        "confidence": 1.0,
+    }
+    defaults.update(kwargs)
+    return Memory.create(content=content, **defaults)
 
 
 def test_store_creates_registry_row(store: DurableMemoryStore):
@@ -148,3 +149,106 @@ def test_get_all_tags_counts(store: DurableMemoryStore):
     tags = store.get_all_tags()
     assert tags.get("foo") == 2
     assert tags.get("bar") == 1
+
+
+def test_store_with_sensitivity(store: DurableMemoryStore):
+    mem = _make_memory("sensitive")
+    mem.sensitivity = Sensitivity.SECRET
+    store.store(mem)
+    retrieved = store.retrieve(mem.id)
+    assert retrieved.sensitivity == Sensitivity.SECRET
+
+
+def test_store_with_tier(store: DurableMemoryStore):
+    mem = _make_memory("tiered")
+    mem.tier = MemoryTier.HOT
+    store.store(mem)
+    retrieved = store.retrieve(mem.id)
+    assert retrieved.tier == MemoryTier.HOT
+
+
+def test_search_by_source(store: DurableMemoryStore):
+    store.store(_make_memory("learned", source="learned"))
+    store.store(_make_memory("stated", source="stated"))
+    results = store.search("learned", source="learned")
+    assert len(results) == 1
+    assert results[0].source == "learned"
+
+
+def test_search_by_tags(store: DurableMemoryStore):
+    m1 = _make_memory("a", tags=["foo", "bar"])
+    m2 = _make_memory("b", tags=["foo"])
+    store.store(m1)
+    store.store(m2)
+    results = store.search("a", tags=["foo", "bar"])
+    assert len(results) == 1
+    assert results[0].content == "a"
+
+
+def test_search_min_confidence(store: DurableMemoryStore):
+    store.store(_make_memory("high", confidence=0.9))
+    store.store(_make_memory("low", confidence=0.3))
+    results = store.search("h", min_confidence=0.5)
+    assert len(results) == 1
+    assert results[0].confidence == 0.9
+
+
+def test_search_limit(store: DurableMemoryStore):
+    for i in range(5):
+        store.store(_make_memory(f"item {i}"))
+    results = store.search("item", limit=3)
+    assert len(results) == 3
+
+
+def test_list_all_by_type(store: DurableMemoryStore):
+    store.store(_make_memory("semantic", memory_type=MemoryType.SEMANTIC))
+    store.store(_make_memory("episodic", memory_type=MemoryType.EPISODIC))
+    results = store.list_all(memory_type=MemoryType.EPISODIC)
+    assert len(results) == 1
+    assert results[0].memory_type == MemoryType.EPISODIC
+
+
+def test_update_missing_returns_false(store: DurableMemoryStore):
+    mem = _make_memory("orphan")
+    assert store.update(mem) is False
+
+
+def test_delete_missing_returns_false(store: DurableMemoryStore):
+    assert store.delete("nonexistent") is False
+
+
+def test_search_no_match(store: DurableMemoryStore):
+    store.store(_make_memory("xyz"))
+    results = store.search("abc")
+    assert results == []
+
+
+def test_store_multiple_events_in_ledger(store: DurableMemoryStore):
+    mem = _make_memory("multi-event")
+    store.store(mem)
+    store.update(mem)
+    store.delete(mem.id)
+
+    from animus_kernel.memory.stores.durable import _EventLedgerRow
+
+    with store._session_factory() as session:
+        # object_refs is JSON array; filter via JSON contains
+        events = session.query(_EventLedgerRow).all()
+        # Check that events for this memory exist somewhere in the ledger
+        matching = [e for e in events if mem.id in (e.object_refs or [])]
+        kinds = {e.event_kind for e in matching}
+        assert "memory.stored" in kinds
+        assert "memory.updated" in kinds
+        assert "memory.deleted" in kinds
+
+
+def test_versioning_fields_preserved(store: DurableMemoryStore):
+    mem = _make_memory("versioned")
+    mem.version = 3
+    mem.parent_id = "parent-123"
+    mem.change_summary = "updated content"
+    store.store(mem)
+    retrieved = store.retrieve(mem.id)
+    assert retrieved.version == 3
+    assert retrieved.parent_id == "parent-123"
+    assert retrieved.change_summary == "updated content"

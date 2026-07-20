@@ -38,10 +38,29 @@ pytest packages/core/tests/ -v
 pytest packages/forge/tests/ -v
 pytest packages/quorum/tests/ -v
 pytest packages/bootstrap/tests/ -v
+pytest packages/contracts/tests/ -v
 
 # Check code style
 ruff check packages/
 ruff format --check packages/
+
+# Type-check ratchet (must pass before pushing)
+python scripts/mypy-ratchet.py core kernel forge bootstrap
+```
+
+## Pre-commit Hooks
+
+Install pre-commit hooks to catch issues before they reach CI:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Run manually across all files:
+
+```bash
+pre-commit run --all-files
 ```
 
 ## Local LLM

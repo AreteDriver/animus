@@ -54,12 +54,33 @@ jobs:
       - name: Format check
         run: ruff format --check packages/ --exclude packages/_archive/
 
+  pre-commit:
+    name: Pre-commit Hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: "3.12"
+
+      - name: Cache pre-commit hooks
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: ${{ runner.os }}-pre-commit-
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run pre-commit
+        run: pre-commit run --all-files --show-diff-on-failure
+
   type-check:
     name: Type Check (mypy)
     runs-on: ubuntu-latest
-    # Non-blocking until codebase is fully typed. Reports issues without
-    # failing the build so we can ratchet down gradually.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
 
@@ -80,6 +101,8 @@ jobs:
           pip install -e packages/types/
           pip install -e "packages/core/[dev]"
           pip install -e "packages/kernel/[dev]"
+          pip install -e "packages/forge/[dev]"
+          pip install -e "packages/bootstrap/[dev]"
           pip install mypy
 
       - name: Run mypy on core
@@ -88,8 +111,7 @@ jobs:
             --ignore-missing-imports \
             --warn-return-any \
             --warn-unused-configs \
-            --pretty \
-            || true
+            --pretty
 
       - name: Run mypy on kernel
         run: |
@@ -97,11 +119,26 @@ jobs:
             --ignore-missing-imports \
             --warn-return-any \
             --warn-unused-configs \
-            --pretty \
-            || true
+            --pretty
+
+      - name: Run mypy on forge
+        run: |
+          mypy packages/forge/src/animus_forge/ \
+            --ignore-missing-imports \
+            --warn-return-any \
+            --warn-unused-configs \
+            --pretty
+
+      - name: Run mypy on bootstrap
+        run: |
+          mypy packages/bootstrap/src/animus_bootstrap/ \
+            --ignore-missing-imports \
+            --warn-return-any \
+            --warn-unused-configs \
+            --pretty
 
       - name: Mypy ratchet
-        run: python3 scripts/mypy-ratchet.py core kernel
+        run: python3 scripts/mypy-ratchet.py core kernel forge bootstrap
 
       - name: Upload mypy report
         if: always()
@@ -111,6 +148,8 @@ jobs:
           path: |
             packages/core/mypy-report.txt
             packages/kernel/mypy-report.txt
+            packages/forge/mypy-report.txt
+            packages/bootstrap/mypy-report.txt
           retention-days: 30
 
   test-kernel:
@@ -139,7 +178,17 @@ jobs:
         run: pip install -e "packages/kernel/[dev]"
 
       - name: Test with coverage
-        run: pytest packages/kernel/tests/ -v --tb=short --cov=animus_kernel --cov-report=term-missing
+        run: pytest packages/kernel/tests/ -v --tb=short --cov=animus_kernel --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@ad3126e4f63f4c42e9f548cce398fb82e6d4c260  # v5.5.1
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Coverage ratchet
+        run: python3 scripts/coverage-ratchet.py kernel
 
   test-core:
     name: Test Core (Python ${{ matrix.python-version }})
@@ -222,6 +271,30 @@ jobs:
       - name: Test with coverage
         run: pytest packages/types/tests/ -v --tb=short --cov=animus_types --cov-report=term-missing
 
+  test-contracts:
+    name: Test Contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-contracts-${{ hashFiles('packages/contracts/pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-contracts-
+
+      - name: Install dependencies
+        run: pip install -e "packages/contracts/[dev]"
+
+      - name: Test with coverage
+        run: pytest packages/contracts/tests/ -v --tb=short --cov=animus_contracts --cov-report=term-missing
+
   test-forge:
     name: Test Forge
     runs-on: ubuntu-latest
@@ -287,6 +360,158 @@ jobs:
         env:
           PYTHONPATH: packages/bootstrap/src
 
+  test-database:
+    name: Test Database (PostgreSQL ${ matrix.postgres-version })
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres-version: ["14", "15", "16"]
+    services:
+      postgres:
+        image: postgres:${ matrix.postgres-version }
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: animus_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install sqlalchemy alembic pytest psycopg2-binary
+
+      - name: Test migrations (SQLite)
+        working-directory: database
+        run: pytest tests/ -v --tb=short -k "not postgres"
+
+      - name: Test migrations (PostgreSQL)
+        working-directory: database
+        run: |
+          export TEST_DATABASE_URL="postgresql://postgres:testpass@localhost/animus_test"
+          pytest tests/ -v --tb=short -k "postgres or integration"
+
+  test-pwa:
+    name: Test PWA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673c0b81f2ad1477f6a8  # v4
+        with:
+          node-version: "20"
+
+      - name: Cache npm
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-pwa-${{ hashFiles('packages/pwa/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-pwa-
+
+      - name: Install dependencies
+        working-directory: packages/pwa
+        run: npm ci
+
+      - name: Run Vitest
+        working-directory: packages/pwa
+        run: npm run test
+
+  test-integration:
+    name: Test Integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -e packages/types/
+          pip install -e "packages/kernel/[dev]"
+          pip install -e "packages/contracts/[dev]"
+
+      - name: Run integration tests
+        run: pytest tests/integration/ -v --tb=short
+
+  docker:
+    name: Docker Build (Kernel)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@8b30df9d033bf30582b8504e1f5c1275d3b41d61  # v3.3.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@988b5a0280414a5210132054a6c801aca2759e3d  # v3.6.1
+
+      - name: Build multi-arch kernel image
+        uses: docker/build-push-action@4f58f7924f5cfc5316c7fba6f4e67c4d484fbc37  # v6.9.0
+        with:
+          context: packages/kernel
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: animus-kernel:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test import inside container (amd64)
+        run: docker run --rm --platform linux/amd64 animus-kernel:ci python -c "import animus_kernel; print('OK amd64')"
+
+      - name: Test CLI inside container (amd64)
+        run: docker run --rm --platform linux/amd64 animus-kernel:ci python -m animus_kernel --help || true
+
+  sbom:
+    name: Generate SBOMs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [core, kernel, forge, bootstrap, types, contracts, quorum]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install package and SBOM tools
+        run: |
+          pip install -e "packages/${{ matrix.package }}/" pip-licenses cyclonedx-bom
+
+      - name: Generate license CSV
+        run: |
+          pip-licenses --format=csv --output-file=sbom-${{ matrix.package }}-licenses.csv
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          cyclonedx-py environment -o sbom-${{ matrix.package }}.json
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom-${{ matrix.package }}
+          path: |
+            sbom-${{ matrix.package }}.json
+            sbom-${{ matrix.package }}-licenses.csv
+          retention-days: 90
+
   security:
     name: Security
     runs-on: ubuntu-latest
@@ -310,7 +535,7 @@ jobs:
     name: Benchmarks
     runs-on: ubuntu-latest
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
-    needs: [type-check, test-kernel, test-core, test-quorum, test-types, test-forge, test-bootstrap, security]
+    needs: [type-check, test-kernel, test-core, test-quorum, test-types, test-contracts, test-forge, test-bootstrap, test-database, test-pwa, test-integration, docker, security]
     permissions:
       contents: write
     steps:
@@ -384,6 +609,9 @@ jobs:
           print(f'Merged {len(merged[\"benchmarks\"])} benchmarks')
           "
 
+      - name: Profile kernel benchmarks
+        run: python3 scripts/profile_benchmarks.py .benchmarks
+
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
@@ -391,8 +619,8 @@ jobs:
           output-file-path: .benchmarks/merged.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
-          alert-threshold: '150%'
-          fail-on-alert: false
+          alert-threshold: '105%'
+          fail-on-alert: true
           comment-on-alert: true
           benchmark-data-dir-path: dev/bench
 
