@@ -78,6 +78,24 @@ jobs:
       - name: Run pre-commit
         run: pre-commit run --all-files --show-diff-on-failure
 
+  schema-validation:
+    name: Schema Validation Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install packages
+        run: |
+          pip install -e packages/contracts/
+
+      - name: Validate schemas
+        run: python3 scripts/validate_schemas.py
+
   contracts:
     name: Contract Validation
     runs-on: ubuntu-latest
@@ -94,7 +112,7 @@ jobs:
           pip install -e packages/contracts/
           pip install -e packages/types/
 
-      - name: Validate schemas
+      - name: Validate contracts
         run: python scripts/validate_contracts.py
 
       - name: Test generated types
