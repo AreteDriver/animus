@@ -32,4 +32,4 @@ Core primitives for autonomous code improvement:
 - utils: Retry, circuit breaker, validation
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"

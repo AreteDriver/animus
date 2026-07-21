@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "animus-kernel"
-version = "0.1.0"
+version = "0.1.1"
 description = "Autonomous builder engine — budget, executor, sandbox, and multi-agent orchestration"
 readme = "README.md"
 license = {text = "MIT"}

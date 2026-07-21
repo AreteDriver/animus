@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-21
+
+### Added
+- Schema Validation Gate: `scripts/validate_schemas.py` with 5-check CI job (well-formed Draft 2020-12, unique `$id`, filename alignment, dangling `$ref` detection, `$schema` declaration).
+- Fleet-wide OPSEC pre-push hook now tracked in notes repo (false-positive fix for `docs/cookbook/` regex-pattern docs).
+
+### Fixed
+- Declared missing third-party dependencies (`pydantic-settings`, `jsonschema`, `pyyaml`) in `pyproject.toml` that caused import failures in fresh venvs.
+
 ## [0.1.0] - 2026-07-19
 
 ### Added
@@ -38,5 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `pyproject.toml` optional dependency syntax corrected from Poetry-style `extra ==` to PEP 621 `[project.optional-dependencies]`.
 
-[Unreleased]: https://github.com/AreteDriver/animus/compare/kernel-v0.1.0...HEAD
+[Unreleased]: https://github.com/AreteDriver/animus/compare/kernel-v0.1.1...HEAD
+[0.1.1]: https://github.com/AreteDriver/animus/releases/tag/kernel-v0.1.1
 [0.1.0]: https://github.com/AreteDriver/animus/releases/tag/kernel-v0.1.0
