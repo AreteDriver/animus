@@ -48,6 +48,10 @@ class SafetyConfig:
     allowed_categories: list[str] = field(default_factory=list)
     denied_categories: list[str] = field(default_factory=list)
 
+    # Self-targeting
+    allow_self_targeting: bool = False
+    max_recursive_depth: int = 3
+
     # Sandbox
     use_branch: bool = True
     branch_prefix: str = "animus-kernel-self-improve/"
@@ -91,6 +95,8 @@ class SafetyConfig:
         sandbox = data.get("sandbox", {})
         rollback = data.get("rollback", {})
 
+        self_targeting = data.get("self_targeting", {})
+
         return cls(
             critical_files=protected.get("critical", []),
             sensitive_files=protected.get("sensitive", []),
@@ -105,6 +111,8 @@ class SafetyConfig:
             human_approval_merge=human_approval.get("merge", True),
             allowed_categories=data.get("allowed_categories", []),
             denied_categories=data.get("denied_categories", []),
+            allow_self_targeting=self_targeting.get("enabled", False),
+            max_recursive_depth=self_targeting.get("max_recursive_depth", 3),
             use_branch=sandbox.get("use_branch", True),
             branch_prefix=sandbox.get("branch_prefix", "animus-kernel-self-improve/"),
             isolated_execution=sandbox.get("isolated_execution", True),

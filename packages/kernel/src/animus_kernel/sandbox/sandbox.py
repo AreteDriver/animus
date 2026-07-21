@@ -43,6 +43,10 @@ class SandboxResult:
     lint_output: str = ""
     error: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    # Performance benchmarks
+    benchmark_before: dict[str, Any] = field(default_factory=dict)
+    benchmark_after: dict[str, Any] = field(default_factory=dict)
+    performance_regression: bool = False
 
 
 class Sandbox:
@@ -263,11 +267,68 @@ class Sandbox:
         match = re.search(r"Found (\d+) error", output)
         return int(match.group(1)) if match else 0
 
+    async def run_benchmarks(self) -> SandboxResult:
+        """Run pytest-benchmark suite if available.
+
+        Returns:
+            SandboxResult with benchmark metrics in metadata.
+        """
+        if not self._sandbox_path:
+            return SandboxResult(
+                status=SandboxStatus.FAILED,
+                error="Sandbox not created",
+            )
+
+        try:
+            # Check if pytest-benchmark is available
+            check = await self._run_command(
+                [sys.executable, "-m", "pytest", "--benchmark-only", "--collect-only"],
+            )
+            if check.returncode != 0 or "benchmark" not in (check.stdout + check.stderr).lower():
+                logger.info("pytest-benchmark not available — skipping benchmarks")
+                return SandboxResult(
+                    status=SandboxStatus.SUCCESS,
+                    tests_passed=True,
+                    metadata={"benchmark_skipped": True},
+                )
+
+            result = await self._run_command(
+                [sys.executable, "-m", "pytest", "--benchmark-only", "-q"],
+            )
+
+            # Parse benchmark output for timing info
+            import re
+
+            timing: dict[str, Any] = {}
+            for match in re.finditer(
+                r"test_([\w_]+).*?(\d+\.?\d*)\s+(ms|us|s)", result.stdout, re.DOTALL
+            ):
+                timing[match.group(1)] = {
+                    "value": float(match.group(2)),
+                    "unit": match.group(3),
+                }
+
+            return SandboxResult(
+                status=SandboxStatus.SUCCESS if result.returncode == 0 else SandboxStatus.FAILED,
+                tests_passed=result.returncode == 0,
+                test_output=result.stdout,
+                metadata={"benchmarks": timing},
+            )
+
+        except Exception as e:
+            logger.warning(f"Benchmark run failed: {e}")
+            return SandboxResult(
+                status=SandboxStatus.FAILED,
+                error=str(e),
+                metadata={"benchmark_failed": True},
+            )
+
     async def validate_changes(self) -> SandboxResult:
-        """Validate all changes by running tests and lint.
+        """Validate all changes by running tests, lint, and benchmarks.
 
         Compares against baseline: if the same number of failures exist before
         and after changes, the changes are considered clean (pre-existing failures).
+        Also compares benchmark results and flags performance regressions.
 
         Returns:
             Combined result.
@@ -276,6 +337,7 @@ class Sandbox:
         # We do this by checking only modified files' tests if possible
         lint_result = await self.run_lint()
         test_result = await self.run_tests()
+        benchmark_result = await self.run_benchmarks()
 
         # Check if failures are pre-existing by comparing against source codebase
         tests_clean = test_result.tests_passed
@@ -315,7 +377,41 @@ class Sandbox:
                 )
                 lint_clean = True
 
-        all_passed = tests_clean and lint_clean
+        # Performance regression check: compare benchmark_before vs benchmark_after
+        performance_regression = False
+        benchmark_before: dict[str, Any] = {}
+        benchmark_after: dict[str, Any] = {}
+
+        if self.source_path and benchmark_result.metadata.get("benchmarks"):
+            # Run benchmarks on source (before changes)
+            baseline_bench = await self._run_command(
+                [sys.executable, "-m", "pytest", "--benchmark-only", "-q"],
+                cwd=str(self.source_path),
+            )
+            import re
+
+            for match in re.finditer(
+                r"test_([\w_]+).*?(\d+\.?\d*)\s+(ms|us|s)", baseline_bench.stdout, re.DOTALL
+            ):
+                benchmark_before[match.group(1)] = {
+                    "value": float(match.group(2)),
+                    "unit": match.group(3),
+                }
+
+            benchmark_after = benchmark_result.metadata.get("benchmarks", {})
+
+            # Detect regressions > 10%
+            for name, after in benchmark_after.items():
+                before = benchmark_before.get(name)
+                if before and after["unit"] == before["unit"]:
+                    if after["value"] > before["value"] * 1.10:
+                        logger.warning(
+                            f"Performance regression detected: {name} "
+                            f"({before['value']}{before['unit']} → {after['value']}{after['unit']})"
+                        )
+                        performance_regression = True
+
+        all_passed = tests_clean and lint_clean and not performance_regression
         status = SandboxStatus.SUCCESS if all_passed else SandboxStatus.FAILED
 
         return SandboxResult(
@@ -325,6 +421,9 @@ class Sandbox:
             lint_passed=lint_clean,
             lint_output=lint_result.lint_output,
             duration_seconds=test_result.duration_seconds,
+            benchmark_before=benchmark_before,
+            benchmark_after=benchmark_after,
+            performance_regression=performance_regression,
         )
 
     @staticmethod

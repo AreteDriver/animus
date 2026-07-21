@@ -60,15 +60,19 @@ class CodebaseAnalyzer:
         self,
         provider: AgentProvider | None = None,
         codebase_path: str | Path = ".",
+        allow_self_targeting: bool = False,
     ):
         """Initialize the analyzer.
 
         Args:
             provider: Optional AI provider for intelligent analysis.
             codebase_path: Path to codebase root.
+            allow_self_targeting: If True, the self-improve module itself
+                can be analyzed and modified (recursive self-targeting).
         """
         self.provider = provider
         self.codebase_path = Path(codebase_path)
+        self.allow_self_targeting = allow_self_targeting
 
     def analyze(
         self,
@@ -132,8 +136,9 @@ class CodebaseAnalyzer:
             ".git",
             ".venv",
             "node_modules",
-            "self_improve",  # Don't analyze the self-improve module
         ]
+        if not self.allow_self_targeting:
+            skip_patterns.append("self_improve")
         return any(pattern in str(file_path) for pattern in skip_patterns)
 
     def _analyze_file(
@@ -168,6 +173,9 @@ class CodebaseAnalyzer:
 
         if not categories or ImprovementCategory.TEST_COVERAGE in categories:
             suggestions.extend(self._check_test_coverage(relative_path, content))
+
+        if not categories or ImprovementCategory.PERFORMANCE in categories:
+            suggestions.extend(self._check_performance(relative_path, content))
 
         return suggestions
 
@@ -353,6 +361,166 @@ class CodebaseAnalyzer:
                     )
 
         return suggestions
+
+    def _check_performance(
+        self,
+        file_path: str,
+        content: str,
+    ) -> list[ImprovementSuggestion]:
+        """Check for performance issues via AST static analysis.
+
+        Args:
+            file_path: Relative file path.
+            content: File content.
+
+        Returns:
+            List of performance suggestions.
+        """
+        import ast
+
+        suggestions = []
+
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return suggestions
+
+        # Track function-level contexts for nested loop detection
+        function_loops: dict[str, list[tuple[int, int]]] = {}
+        current_function: str | None = None
+
+        class PerfVisitor(ast.NodeVisitor):
+            def __init__(self):
+                self.loop_depth = 0
+                self.function_name: str | None = None
+                self.suggestions: list[ImprovementSuggestion] = []
+
+            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+                old_func = self.function_name
+                self.function_name = node.name
+                self.generic_visit(node)
+                self.function_name = old_func
+
+            def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+                self.visit_FunctionDef(node)  # type: ignore[arg-type]
+
+            def visit_For(self, node: ast.For) -> None:
+                self._enter_loop(node)
+
+            def visit_While(self, node: ast.While) -> None:
+                self._enter_loop(node)
+
+            def _enter_loop(self, node: ast.AST) -> None:
+                old_depth = self.loop_depth
+                self.loop_depth += 1
+
+                # Nested loop detection
+                if self.loop_depth >= 2:
+                    line = getattr(node, "lineno", 0)
+                    self.suggestions.append(
+                        ImprovementSuggestion(
+                            id=f"perf_nested_loop_{file_path}_{line}",
+                            category=ImprovementCategory.PERFORMANCE,
+                            title=f"Nested loop at {file_path}:{line}",
+                            description=(
+                                f"Nested loops ({self.loop_depth} levels deep) can be O(n^m). "
+                                "Consider flattening, using set lookups, or vectorizing."
+                            ),
+                            affected_files=[file_path],
+                            priority=2,
+                            estimated_lines=15,
+                            reasoning="Algorithmic complexity concern",
+                            implementation_hints="Consider set-based lookup or itertools.product",
+                        )
+                    )
+
+                self.generic_visit(node)
+                self.loop_depth = old_depth
+
+            def visit_BinOp(self, node: ast.BinOp) -> None:
+                # String concatenation in loops
+                if (
+                    self.loop_depth > 0
+                    and isinstance(node.op, ast.Add)
+                    and isinstance(node.left, ast.Name)
+                ):
+                    # Heuristic: var + something inside a loop
+                    line = getattr(node, "lineno", 0)
+                    self.suggestions.append(
+                        ImprovementSuggestion(
+                            id=f"perf_str_concat_{file_path}_{line}",
+                            category=ImprovementCategory.PERFORMANCE,
+                            title=f"String concatenation in loop at {file_path}:{line}",
+                            description=(
+                                "String concatenation with '+' inside a loop creates "
+                                "intermediate string objects. Use list.append + ''.join() "
+                                "or io.StringIO instead."
+                            ),
+                            affected_files=[file_path],
+                            priority=2,
+                            estimated_lines=8,
+                            reasoning="O(n^2) string building",
+                            implementation_hints="Collect in list, then ''.join(list)",
+                        )
+                    )
+                self.generic_visit(node)
+
+            def visit_Call(self, node: ast.Call) -> None:
+                # list.append in loops is fine, but list.insert(0, ...) is O(n)
+                if (
+                    self.loop_depth > 0
+                    and isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "insert"
+                    and isinstance(node.args[0], ast.Constant)
+                    and node.args[0].value == 0
+                ):
+                    line = getattr(node, "lineno", 0)
+                    self.suggestions.append(
+                        ImprovementSuggestion(
+                            id=f"perf_list_insert0_{file_path}_{line}",
+                            category=ImprovementCategory.PERFORMANCE,
+                            title=f"list.insert(0, ...) in loop at {file_path}:{line}",
+                            description=(
+                                "Inserting at index 0 inside a loop is O(n) per operation. "
+                                "Consider using collections.deque or appending and reversing."
+                            ),
+                            affected_files=[file_path],
+                            priority=1,
+                            estimated_lines=10,
+                            reasoning="Quadratic list shifting",
+                            implementation_hints="Use collections.deque.appendleft()",
+                        )
+                    )
+
+                # Detect list(comprehension opportunity): for x in seq: result.append(f(x))
+                if (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "append"
+                    and self.loop_depth > 0
+                ):
+                    line = getattr(node, "lineno", 0)
+                    self.suggestions.append(
+                        ImprovementSuggestion(
+                            id=f"perf_list_comp_{file_path}_{line}",
+                            category=ImprovementCategory.PERFORMANCE,
+                            title=f"List append in loop at {file_path}:{line}",
+                            description=(
+                                "Appending to a list inside a loop may be replaceable "
+                                "with a list comprehension, which is faster and more idiomatic."
+                            ),
+                            affected_files=[file_path],
+                            priority=4,
+                            estimated_lines=5,
+                            reasoning="List comprehensions are ~2x faster than append loops",
+                            implementation_hints="Refactor loop body into [f(x) for x in seq]",
+                        )
+                    )
+
+                self.generic_visit(node)
+
+        visitor = PerfVisitor()
+        visitor.visit(tree)
+        return visitor.suggestions
 
     async def analyze_with_ai(
         self,
