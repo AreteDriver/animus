@@ -365,6 +365,15 @@ Active development. Architecture stable. v2.3.0 (migrating to v2.1 baseline) rel
 
 ---
 
+
+## Related Projects
+
+These tools are built to work together as the Arete Stack:
+
+- **[mcp-manager](https://github.com/AreteDriver/mcp-manager)** — Manage MCP servers across your IDEs (`pip install arete-mcp`)
+- **[ai-spend](https://github.com/AreteDriver/ai-spend)** — Cross-provider AI cost aggregation with provider retry and config encryption (`pip install ai-spend`)
+- **[the-human-stack](https://github.com/AreteDriver/the-human-stack)** — The methodology reference behind the evidence framework and maturity model
+
 ## License
 
 MIT
