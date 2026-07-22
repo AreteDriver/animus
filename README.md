@@ -17,6 +17,8 @@ Before software I spent 17 years in manufacturing and logistics (IBM, Toyota Pro
 
 Eight packages (four installable via PyPI). ~17,000+ tests. Proactive engine with 6 self-healing checks and an autonomous improvement loop verified end-to-end against local inference.
 
+> **Development method:** Built with Claude Code (human-reviewed, human-verified). See [profile](https://github.com/AreteDriver) for the full transparency note.
+
 **[Architecture](docs/architecture/overview.md)** | **[Roadmap](docs/roadmap/current.md)** | **[Whitepaper](docs/whitepaper.pdf)** | **[Tools Reference](docs/reference/tools.md)**
 
 ---
@@ -25,20 +27,36 @@ Eight packages (four installable via PyPI). ~17,000+ tests. Proactive engine wit
 
 Four-layer stack. Each layer solves exactly one problem and is independently useful.
 
-```
-┌─────────────────────────────────────────┐
-│           INTERFACE LAYER               │
-│   Bootstrap Dashboard · PWA · API       │
-├─────────────────────────────────────────┤
-│           COGNITIVE LAYER               │
-│   Forge · Quorum · Contracts            │
-├─────────────────────────────────────────┤
-│           MEMORY LAYER                  │
-│   Kernel · Episodic · Semantic · Procedural │
-├─────────────────────────────────────────┤
-│           CORE LAYER                    │
-│   Identity · Security · Ethics          │
-└─────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph Interface["INTERFACE LAYER"]
+        Dashboard[Bootstrap Dashboard]
+        PWA[React PWA]
+        API[FastAPI]
+    end
+
+    subgraph Cognitive["COGNITIVE LAYER"]
+        Forge[Forge Workflow Engine]
+        Quorum[Quorum Agent Coordination]
+        Contracts[Schema Contracts]
+    end
+
+    subgraph Memory["MEMORY LAYER"]
+        Kernel[Builder Engine]
+        Episodic[(Episodic SQLite)]
+        Semantic[(Semantic ChromaDB)]
+        Procedural[(Procedural Memory)]
+    end
+
+    subgraph Core["CORE LAYER"]
+        Identity[Identity]
+        Security[Security]
+        Ethics[Ethics]
+    end
+
+    Interface --> Cognitive
+    Cognitive --> Memory
+    Memory --> Core
 ```
 
 **Package map**:
