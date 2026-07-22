@@ -1,4 +1,4 @@
-# Animus — Sovereign AI Operating Environment
+# Animus — AI Operating Environment You Own
 
 **Multi-agent orchestration framework with budget controls, quality gates, and checkpoint/resume.**
 
