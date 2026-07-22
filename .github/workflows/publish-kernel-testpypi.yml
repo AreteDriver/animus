@@ -12,6 +12,7 @@ permissions:
 jobs:
   publish-testpypi:
     runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
     environment: testpypi
     permissions:
       contents: read
