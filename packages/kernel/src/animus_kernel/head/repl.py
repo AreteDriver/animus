@@ -221,8 +221,11 @@ class HeadREPL:
         print(f"   Auto-execute direct: {'on' if self.auto_execute_direct else 'off'}")
         print("   Type 'exit', 'quit', or Ctrl+D to leave.")
         print("   Type '!!' to see available tools.")
-        print("   Type '/model' to list or swap models. '/hardware' for GPU info.")
+        print("   Type '/model' for model info, '/model <name>' to swap.")
+        print("   Type '/model recommend' for hardware-aware suggestions.")
+        print("   Type '/model stats' for per-model performance telemetry.")
         print("   Type '/model pin <name>' to pin a model digest.")
+        print("   Type '/hardware' for GPU info.")
         print()
 
         self.bootstrap()
