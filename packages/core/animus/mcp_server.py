@@ -129,11 +129,11 @@ if FastMCP is not None:
                     name=tool.name,
                     description=tool.description or "",
                     input_schema=getattr(tool, "parameters", {}) or {},
-                keywords=[],
-                category="general",
-                always_expose=(tool.name in _ALWAYS_EXPOSE),
-            )
-        self._gater_initialized = True
+                    keywords=[],
+                    category="general",
+                    always_expose=(tool.name in _ALWAYS_EXPOSE),
+                )
+            self._gater_initialized = True
 
     async def list_tools(self) -> list:
         """Override to return gated schemas based on session intent."""
@@ -3188,6 +3188,121 @@ def create_mcp_server():
                     lines.append(f"  - {e}")
             lines.append("")
 
+        return "\n".join(lines)
+
+    # -----------------------------------------------------------------------
+    # Browser fetch tools (real-browser content extraction)
+    # -----------------------------------------------------------------------
+
+    @mcp.tool()
+    def animus_fetch(
+        url: str,
+        format: str = "text",
+        wait_for: str = "",
+        timeout: int = 30000,
+        human_mode: bool = False,
+        api_key: str = "",
+    ) -> str:
+        """Fetch a web page via real Chrome browser and return extracted content.
+
+        Use this when a site is JavaScript-heavy (SPA, React, Vue, docs portals)
+        or when raw HTTP fetching returns empty or malformed content.
+
+        Args:
+            url: Target URL to fetch.
+            format: Output format — one of "text", "markdown", "html" (default "text").
+            wait_for: Optional CSS selector to wait for before extraction.
+            timeout: Maximum time in milliseconds (default 30000).
+            human_mode: Enable anti-detection emulation — slower but more robust
+                against Cloudflare / DataDome / bot checks (default False).
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        try:
+            from animus.browser.mcp_tools import fetch as browser_fetch
+        except RuntimeError as exc:
+            return (
+                f"Browser fetch unavailable: {exc}\n"
+                f"Install with: pip install nodriver readability-lxml"
+            )
+
+        try:
+            result = asyncio.run(
+                browser_fetch(
+                    url=url,
+                    format=format,
+                    wait_for=wait_for or None,
+                    timeout=timeout,
+                    human_mode=human_mode,
+                )
+            )
+        except Exception as e:
+            return f"Browser fetch failed: {e}"
+
+        lines = [
+            f"**URL:** {result['final_url']}",
+            f"**Status:** {result['status_code']} {'✅' if result['ok'] else '❌'}",
+            f"**Title:** {result['title']}",
+        ]
+        if result.get("cache_hit"):
+            lines.append("**Cache:** hit")
+        if result.get("used_human_mode"):
+            lines.append("**Human mode:** enabled")
+        lines.append("")
+        lines.append(result["content"])
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def animus_fetch_batch(
+        urls: str,
+        format: str = "text",
+        api_key: str = "",
+    ) -> str:
+        """Fetch multiple URLs in parallel via real Chrome browser.
+
+        Accepts up to 14 URLs (comma-separated or newline-separated).
+
+        Args:
+            urls: Comma-separated or newline-separated list of URLs.
+            format: Output format — one of "text", "markdown", "html" (default "text").
+            api_key: API key (required if ANIMUS_MCP_API_KEY is set).
+        """
+        auth_err = _check_auth(api_key)
+        if auth_err:
+            return auth_err
+
+        url_list = [u.strip() for u in urls.replace(",", "\n").splitlines() if u.strip()]
+        if len(url_list) > 14:
+            return f"Too many URLs: {len(url_list)} (max 14)."
+        if not url_list:
+            return "No URLs provided."
+
+        try:
+            from animus.browser.mcp_tools import fetch_batch as browser_fetch_batch
+        except RuntimeError as exc:
+            return (
+                f"Browser fetch unavailable: {exc}\n"
+                f"Install with: pip install nodriver readability-lxml"
+            )
+
+        try:
+            results = asyncio.run(browser_fetch_batch(urls=url_list, format=format))
+        except Exception as e:
+            return f"Browser fetch batch failed: {e}"
+
+        lines = [f"# Fetch Batch Results ({len(results)} URLs)", ""]
+        for idx, res in enumerate(results, 1):
+            ok_mark = "✅" if res["ok"] else "❌"
+            lines.append(f"## {idx}. {res['url']} {ok_mark}")
+            lines.append(f"- **Status:** {res['status_code']}")
+            lines.append(f"- **Title:** {res['title']}")
+            if res.get("cache_hit"):
+                lines.append("- **Cache:** hit")
+            lines.append(f"- **Content preview:** {res['content'][:200]}...")
+            lines.append("")
         return "\n".join(lines)
 
     return mcp
