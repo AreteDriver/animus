@@ -1189,3 +1189,187 @@ class TestHeadDaemon:
         assert daemon._shutdown is False
         daemon._on_sigterm(15, None)
         assert daemon._shutdown is True
+
+
+# ------------------------------------------------------------------
+# Phase 6: Model swap
+# ------------------------------------------------------------------
+
+
+class TestModelSwap:
+    """Tests for HeadREPL._swap_model without requiring live Ollama."""
+
+    @pytest.fixture
+    def mock_repl(self, tmp_path):
+        """Build a HeadREPL with a mocked Ollama provider."""
+        from animus_kernel.head.checkpoint import HeadCheckpointStore
+        from animus_kernel.head.repl import HeadREPL
+
+        repl = HeadREPL(
+            model="qwen2.5:32b",
+            project_root=tmp_path,
+            memory_dir=tmp_path / "memory",
+            checkpoint_store=HeadCheckpointStore(db_path=tmp_path / "head.db"),
+        )
+        return repl
+
+    def _mock_provider(self, repl, installed, running=None):
+        """Replace the Ollama provider with a lightweight stub."""
+        if running is None:
+            running = []
+
+        class StubProvider:
+            def __init__(self, model, host="http://localhost:11434"):
+                self.model = model
+                self.base_url = host
+                self._configured = True
+
+            def is_configured(self):
+                return self._configured
+
+            def list_models(self):
+                return installed
+
+            def running_models(self):
+                return running
+
+            def complete(self, request):
+                from animus_kernel.providers.base import CompletionResponse
+
+                return CompletionResponse(
+                    content="stub",
+                    model=self.model,
+                    provider="ollama",
+                    tokens_used=10,
+                )
+
+        repl.provider = StubProvider(repl.model)
+        return StubProvider
+
+    def test_swap_exact_match(self, mock_repl):
+        """Swapping to an exact installed model succeeds."""
+        self._mock_provider(mock_repl, installed=["qwen2.5:32b", "phi4:14b"])
+        mock_repl._swap_model("phi4:14b")
+        assert mock_repl.model == "phi4:14b"
+
+    def test_swap_ambiguous_name_rejected(self, mock_repl, capsys):
+        """Ambiguous bare names matching multiple installed models are rejected."""
+        self._mock_provider(mock_repl, installed=["qwen2.5:32b", "qwen2.5:14b"])
+        mock_repl._swap_model("qwen2.5")
+        captured = capsys.readouterr()
+        assert "Ambiguous" in captured.out
+        assert mock_repl.model == "qwen2.5:32b"  # unchanged
+
+    def test_swap_single_prefix_match(self, mock_repl):
+        """Bare name matching exactly one prefix succeeds."""
+        self._mock_provider(mock_repl, installed=["qwen2.5:32b", "phi4:14b"])
+        mock_repl._swap_model("phi4")
+        assert mock_repl.model == "phi4:14b"
+
+    def test_swap_preserves_host(self, mock_repl):
+        """Custom Ollama host is preserved across swaps."""
+        self._mock_provider(mock_repl, installed=["qwen2.5:32b", "phi4:14b"])
+        mock_repl.provider.base_url = "http://ollama.local:11434"
+        mock_repl._swap_model("phi4:14b")
+        assert mock_repl.provider.base_url == "http://ollama.local:11434"
+
+    def test_swap_preserves_messages(self, mock_repl):
+        """Conversation history survives a model swap."""
+        self._mock_provider(mock_repl, installed=["qwen2.5:32b", "phi4:14b"])
+        mock_repl.context.add_message({"role": "user", "content": "hello"})
+        mock_repl.context.add_message({"role": "assistant", "content": "hi"})
+        old_msgs = mock_repl.context._messages.copy()
+
+        mock_repl._swap_model("phi4:14b")
+        assert mock_repl.context._messages == old_msgs
+
+    def test_swap_prunes_on_window_shrink(self, mock_repl, capsys):
+        """If the new model has a smaller context window, excess messages are pruned."""
+        self._mock_provider(mock_repl, installed=["qwen2.5:32b", "tiny:1b"])
+        # Seed a large conversation that exceeds the tiny model's 8192 default limit
+        for i in range(200):
+            mock_repl.context.add_message({"role": "user", "content": f"user turn {i} " * 500})
+            mock_repl.context.add_message({"role": "assistant", "content": f"assistant turn {i} " * 500})
+
+        # Tiny model has a tiny window
+        assert mock_repl.context.max_tokens == 32768
+        mock_repl._swap_model("tiny:1b")
+        captured = capsys.readouterr()
+        assert mock_repl.model == "tiny:1b"
+        assert mock_repl.context.max_tokens == 8192
+        # Should have triggered a prune warning
+        assert "Pruned" in captured.out or mock_repl.context.dropped_messages > 0
+        stats = mock_repl.context.get_stats()
+        assert stats.total_tokens <= mock_repl.context.max_tokens
+
+    def test_swap_unknown_model_warns(self, mock_repl, capsys):
+        """Swapping to an uninstalled model prints a warning and does nothing."""
+        self._mock_provider(mock_repl, installed=["qwen2.5:32b"])
+        mock_repl._swap_model("nonexistent:99b")
+        captured = capsys.readouterr()
+        assert "not installed" in captured.out
+        assert mock_repl.model == "qwen2.5:32b"
+
+    def test_recommend_model_suggests_installed(self, mock_repl, capsys):
+        """_recommend_model filters recommendations to installed models."""
+        # Use a model that is likely in the hardware recommendations for any machine
+        self._mock_provider(mock_repl, installed=["qwen2.5:32b", "qwen2.5:14b"])
+        mock_repl._recommend_model()
+        captured = capsys.readouterr()
+        # On some hardware both may be filtered out, so accept either outcome
+        assert "Recommended models" in captured.out or "best installed option" in captured.out
+
+    def test_recommend_model_no_alternatives(self, mock_repl, capsys):
+        """When current model is the only installed recommendation, say so."""
+        self._mock_provider(mock_repl, installed=["qwen2.5:32b"])
+        mock_repl._recommend_model()
+        captured = capsys.readouterr()
+        assert "best installed option" in captured.out
+
+    def test_model_stats_empty(self, mock_repl, capsys):
+        """_show_model_stats reports nothing before any calls."""
+        mock_repl._show_model_stats()
+        captured = capsys.readouterr()
+        assert "No model calls recorded" in captured.out
+
+    def test_model_stats_shows_telemetry(self, mock_repl, capsys):
+        """_show_model_stats aggregates recorded telemetry."""
+        mock_repl._record_telemetry("phi4:14b", latency_ms=1200, tokens=240, fallback=False)
+        mock_repl._record_telemetry("phi4:14b", latency_ms=800, tokens=160, fallback=False)
+        mock_repl._show_model_stats()
+        captured = capsys.readouterr()
+        assert "phi4:14b" in captured.out
+        assert "2" in captured.out  # calls
+        assert "1000.0" in captured.out  # avg ms
+        assert "200.0" in captured.out  # tokens/sec
+
+    def test_checkpoint_persists_model(self, mock_repl, tmp_path):
+        """The active model is saved and restored via checkpoints."""
+        self._mock_provider(mock_repl, installed=["qwen2.5:32b", "phi4:14b"])
+        mock_repl._swap_model("phi4:14b")
+        assert mock_repl.model == "phi4:14b"
+
+        # Save checkpoint
+        mock_repl._checkpoint()
+
+        # Load checkpoint and verify model
+        loaded = mock_repl.checkpoint_store.load(mock_repl.session_id)
+        assert loaded is not None
+        assert loaded.model == "phi4:14b"
+
+    def test_pin_model_command(self, mock_repl, capsys, monkeypatch):
+        """/model pin fetches digest and stores it."""
+        from animus_kernel.providers.model_pin import ModelPinStore
+
+        self._mock_provider(mock_repl, installed=["qwen2.5:32b"])
+        # Mock fetch_ollama_digest to avoid network call
+        monkeypatch.setattr(
+            "animus_kernel.providers.model_pin.fetch_ollama_digest",
+            lambda model, base_url=None: "sha256:mock123",
+        )
+        mock_repl._pin_model("qwen2.5:32b")
+        captured = capsys.readouterr()
+        assert "Pinned" in captured.out
+        store = ModelPinStore()
+        assert store.get_pin("qwen2.5:32b") == "sha256:mock123"
+        store.unpin_model("qwen2.5:32b")  # cleanup

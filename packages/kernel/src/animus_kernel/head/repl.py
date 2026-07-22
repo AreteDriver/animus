@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+import time
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -135,6 +137,9 @@ class HeadREPL:
         self.turns = 0
         self.total_tokens = 0
 
+        # Per-model performance telemetry: model_name -> {calls, latency_ms, tokens}
+        self._model_telemetry: dict[str, dict] = {}
+
         # Session lifecycle management
         self._session_started_at: datetime | None = None
         self._session_timer = session_timer
@@ -174,6 +179,18 @@ class HeadREPL:
             filtered = self._filter_messages(prev["messages"])
             self.turns = prev.get("turns", 0)
             self.total_tokens = prev.get("total_tokens", 0)
+            # Restore model if present and still available
+            prev_model = prev.get("model", "")
+            if prev_model and prev_model != self.model:
+                try:
+                    installed = self.provider.list_models()
+                    if prev_model in installed:
+                        print(f"   📥 Restoring previous model: {prev_model}")
+                        self._swap_model(prev_model)
+                    else:
+                        print(f"   ⚠ Previous model '{prev_model}' not installed, using default.")
+                except Exception:
+                    pass  # Non-critical: keep default model
             # Restore summary if present
             if prev.get("summary"):
                 self.context.set_summary(prev["summary"])
@@ -204,6 +221,8 @@ class HeadREPL:
         print(f"   Auto-execute direct: {'on' if self.auto_execute_direct else 'off'}")
         print("   Type 'exit', 'quit', or Ctrl+D to leave.")
         print("   Type '!!' to see available tools.")
+        print("   Type '/model' to list or swap models. '/hardware' for GPU info.")
+        print("   Type '/model pin <name>' to pin a model digest.")
         print()
 
         self.bootstrap()
@@ -406,6 +425,12 @@ class HeadREPL:
                         print("   ☁️ Escalated to cloud model for this turn.")
                         response = fb_response
                         self.total_tokens += response.tokens_used
+                        self._record_telemetry(
+                            model=response.model or self._fallback.fallback_provider,
+                            latency_ms=response.latency_ms or 0.0,
+                            tokens=response.tokens_used,
+                            fallback=True,
+                        )
                         break
 
                 # Re-call model for corrected calls
@@ -475,6 +500,12 @@ class HeadREPL:
                 print("   ☁️ Escalated to cloud model for this turn.")
                 response = fb_response
                 self.total_tokens += response.tokens_used
+                self._record_telemetry(
+                    model=response.model or self._fallback.fallback_provider,
+                    latency_ms=response.latency_ms or 0.0,
+                    tokens=response.tokens_used,
+                    fallback=True,
+                )
 
         # Final assistant response
         self.context.add_message(
@@ -672,17 +703,329 @@ class HeadREPL:
                 tools=tools,
                 tool_choice="auto" if tools else None,
             )
+            start = time.time()
             response = self.provider.complete(request)
+            latency_ms = (time.time() - start) * 1000
             self.total_tokens += response.tokens_used
+            self._record_telemetry(
+                model=response.model or self.model,
+                latency_ms=latency_ms,
+                tokens=response.tokens_used,
+                fallback=False,
+            )
             return response
         except Exception as exc:
             logger.exception("Model call failed")
             print(f"   [ERROR: Model call failed: {exc}]")
             return None
 
+    def _record_telemetry(
+        self,
+        model: str,
+        latency_ms: float,
+        tokens: int,
+        fallback: bool = False,
+    ) -> None:
+        """Append a single observation to the per-model telemetry store."""
+        entry = self._model_telemetry.setdefault(
+            model, {"calls": 0, "latency_ms": 0.0, "tokens": 0, "fallbacks": 0}
+        )
+        entry["calls"] += 1
+        entry["latency_ms"] += latency_ms
+        entry["tokens"] += tokens
+        if fallback:
+            entry["fallbacks"] += 1
+
     # ------------------------------------------------------------------
     # Commands
     # ------------------------------------------------------------------
+
+    def _show_model_info(self) -> None:
+        """Display current model, installed models, and hardware profile."""
+        print(f"\n   Current model: {self.model}")
+
+        # Show pin status
+        from animus_kernel.providers.model_pin import ModelPinStore
+
+        pin_store = ModelPinStore()
+        pin = pin_store.get_pin(self.model)
+        if pin:
+            print(f"   🔒 Pinned: {pin}")
+        else:
+            print(f"   🔓 Not pinned")
+
+        # List installed models
+        try:
+            installed = self.provider.list_models()
+            if installed:
+                print(f"\n   Installed models ({len(installed)}):")
+                for m in installed:
+                    marker = "  ← current" if m == self.model else ""
+                    pin_marker = " 🔒" if pin_store.get_pin(m) else ""
+                    print(f"   • {m}{marker}{pin_marker}")
+            else:
+                print("\n   No models reported by Ollama.")
+
+            # Show currently loaded models
+            try:
+                running = self.provider.running_models()
+                if running:
+                    print(f"\n   Running in VRAM ({len(running)}):")
+                    for m in running:
+                        size_mb = m.get("size_vram", 0) / (1024 * 1024)
+                        print(f"   • {m['name']} ({size_mb:.0f} MB)")
+                else:
+                    print("\n   No models currently loaded in VRAM.")
+            except Exception:
+                pass  # Non-critical
+        except Exception as exc:
+            print(f"\n   Could not list models: {exc}")
+
+        # Hardware profile
+        from animus_kernel.providers.hardware import detect_hardware
+
+        hw = detect_hardware()
+        print(f"\n   Hardware profile:")
+        print(f"   • Platform: {hw.platform_id}")
+        print(f"   • GPU: {hw.gpu_name or 'None detected'}")
+        if hw.gpu_vram_gb:
+            print(f"   • GPU VRAM: {hw.gpu_vram_gb} GB")
+        print(f"   • Total memory: {hw.total_memory_gb} GB")
+        print(f"   • Available memory: {hw.available_memory_gb} GB")
+        print(f"   • Recommended tier: {hw.recommended_tier}")
+        if hw.recommended_models:
+            print(f"   • Recommended models: {', '.join(hw.recommended_models)}")
+        if hw.warnings:
+            for w in hw.warnings:
+                print(f"   ⚠ {w}")
+        print()
+
+    def _recommend_model(self) -> None:
+        """Recommend the best installed model not currently in use."""
+        from animus_kernel.providers.hardware import detect_hardware
+
+        try:
+            installed = self.provider.list_models()
+        except Exception as exc:
+            print(f"   Error listing models: {exc}")
+            return
+
+        hw = detect_hardware()
+        recs = hw.recommended_models
+
+        # Filter to installed models
+        installed_set = {m.split(":")[0] for m in installed}
+        installed_full = set(installed)
+        candidates: list[str] = []
+        for r in recs:
+            # Exact match first
+            if r in installed_full:
+                candidates.append(r)
+                continue
+            # Base match (e.g. "qwen2.5" matches "qwen2.5:14b")
+            base = r.split(":")[0]
+            for m in installed:
+                if m.split(":")[0] == base:
+                    candidates.append(m)
+                    break
+
+        # Remove current model
+        current_base = self.model.split(":")[0]
+        candidates = [c for c in candidates if c.split(":")[0] != current_base]
+
+        if not candidates:
+            print("   No alternative recommendations.")
+            print(f"   Current model ({self.model}) is the best installed option.")
+            return
+
+        print(f"\n   Recommended models (tier: {hw.recommended_tier}):")
+        for i, c in enumerate(candidates[:3], 1):
+            marker = "  ← already running" if c == self.model else ""
+            print(f"   {i}. {c}{marker}")
+        print(f"\n   Use /model <name> to swap.")
+        print()
+
+    def _show_model_stats(self) -> None:
+        """Display per-model performance telemetry for this session."""
+        if not self._model_telemetry:
+            print("\n   No model calls recorded yet.")
+            return
+
+        print("\n   Model performance this session:")
+        print(
+            f"   {'Model':<25} {'Calls':>6} {'Avg ms':>10} {'Tokens/sec':>12} {'Fallbacks':>10}"
+        )
+        print(f"   {'-' * 25} {'-' * 6} {'-' * 10} {'-' * 12} {'-' * 10}")
+        for model, data in sorted(
+            self._model_telemetry.items(),
+            key=lambda x: x[1]["latency_ms"] / max(x[1]["calls"], 1),
+        ):
+            calls = data["calls"]
+            avg_lat = data["latency_ms"] / calls
+            tokens = data["tokens"]
+            tps = (
+                round((tokens / (data["latency_ms"] / 1000)), 1)
+                if data["latency_ms"] > 0
+                else 0.0
+            )
+            fallbacks = data.get("fallbacks", 0)
+            print(
+                f"   {model:<25} {calls:>6} {avg_lat:>10.1f} {tps:>12} {fallbacks:>10}"
+            )
+        print()
+
+    def _pin_model(self, model: str) -> None:
+        """Pin a model's digest for tamper detection."""
+        from animus_kernel.providers.model_pin import ModelPinStore, fetch_ollama_digest
+
+        store = ModelPinStore()
+        digest = fetch_ollama_digest(model, base_url=self.provider.base_url)
+        if digest is None:
+            print(f"   Could not fetch digest for '{model}'. Is Ollama running?")
+            return
+        store.pin_model(model, digest)
+        print(f"   🔒 Pinned {model} → {digest}")
+
+    def _unpin_model(self, model: str) -> None:
+        """Remove a model pin."""
+        from animus_kernel.providers.model_pin import ModelPinStore
+
+        store = ModelPinStore()
+        store.unpin_model(model)
+        print(f"   🔓 Unpinned {model}")
+
+    def _list_pins(self) -> None:
+        """Show all pinned models."""
+        from animus_kernel.providers.model_pin import ModelPinStore
+
+        store = ModelPinStore()
+        pins = store.list_pins()
+        if not pins:
+            print("   No pinned models.")
+            return
+        print(f"\n   Pinned models ({len(pins)}):")
+        for model, digest in pins.items():
+            print(f"   • {model} → {digest}")
+        print()
+
+    def _swap_model(self, model: str, warm: bool = False) -> None:
+        """Swap to a different Ollama model mid-session, preserving conversation state.
+
+        Args:
+            model: Target Ollama model name
+            warm: If True, send a tiny warmup prompt to preload the model into VRAM
+        """
+        # Validate model is installed
+        try:
+            installed = self.provider.list_models()
+        except Exception as exc:
+            print(f"   Error listing models: {exc}")
+            return
+
+        # Normalize: handle bare names by checking if any installed model contains it
+        exact_match = model in installed
+        if not exact_match:
+            matches = [m for m in installed if m.startswith(model) or model in m]
+            if len(matches) == 1:
+                model = matches[0]
+                exact_match = True
+            elif len(matches) > 1:
+                print(f"   Ambiguous model '{model}' matches: {', '.join(matches)}")
+                return
+
+        if not exact_match:
+            print(f"   Model '{model}' is not installed.")
+            print(f"   Run: ollama pull {model}")
+            return
+
+        # Hardware sanity check
+        from animus_kernel.providers.hardware import detect_hardware
+
+        hw = detect_hardware()
+        size_hint = self._extract_model_size(model)
+        warning = ""
+        if hw.gpu_vram_gb and size_hint:
+            est_vram = size_hint * 0.7  # rough Q4 estimate
+            if est_vram > hw.gpu_vram_gb * 0.9:
+                warning = (
+                    f" (Warning: may exceed available VRAM — "
+                    f"{est_vram:.0f}GB estimated vs {hw.gpu_vram_gb}GB available)"
+                )
+
+        # Preserve conversation state
+        old_messages = self.context._messages.copy()
+        old_summary = self.context._summary
+        old_summary_tokens = self.context._summary_tokens
+        old_dropped = self.context.dropped_messages
+
+        # Rebuild provider and context manager — preserve custom host/base_url
+        try:
+            new_provider = OllamaProvider(
+                model=model,
+                host=self.provider.base_url,
+            )
+            if not new_provider.is_configured():
+                print(f"   Ollama reports model '{model}' is not available.")
+                return
+        except Exception as exc:
+            print(f"   Failed to initialize provider for '{model}': {exc}")
+            return
+
+        self.model = model
+        self.provider = new_provider
+        self.context = HeadContextManager(model=model)
+
+        # Restore conversation state (private access is intentional: preserves
+        # message history across model swaps without triggering re-pruning)
+        self.context._messages = old_messages
+        self.context._summary = old_summary
+        self.context._summary_tokens = old_summary_tokens
+        self.context.dropped_messages = old_dropped
+
+        # Context-budget guard: proactively prune if the new window is smaller
+        stats = self.context.get_stats()
+        if stats.utilization_percent > 100:
+            print(
+                f"   Warning: conversation ({stats.total_tokens:,} tokens) exceeds "
+                f"new context window ({self.context.max_tokens:,} tokens)."
+            )
+            self.context._prune_if_needed()
+            post_stats = self.context.get_stats()
+            print(
+                f"   Pruned to {post_stats.total_tokens:,} tokens "
+                f"({post_stats.dropped_messages} messages dropped)."
+            )
+
+        print(f"   Model swapped to: {self.model}{warning}")
+        print(f"   Context window: {self.context.max_tokens:,} tokens")
+
+        if warm:
+            print("   Warming up model...", end="", flush=True)
+            try:
+                from animus_kernel.providers.base import CompletionRequest
+
+                warmup_req = CompletionRequest(
+                    prompt="",
+                    messages=[{"role": "user", "content": "hi"}],
+                    model=self.model,
+                    temperature=0.1,
+                )
+                self.provider.complete(warmup_req)
+                print(" done.")
+            except Exception:
+                print(" failed (non-critical).")
+
+    @staticmethod
+    def _extract_model_size(model_name: str) -> int | None:
+        """Extract parameter size hint from model name, e.g. 'qwen2.5:32b' -> 32."""
+        match = re.search(r"(\d+)(?:\.\d+)?[bm]", model_name.lower())
+        if match:
+            val = float(match.group(1))
+            if "b" in model_name.lower():
+                return int(val)
+            if "m" in model_name.lower():
+                return int(val / 1000)
+        return None
 
     def _show_tools(self) -> None:
         """Display available tools."""
@@ -701,7 +1044,24 @@ class HeadREPL:
         arg = parts[1] if len(parts) > 1 else ""
 
         if cmd == "model":
-            print(f"   Current model: {self.model}")
+            if arg == "recommend":
+                self._recommend_model()
+            elif arg == "stats":
+                self._show_model_stats()
+            elif arg.startswith("pin "):
+                self._pin_model(arg[4:].strip())
+            elif arg.startswith("unpin "):
+                self._unpin_model(arg[6:].strip())
+            elif arg == "pins":
+                self._list_pins()
+            elif arg:
+                warm = arg.endswith(" --warm")
+                model_arg = arg.replace(" --warm", "").strip() if warm else arg
+                self._swap_model(model_arg, warm=warm)
+            else:
+                self._show_model_info()
+        elif cmd == "hardware":
+            self._show_model_info()
         elif cmd == "project":
             print(f"   Project root: {self.project_root}")
         elif cmd == "session":
@@ -812,6 +1172,7 @@ class HeadREPL:
             started_at=datetime.now(UTC),
             last_active_at=datetime.now(UTC),
             project_root=str(self.project_root),
+            model=self.model,
             messages=self._filter_messages(self.context.get_messages()),
             summary=self.context._summary,
             total_tokens=self.total_tokens,

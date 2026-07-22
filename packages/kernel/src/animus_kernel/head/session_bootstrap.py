@@ -192,6 +192,7 @@ class SessionBootstrap:
 
             return {
                 "session_id": checkpoint.session_id,
+                "model": checkpoint.model,
                 "summary": checkpoint.summary,
                 "turns": checkpoint.turns,
                 "total_tokens": checkpoint.total_tokens,

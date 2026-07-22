@@ -24,6 +24,7 @@ class HeadCheckpoint:
     started_at: datetime
     last_active_at: datetime
     project_root: str | None = None
+    model: str = ""
     messages: list[dict] = field(default_factory=list)
     summary: str = ""
     total_tokens: int = 0
@@ -36,6 +37,7 @@ class HeadCheckpoint:
             "started_at": self.started_at.isoformat(),
             "last_active_at": self.last_active_at.isoformat(),
             "project_root": self.project_root,
+            "model": self.model,
             "messages": self.messages,
             "summary": self.summary,
             "total_tokens": self.total_tokens,
@@ -50,6 +52,7 @@ class HeadCheckpoint:
             started_at=datetime.fromisoformat(data["started_at"]),
             last_active_at=datetime.fromisoformat(data["last_active_at"]),
             project_root=data.get("project_root"),
+            model=data.get("model", ""),
             messages=data.get("messages", []),
             summary=data.get("summary", ""),
             total_tokens=data.get("total_tokens", 0),
@@ -67,6 +70,7 @@ class HeadCheckpointStore:
             started_at TEXT NOT NULL,
             last_active_at TEXT NOT NULL,
             project_root TEXT,
+            model TEXT NOT NULL DEFAULT '',
             messages_json TEXT NOT NULL DEFAULT '[]',
             summary TEXT NOT NULL DEFAULT '',
             total_tokens INTEGER NOT NULL DEFAULT 0,
@@ -94,12 +98,13 @@ class HeadCheckpointStore:
             conn.execute(
                 """
                 INSERT INTO head_checkpoints
-                (session_id, started_at, last_active_at, project_root,
+                (session_id, started_at, last_active_at, project_root, model,
                  messages_json, summary, total_tokens, turns, metadata_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(session_id) DO UPDATE SET
                     last_active_at=excluded.last_active_at,
                     project_root=excluded.project_root,
+                    model=excluded.model,
                     messages_json=excluded.messages_json,
                     summary=excluded.summary,
                     total_tokens=excluded.total_tokens,
@@ -111,6 +116,7 @@ class HeadCheckpointStore:
                     checkpoint.started_at.isoformat(),
                     checkpoint.last_active_at.isoformat(),
                     checkpoint.project_root,
+                    checkpoint.model,
                     json.dumps(checkpoint.messages),
                     checkpoint.summary,
                     checkpoint.total_tokens,
@@ -130,24 +136,25 @@ class HeadCheckpointStore:
         if not row:
             return None
 
-        # Map row to checkpoint
+        # Map row to checkpoint (column order matches SCHEMA)
         return HeadCheckpoint(
             session_id=row[0],
             started_at=datetime.fromisoformat(row[1]),
             last_active_at=datetime.fromisoformat(row[2]),
             project_root=row[3],
-            messages=json.loads(row[4]) if row[4] else [],
-            summary=row[5] or "",
-            total_tokens=row[6] or 0,
-            turns=row[7] or 0,
-            metadata=json.loads(row[8]) if row[8] else {},
+            model=row[4] or "",
+            messages=json.loads(row[5]) if row[5] else [],
+            summary=row[6] or "",
+            total_tokens=row[7] or 0,
+            turns=row[8] or 0,
+            metadata=json.loads(row[9]) if row[9] else {},
         )
 
     def list_recent(self, limit: int = 10) -> list[HeadCheckpoint]:
         with sqlite3.connect(str(self.db_path)) as conn:
             rows = conn.execute(
                 """
-                SELECT session_id, started_at, last_active_at, project_root,
+                SELECT session_id, started_at, last_active_at, project_root, model,
                        messages_json, summary, total_tokens, turns, metadata_json
                 FROM head_checkpoints
                 ORDER BY last_active_at DESC
@@ -164,11 +171,12 @@ class HeadCheckpointStore:
                     started_at=datetime.fromisoformat(row[1]),
                     last_active_at=datetime.fromisoformat(row[2]),
                     project_root=row[3],
-                    messages=json.loads(row[4]) if row[4] else [],
-                    summary=row[5] or "",
-                    total_tokens=row[6] or 0,
-                    turns=row[7] or 0,
-                    metadata=json.loads(row[8]) if row[8] else {},
+                    model=row[4] or "",
+                    messages=json.loads(row[5]) if row[5] else [],
+                    summary=row[6] or "",
+                    total_tokens=row[7] or 0,
+                    turns=row[8] or 0,
+                    metadata=json.loads(row[9]) if row[9] else {},
                 )
             )
         return checkpoints
