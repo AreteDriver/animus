@@ -490,10 +490,12 @@ class BudgetManager:
                 the breakdown sum is used.
             operation: Operation description.
             metadata: Additional metadata.
-            input_tokens / output_tokens / cache_read_tokens: optional
-                per-direction breakdown. When supplied, lets ``effective_tokens``
-                / ``total_effective_tokens`` compute a cost-weighted score —
-                cache reads count ~0.1× input, output ~4× input.
+            input_tokens: Optional per-direction breakdown.
+            output_tokens: Optional per-direction breakdown.
+            cache_read_tokens: Optional per-direction breakdown. When supplied,
+                lets ``effective_tokens`` / ``total_effective_tokens`` compute
+                a cost-weighted score — cache reads count ~0.1× input,
+                output ~4× input.
             model: optional model id (e.g. ``"claude-sonnet-4-6"``); used to
                 pick a tier multiplier for Effective-Tokens.
 

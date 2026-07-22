@@ -48,6 +48,7 @@ nav:
   - Performance: operators/performance.md
 - Reference:
   - CLI Commands: reference/cli-commands.md
+  - Head REPL Commands: reference/head-repl.md
   - API Reference: reference/api.md
   - Kernel API: reference/kernel-api.md
   - Memory System: reference/memory.md

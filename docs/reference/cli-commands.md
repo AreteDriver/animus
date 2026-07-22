@@ -23,7 +23,7 @@ The Animus REPL accepts two kinds of input:
 | `exit` | Quit Animus |
 | `/status` | Show system status (provider, backend, memory count) |
 | `/stats` | Show detailed memory statistics + task success rate |
-| `/model` | Show current model routing (primary + fallback) |
+| `/model` | Show current model info. **Core REPL:** dual-model routing (primary + fallback). **Head REPL:** swap installed local models. See [Head REPL Commands](head-repl.md) |
 | `/auto` | Toggle auto-approve for tool execution |
 
 ### Examples
