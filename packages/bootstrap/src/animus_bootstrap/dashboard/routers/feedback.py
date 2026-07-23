@@ -15,6 +15,14 @@ def _get_feedback_store(request: Request):  # noqa: ANN202
     return getattr(runtime, "feedback_store", None)
 
 
+def _get_event_ledger(request: Request):  # noqa: ANN202
+    """Safely retrieve the event ledger from runtime."""
+    runtime = getattr(request.app.state, "runtime", None)
+    if runtime is None:
+        return None
+    return getattr(runtime, "event_ledger", None)
+
+
 @router.post("/api/feedback")
 async def record_feedback(
     request: Request,
@@ -40,6 +48,10 @@ async def record_feedback(
         comment=comment,
         channel=channel,
     )
+
+    ledger = _get_event_ledger(request)
+    if ledger is not None:
+        ledger.record("feedback_recorded", "dashboard", {"rating": rating, "channel": channel})
 
     icon = "&#128077;" if rating > 0 else "&#128078;"
     return templates.TemplateResponse(

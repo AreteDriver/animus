@@ -60,28 +60,44 @@
 
     </div>
 
-    <!-- Component Summary -->
+    <!-- Operational Stats -->
     <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-4">
-        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Components</h3>
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Operations</h3>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-                <span class="text-animus-muted">Cognitive</span>
-                <p class="text-animus-text font-semibold mt-1">{{ cognitive_type | capitalize }}</p>
+                <span class="text-animus-muted">Events / min</span>
+                <p class="text-animus-text font-semibold mt-1">{{ ledger_stats.get('events_per_min', 0) }}</p>
+            </div>
+            <div>
+                <span class="text-animus-muted">Total Events</span>
+                <p class="text-animus-text font-semibold mt-1">{{ ledger_stats.get('total', 0) }}</p>
+            </div>
+            <div>
+                <span class="text-animus-muted">Recent Errors</span>
+                <p class="text-animus-text font-semibold mt-1">{{ (ledger_stats.get('by_type') or {}).get('error', 0) }}</p>
             </div>
             <div>
                 <span class="text-animus-muted">Intelligence</span>
                 <p class="text-animus-text font-semibold mt-1">{{ component_count }}/4 active</p>
             </div>
-            <div>
-                <span class="text-animus-muted">Personas</span>
-                <p class="text-animus-text font-semibold mt-1">{{ persona_count }} loaded</p>
-            </div>
-            <div>
-                <span class="text-animus-muted">Channel</span>
-                <p class="text-animus-text font-semibold mt-1">WebChat</p>
-            </div>
         </div>
     </div>
+
+    <!-- Recent Events -->
+    {% if recent_events %}
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-4">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Recent Events</h3>
+        <div class="space-y-2 text-sm">
+            {% for event in recent_events %}
+            <div class="flex items-center gap-3">
+                <span class="text-animus-green text-xs font-mono">{{ event.type }}</span>
+                <span class="text-animus-muted text-xs">{{ event.source }}</span>
+                <span class="text-animus-text">{{ event.payload | default({}) | string | truncate(40) }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Health endpoint hint -->
     <div class="bg-animus-surface border border-animus-border rounded-lg p-6">

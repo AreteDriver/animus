@@ -58,6 +58,7 @@ class AnimusRuntime:
         self._channels: dict[str, Any] = {}
         self.push_store: Any = None
         self._message_logger: Any = None
+        self.event_ledger: Any = None
 
     @property
     def config(self) -> AnimusConfig:
@@ -82,6 +83,12 @@ class AnimusRuntime:
 
         data_dir = self._config.get_data_path()
         data_dir.mkdir(parents=True, exist_ok=True)
+
+        # 0. Event ledger — operational telemetry for the dashboard
+        from animus_bootstrap.intelligence.event_ledger import EventLedger
+
+        self.event_ledger = EventLedger(db_path=data_dir / "events.db")
+        self.event_ledger.record("session_started", "runtime", {"version": __import__("animus_bootstrap").__version__})
 
         # 1. Identity file manager
         from animus_bootstrap.identity.manager import IdentityFileManager
@@ -129,6 +136,12 @@ class AnimusRuntime:
             self._tool_history_store = ToolHistoryStore(history_db)
             self.tool_executor.set_history_store(self._tool_history_store)
             logger.info("Tool history store initialized: %s", history_db)
+
+            # Wire event ledger for operational telemetry
+            if self.event_ledger is not None:
+                self.tool_executor.add_execution_observer(
+                    _make_tool_execution_observer(self.event_ledger)
+                )
 
             if self.memory_manager is not None:
                 self.memory_manager.add_action_observer(
@@ -464,6 +477,9 @@ class AnimusRuntime:
             self._message_logger.close()
             self._message_logger = None
             logger.info("Gateway message logger closed")
+
+        if self.event_ledger is not None:
+            self.event_ledger.record("session_ended", "runtime")
 
         self._started = False
         logger.info("Animus runtime stopped")
@@ -940,6 +956,26 @@ def _make_tool_history_observer(history_store: Any) -> Any:
             if since <= ts < until:
                 count += 1
         return count
+
+    return observe
+
+
+def _make_tool_execution_observer(event_ledger: Any) -> Any:
+    """Build a callback that records tool executions to the event ledger."""
+
+    def observe(result: Any) -> None:
+        try:
+            event_ledger.record(
+                "tool_execution",
+                "tool_executor",
+                {
+                    "tool_name": result.tool_name,
+                    "success": result.success,
+                    "duration_ms": round(result.duration_ms, 2),
+                },
+            )
+        except Exception:
+            logger.exception("tool execution observer failed")
 
     return observe
 

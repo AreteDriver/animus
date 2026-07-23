@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Operational Events{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Operational Events</h2>
+
+    <!-- Stats Summary -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <h3 class="text-xs text-animus-muted uppercase tracking-wide mb-2">Total Events</h3>
+            <p class="text-2xl font-bold text-animus-text">{{ stats.get('total', 0) }}</p>
+        </div>
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <h3 class="text-xs text-animus-muted uppercase tracking-wide mb-2">Events / min</h3>
+            <p class="text-2xl font-bold text-animus-text">{{ stats.get('events_per_min', 0) }}</p>
+        </div>
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <h3 class="text-xs text-animus-muted uppercase tracking-wide mb-2">Errors</h3>
+            <p class="text-2xl font-bold text-animus-red">{{ (stats.get('by_type') or {}).get('error', 0) }}</p>
+        </div>
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <h3 class="text-xs text-animus-muted uppercase tracking-wide mb-2">Tool Execs</h3>
+            <p class="text-2xl font-bold text-animus-green">{{ (stats.get('by_type') or {}).get('tool_execution', 0) }}</p>
+        </div>
+    </div>
+
+    <!-- Live Feed -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-8"
+         hx-get="/events/feed"
+         hx-trigger="every 5s"
+         hx-swap="innerHTML">
+        <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Live Feed</h3>
+        {% include "fragments/events_feed.html" %}
+    </div>
+
+    <!-- SSE Stream Indicator -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-4 mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm text-animus-muted uppercase tracking-wide">Real-Time Stream</h3>
+                <p class="text-xs text-animus-muted mt-1">Connect to /events/stream for live SSE</p>
+            </div>
+            <span class="status-indicator status-ok"></span>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -138,6 +138,13 @@
                 </a>
             </li>
             <li>
+                <a href="/events"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/events' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Events
+                </a>
+            </li>
+            <li>
                 <a href="/tasks"
                    class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
                           {% if '/tasks' in request.url.path %}bg-animus-border text-animus-green{% endif %}">

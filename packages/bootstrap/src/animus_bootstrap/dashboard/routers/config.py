@@ -120,6 +120,12 @@ async def save_config(
 
     config_manager.save(cfg)
 
+    # Record config change in event ledger
+    runtime = getattr(request.app.state, "runtime", None)
+    ledger = getattr(runtime, "event_ledger", None) if runtime else None
+    if ledger is not None:
+        ledger.record("config_changed", "dashboard", {"fields_updated": ["general"]})
+
     return RedirectResponse(url="/config?saved=1", status_code=303)
 
 
@@ -142,4 +148,10 @@ async def delete_key(
         return RedirectResponse(url="/config", status_code=303)
 
     config_manager.save(cfg)
+
+    runtime = getattr(request.app.state, "runtime", None)
+    ledger = getattr(runtime, "event_ledger", None) if runtime else None
+    if ledger is not None:
+        ledger.record("config_changed", "dashboard", {"fields_updated": [key], "action": "deleted"})
+
     return RedirectResponse(url="/config?saved=1", status_code=303)

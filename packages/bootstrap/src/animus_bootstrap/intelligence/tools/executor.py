@@ -65,6 +65,7 @@ class ToolExecutor:
         self._permissions = permission_manager or ToolPermissionManager()
         self._approval_callback = approval_callback
         self._history_store = history_store
+        self._execution_observers: list[Callable[[ToolResult], None]] = []
 
     def register(self, tool: ToolDefinition) -> None:
         """Register a tool. Raises ValueError if name already taken."""
@@ -85,6 +86,10 @@ class ToolExecutor:
     def set_history_store(self, store: Any | None) -> None:
         """Set or clear the persistent history store."""
         self._history_store = store
+
+    def add_execution_observer(self, callback: Callable[[ToolResult], None]) -> None:
+        """Register a callback invoked after every tool execution."""
+        self._execution_observers.append(callback)
 
     def unregister(self, name: str) -> None:
         """Remove a tool by name. No-op if not found."""
@@ -213,6 +218,11 @@ class ToolExecutor:
                 self._history_store.save(result)
             except (OSError, RuntimeError, ValueError):
                 logger.exception("Failed to persist tool history for '%s'", name)
+        for observer in self._execution_observers:
+            try:
+                observer(result)
+            except Exception:
+                logger.exception("Execution observer failed for '%s'", name)
         return result
 
     async def execute_batch(self, tool_calls: list[dict]) -> list[ToolResult]:

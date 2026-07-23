@@ -111,6 +111,13 @@ async def home_page(request: Request) -> object:
     if runtime_started and getattr(runtime, "persona_engine", None) is not None:
         persona_count = runtime.persona_engine.persona_count
 
+    # Event ledger stats
+    ledger_stats: dict[str, Any] = {}
+    recent_events: list[dict[str, Any]] = []
+    if runtime_started and getattr(runtime, "event_ledger", None) is not None:
+        ledger_stats = runtime.event_ledger.get_stats()
+        recent_events = runtime.event_ledger.query(limit=5)
+
     return templates.TemplateResponse(
         request,
         "home.html",
@@ -122,5 +129,7 @@ async def home_page(request: Request) -> object:
             "component_count": component_count,
             "cognitive_type": cognitive_type,
             "persona_count": persona_count,
+            "ledger_stats": ledger_stats,
+            "recent_events": recent_events,
         },
     )

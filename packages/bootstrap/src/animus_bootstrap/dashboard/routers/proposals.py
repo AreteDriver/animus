@@ -93,6 +93,11 @@ async def approve_proposal(proposal_id: int, request: Request) -> object:
             {"approved": False, "file": "", "error": "Cannot modify locked file."}
         )
 
+    runtime = getattr(request.app.state, "runtime", None)
+    ledger = getattr(runtime, "event_ledger", None) if runtime else None
+    if ledger is not None:
+        ledger.record("proposal_approved", "dashboard", {"proposal_id": proposal_id, "file": result.file})
+
     return templates.TemplateResponse(
         request,
         "fragments/proposal_action_result.html",
@@ -118,6 +123,11 @@ async def reject_proposal(proposal_id: int, request: Request) -> object:
             request, "fragments/proposal_action_result.html",
             {"approved": False, "file": "", "error": "Proposal not found."}
         )
+
+    runtime = getattr(request.app.state, "runtime", None)
+    ledger = getattr(runtime, "event_ledger", None) if runtime else None
+    if ledger is not None:
+        ledger.record("proposal_rejected", "dashboard", {"proposal_id": proposal_id})
 
     return templates.TemplateResponse(
         request,
