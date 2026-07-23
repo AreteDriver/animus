@@ -271,3 +271,54 @@ async def citizens_summary_api(request: Request) -> JSONResponse:
     """Return JSON summary of citizen activity."""
     bridge = _get_bridge(request)
     return JSONResponse(bridge.summary())
+
+
+@router.get("/api/citizens/proposals")
+async def citizens_proposals_api(request: Request) -> JSONResponse:
+    """Return JSON list of citizen proposals."""
+    bridge = _get_bridge(request)
+    status_filter = request.query_params.get("status", "")
+    citizen_filter = request.query_params.get("citizen", "")
+    proposals = bridge.list_proposals(
+        citizen_name=citizen_filter or None,
+        status=status_filter or None,
+        limit=100,
+    )
+    return JSONResponse([p.__dict__ for p in proposals])
+
+
+@router.post("/api/citizens/proposals/{proposal_id}/approve")
+async def approve_citizen_proposal_api(request: Request, proposal_id: str) -> JSONResponse:
+    """Approve a citizen proposal (JSON API for PWA)."""
+    bridge = _get_bridge(request)
+    result = bridge.approve(proposal_id)
+    _record_event(request, "citizen_proposal_approved", {
+        "proposal_id": proposal_id,
+        "success": result.get("success", False),
+    })
+    return JSONResponse(result)
+
+
+@router.post("/api/citizens/proposals/{proposal_id}/reject")
+async def reject_citizen_proposal_api(request: Request, proposal_id: str) -> JSONResponse:
+    """Reject a citizen proposal (JSON API for PWA)."""
+    bridge = _get_bridge(request)
+    result = bridge.reject(proposal_id)
+    _record_event(request, "citizen_proposal_rejected", {
+        "proposal_id": proposal_id,
+        "success": result.get("success", False),
+    })
+    return JSONResponse(result)
+
+
+@router.post("/api/citizens/proposals/{proposal_id}/commission")
+async def commission_citizen_proposal_api(request: Request, proposal_id: str) -> JSONResponse:
+    """Commission an approved proposal to Forge (JSON API for PWA)."""
+    bridge = _get_bridge(request)
+    result = bridge.commission(proposal_id)
+    _record_event(request, "citizen_proposal_commissioned", {
+        "proposal_id": proposal_id,
+        "success": result.get("success", False),
+        "stage_reached": result.get("stage_reached", ""),
+    })
+    return JSONResponse(result)

@@ -1,9 +1,9 @@
 {
   "phase": 6,
   "phase_name": "Citizen Integration Hardening",
-  "tasks_completed": ["6.1", "6.2"],
+  "tasks_completed": ["6.1", "6.2", "6.3"],
   "current_task": null,
   "blocked_by": null,
-  "last_action": "Task 6.2 complete: End-to-end mock pipeline tests (3 tests) proving full Observe→Propose→Approve→Commission loop. 35 total citizen tests green.",
+  "last_action": "Phase 6 complete. Live polling (6.1), end-to-end mock pipeline tests (6.2), PWA Citizens view with JSON API (6.3). 30 total citizen tests green.",
   "timestamp": "2026-07-23T00:00:00Z"
 }

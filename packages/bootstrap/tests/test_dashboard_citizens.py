@@ -187,6 +187,53 @@ class TestCitizensApi:
         data = resp.json()
         assert data["citizens_total"] == 5
 
+    def test_proposals_api_returns_json(self, client: TestClient) -> None:
+        """GET /api/citizens/proposals returns JSON list."""
+        resp = client.get("/api/citizens/proposals")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data, list)
+
+    def test_proposals_api_filters_by_status(self, client: TestClient) -> None:
+        """GET /api/citizens/proposals?status=draft filters."""
+        resp = client.get("/api/citizens/proposals?status=draft")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data, list)
+
+    def test_approve_api_returns_json(self, client: TestClient) -> None:
+        """POST /api/citizens/proposals/{id}/approve returns JSON."""
+        headers = _csrf_headers(client)
+        resp = client.post(
+            "/api/citizens/proposals/test-id/approve",
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+
+    def test_reject_api_returns_json(self, client: TestClient) -> None:
+        """POST /api/citizens/proposals/{id}/reject returns JSON."""
+        headers = _csrf_headers(client)
+        resp = client.post(
+            "/api/citizens/proposals/test-id/reject",
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+
+    def test_commission_api_returns_json(self, client: TestClient) -> None:
+        """POST /api/citizens/proposals/{id}/commission returns JSON."""
+        headers = _csrf_headers(client)
+        resp = client.post(
+            "/api/citizens/proposals/test-id/commission",
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "success" in data
+
 
 class TestCitizensFragments:
     """Tests for HTMX pollable fragments."""

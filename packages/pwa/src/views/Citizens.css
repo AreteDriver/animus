@@ -1,0 +1,232 @@
+.citizens {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.citizens-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0;
+}
+
+.citizens-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.citizens-stat {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.citizens-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.citizens-stat-value--ok {
+  color: var(--success);
+}
+
+.citizens-stat-value--warn {
+  color: var(--warning);
+}
+
+.citizens-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.citizens-warning {
+  padding: 12px;
+  border-radius: var(--radius);
+  background: rgba(251, 191, 36, 0.1);
+  color: var(--warning);
+  font-size: 13px;
+}
+
+.citizens-filter {
+  display: flex;
+  gap: 8px;
+}
+
+.citizens-select {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--bg-input);
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.citizens-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.citizens-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-dim);
+}
+
+.citizens-empty-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.citizens-empty-text {
+  font-size: 14px;
+}
+
+.citizens-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.citizens-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.citizens-card-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.citizens-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.citizens-badge--draft,
+.citizens-badge--submitted,
+.citizens-badge--pending_review {
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--warning);
+}
+
+.citizens-badge--approved,
+.citizens-badge--complete,
+.citizens-badge--implemented {
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--success);
+}
+
+.citizens-badge--rejected {
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--danger);
+}
+
+.citizens-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.citizens-confidence {
+  font-weight: 700;
+}
+
+.citizens-confidence--high {
+  color: var(--success);
+}
+
+.citizens-confidence--medium {
+  color: var(--warning);
+}
+
+.citizens-confidence--low {
+  color: var(--danger);
+}
+
+.citizens-card-problem {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.citizens-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.citizens-btn {
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  border: none;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.citizens-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.citizens-btn--approve {
+  background: var(--success);
+  color: var(--bg);
+}
+
+.citizens-btn--reject {
+  background: var(--danger);
+  color: #fff;
+}
+
+.citizens-btn--commission {
+  background: var(--warning);
+  color: var(--bg);
+}
+
+.citizens-last-checked {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+  margin: 0;
+}
+
+.citizens-error {
+  padding: 12px;
+  border-radius: var(--radius);
+  background: rgba(248, 113, 113, 0.1);
+  color: var(--danger);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}

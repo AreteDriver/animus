@@ -56,6 +56,63 @@ export async function getHealth(): Promise<HealthResponse> {
   return request("/health");
 }
 
+// Citizens
+export interface CitizenSummary {
+  citizens_total: number;
+  citizens_active: number;
+  proposals_total: number;
+  proposals_pending: number;
+  proposals_approved: number;
+  proposals_completed: number;
+  core_available: boolean;
+}
+
+export interface CitizenProposal {
+  id: string;
+  title: string;
+  problem: string;
+  recommendation: string;
+  confidence_score: number;
+  confidence_label: string;
+  estimated_effort_hours: number;
+  affected_components: string[];
+  status: string;
+  source_citizen: string;
+  created_at: string;
+  evidence_count: number;
+}
+
+export async function getCitizensSummary(): Promise<CitizenSummary> {
+  return request("/api/citizens/summary");
+}
+
+export async function getCitizenProposals(
+  status?: string,
+  citizen?: string,
+): Promise<CitizenProposal[]> {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (citizen) params.set("citizen", citizen);
+  const qs = params.toString();
+  return request(`/api/citizens/proposals${qs ? "?" + qs : ""}`);
+}
+
+export async function approveProposal(proposalId: string): Promise<{ success: boolean }> {
+  return request(`/api/citizens/proposals/${proposalId}/approve`, { method: "POST" });
+}
+
+export async function rejectProposal(proposalId: string): Promise<{ success: boolean }> {
+  return request(`/api/citizens/proposals/${proposalId}/reject`, { method: "POST" });
+}
+
+export async function commissionProposal(proposalId: string): Promise<{
+  success: boolean;
+  error?: string;
+  stage_reached?: string;
+}> {
+  return request(`/api/citizens/proposals/${proposalId}/commission`, { method: "POST" });
+}
+
 // Chat (REST fallback)
 export async function sendMessage(text: string): Promise<{ text: string }> {
   return request("/conversations/messages", {
