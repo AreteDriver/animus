@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 
 router = APIRouter()
 
@@ -41,18 +41,26 @@ async def tasks_create(
 
 
 @router.post("/tasks/{task_id}/complete")
-async def tasks_complete(request: Request, task_id: str) -> HTMLResponse:
+async def tasks_complete(request: Request, task_id: str) -> object:
     """Mark a task as completed (HTMX)."""
+    templates = request.app.state.templates
     store = _get_task_store(request)
     if store:
         store.complete(task_id)
-    return HTMLResponse('<span class="text-animus-green">Done</span>')
+    return templates.TemplateResponse(
+        request, "fragments/task_action_result.html",
+        {"css_class": "text-animus-green", "message": "Done"}
+    )
 
 
 @router.post("/tasks/{task_id}/delete")
-async def tasks_delete(request: Request, task_id: str) -> HTMLResponse:
+async def tasks_delete(request: Request, task_id: str) -> object:
     """Delete a task (HTMX)."""
+    templates = request.app.state.templates
     store = _get_task_store(request)
     if store:
         store.delete(task_id)
-    return HTMLResponse('<span class="text-animus-red">Deleted</span>')
+    return templates.TemplateResponse(
+        request, "fragments/task_action_result.html",
+        {"css_class": "text-animus-red", "message": "Deleted"}
+    )

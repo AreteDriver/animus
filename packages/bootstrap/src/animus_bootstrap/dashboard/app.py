@@ -17,6 +17,7 @@ from fastapi.templating import Jinja2Templates
 import animus_bootstrap
 from animus_bootstrap.config import ConfigManager
 from animus_bootstrap.dashboard.auth import auth_required_for, verify_ws_token
+from animus_bootstrap.dashboard.csrf import CsrfMiddleware, get_csrf_token, set_csrf_cookie
 from animus_bootstrap.dashboard.middleware_http import AuthMiddleware
 from animus_bootstrap.dashboard.routers import (
     activity,
@@ -141,15 +142,17 @@ app = FastAPI(
 # localhost binding, auth is a no-op (see auth_required_for).
 app.state.config = ConfigManager().load()
 
-# CORS — allow the PWA (or any dev frontend) to hit the API surface.
-# In production with a reverse proxy this can be tightened to the origin.
+# CORS — tightened to localhost only for security.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:7700"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-CSRF-Token"],
 )
+
+# CSRF protection for state-changing requests
+app.add_middleware(CsrfMiddleware)
 
 # Bearer-token auth for the PWA API surface (no-op for local HTMX dashboard).
 app.add_middleware(AuthMiddleware)
@@ -166,6 +169,14 @@ else:
 # Jinja2 templates (shared across routers via app.state)
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 templates.env.globals["version"] = animus_bootstrap.__version__
+
+
+def _csrf_context(request: Request) -> dict[str, str]:
+    """Inject CSRF token into every template context."""
+    return {"csrf_token": get_csrf_token(request)}
+
+
+templates.env.globals["csrf_token"] = _csrf_context
 app.state.templates = templates
 
 # Shared WebChat adapter instance

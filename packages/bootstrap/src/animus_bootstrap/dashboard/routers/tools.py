@@ -11,7 +11,6 @@ from html import escape as html_escape
 from typing import Any
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse
 from starlette.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
@@ -155,55 +154,32 @@ async def tools_page(request: Request) -> object:
 
 
 @router.get("/tools/pending")
-async def tools_pending(request: Request) -> HTMLResponse:
+async def tools_pending(request: Request) -> object:
     """Return pending approvals as an HTML fragment (for HTMX polling)."""
+    templates = request.app.state.templates
     pending = [
-        {"id": rid, "tool_name": entry["tool_name"], "arguments": entry["arguments"]}
+        {"id": rid, "tool_name": entry["tool_name"], "arguments": json.dumps(entry["arguments"], indent=2)[:200]}
         for rid, entry in _pending_approvals.items()
         if entry.get("approved") is None
     ]
 
-    if not pending:
-        return HTMLResponse('<p class="text-animus-muted text-sm">No pending approvals.</p>')
-
-    rows = []
-    for p in pending:
-        args_str = json.dumps(p["arguments"], indent=2)[:200]
-        rows.append(
-            f'<tr class="border-b border-animus-border">'
-            f'<td class="py-2 pr-4 text-animus-yellow font-bold">{p["tool_name"]}</td>'
-            f'<td class="py-2 pr-4 text-animus-muted text-xs"><pre>{args_str}</pre></td>'
-            f'<td class="py-2">'
-            f'<form method="post" action="/tools/approve/{p["id"]}" class="inline">'
-            f'<button type="submit" name="decision" value="approve" '
-            f'class="px-3 py-1 bg-animus-green text-animus-bg rounded text-xs '
-            f'hover:opacity-80 mr-2">Approve</button>'
-            f'<button type="submit" name="decision" value="deny" '
-            f'class="px-3 py-1 bg-animus-red text-white rounded text-xs '
-            f'hover:opacity-80">Deny</button>'
-            f"</form>"
-            f"</td></tr>"
-        )
-
-    table = (
-        '<table class="w-full text-sm">'
-        "<thead>"
-        '<tr class="border-b border-animus-border text-animus-muted">'
-        '<th class="text-left py-2 pr-4">Tool</th>'
-        '<th class="text-left py-2 pr-4">Arguments</th>'
-        '<th class="text-left py-2">Action</th>'
-        "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
+    return templates.TemplateResponse(
+        request,
+        "fragments/tool_pending_table.html",
+        {"pending": pending},
     )
-    return HTMLResponse(table)
 
 
 @router.post("/tools/approve/{request_id}")
-async def approve_tool(request_id: str, decision: str = Form("deny")) -> HTMLResponse:
+async def approve_tool(request_id: str, request: Request, decision: str = Form("deny")) -> object:
     """Approve or deny a pending tool execution."""
+    templates = request.app.state.templates
     entry = _pending_approvals.get(request_id)
     if entry is None:
-        return HTMLResponse(
-            '<p class="text-animus-red text-sm">Approval request not found or expired.</p>'
+        return templates.TemplateResponse(
+            request,
+            "fragments/tool_approval_result.html",
+            {"color": "text-animus-red", "tool_name": "", "status": "not found or expired"},
         )
 
     approved = decision == "approve"
@@ -212,7 +188,11 @@ async def approve_tool(request_id: str, decision: str = Form("deny")) -> HTMLRes
 
     status = "approved" if approved else "denied"
     color = "text-animus-green" if approved else "text-animus-red"
-    return HTMLResponse(f"<p class=\"{color} text-sm\">Tool '{entry['tool_name']}' {status}.</p>")
+    return templates.TemplateResponse(
+        request,
+        "fragments/tool_approval_result.html",
+        {"color": color, "tool_name": entry["tool_name"], "status": status},
+    )
 
 
 @router.get("/tools/events")
@@ -252,34 +232,42 @@ async def execute_tool(
     request: Request,
     tool_name: str = Form(""),
     arguments_json: str = Form("{}"),
-) -> HTMLResponse:
+) -> object:
     """Execute a tool directly from the dashboard (user-initiated, auto-approved)."""
+    templates = request.app.state.templates
     runtime = _get_runtime(request)
     if runtime is None or getattr(runtime, "tool_executor", None) is None:
-        return HTMLResponse('<p class="text-animus-red text-sm">No tool executor available.</p>')
+        return templates.TemplateResponse(
+            request, "fragments/tool_execution_result.html",
+            {"error": "No tool executor available."}
+        )
 
     try:
         arguments = json.loads(arguments_json)
     except json.JSONDecodeError:
-        return HTMLResponse('<p class="text-animus-red text-sm">Invalid JSON arguments.</p>')
+        return templates.TemplateResponse(
+            request, "fragments/tool_execution_result.html",
+            {"error": "Invalid JSON arguments."}
+        )
 
     executor = runtime.tool_executor
     tool = executor.get_tool(tool_name)
     if tool is None:
-        return HTMLResponse(
-            f'<p class="text-animus-red text-sm">Unknown tool: {html_escape(tool_name)}</p>'
+        return templates.TemplateResponse(
+            request, "fragments/tool_execution_result.html",
+            {"error": f"Unknown tool: {tool_name}"}
         )
 
     result = await executor.execute(tool_name, arguments)
 
-    safe_name = html_escape(tool_name)
-    color = "text-animus-green" if result.success else "text-animus-red"
-    output_escaped = html_escape(result.output[:1000])
-    return HTMLResponse(
-        f'<div class="bg-animus-surface border border-animus-border rounded p-4 mt-2">'
-        f'<p class="{color} text-sm font-bold">'
-        f"{safe_name}: {'OK' if result.success else 'FAIL'} "
-        f"({result.duration_ms:.0f}ms)</p>"
-        f'<pre class="text-animus-text text-xs mt-2 whitespace-pre-wrap">'
-        f"{output_escaped}</pre></div>"
+    return templates.TemplateResponse(
+        request,
+        "fragments/tool_execution_result.html",
+        {
+            "tool_name": tool_name,
+            "status": "OK" if result.success else "FAIL",
+            "color": "text-animus-green" if result.success else "text-animus-red",
+            "duration_ms": f"{result.duration_ms:.0f}",
+            "output": result.output[:1000],
+        },
     )

@@ -1,0 +1,10 @@
+<div class="bg-animus-bg border border-animus-border rounded p-4 mt-2 mb-4 text-sm">
+    <p class="text-animus-muted text-xs mb-1">Area: <span class="text-animus-green">{{ area }}</span></p>
+    <p class="text-animus-text mb-2">{{ description }}</p>
+    <p class="text-animus-muted text-xs mb-1">Analysis:</p>
+    <p class="text-animus-text mb-2">{{ analysis }}</p>
+    {% if patch %}
+    <p class="text-animus-muted text-xs mb-1">Patch:</p>
+    <pre class="bg-animus-surface p-2 rounded text-xs text-animus-text overflow-x-auto">{{ patch }}</pre>
+    {% endif %}
+</div>

@@ -3,9 +3,19 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 router = APIRouter()
+
+_templates: Jinja2Templates | None = None
+
+
+def _get_templates(request: Request) -> Jinja2Templates:
+    """Retrieve Jinja2 templates from app state."""
+    global _templates
+    if _templates is None:
+        _templates = request.app.state.templates
+    return _templates
 
 
 def _get_runtime(request: Request) -> object | None:
@@ -54,7 +64,7 @@ async def self_mod_page(request: Request) -> object:
 
 
 @router.get("/self-mod/improvement/{proposal_id}")
-async def improvement_detail(proposal_id: int, request: Request) -> HTMLResponse:
+async def improvement_detail(proposal_id: int, request: Request) -> object:
     """Return an HTML fragment with the full detail for one improvement proposal."""
     from animus_bootstrap.intelligence.tools.builtin.self_improve import (
         get_improvement_log,
@@ -62,25 +72,19 @@ async def improvement_detail(proposal_id: int, request: Request) -> HTMLResponse
 
     matching = [p for p in get_improvement_log() if p["id"] == proposal_id]
     if not matching:
-        return HTMLResponse('<p class="text-animus-red text-sm">Proposal not found.</p>')
+        return _get_templates(request).TemplateResponse(
+            request, "fragments/improvement_detail.html",
+            {"area": "", "description": "Proposal not found.", "analysis": "", "patch": ""}
+        )
 
     p = matching[0]
-    analysis = p.get("analysis") or "No analysis available."
-    patch = p.get("patch") or ""
-
-    lines = [
-        '<div class="bg-animus-bg border border-animus-border rounded p-4 mt-2 mb-4 text-sm">',
-        f'<p class="text-animus-muted text-xs mb-1">Area: '
-        f'<span class="text-animus-green">{p.get("area", "")}</span></p>',
-        f'<p class="text-animus-text mb-2">{p.get("description", "")}</p>',
-        '<p class="text-animus-muted text-xs mb-1">Analysis:</p>',
-        f'<p class="text-animus-text mb-2">{analysis}</p>',
-    ]
-    if patch:
-        lines.append('<p class="text-animus-muted text-xs mb-1">Patch:</p>')
-        lines.append(
-            f'<pre class="bg-animus-surface p-2 rounded text-xs '
-            f'text-animus-text overflow-x-auto">{patch}</pre>'
-        )
-    lines.append("</div>")
-    return HTMLResponse("\n".join(lines))
+    return _get_templates(request).TemplateResponse(
+        request,
+        "fragments/improvement_detail.html",
+        {
+            "area": p.get("area", ""),
+            "description": p.get("description", ""),
+            "analysis": p.get("analysis") or "No analysis available.",
+            "patch": p.get("patch") or "",
+        },
+    )

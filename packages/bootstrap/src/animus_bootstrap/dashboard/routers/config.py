@@ -121,3 +121,25 @@ async def save_config(
     config_manager.save(cfg)
 
     return RedirectResponse(url="/config?saved=1", status_code=303)
+
+
+@router.post("/config/delete-key")
+async def delete_key(
+    request: Request,
+    key: str = Form(""),
+) -> RedirectResponse:
+    """Remove a configured API key by setting it to empty string."""
+    config_manager = ConfigManager()
+    cfg = config_manager.load()
+
+    if key == "anthropic_key":
+        cfg.api.anthropic_key = ""
+    elif key == "openai_key":
+        cfg.api.openai_key = ""
+    elif key == "forge_api_key":
+        cfg.forge.api_key = ""
+    else:
+        return RedirectResponse(url="/config", status_code=303)
+
+    config_manager.save(cfg)
+    return RedirectResponse(url="/config?saved=1", status_code=303)

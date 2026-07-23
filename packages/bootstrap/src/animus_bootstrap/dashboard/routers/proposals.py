@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
 
 from animus_bootstrap.intelligence.proposals import IdentityProposalManager, Proposal
 
@@ -71,38 +70,57 @@ async def proposals_page(request: Request) -> object:
 
 
 @router.post("/proposals/{proposal_id}/approve")
-async def approve_proposal(proposal_id: int, request: Request) -> HTMLResponse:
+async def approve_proposal(proposal_id: int, request: Request) -> object:
     """Approve a proposal — apply the change to the identity file."""
+    templates = request.app.state.templates
     pm = _get_proposal_manager(request)
     if pm is None:
-        return HTMLResponse('<p class="text-animus-red text-sm">Not available.</p>')
+        return templates.TemplateResponse(
+            request, "fragments/proposal_action_result.html",
+            {"approved": False, "file": "", "error": "Not available."}
+        )
 
     try:
         result = pm.approve(proposal_id)
     except ValueError:
-        return HTMLResponse('<p class="text-animus-red text-sm">Proposal not found.</p>')
+        return templates.TemplateResponse(
+            request, "fragments/proposal_action_result.html",
+            {"approved": False, "file": "", "error": "Proposal not found."}
+        )
     except PermissionError:
-        return HTMLResponse('<p class="text-animus-red text-sm">Cannot modify locked file.</p>')
+        return templates.TemplateResponse(
+            request, "fragments/proposal_action_result.html",
+            {"approved": False, "file": "", "error": "Cannot modify locked file."}
+        )
 
-    return HTMLResponse(
-        f'<div class="bg-animus-green/10 border border-animus-green rounded p-3 text-sm">'
-        f'<span class="text-animus-green">Approved</span> — {result.file} updated.</div>'
+    return templates.TemplateResponse(
+        request,
+        "fragments/proposal_action_result.html",
+        {"approved": True, "file": result.file},
     )
 
 
 @router.post("/proposals/{proposal_id}/reject")
-async def reject_proposal(proposal_id: int, request: Request) -> HTMLResponse:
+async def reject_proposal(proposal_id: int, request: Request) -> object:
     """Reject a proposal — log the rejection."""
+    templates = request.app.state.templates
     pm = _get_proposal_manager(request)
     if pm is None:
-        return HTMLResponse('<p class="text-animus-red text-sm">Not available.</p>')
+        return templates.TemplateResponse(
+            request, "fragments/proposal_action_result.html",
+            {"approved": False, "file": "", "error": "Not available."}
+        )
 
     try:
         pm.reject(proposal_id)
     except ValueError:
-        return HTMLResponse('<p class="text-animus-red text-sm">Proposal not found.</p>')
+        return templates.TemplateResponse(
+            request, "fragments/proposal_action_result.html",
+            {"approved": False, "file": "", "error": "Proposal not found."}
+        )
 
-    return HTMLResponse(
-        '<div class="bg-animus-red/10 border border-animus-red rounded p-3 text-sm">'
-        '<span class="text-animus-red">Rejected</span> — proposal dismissed.</div>'
+    return templates.TemplateResponse(
+        request,
+        "fragments/proposal_action_result.html",
+        {"approved": False, "file": ""},
     )

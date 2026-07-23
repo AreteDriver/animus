@@ -1,0 +1,11 @@
+{% if error %}
+<p class="text-animus-red text-sm">{{ error }}</p>
+{% else %}
+<div class="flex items-center justify-between mb-2">
+    <h4 class="text-sm font-bold text-animus-text">{{ filename }}{% if locked %} <span title="Immutable — human-edit only">&#128274;</span>{% endif %}</h4>
+    {% if filename != "LEARNED.md" %}
+    <button hx-get="/identity/edit/{{ filename }}" hx-target="#card-{{ card_id }}" hx-swap="innerHTML" class="text-xs text-animus-green hover:underline">Edit</button>
+    {% endif %}
+</div>
+<pre class="text-xs text-animus-muted whitespace-pre-wrap">{% if preview %}{{ preview }}{% else %}<em>Empty</em>{% endif %}</pre>
+{% endif %}

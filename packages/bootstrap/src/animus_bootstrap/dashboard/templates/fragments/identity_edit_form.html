@@ -1,0 +1,13 @@
+{% if error %}
+<p class="text-animus-red text-sm">{{ error }}</p>
+{% else %}
+<form hx-put="/identity/{{ filename }}" hx-target="#card-{{ card_id }}" hx-swap="innerHTML">
+    <textarea name="content" rows="12" class="w-full bg-animus-bg border border-animus-border rounded p-3 text-sm text-animus-text font-mono resize-y" {% if locked %}readonly class="opacity-60 cursor-not-allowed"{% endif %}>{{ content }}</textarea>
+    <div class="flex gap-2 mt-2">
+        {% if not locked %}
+        <button type="submit" class="bg-animus-green text-animus-bg font-bold px-4 py-1 rounded text-xs hover:bg-animus-green/80">Save</button>
+        {% endif %}
+        <button type="button" hx-get="/identity/view/{{ filename }}" hx-target="#card-{{ card_id }}" hx-swap="innerHTML" class="bg-animus-border text-animus-text px-4 py-1 rounded text-xs hover:bg-animus-muted/20">Cancel</button>
+    </div>
+</form>
+{% endif %}

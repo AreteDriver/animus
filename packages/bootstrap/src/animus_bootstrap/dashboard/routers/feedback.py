@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse
 
 router = APIRouter()
 
@@ -24,11 +23,15 @@ async def record_feedback(
     rating: int = Form(0),
     comment: str = Form(""),
     channel: str = Form("webchat"),
-) -> HTMLResponse:
+) -> object:
     """Record a thumbs up/down feedback entry, return HTMX partial."""
+    templates = request.app.state.templates
     store = _get_feedback_store(request)
     if store is None:
-        return HTMLResponse('<span class="text-animus-muted text-xs">Feedback not available</span>')
+        return templates.TemplateResponse(
+            request, "fragments/feedback_result.html",
+            {"error": "Feedback not available"}
+        )
 
     store.record(
         message_text=message_text,
@@ -39,8 +42,9 @@ async def record_feedback(
     )
 
     icon = "&#128077;" if rating > 0 else "&#128078;"
-    return HTMLResponse(
-        f'<span class="text-animus-green text-xs">{icon} Thanks for the feedback!</span>'
+    return templates.TemplateResponse(
+        request, "fragments/feedback_result.html",
+        {"icon": icon}
     )
 
 

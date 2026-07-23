@@ -29,6 +29,14 @@ def _mock_config_manager() -> MagicMock:
     return mgr
 
 
+def _csrf_headers(client: TestClient) -> dict[str, str]:
+    """Prime the CSRF cookie via GET / and return the X-CSRF-Token header."""
+    client.get("/")
+    token = client.cookies.get("animus_csrf")
+    assert token is not None, "CSRF cookie not set"
+    return {"X-CSRF-Token": token}
+
+
 def _mock_installer(running: bool = False) -> MagicMock:
     """Build a mock AnimusInstaller."""
     inst = MagicMock()
@@ -226,6 +234,7 @@ class TestConfigPage:
                 "log_level": "info",
                 "data_dir": "~/.local/share/animus",
             },
+            headers=_csrf_headers(client),
             follow_redirects=False,
         )
         # POST should redirect to /config?saved=1 with 303
@@ -259,6 +268,7 @@ class TestConfigPage:
                 "log_level": "info",
                 "data_dir": "~/.local/share/animus",
             },
+            headers=_csrf_headers(client),
             follow_redirects=False,
         )
         assert resp.status_code == 303
@@ -292,6 +302,7 @@ class TestConfigPage:
                 "log_level": "info",
                 "data_dir": "~/.local/share/animus",
             },
+            headers=_csrf_headers(client),
             follow_redirects=False,
         )
         assert resp.status_code == 303
@@ -404,7 +415,7 @@ class TestUpdatePage:
 
     def test_update_apply_placeholder(self, client: TestClient) -> None:
         """POST /update/apply returns JSON placeholder response."""
-        resp = client.post("/update/apply")
+        resp = client.post("/update/apply", headers=_csrf_headers(client))
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "info"

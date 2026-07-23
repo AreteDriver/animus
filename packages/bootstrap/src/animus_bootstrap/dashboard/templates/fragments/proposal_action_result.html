@@ -1,0 +1,9 @@
+{% if approved %}
+<div class="bg-animus-green/10 border border-animus-green rounded p-3 text-sm">
+    <span class="text-animus-green">Approved</span> — {{ file }} updated.
+</div>
+{% else %}
+<div class="bg-animus-red/10 border border-animus-red rounded p-3 text-sm">
+    <span class="text-animus-red">Rejected</span> — proposal dismissed.
+</div>
+{% endif %}

@@ -11,6 +11,14 @@ from animus_bootstrap.dashboard.app import app
 from animus_bootstrap.intelligence.tools.builtin.task_store import TaskStore
 
 
+def _csrf_headers(client: TestClient) -> dict[str, str]:
+    """Prime the CSRF cookie via GET / and return the X-CSRF-Token header."""
+    client.get("/")
+    token = client.cookies.get("animus_csrf")
+    assert token is not None, "CSRF cookie not set"
+    return {"X-CSRF-Token": token}
+
+
 @pytest.fixture()
 def store(tmp_path):
     """Return a TaskStore backed by tmp_path."""
@@ -56,6 +64,7 @@ class TestTasksCreate:
         resp = client.post(
             "/tasks/create",
             data={"name": "new task", "description": "", "priority": "normal", "due_date": ""},
+            headers=_csrf_headers(client),
             follow_redirects=False,
         )
         assert resp.status_code == 303
@@ -68,6 +77,7 @@ class TestTasksCreate:
         client.post(
             "/tasks/create",
             data={"name": "persisted", "description": "desc", "priority": "urgent", "due_date": ""},
+            headers=_csrf_headers(client),
             follow_redirects=False,
         )
         tasks = store.list_all()
@@ -82,7 +92,7 @@ class TestTasksComplete:
         runtime._task_store = store
         app.state.runtime = runtime
         task_id = store.create("completable")
-        resp = client.post(f"/tasks/{task_id}/complete")
+        resp = client.post(f"/tasks/{task_id}/complete", headers=_csrf_headers(client))
         assert resp.status_code == 200
         assert "Done" in resp.text
         assert store.get(task_id)["status"] == "completed"
@@ -94,7 +104,7 @@ class TestTasksDelete:
         runtime._task_store = store
         app.state.runtime = runtime
         task_id = store.create("deletable")
-        resp = client.post(f"/tasks/{task_id}/delete")
+        resp = client.post(f"/tasks/{task_id}/delete", headers=_csrf_headers(client))
         assert resp.status_code == 200
         assert "Deleted" in resp.text
         assert store.get(task_id) is None

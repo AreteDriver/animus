@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse
 from markupsafe import escape as _esc
 
 router = APIRouter()
@@ -41,57 +40,42 @@ async def identity_page(request: Request) -> object:
 
 
 @router.get("/identity/edit/{filename}")
-async def identity_edit_form(filename: str, request: Request) -> HTMLResponse:
+async def identity_edit_form(filename: str, request: Request) -> object:
     """Return an HTMX partial with a textarea for editing an identity file."""
+    templates = request.app.state.templates
     mgr = _get_identity_manager(request)
     if mgr is None:
-        return HTMLResponse(
-            '<p class="text-animus-red text-sm">Identity manager not available.</p>'
+        return templates.TemplateResponse(
+            request, "fragments/identity_edit_form.html",
+            {"filename": "", "card_id": "", "content": "", "locked": True, "error": "Identity manager not available."}
         )
 
     try:
         content = mgr.read(filename)
     except ValueError:
-        return HTMLResponse('<p class="text-animus-red text-sm">Unknown identity file.</p>')
+        return templates.TemplateResponse(
+            request, "fragments/identity_edit_form.html",
+            {"filename": "", "card_id": "", "content": "", "locked": True, "error": "Unknown identity file."}
+        )
 
-    safe_fn = _esc(filename)
     locked = filename in mgr.LOCKED_FILES
-    ro = 'readonly class="opacity-60 cursor-not-allowed"' if locked else ""
-    card_id = _esc(filename.replace(".", "-"))
-    ta_cls = (
-        "w-full bg-animus-bg border border-animus-border "
-        "rounded p-3 text-sm text-animus-text font-mono resize-y"
-    )
-    save_btn = (
-        '<button type="submit" class="bg-animus-green '
-        "text-animus-bg font-bold px-4 py-1 rounded text-xs "
-        'hover:bg-animus-green/80">Save</button>'
-        if not locked
-        else ""
-    )
-    cancel_cls = (
-        "bg-animus-border text-animus-text px-4 py-1 rounded text-xs hover:bg-animus-muted/20"
-    )
-    safe_content = _esc(content)
-    return HTMLResponse(
-        f'<form hx-put="/identity/{safe_fn}" '
-        f'hx-target="#card-{card_id}" hx-swap="innerHTML">'
-        f'<textarea name="content" rows="12" class="{ta_cls}" '
-        f"{ro}>{safe_content}</textarea>"
-        f'<div class="flex gap-2 mt-2">{save_btn}'
-        f'<button type="button" hx-get="/identity/view/{safe_fn}" '
-        f'hx-target="#card-{card_id}" hx-swap="innerHTML" '
-        f'class="{cancel_cls}">Cancel</button></div></form>'
+    card_id = filename.replace(".", "-")
+    return templates.TemplateResponse(
+        request,
+        "fragments/identity_edit_form.html",
+        {"filename": filename, "card_id": card_id, "content": content, "locked": locked},
     )
 
 
 @router.put("/identity/{filename}")
-async def identity_save(filename: str, request: Request, content: str = Form("")) -> HTMLResponse:
+async def identity_save(filename: str, request: Request, content: str = Form("")) -> object:
     """Save content to an identity file and return the updated view."""
+    templates = request.app.state.templates
     mgr = _get_identity_manager(request)
     if mgr is None:
-        return HTMLResponse(
-            '<p class="text-animus-red text-sm">Identity manager not available.</p>'
+        return templates.TemplateResponse(
+            request, "fragments/identity_file_view.html",
+            {"filename": "", "card_id": "", "preview": "", "locked": True, "error": "Identity manager not available."}
         )
 
     locked = filename in mgr.LOCKED_FILES
@@ -101,47 +85,44 @@ async def identity_save(filename: str, request: Request, content: str = Form("")
         else:
             mgr.write(filename, content)
     except (ValueError, PermissionError):
-        return HTMLResponse('<p class="text-animus-red text-sm">Failed to save file.</p>')
+        return templates.TemplateResponse(
+            request, "fragments/identity_file_view.html",
+            {"filename": filename, "card_id": filename.replace(".", "-"), "preview": "", "locked": locked, "error": "Failed to save file."}
+        )
 
-    return _render_file_view(filename, content, locked)
+    return _render_file_view(request, filename, content, locked)
 
 
 @router.get("/identity/view/{filename}")
-async def identity_view(filename: str, request: Request) -> HTMLResponse:
+async def identity_view(filename: str, request: Request) -> object:
     """Return an HTMX partial with the rendered identity file view."""
+    templates = request.app.state.templates
     mgr = _get_identity_manager(request)
     if mgr is None:
-        return HTMLResponse(
-            '<p class="text-animus-red text-sm">Identity manager not available.</p>'
+        return templates.TemplateResponse(
+            request, "fragments/identity_file_view.html",
+            {"filename": "", "card_id": "", "preview": "", "locked": True, "error": "Identity manager not available."}
         )
 
     try:
         content = mgr.read(filename)
     except ValueError:
-        return HTMLResponse('<p class="text-animus-red text-sm">Unknown identity file.</p>')
+        return templates.TemplateResponse(
+            request, "fragments/identity_file_view.html",
+            {"filename": "", "card_id": "", "preview": "", "locked": True, "error": "Unknown identity file."}
+        )
 
     locked = filename in mgr.LOCKED_FILES
-    return _render_file_view(filename, content, locked)
+    return _render_file_view(request, filename, content, locked)
 
 
-def _render_file_view(filename: str, content: str, locked: bool) -> HTMLResponse:
+def _render_file_view(request: Request, filename: str, content: str, locked: bool) -> object:
     """Render a file card's inner content with Edit button."""
-    safe_name = _esc(filename)
-    lock_icon = ' <span title="Immutable — human-edit only">&#128274;</span>' if locked else ""
-    edit_btn = (
-        ""
-        if filename == "LEARNED.md"
-        else f'<button hx-get="/identity/edit/{safe_name}" '
-        f'hx-target="#card-{_esc(filename.replace(".", "-"))}" hx-swap="innerHTML" '
-        f'class="text-xs text-animus-green hover:underline">Edit</button>'
+    templates = request.app.state.templates
+    preview = content[:500] if content else ""
+    card_id = filename.replace(".", "-")
+    return templates.TemplateResponse(
+        request,
+        "fragments/identity_file_view.html",
+        {"filename": filename, "card_id": card_id, "preview": preview, "locked": locked},
     )
-
-    preview = _esc(content[:500]) if content else "<em>Empty</em>"
-
-    return HTMLResponse(f"""
-    <div class="flex items-center justify-between mb-2">
-        <h4 class="text-sm font-bold text-animus-text">{safe_name}{lock_icon}</h4>
-        {edit_btn}
-    </div>
-    <pre class="text-xs text-animus-muted whitespace-pre-wrap">{preview}</pre>
-    """)

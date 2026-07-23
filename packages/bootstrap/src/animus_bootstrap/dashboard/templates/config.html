@@ -47,15 +47,37 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                 <div>
                     <label for="anthropic_key" class="block text-xs text-animus-muted mb-1">Anthropic Key</label>
-                    <input type="password" id="anthropic_key" name="anthropic_key"
-                           value="{{ config.api.anthropic_key }}"
-                           class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                    <div class="flex items-center gap-2">
+                        {% if config.api.anthropic_key %}
+                        <span class="text-animus-green text-sm">Configured</span>
+                        {% else %}
+                        <span class="text-animus-muted text-sm">Not configured</span>
+                        {% endif %}
+                        <input type="password" id="anthropic_key" name="anthropic_key"
+                               placeholder="Enter new key to replace"
+                               class="flex-1 bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                        {% if config.api.anthropic_key %}
+                        <button type="button" class="text-animus-red text-xs hover:underline"
+                                hx-post="/config/delete-key" hx-vals='{"key":"anthropic_key"}' hx-target="body">Remove</button>
+                        {% endif %}
+                    </div>
                 </div>
                 <div>
                     <label for="openai_key" class="block text-xs text-animus-muted mb-1">OpenAI Key</label>
-                    <input type="password" id="openai_key" name="openai_key"
-                           value="{{ config.api.openai_key }}"
-                           class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                    <div class="flex items-center gap-2">
+                        {% if config.api.openai_key %}
+                        <span class="text-animus-green text-sm">Configured</span>
+                        {% else %}
+                        <span class="text-animus-muted text-sm">Not configured</span>
+                        {% endif %}
+                        <input type="password" id="openai_key" name="openai_key"
+                               placeholder="Enter new key to replace"
+                               class="flex-1 bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                        {% if config.api.openai_key %}
+                        <button type="button" class="text-animus-red text-xs hover:underline"
+                                hx-post="/config/delete-key" hx-vals='{"key":"openai_key"}' hx-target="body">Remove</button>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </fieldset>
@@ -85,9 +107,20 @@
             </div>
             <div class="mt-4">
                 <label for="forge_api_key" class="block text-xs text-animus-muted mb-1">Forge API Key</label>
-                <input type="password" id="forge_api_key" name="forge_api_key"
-                       value="{{ config.forge.api_key }}"
-                       class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                <div class="flex items-center gap-2">
+                    {% if config.forge.api_key %}
+                    <span class="text-animus-green text-sm">Configured</span>
+                    {% else %}
+                    <span class="text-animus-muted text-sm">Not configured</span>
+                    {% endif %}
+                    <input type="password" id="forge_api_key" name="forge_api_key"
+                           placeholder="Enter new key to replace"
+                           class="flex-1 bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none">
+                    {% if config.forge.api_key %}
+                    <button type="button" class="text-animus-red text-xs hover:underline"
+                            hx-post="/config/delete-key" hx-vals='{"key":"forge_api_key"}' hx-target="body">Remove</button>
+                    {% endif %}
+                </div>
             </div>
         </fieldset>
 

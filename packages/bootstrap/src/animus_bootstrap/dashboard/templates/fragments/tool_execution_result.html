@@ -1,0 +1,9 @@
+<!-- Tool execution result fragment -->
+{% if error %}
+<p class="text-animus-red text-sm">{{ error }}</p>
+{% else %}
+<div class="bg-animus-surface border border-animus-border rounded p-4 mt-2">
+  <p class="{{ color }} text-sm font-bold">{{ tool_name }}: {{ status }} ({{ duration_ms }}ms)</p>
+  <pre class="text-animus-text text-xs mt-2 whitespace-pre-wrap">{{ output }}</pre>
+</div>
+{% endif %}
