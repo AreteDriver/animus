@@ -1,9 +1,9 @@
 {
   "phase": 6,
   "phase_name": "Citizen Integration Hardening",
-  "tasks_completed": ["6.1"],
-  "current_task": "6.2",
+  "tasks_completed": ["6.1", "6.2"],
+  "current_task": null,
   "blocked_by": null,
-  "last_action": "Task 6.1 complete: Live polling added to citizens page (status cards + proposals table every 5s). 3 new fragment endpoints, 3 new fragment templates, 22 total citizen tests green.",
+  "last_action": "Task 6.2 complete: End-to-end mock pipeline tests (3 tests) proving full Observe→Propose→Approve→Commission loop. 35 total citizen tests green.",
   "timestamp": "2026-07-23T00:00:00Z"
 }
