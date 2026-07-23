@@ -1,0 +1,41 @@
+{% if pending or approved %}
+<table class="w-full text-sm">
+    <thead>
+        <tr class="border-b border-animus-border text-animus-muted">
+            <th class="text-left py-2 pr-4">ID</th>
+            <th class="text-left py-2 pr-4">Title</th>
+            <th class="text-left py-2 pr-4">Citizen</th>
+            <th class="text-left py-2 pr-4">Confidence</th>
+            <th class="text-left py-2 pr-4">Effort</th>
+            <th class="text-left py-2">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in pending %}
+        <tr class="border-b border-animus-border">
+            <td class="py-2 pr-4 text-animus-muted text-xs font-mono">{{ p.id[:16] }}...</td>
+            <td class="py-2 pr-4 text-animus-text">{{ p.title }}</td>
+            <td class="py-2 pr-4 text-animus-muted">{{ p.source_citizen }}</td>
+            <td class="py-2 pr-4">
+                <span class="text-xs
+                    {% if p.confidence_score >= 0.75 %}text-animus-green
+                    {% elif p.confidence_score >= 0.5 %}text-animus-yellow
+                    {% else %}text-animus-red{% endif %}">
+                    {{ p.confidence_label or "%.0f"|format(p.confidence_score * 100) }}%
+                </span>
+            </td>
+            <td class="py-2 pr-4 text-animus-muted">{{ p.estimated_effort_hours }}h</td>
+            <td class="py-2">
+                <span class="text-xs text-animus-yellow font-bold">{{ p.status }}</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">&#128270;</div>
+    <div class="empty-state-text">No proposals yet.</div>
+    <div class="text-xs text-animus-muted mt-1">Citizens produce proposals as they observe the system.</div>
+</div>
+{% endif %}

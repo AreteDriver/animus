@@ -1,9 +1,9 @@
 {
-  "phase": 5,
-  "phase_name": "Citizen Integration",
-  "tasks_completed": ["5.1", "5.2", "5.3", "5.4", "5.5", "5.6"],
-  "current_task": null,
+  "phase": 6,
+  "phase_name": "Citizen Integration Hardening",
+  "tasks_completed": ["6.1"],
+  "current_task": "6.2",
   "blocked_by": null,
-  "last_action": "Phase 5 complete. Citizen Bridge, Router, Templates, Event Ledger wiring, Navigation, Tests (29 green), and Documentation all done.",
+  "last_action": "Task 6.1 complete: Live polling added to citizens page (status cards + proposals table every 5s). 3 new fragment endpoints, 3 new fragment templates, 22 total citizen tests green.",
   "timestamp": "2026-07-23T00:00:00Z"
 }

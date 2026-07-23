@@ -36,85 +36,30 @@
     </div>
     {% endif %}
 
-    <!-- Citizen Status Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {% for citizen in statuses %}
-        <div class="bg-animus-surface border border-animus-border rounded-lg p-4 hover:border-animus-green/50 transition-colors">
-            <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-bold text-animus-text">{{ citizen.display_name }}</h3>
-                <span class="status-indicator
-                    {% if citizen.state == 'idle' %}status-ok
-                    {% elif citizen.state == 'observing' %}status-warn
-                    {% elif citizen.state == 'proposing' %}status-ok
-                    {% elif citizen.state == 'error' %}status-error
-                    {% else %}status-error{% endif %}"
-                    title="{{ citizen.state }}"></span>
-            </div>
-            <p class="text-xs text-animus-muted mb-2">{{ citizen.description }}</p>
-            <div class="flex items-center justify-between text-xs">
-                <span class="text-animus-muted">State: <span class="text-animus-text">{{ citizen.state }}</span></span>
-                <span class="text-animus-muted">{{ citizen.total_proposals }} proposals</span>
-            </div>
-            {% if citizen.recent_proposals > 0 %}
-            <div class="mt-2 text-xs text-animus-green font-bold">
-                {{ citizen.recent_proposals }} new in last 24h
-            </div>
-            {% endif %}
-            <div class="mt-3">
-                <a href="/citizens/{{ citizen.name }}" class="text-xs text-animus-green hover:underline">View details →</a>
-            </div>
-        </div>
-        {% endfor %}
+    <!-- Citizen Status Cards (live-polling) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8"
+         hx-get="/citizens/fragments/status-cards"
+         hx-trigger="every 5s"
+         hx-swap="innerHTML"
+         hx-indicator="#citizens-cards-loading">
+        {% include "fragments/citizens_status_cards.html" %}
     </div>
+    <div id="citizens-cards-loading" class="htmx-indicator mb-4 text-xs text-animus-muted">Updating...</div>
 
-    <!-- Recent Proposals -->
+    <!-- Recent Proposals (live-polling) -->
     <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-8">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm text-animus-muted uppercase tracking-wide">Recent Proposals</h3>
             <a href="/citizens/proposals" class="text-xs text-animus-green hover:underline">View all →</a>
         </div>
 
-        {% if pending or approved %}
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-animus-border text-animus-muted">
-                    <th class="text-left py-2 pr-4">ID</th>
-                    <th class="text-left py-2 pr-4">Title</th>
-                    <th class="text-left py-2 pr-4">Citizen</th>
-                    <th class="text-left py-2 pr-4">Confidence</th>
-                    <th class="text-left py-2 pr-4">Effort</th>
-                    <th class="text-left py-2">Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in pending %}
-                <tr class="border-b border-animus-border">
-                    <td class="py-2 pr-4 text-animus-muted text-xs font-mono">{{ p.id[:16] }}...</td>
-                    <td class="py-2 pr-4 text-animus-text">{{ p.title }}</td>
-                    <td class="py-2 pr-4 text-animus-muted">{{ p.source_citizen }}</td>
-                    <td class="py-2 pr-4">
-                        <span class="text-xs
-                            {% if p.confidence_score >= 0.75 %}text-animus-green
-                            {% elif p.confidence_score >= 0.5 %}text-animus-yellow
-                            {% else %}text-animus-red{% endif %}">
-                            {{ p.confidence_label or "%.0f"|format(p.confidence_score * 100) }}%
-                        </span>
-                    </td>
-                    <td class="py-2 pr-4 text-animus-muted">{{ p.estimated_effort_hours }}h</td>
-                    <td class="py-2">
-                        <span class="text-xs text-animus-yellow font-bold">{{ p.status }}</span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="empty-state">
-            <div class="empty-state-icon">&#128270;</div>
-            <div class="empty-state-text">No proposals yet.</div>
-            <div class="text-xs text-animus-muted mt-1">Citizens produce proposals as they observe the system.</div>
+        <div hx-get="/citizens/fragments/proposals-table"
+             hx-trigger="every 5s"
+             hx-swap="innerHTML"
+             hx-indicator="#citizens-proposals-loading">
+            {% include "fragments/citizens_proposals_table.html" %}
         </div>
-        {% endif %}
+        <div id="citizens-proposals-loading" class="htmx-indicator mt-4 text-xs text-animus-muted">Updating...</div>
     </div>
 </div>
 {% endblock %}

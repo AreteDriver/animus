@@ -188,6 +188,37 @@ class TestCitizensApi:
         assert data["citizens_total"] == 5
 
 
+class TestCitizensFragments:
+    """Tests for HTMX pollable fragments."""
+
+    def test_status_cards_fragment_returns_200(self, client: TestClient) -> None:
+        """GET /citizens/fragments/status-cards returns 200."""
+        resp = client.get("/citizens/fragments/status-cards")
+        assert resp.status_code == 200
+        assert "Architect" in resp.text
+
+    def test_proposals_table_fragment_returns_200(self, client: TestClient) -> None:
+        """GET /citizens/fragments/proposals-table returns 200."""
+        resp = client.get("/citizens/fragments/proposals-table")
+        assert resp.status_code == 200
+        assert "No proposals yet" in resp.text or "proposals" in resp.text.lower()
+
+    def test_proposals_table_fragment_with_mock_data(self, client: TestClient) -> None:
+        """Fragment renders proposals when bridge returns data."""
+        fake = CitizenProposalView(
+            id="p1",
+            title="Fragment Proposal",
+            status="draft",
+            source_citizen="architect",
+            confidence_score=0.8,
+            estimated_effort_hours=2.0,
+        )
+        with patch.object(CitizenBridge, "list_proposals", return_value=[fake]):
+            resp = client.get("/citizens/fragments/proposals-table")
+            assert resp.status_code == 200
+            assert "Fragment Proposal" in resp.text
+
+
 class TestNavigationWiring:
     """Tests that citizens page is linked from base navigation."""
 

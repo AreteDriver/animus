@@ -232,6 +232,37 @@ async def commission_citizen_proposal(request: Request, proposal_id: str) -> obj
     )
 
 
+# ── HTMX Fragments (for polling) ──────────────────────────────────────────
+
+
+@router.get("/citizens/fragments/status-cards")
+async def citizens_status_cards_fragment(request: Request) -> object:
+    """Return citizen status cards as an HTML fragment (for HTMX polling)."""
+    templates = request.app.state.templates
+    bridge = _get_bridge(request)
+    statuses = bridge.get_citizen_statuses()
+    return templates.TemplateResponse(
+        request,
+        "fragments/citizens_status_cards.html",
+        {"statuses": statuses},
+    )
+
+
+@router.get("/citizens/fragments/proposals-table")
+async def citizens_proposals_table_fragment(request: Request) -> object:
+    """Return recent proposals table as an HTML fragment (for HTMX polling)."""
+    templates = request.app.state.templates
+    bridge = _get_bridge(request)
+    proposals = bridge.list_proposals(limit=20)
+    pending = [p for p in proposals if p.status in ("draft", "submitted", "pending_review")]
+    approved = [p for p in proposals if p.status == "approved"]
+    return templates.TemplateResponse(
+        request,
+        "fragments/citizens_proposals_table.html",
+        {"pending": pending, "approved": approved},
+    )
+
+
 # ── API Endpoints (JSON) ──────────────────────────────────────────────────
 
 

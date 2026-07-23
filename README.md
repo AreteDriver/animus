@@ -79,6 +79,48 @@ graph TD
 
 ---
 
+## Ecosystem
+
+Animus does not exist in isolation. These are the tools that feed it, manage it, or extend it — each independently installable.
+
+```mermaid
+flowchart TB
+    subgraph Animus["ANIMUS"]
+        direction TB
+        Core[Core<br/>CLI + MCP]
+        Forge[Forge<br/>Workflow Engine]
+        Kernel[Kernel<br/>Memory Layer]
+        Quorum[Quorum<br/>Agent Coordination]
+        Bootstrap[Bootstrap<br/>Ops Dashboard]
+    end
+
+    subgraph Satellites["SATELLITE TOOLS"]
+        direction LR
+        AISPEND[ai-spend<br/>Cost Tracking]
+        MCPMGR[mcp-manager<br/>Server Registry]
+        EVALS[arete-evals<br/>Benchmarks]
+        LINT[agent-lint<br/>Workflow Checks]
+        HYGIENE[context-hygiene<br/>Context Audit]
+        SKILLS[ai-skills<br/>Capability Library]
+    end
+
+    subgraph Methodology["METHODOLOGY"]
+        direction LR
+        THS[the-human-stack<br/>Evidence Framework]
+        NOTES[notes<br/>Decision Logs]
+    end
+
+    AISPEND -->|"spend data"| Core
+    MCPMGR -->|"MCP servers"| Core
+    EVALS -->|"eval results"| Forge
+    LINT -->|"gate checks"| Forge
+    SKILLS -->|"capabilities"| Core
+    THS -.->|"E0–E5 grading"| Animus
+    THS -.->|"ADL governance"| NOTES
+```
+
+---
+
 ## Subsystems
 
 ### Forge — Workflow Orchestration Engine
