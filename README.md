@@ -23,6 +23,14 @@ Eight packages (four installable via PyPI). ~17,000+ tests. Proactive engine wit
 
 ---
 
+## Citizens in Action
+
+Autonomous improvement proposals generated from codebase observation:
+
+![Animus Architect Citizen](docs/assets/animus-architect-demo.gif)
+
+---
+
 ## The Architecture
 
 Four-layer stack. Each layer solves exactly one problem and is independently useful.
