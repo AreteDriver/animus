@@ -75,8 +75,8 @@
 
 - [x] Port 20 JSON schemas into importable Python types in `packages/types/` (via `scripts/compile_schemas.py`)
 - [x] Add `pyproject.toml` to `packages/contracts/` (now a real package)
-- [ ] Build schema validation layer (JSON Schema → Pydantic or dataclass)
-- [ ] Add JSON Schema CI gate to `docs-validate.py` or new CI job
+- [x] Build schema validation layer (JSON Schema → Pydantic or dataclass) — `scripts/validate_schemas.py` checks all 25 schemas for meta-schema validity, unique $id, dangling $refs, and Pydantic model importability + minimal payload round-trip. Verified green.
+- [x] Add JSON Schema CI gate — `.github/workflows/ci.yml` has `schema-validate` job running on PR/push to main.
 - [ ] Document schema usage patterns in `docs/reference/`
 - [ ] Align `packages/quorum/` name (`convergentAI` → `animus-quorum` or document exception)
 
