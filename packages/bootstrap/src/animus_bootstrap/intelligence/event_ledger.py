@@ -110,6 +110,36 @@ class EventLedger:
         """Convenience: return recent error events."""
         return self.query(event_type="error", limit=limit)
 
+    def get_rate(self, event_type: str, window_seconds: float = 300) -> float:
+        """Return events per minute for a given type over the time window."""
+        with self._lock:
+            events = list(self._events)
+        now = time.time()
+        cutoff = now - window_seconds
+        count = sum(1 for e in events if e["type"] == event_type and e["timestamp"] >= cutoff)
+        minutes = window_seconds / 60.0
+        return round(count / minutes, 2) if count else 0.0
+
+    def get_error_rate(self, window_seconds: float = 300) -> float:
+        """Return error events per minute over the window."""
+        return self.get_rate("error", window_seconds)
+
+    def get_tool_failure_rate(self, window_seconds: float = 300) -> float:
+        """Return failed tool executions per minute over the window."""
+        with self._lock:
+            events = list(self._events)
+        now = time.time()
+        cutoff = now - window_seconds
+        count = sum(
+            1
+            for e in events
+            if e["type"] == "tool_execution"
+            and e["timestamp"] >= cutoff
+            and not e.get("payload", {}).get("success", True)
+        )
+        minutes = window_seconds / 60.0
+        return round(count / minutes, 2) if count else 0.0
+
     # ------------------------------------------------------------------
     # Persistence
     # ------------------------------------------------------------------

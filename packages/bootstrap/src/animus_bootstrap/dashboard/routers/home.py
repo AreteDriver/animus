@@ -118,6 +118,13 @@ async def home_page(request: Request) -> object:
         ledger_stats = runtime.event_ledger.get_stats()
         recent_events = runtime.event_ledger.query(limit=5)
 
+    # Alert manager — health score and active alerts
+    health: dict[str, Any] = {"score": 0, "status": "unknown", "factors": {}}
+    active_alerts: list[dict[str, Any]] = []
+    if runtime_started and getattr(runtime, "alert_manager", None) is not None:
+        health = runtime.alert_manager.get_health_score()
+        active_alerts = runtime.alert_manager.get_active_alerts(limit=5)
+
     return templates.TemplateResponse(
         request,
         "home.html",
@@ -131,5 +138,7 @@ async def home_page(request: Request) -> object:
             "persona_count": persona_count,
             "ledger_stats": ledger_stats,
             "recent_events": recent_events,
+            "health": health,
+            "active_alerts": active_alerts,
         },
     )

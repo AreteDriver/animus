@@ -6,6 +6,41 @@
 <div class="max-w-4xl">
     <h2 class="text-2xl font-bold text-animus-green mb-6">System Status</h2>
 
+    <!-- Active Alerts Banner -->
+    {% if active_alerts %}
+    <div class="bg-animus-red/10 border border-animus-red rounded-lg p-4 mb-6">
+        <h3 class="text-sm text-animus-red font-bold uppercase tracking-wide mb-2">Active Alerts</h3>
+        <div class="space-y-1 text-sm">
+            {% for alert in active_alerts %}
+            <div class="flex items-center gap-2">
+                <span class="text-animus-red">⚠</span>
+                <span class="text-animus-text">{{ alert.payload.message | default(alert.payload.type) }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Health Score Card -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-1">System Health</h3>
+                <p class="text-2xl font-bold
+                    {% if health.status == 'healthy' %}text-animus-green
+                    {% elif health.status == 'degraded' %}text-animus-yellow
+                    {% else %}text-animus-red{% endif %}">
+                    {{ health.score }}/100 — {{ health.status | capitalize }}
+                </p>
+            </div>
+            <div class="text-right text-xs text-animus-muted">
+                <p>Error rate: {{ health.factors.error_rate | default(0) }}/min</p>
+                <p>Tool failures: {{ health.factors.tool_failure_rate | default(0) }}/min</p>
+                <p>Alerts: {{ health.factors.recent_alerts | default(0) }}</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Status Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 

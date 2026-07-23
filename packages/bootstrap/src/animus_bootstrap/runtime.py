@@ -59,6 +59,7 @@ class AnimusRuntime:
         self.push_store: Any = None
         self._message_logger: Any = None
         self.event_ledger: Any = None
+        self.alert_manager: Any = None
 
     @property
     def config(self) -> AnimusConfig:
@@ -89,6 +90,11 @@ class AnimusRuntime:
 
         self.event_ledger = EventLedger(db_path=data_dir / "events.db")
         self.event_ledger.record("session_started", "runtime", {"version": __import__("animus_bootstrap").__version__})
+
+        # 0b. Alert manager — threshold monitoring
+        from animus_bootstrap.intelligence.alert_manager import AlertManager
+
+        self.alert_manager = AlertManager(self.event_ledger)
 
         # 1. Identity file manager
         from animus_bootstrap.identity.manager import IdentityFileManager
