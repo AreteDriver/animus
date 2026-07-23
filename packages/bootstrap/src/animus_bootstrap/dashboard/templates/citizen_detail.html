@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — {{ display_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl">
+    <div class="flex items-center gap-4 mb-6">
+        <h2 class="text-2xl font-bold text-animus-green">{{ display_name }}</h2>
+        <span class="text-xs font-bold px-2 py-1 rounded
+            {% if state == 'idle' %}bg-animus-border text-animus-muted
+            {% elif state == 'observing' %}bg-animus-yellow/20 text-animus-yellow
+            {% elif state == 'proposing' %}bg-animus-green/20 text-animus-green
+            {% elif state == 'error' %}bg-animus-red/20 text-animus-red
+            {% else %}bg-animus-border text-animus-muted{% endif %}">
+            {{ state }}
+        </span>
+    </div>
+
+    <p class="text-animus-muted mb-6">{{ description }}</p>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <div class="text-2xl font-bold text-animus-text">{{ proposal_count }}</div>
+            <div class="text-xs text-animus-muted">Proposals</div>
+        </div>
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <div class="text-2xl font-bold text-animus-green">{{ approved_count }}</div>
+            <div class="text-xs text-animus-muted">Approved</div>
+        </div>
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <div class="text-2xl font-bold text-animus-yellow">{{ pending_count }}</div>
+            <div class="text-xs text-animus-muted">Pending</div>
+        </div>
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <div class="text-2xl font-bold text-animus-red">{{ rejected_count }}</div>
+            <div class="text-xs text-animus-muted">Rejected</div>
+        </div>
+    </div>
+
+    <!-- Proposals -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6">
+        <h3 class="text-lg font-bold text-animus-text mb-4">Recent Proposals</h3>
+        {% if proposals %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-animus-border text-animus-muted">
+                    <th class="text-left py-2 pr-4">Title</th>
+                    <th class="text-left py-2 pr-4">Confidence</th>
+                    <th class="text-left py-2 pr-4">Effort</th>
+                    <th class="text-left py-2 pr-4">Status</th>
+                    <th class="text-left py-2">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in proposals %}
+                <tr class="border-b border-animus-border" id="proposal-row-{{ p.id }}">
+                    <td class="py-2 pr-4 text-animus-text">{{ p.title }}</td>
+                    <td class="py-2 pr-4">
+                        <span class="text-xs
+                            {% if p.confidence_score >= 0.75 %}text-animus-green
+                            {% elif p.confidence_score >= 0.5 %}text-animus-yellow
+                            {% else %}text-animus-red{% endif %}">
+                            {{ p.confidence_label or "%.0f"|format(p.confidence_score * 100) }}%
+                        </span>
+                    </td>
+                    <td class="py-2 pr-4 text-animus-muted">{{ p.estimated_effort_hours }}h</td>
+                    <td class="py-2 pr-4">
+                        <span class="text-xs font-bold
+                            {% if p.status == 'approved' %}text-animus-green
+                            {% elif p.status == 'complete' %}text-animus-green
+                            {% elif p.status == 'rejected' %}text-animus-red
+                            {% else %}text-animus-yellow{% endif %}">
+                            {{ p.status }}
+                        </span>
+                    </td>
+                    <td class="py-2 space-x-1">
+                        {% if p.status in ('draft', 'submitted', 'pending_review') %}
+                        <button hx-post="/citizens/proposals/{{ p.id }}/approve" hx-target="#proposal-row-{{ p.id }}" hx-swap="outerHTML"
+                            class="px-2 py-1 bg-animus-green text-animus-bg rounded text-xs hover:opacity-80">
+                            Approve
+                        </button>
+                        <button hx-post="/citizens/proposals/{{ p.id }}/reject" hx-target="#proposal-row-{{ p.id }}" hx-swap="outerHTML"
+                            class="px-2 py-1 bg-animus-red text-white rounded text-xs hover:opacity-80">
+                            Reject
+                        </button>
+                        {% elif p.status == 'approved' %}
+                        <button hx-post="/citizens/proposals/{{ p.id }}/commission" hx-target="#proposal-row-{{ p.id }}" hx-swap="outerHTML"
+                            class="px-2 py-1 bg-animus-yellow text-animus-bg rounded text-xs hover:opacity-80">
+                            Commission
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">&#128270;</div>
+            <div class="empty-state-text">No proposals from this citizen yet.</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

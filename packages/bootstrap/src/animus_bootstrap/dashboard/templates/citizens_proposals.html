@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Citizen Proposals{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Citizen Proposals</h2>
+
+    <!-- Filters -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-4 mb-6">
+        <form method="get" class="flex gap-4 items-end">
+            <div>
+                <label class="block text-animus-muted text-xs mb-1">Status</label>
+                <select name="status" class="bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text">
+                    <option value="" {% if not status_filter %}selected{% endif %}>All</option>
+                    <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Submitted</option>
+                    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                    <option value="complete" {% if status_filter == 'complete' %}selected{% endif %}>Complete</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-animus-muted text-xs mb-1">Citizen</label>
+                <select name="citizen" class="bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text">
+                    <option value="" {% if not citizen_filter %}selected{% endif %}>All</option>
+                    <option value="architect" {% if citizen_filter == 'architect' %}selected{% endif %}>Architect</option>
+                    <option value="conversation_designer" {% if citizen_filter == 'conversation_designer' %}selected{% endif %}>Conversation Designer</option>
+                    <option value="knowledge_curator" {% if citizen_filter == 'knowledge_curator' %}selected{% endif %}>Knowledge Curator</option>
+                    <option value="test_oracle" {% if citizen_filter == 'test_oracle' %}selected{% endif %}>Test Oracle</option>
+                    <option value="session_steward" {% if citizen_filter == 'session_steward' %}selected{% endif %}>Session Steward</option>
+                </select>
+            </div>
+            <button type="submit" class="px-4 py-2 bg-animus-border text-animus-text rounded text-sm hover:bg-animus-green/20 transition-colors">Filter</button>
+        </form>
+    </div>
+
+    <!-- Proposals Table -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-6">
+        {% if proposals %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-animus-border text-animus-muted">
+                    <th class="text-left py-2 pr-4">ID</th>
+                    <th class="text-left py-2 pr-4">Title</th>
+                    <th class="text-left py-2 pr-4">Citizen</th>
+                    <th class="text-left py-2 pr-4">Confidence</th>
+                    <th class="text-left py-2 pr-4">Effort</th>
+                    <th class="text-left py-2 pr-4">Status</th>
+                    <th class="text-left py-2">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in proposals %}
+                <tr class="border-b border-animus-border" id="proposal-row-{{ p.id }}">
+                    <td class="py-2 pr-4 text-animus-muted text-xs font-mono">{{ p.id[:20] }}</td>
+                    <td class="py-2 pr-4 text-animus-text">{{ p.title }}</td>
+                    <td class="py-2 pr-4 text-animus-muted">{{ p.source_citizen }}</td>
+                    <td class="py-2 pr-4">
+                        <span class="text-xs
+                            {% if p.confidence_score >= 0.75 %}text-animus-green
+                            {% elif p.confidence_score >= 0.5 %}text-animus-yellow
+                            {% else %}text-animus-red{% endif %}">
+                            {{ p.confidence_label or "%.0f"|format(p.confidence_score * 100) }}%
+                        </span>
+                    </td>
+                    <td class="py-2 pr-4 text-animus-muted">{{ p.estimated_effort_hours }}h</td>
+                    <td class="py-2 pr-4">
+                        <span class="text-xs font-bold
+                            {% if p.status == 'approved' %}text-animus-green
+                            {% elif p.status == 'complete' %}text-animus-green
+                            {% elif p.status == 'rejected' %}text-animus-red
+                            {% else %}text-animus-yellow{% endif %}">
+                            {{ p.status }}
+                        </span>
+                    </td>
+                    <td class="py-2 space-x-1">
+                        {% if p.status in ('draft', 'submitted', 'pending_review') %}
+                        <button hx-post="/citizens/proposals/{{ p.id }}/approve" hx-target="#proposal-row-{{ p.id }}" hx-swap="outerHTML"
+                            class="px-2 py-1 bg-animus-green text-animus-bg rounded text-xs hover:opacity-80">
+                            Approve
+                        </button>
+                        <button hx-post="/citizens/proposals/{{ p.id }}/reject" hx-target="#proposal-row-{{ p.id }}" hx-swap="outerHTML"
+                            class="px-2 py-1 bg-animus-red text-white rounded text-xs hover:opacity-80">
+                            Reject
+                        </button>
+                        {% elif p.status == 'approved' %}
+                        <button hx-post="/citizens/proposals/{{ p.id }}/commission" hx-target="#proposal-row-{{ p.id }}" hx-swap="outerHTML"
+                            class="px-2 py-1 bg-animus-yellow text-animus-bg rounded text-xs hover:opacity-80">
+                            Commission
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">&#128270;</div>
+            <div class="empty-state-text">No proposals match the current filters.</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

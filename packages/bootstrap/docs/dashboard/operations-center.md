@@ -8,7 +8,7 @@ The Animus Bootstrap dashboard has evolved from a static status page into a **Co
 ┌─────────────────────────────────────────────────────────────┐
 │                     Dashboard (FastAPI)                    │
 │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────────┐  │
-│  │  Home   │  │ Events  │  │  Tasks  │  │   Memory    │  │
+│  │  Home   │  │ Events  │  │ Citizens│  │   Memory    │  │
 │  │ (HTMX)  │  │ (HTMX+  │  │ (HTMX)  │  │   (HTMX)    │  │
 │  │         │  │  SSE)   │  │         │  │             │  │
 │  └────┬────┘  └────┬────┘  └────┬────┘  └──────┬──────┘  │
@@ -50,6 +50,9 @@ The Animus Bootstrap dashboard has evolved from a static status page into a **Co
 | `config_changed` | dashboard | Config key saved or deleted |
 | `proposal_approved` | dashboard | Proposal accepted |
 | `proposal_rejected` | dashboard | Proposal declined |
+| `citizen_proposal_approved` | dashboard | Citizen proposal approved by operator |
+| `citizen_proposal_rejected` | dashboard | Citizen proposal rejected by operator |
+| `citizen_proposal_commissioned` | dashboard | Citizen proposal commissioned to Forge |
 | `memory_cleared` | dashboard | Operator cleared all memories |
 | `events_exported` | dashboard | JSON/CSV export downloaded |
 | `alert_acknowledged` | dashboard | Operator acknowledged alert |
@@ -72,6 +75,18 @@ The Animus Bootstrap dashboard has evolved from a static status page into a **Co
 - `POST /memory/clear` — Clear all memories (with backend fallback)
 - `POST /tools/{name}/rerun` — Re-run tool with JSON arguments
 - `POST /alerts/acknowledge` — Acknowledge alert by type
+
+### Citizens
+
+- `GET /citizens` — Citizen overview with status cards and recent proposals
+- `GET /citizens/proposals` — Filtered proposal list (by status and citizen)
+- `GET /citizens/{name}` — Per-citizen detail page with proposal history
+- `POST /citizens/proposals/{id}/approve` — Approve proposal (CSRF-protected)
+- `POST /citizens/proposals/{id}/reject` — Reject proposal (CSRF-protected)
+- `POST /citizens/proposals/{id}/commission` — Commission approved proposal to Forge (CSRF-protected)
+- `GET /api/citizens/summary` — JSON summary of citizen activity
+
+The Citizens page bridges the bootstrap dashboard to the core Animus citizens (`packages/core/animus/citizens/`). It uses lazy imports so the dashboard works even when the core package is not installed.
 
 ### Health
 
@@ -120,5 +135,6 @@ Press `?` anywhere in the dashboard to open the help modal.
 | `/` | Quick page search |
 | `g` `h` | Go to Home |
 | `g` `e` | Go to Events |
+| `g` `ci` | Go to Citizens |
 | `g` `t` | Go to Tasks |
 | `Esc` | Close modal/overlay |

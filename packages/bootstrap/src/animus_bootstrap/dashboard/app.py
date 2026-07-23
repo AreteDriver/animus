@@ -24,6 +24,7 @@ from animus_bootstrap.dashboard.routers import (
     automations,
     capture,
     channels_page,
+    citizens_page,
     config,
     controls,
     conversations,
@@ -197,6 +198,7 @@ app.include_router(tools.router)
 app.include_router(automations.router)
 app.include_router(activity.router)
 app.include_router(events.router)
+app.include_router(citizens_page.router)
 app.include_router(personas_page.router)
 app.include_router(routing_page.router)
 app.include_router(self_mod.router)

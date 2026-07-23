@@ -145,6 +145,13 @@
                 </a>
             </li>
             <li>
+                <a href="/citizens"
+                   class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
+                          {% if '/citizens' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
+                    Citizens
+                </a>
+            </li>
+            <li>
                 <a href="/tasks"
                    class="block px-3 py-2 rounded text-sm hover:bg-animus-border hover:text-animus-green transition-colors
                           {% if '/tasks' in request.url.path %}bg-animus-border text-animus-green{% endif %}">
@@ -245,6 +252,10 @@
                     <span><span class="kb-shortcut">g</span> then <span class="kb-shortcut">e</span></span>
                 </div>
                 <div class="flex justify-between">
+                    <span class="text-animus-text">Navigate citizens</span>
+                    <span><span class="kb-shortcut">g</span> then <span class="kb-shortcut">ci</span></span>
+                </div>
+                <div class="flex justify-between">
                     <span class="text-animus-text">Navigate tasks</span>
                     <span><span class="kb-shortcut">g</span> then <span class="kb-shortcut">t</span></span>
                 </div>
@@ -283,6 +294,7 @@
             {name: 'Logs', path: '/logs', keys: 'gl'},
             {name: 'Tools', path: '/tools', keys: 'gto'},
             {name: 'Events', path: '/events', keys: 'ge'},
+            {name: 'Citizens', path: '/citizens', keys: 'gci'},
             {name: 'Tasks', path: '/tasks', keys: 'gt'},
             {name: 'Personas', path: '/personas', keys: 'gp'},
             {name: 'Proposals', path: '/proposals', keys: 'gpr'},

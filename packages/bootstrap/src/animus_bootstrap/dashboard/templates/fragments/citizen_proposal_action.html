@@ -1,0 +1,45 @@
+<tr class="border-b border-animus-border" id="proposal-row-{{ proposal.id }}">
+    <td class="py-2 pr-4 text-animus-muted text-xs font-mono">{{ proposal.id[:20] }}</td>
+    <td class="py-2 pr-4 text-animus-text">{{ proposal.title }}</td>
+    <td class="py-2 pr-4 text-animus-muted">{{ proposal.source_citizen }}</td>
+    <td class="py-2 pr-4">
+        <span class="text-xs
+            {% if proposal.confidence_score >= 0.75 %}text-animus-green
+            {% elif proposal.confidence_score >= 0.5 %}text-animus-yellow
+            {% else %}text-animus-red{% endif %}">
+            {{ proposal.confidence_label or "%.0f"|format(proposal.confidence_score * 100) }}%
+        </span>
+    </td>
+    <td class="py-2 pr-4 text-animus-muted">{{ proposal.estimated_effort_hours }}h</td>
+    <td class="py-2 pr-4">
+        <span class="text-xs font-bold
+            {% if proposal.status == 'approved' %}text-animus-green
+            {% elif proposal.status == 'complete' %}text-animus-green
+            {% elif proposal.status == 'rejected' %}text-animus-red
+            {% else %}text-animus-yellow{% endif %}">
+            {{ proposal.status }}
+        </span>
+    </td>
+    <td class="py-2 space-x-1">
+        {% if proposal.status in ('draft', 'submitted', 'pending_review') %}
+        <button hx-post="/citizens/proposals/{{ proposal.id }}/approve" hx-target="#proposal-row-{{ proposal.id }}" hx-swap="outerHTML"
+            class="px-2 py-1 bg-animus-green text-animus-bg rounded text-xs hover:opacity-80">
+            Approve
+        </button>
+        <button hx-post="/citizens/proposals/{{ proposal.id }}/reject" hx-target="#proposal-row-{{ proposal.id }}" hx-swap="outerHTML"
+            class="px-2 py-1 bg-animus-red text-white rounded text-xs hover:opacity-80">
+            Reject
+        </button>
+        {% elif proposal.status == 'approved' %}
+        <button hx-post="/citizens/proposals/{{ proposal.id }}/commission" hx-target="#proposal-row-{{ proposal.id }}" hx-swap="outerHTML"
+            class="px-2 py-1 bg-animus-yellow text-animus-bg rounded text-xs hover:opacity-80">
+            Commission
+        </button>
+        {% else %}
+        <span class="text-xs text-animus-muted">—</span>
+        {% endif %}
+        {% if error %}
+        <span class="text-xs text-animus-red ml-1" title="{{ error }}">&#9888;</span>
+        {% endif %}
+    </td>
+</tr>
