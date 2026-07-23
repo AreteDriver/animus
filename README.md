@@ -121,6 +121,16 @@ flowchart TB
 
 ---
 
+## Further Reading
+
+The philosophy behind Animus is documented in essays, not just code:
+
+- **[From 700 Pints to 4,800 Per Hour](https://aretedriver.substack.com)** — How manufacturing discipline (Toyota Production System, Kaizen, error-proofing) maps to AI operations. This is the origin story of checkpoint/resume, token budgets, and quality gates.
+- **[The Eval Is the Product](https://aretedriver.substack.com)** — Why Animus treats evaluation infrastructure as a first-class subsystem (Forge + arete-evals) rather than an afterthought.
+- **[The Human Stack](https://github.com/AreteDriver/the-human-stack)** — The full methodology reference: evidence grading (E0–E5), ADL governance, failure taxonomy, and benchmark standards.
+
+---
+
 ## Subsystems
 
 ### Forge — Workflow Orchestration Engine
