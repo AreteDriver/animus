@@ -52,9 +52,9 @@
                             Complete
                         </button>
                         {% endif %}
-                        <button hx-post="/tasks/{{ task.id }}/delete" hx-target="#task-row-{{ task.id }}" hx-swap="outerHTML"
+                        <button hx-post="/tasks/{{ task.id }}/kill" hx-target="#task-row-{{ task.id }}" hx-swap="outerHTML"
                             class="px-2 py-1 bg-animus-red text-white rounded text-xs hover:opacity-80">
-                            Delete
+                            Kill
                         </button>
                     </td>
                 </tr>

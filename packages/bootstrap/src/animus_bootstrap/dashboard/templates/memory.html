@@ -99,9 +99,13 @@
             View Scores JSON
         </a>
         <a href="/memory/export"
-           class="inline-block bg-animus-border text-animus-text px-4 py-2 rounded text-sm hover:bg-animus-green/20 transition-colors">
+           class="inline-block bg-animus-border text-animus-text px-4 py-2 rounded text-sm hover:bg-animus-green/20 transition-colors mr-2">
             Export Config as JSON
         </a>
+        <button hx-post="/memory/clear" hx-confirm="Are you sure you want to clear all memories?"
+            class="inline-block bg-animus-red text-white px-4 py-2 rounded text-sm hover:opacity-80 transition-opacity">
+            Clear Memory
+        </button>
     </div>
 </div>
 {% endblock %}

@@ -38,6 +38,7 @@ class AnimusRuntime:
     def __init__(self, config: AnimusConfig | None = None) -> None:
         self._config = config or ConfigManager().load()
         self._started = False
+        self._paused = False
 
         # Component references (populated by start())
         self.identity_manager: IdentityFileManager | None = None
@@ -68,6 +69,28 @@ class AnimusRuntime:
     @property
     def started(self) -> bool:
         return self._started
+
+    @property
+    def paused(self) -> bool:
+        return self._paused
+
+    def pause(self) -> None:
+        """Pause the runtime — stops proactive processing but keeps connections alive."""
+        if not self._started or self._paused:
+            return
+        self._paused = True
+        logger.info("Runtime paused")
+        if self.event_ledger is not None:
+            self.event_ledger.record("runtime_paused", "dashboard", {})
+
+    def resume(self) -> None:
+        """Resume a paused runtime."""
+        if not self._started or not self._paused:
+            return
+        self._paused = False
+        logger.info("Runtime resumed")
+        if self.event_ledger is not None:
+            self.event_ledger.record("runtime_resumed", "dashboard", {})
 
     async def start(self) -> None:
         """Initialize and start all components based on config."""

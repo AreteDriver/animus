@@ -113,7 +113,8 @@
                     <th class="text-left py-2 pr-4">Timestamp</th>
                     <th class="text-left py-2 pr-4">Tool</th>
                     <th class="text-left py-2 pr-4">Success</th>
-                    <th class="text-left py-2">Duration</th>
+                    <th class="text-left py-2 pr-4">Duration</th>
+                    <th class="text-left py-2">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -129,6 +130,13 @@
                         {% endif %}
                     </td>
                     <td class="py-2 text-animus-muted">{{ entry.duration_ms }}ms</td>
+                    <td class="py-2">
+                        <form hx-post="/tools/{{ entry.tool_name }}/rerun" hx-target="#rerun-result-{{ loop.index }}" class="inline">
+                            <input type="hidden" name="arguments" value='{{ entry.arguments | tojson }}'>
+                            <button type="submit" class="px-2 py-1 bg-animus-border text-animus-text rounded text-xs hover:bg-animus-green/20">Re-run</button>
+                        </form>
+                        <span id="rerun-result-{{ loop.index }}" class="text-xs ml-2"></span>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

@@ -9,7 +9,13 @@
     <!-- Active Alerts Banner -->
     {% if active_alerts %}
     <div class="bg-animus-red/10 border border-animus-red rounded-lg p-4 mb-6">
-        <h3 class="text-sm text-animus-red font-bold uppercase tracking-wide mb-2">Active Alerts</h3>
+        <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm text-animus-red font-bold uppercase tracking-wide">Active Alerts</h3>
+            <button hx-post="/alerts/acknowledge" hx-vals='{"alert_type": "all"}'
+                class="px-3 py-1 bg-animus-red text-white rounded text-xs hover:opacity-80">
+                Acknowledge All
+            </button>
+        </div>
         <div class="space-y-1 text-sm">
             {% for alert in active_alerts %}
             <div class="flex items-center gap-2">
@@ -54,10 +60,23 @@
                 <span class="status-indicator status-error"></span>
                 {% endif %}
             </div>
-            <p class="text-lg font-bold
+            <p class="text-lg font-bold mb-2
                 {% if runtime_status == 'running' %}text-animus-green{% else %}text-animus-red{% endif %}">
                 {{ runtime_status | capitalize }}
             </p>
+            <div class="flex gap-2">
+                {% if runtime_paused %}
+                <button hx-post="/runtime/resume"
+                    class="px-2 py-1 bg-animus-green text-animus-bg rounded text-xs hover:opacity-80">
+                    Resume
+                </button>
+                {% else %}
+                <button hx-post="/runtime/pause"
+                    class="px-2 py-1 bg-animus-yellow text-animus-bg rounded text-xs hover:opacity-80">
+                    Pause
+                </button>
+                {% endif %}
+            </div>
         </div>
 
         <!-- Forge -->

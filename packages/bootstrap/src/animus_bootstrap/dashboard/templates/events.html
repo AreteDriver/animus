@@ -35,6 +35,20 @@
         {% include "fragments/events_feed.html" %}
     </div>
 
+    <!-- Export Controls -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg p-4 mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm text-animus-muted uppercase tracking-wide">Export</h3>
+                <p class="text-xs text-animus-muted mt-1">Download event history</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="/events/export?format=json" class="px-3 py-1 bg-animus-border text-animus-text rounded text-xs hover:bg-animus-green/20 transition-colors">JSON</a>
+                <a href="/events/export?format=csv" class="px-3 py-1 bg-animus-border text-animus-text rounded text-xs hover:bg-animus-green/20 transition-colors">CSV</a>
+            </div>
+        </div>
+    </div>
+
     <!-- SSE Stream Indicator -->
     <div class="bg-animus-surface border border-animus-border rounded-lg p-4 mb-8">
         <div class="flex items-center justify-between">

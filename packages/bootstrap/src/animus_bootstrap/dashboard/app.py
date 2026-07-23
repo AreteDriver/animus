@@ -25,6 +25,7 @@ from animus_bootstrap.dashboard.routers import (
     capture,
     channels_page,
     config,
+    controls,
     conversations,
     events,
     feedback,
@@ -208,6 +209,7 @@ app.include_router(proposals.router)
 app.include_router(session.router)
 app.include_router(capture.router)
 app.include_router(push.router)
+app.include_router(controls.router)
 
 
 def _health_payload(request: Request) -> dict[str, object]:

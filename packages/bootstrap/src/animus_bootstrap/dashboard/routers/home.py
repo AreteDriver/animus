@@ -89,6 +89,7 @@ async def home_page(request: Request) -> object:
     # Runtime status
     runtime = getattr(request.app.state, "runtime", None)
     runtime_started = runtime and getattr(runtime, "started", False)
+    runtime_paused = runtime_started and getattr(runtime, "paused", False)
     runtime_status = "running" if runtime_started else "stopped"
     component_count = _count_runtime_components(runtime)
 
@@ -130,6 +131,7 @@ async def home_page(request: Request) -> object:
         "home.html",
         {
             "runtime_status": runtime_status,
+            "runtime_paused": runtime_paused,
             "forge_status": forge_status,
             "memory_size": memory_size,
             "uptime": uptime,
