@@ -33,5 +33,9 @@
     </tbody>
 </table>
 {% else %}
-<p class="text-animus-muted text-sm">No events recorded yet. Events appear here as the runtime operates.</p>
+<div class="empty-state">
+    <div class="empty-state-icon">&#128270;</div>
+    <div class="empty-state-text">No events recorded yet.</div>
+    <div class="text-xs text-animus-muted mt-1">Events appear here as the runtime operates.</div>
+</div>
 {% endif %}

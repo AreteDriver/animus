@@ -12,7 +12,12 @@
         <div id="pending-approvals"
              hx-get="/tools/pending"
              hx-trigger="every 3s"
-             hx-swap="innerHTML">
+             hx-swap="innerHTML"
+             hx-indicator="#pending-loading">
+            <div id="pending-loading" class="htmx-indicator mb-4">
+                <div class="skeleton-row" style="width: 100%"></div>
+                <div class="skeleton-row" style="width: 85%"></div>
+            </div>
             {% if pending_approvals %}
             <table class="w-full text-sm">
                 <thead>

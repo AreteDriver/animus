@@ -219,5 +219,156 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- Keyboard Help Modal -->
+    <div id="keyboard-help-modal" onclick="if(event.target===this) closeHelp()">
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h3 class="text-lg font-bold text-animus-green mb-4">Keyboard Shortcuts</h3>
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-animus-text">Toggle help</span>
+                    <span><span class="kb-shortcut">?</span></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-animus-text">Quick search</span>
+                    <span><span class="kb-shortcut">/</span></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-animus-text">Focus chat input</span>
+                    <span><span class="kb-shortcut">Esc</span> then <span class="kb-shortcut">C</span></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-animus-text">Navigate home</span>
+                    <span><span class="kb-shortcut">g</span> then <span class="kb-shortcut">h</span></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-animus-text">Navigate events</span>
+                    <span><span class="kb-shortcut">g</span> then <span class="kb-shortcut">e</span></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-animus-text">Navigate tasks</span>
+                    <span><span class="kb-shortcut">g</span> then <span class="kb-shortcut">t</span></span>
+                </div>
+            </div>
+            <div class="mt-6 text-center">
+                <button onclick="closeHelp()" class="px-4 py-2 bg-animus-border text-animus-text rounded text-sm hover:bg-animus-green/20 transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Search Overlay -->
+    <div id="quick-search-overlay" style="display:none; position:fixed; inset:0; z-index:40; background:rgba(0,0,0,0.5); align-items:flex-start; justify-content:center; padding-top:20vh;">
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4 w-full max-w-lg mx-4 shadow-xl">
+            <input type="text" id="quick-search-input" placeholder="Search pages..."
+                   class="w-full bg-animus-bg border border-animus-border rounded px-3 py-2 text-sm text-animus-text focus:border-animus-green focus:outline-none"
+                   autocomplete="off">
+            <div id="quick-search-results" class="mt-2 max-h-48 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var helpModal = document.getElementById('keyboard-help-modal');
+        var searchOverlay = document.getElementById('quick-search-overlay');
+        var searchInput = document.getElementById('quick-search-input');
+        var searchResults = document.getElementById('quick-search-results');
+        var keyBuffer = '';
+        var bufferTimer = null;
+
+        var pages = [
+            {name: 'Home', path: '/', keys: 'gh'},
+            {name: 'Conversations', path: '/conversations', keys: 'gc'},
+            {name: 'Channels', path: '/channels', keys: 'gch'},
+            {name: 'Config', path: '/config', keys: 'gco'},
+            {name: 'Memory', path: '/memory', keys: 'gm'},
+            {name: 'Logs', path: '/logs', keys: 'gl'},
+            {name: 'Tools', path: '/tools', keys: 'gto'},
+            {name: 'Events', path: '/events', keys: 'ge'},
+            {name: 'Tasks', path: '/tasks', keys: 'gt'},
+            {name: 'Personas', path: '/personas', keys: 'gp'},
+            {name: 'Proposals', path: '/proposals', keys: 'gpr'},
+            {name: 'Feedback', path: '/feedback', keys: 'gf'},
+        ];
+
+        window.openHelp = function() { helpModal.classList.add('active'); };
+        window.closeHelp = function() { helpModal.classList.remove('active'); };
+
+        function openSearch() {
+            searchOverlay.style.display = 'flex';
+            searchInput.value = '';
+            searchInput.focus();
+            renderResults(pages);
+        }
+
+        function closeSearch() {
+            searchOverlay.style.display = 'none';
+            searchResults.innerHTML = '';
+        }
+
+        function renderResults(items) {
+            if (!items.length) {
+                searchResults.innerHTML = '<div class="text-xs text-animus-muted p-2">No matches</div>';
+                return;
+            }
+            searchResults.innerHTML = items.map(function(p) {
+                return '<a href="' + p.path + '" class="block px-3 py-2 rounded text-sm text-animus-text hover:bg-animus-border" onclick="closeSearch()">' + p.name + '</a>';
+            }).join('');
+        }
+
+        searchInput.addEventListener('input', function() {
+            var q = searchInput.value.toLowerCase();
+            var filtered = pages.filter(function(p) { return p.name.toLowerCase().indexOf(q) !== -1; });
+            renderResults(filtered);
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeSearch();
+        });
+
+        document.addEventListener('keydown', function(e) {
+            // Ignore if typing in an input/textarea
+            var tag = (e.target.tagName || '').toLowerCase();
+            if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) {
+                if (e.key === 'Escape') closeSearch();
+                return;
+            }
+
+            if (e.key === '?') {
+                e.preventDefault();
+                openHelp();
+                return;
+            }
+            if (e.key === '/') {
+                e.preventDefault();
+                openSearch();
+                return;
+            }
+            if (e.key === 'Escape') {
+                closeHelp();
+                closeSearch();
+                return;
+            }
+
+            // Go-to navigation buffer
+            if (e.key.length === 1 && /[a-z]/.test(e.key)) {
+                keyBuffer += e.key;
+                if (bufferTimer) clearTimeout(bufferTimer);
+                bufferTimer = setTimeout(function() { keyBuffer = ''; }, 800);
+
+                for (var i = 0; i < pages.length; i++) {
+                    if (pages[i].keys === keyBuffer) {
+                        window.location.href = pages[i].path;
+                        return;
+                    }
+                }
+            }
+        });
+
+        // Close search on backdrop click
+        searchOverlay.addEventListener('click', function(e) {
+            if (e.target === searchOverlay) closeSearch();
+        });
+    })();
+    </script>
+
 </body>
 </html>

@@ -30,8 +30,14 @@
     <div class="bg-animus-surface border border-animus-border rounded-lg p-6 mb-8"
          hx-get="/events/feed"
          hx-trigger="every 5s"
-         hx-swap="innerHTML">
+         hx-swap="innerHTML"
+         hx-indicator="#events-loading">
         <h3 class="text-sm text-animus-muted uppercase tracking-wide mb-4">Live Feed</h3>
+        <div id="events-loading" class="htmx-indicator mb-4">
+            <div class="skeleton-row" style="width: 100%"></div>
+            <div class="skeleton-row" style="width: 90%"></div>
+            <div class="skeleton-row" style="width: 80%"></div>
+        </div>
         {% include "fragments/events_feed.html" %}
     </div>
 

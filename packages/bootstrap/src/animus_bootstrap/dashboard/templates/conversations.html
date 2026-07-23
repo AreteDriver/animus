@@ -60,7 +60,14 @@
              hx-get="/conversations/messages"
              hx-trigger="every 5s"
              hx-swap="none"
-             hx-on::after-request="updateFeed(event)">
+             hx-on::after-request="updateFeed(event)"
+             hx-indicator="#msg-loading">
+
+            <div id="msg-loading" class="htmx-indicator p-4">
+                <div class="skeleton-row" style="width: 100%"></div>
+                <div class="skeleton-row" style="width: 90%"></div>
+                <div class="skeleton-row" style="width: 75%"></div>
+            </div>
 
             {% if messages %}
                 {% for msg in messages %}
@@ -97,8 +104,10 @@
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="p-8 text-center text-animus-muted text-sm">
-                    No messages yet. Connect a channel or use the WebChat below to start a conversation.
+                <div class="empty-state">
+                    <div class="empty-state-icon">&#128172;</div>
+                    <div class="empty-state-text">No messages yet.</div>
+                    <div class="text-xs text-animus-muted mt-1">Connect a channel or use the WebChat below to start a conversation.</div>
                 </div>
             {% endif %}
         </div>
