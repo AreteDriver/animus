@@ -179,7 +179,11 @@ class DurableMemoryStore(MemoryStore):
         actor_refs: list[str] | None = None,
         idempotency_key: str | None = None,
     ) -> None:
-        """Append an event to the ledger."""
+        """Append an event to the ledger.
+
+        Does *not* commit the session so that callers can keep registry
+        mutations and their events in a single atomic transaction.
+        """
         row = _EventLedgerRow(
             event_kind=event_kind,
             actor_refs=json.dumps(actor_refs or []),
@@ -189,16 +193,24 @@ class DurableMemoryStore(MemoryStore):
             valid_from=_now_utc(),
         )
         session.add(row)
-        session.commit()
 
     def _upsert_registry_row(self, session: Session, memory: Memory) -> _ObjectRegistryRow:
-        """Create or update an object_registry row for a Memory."""
+        """Create or update an object_registry row for a Memory.
+
+        Does *not* commit the session — callers must commit explicitly so
+        registry writes can be kept atomic with their corresponding event.
+        """
         payload = self._memory_to_payload(memory)
         sha = _sha256(payload)
 
-        # Look for existing row by object_id
+        # Look for the *current* (non-superseded) row by object_id.
+        # Without the superseded_at filter a concurrent update could race or
+        # we could accidentally re-supersede an already-historical version.
         existing = session.execute(
-            select(_ObjectRegistryRow).where(_ObjectRegistryRow.object_id == memory.id)
+            select(_ObjectRegistryRow).where(
+                _ObjectRegistryRow.object_id == memory.id,
+                _ObjectRegistryRow.superseded_at.is_(None),
+            )
         ).scalar_one_or_none()
 
         if existing:
@@ -230,7 +242,6 @@ class DurableMemoryStore(MemoryStore):
             payload=payload,
         )
         session.add(row)
-        session.commit()
         return row
 
     # ------------------------------------------------------------------
@@ -248,6 +259,7 @@ class DurableMemoryStore(MemoryStore):
                 actor_refs=["animus-kernel"],
                 idempotency_key=f"store-{memory.id}",
             )
+            session.commit()
         logger.debug(f"Stored memory {memory.id[:8]} in durable core")
 
     def update(self, memory: Memory) -> bool:
@@ -272,6 +284,7 @@ class DurableMemoryStore(MemoryStore):
                 actor_refs=["animus-kernel"],
                 idempotency_key=f"update-{memory.id}-v{memory.version}",
             )
+            session.commit()
         logger.debug(f"Updated memory {memory.id[:8]} in durable core")
         return True
 
@@ -296,6 +309,7 @@ class DurableMemoryStore(MemoryStore):
                 actor_refs=["animus-kernel"],
                 idempotency_key=None,
             )
+            session.commit()
 
             return self._payload_to_memory(row.payload)
 
@@ -352,7 +366,6 @@ class DurableMemoryStore(MemoryStore):
             row.superseded_at = _now_utc()
             row.valid_to = _now_utc()
             row.lifecycle_status = "deleted"
-            session.commit()
 
             self._write_event(
                 session,
@@ -362,6 +375,7 @@ class DurableMemoryStore(MemoryStore):
                 actor_refs=["animus-kernel"],
                 idempotency_key=f"delete-{memory_id}",
             )
+            session.commit()
         logger.debug(f"Deleted memory {memory_id[:8]} from durable core")
         return True
 

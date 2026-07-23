@@ -252,3 +252,142 @@ def test_versioning_fields_preserved(store: DurableMemoryStore):
     assert retrieved.version == 3
     assert retrieved.parent_id == "parent-123"
     assert retrieved.change_summary == "updated content"
+
+
+# ---------------------------------------------------------------------------
+# Adversarial tests for _upsert_registry_row correctness
+# ---------------------------------------------------------------------------
+
+def test_upsert_only_supersedes_current_version(store: DurableMemoryStore):
+    """Updating a memory must leave exactly one non-superseded row."""
+    mem = _make_memory("version test")
+    store.store(mem)          # v1
+    mem.content = "updated" # v2
+    store.update(mem)
+    mem.content = "again"     # v3
+    store.update(mem)
+
+    from animus_kernel.memory.stores.durable import _ObjectRegistryRow
+
+    with store._session_factory() as session:
+        # Total rows for this object_id should be 3
+        all_rows = session.query(_ObjectRegistryRow).where(
+            _ObjectRegistryRow.object_id == mem.id
+        ).all()
+        assert len(all_rows) == 3
+
+        # Exactly one must be current (non-superseded)
+        current = [r for r in all_rows if r.superseded_at is None]
+        assert len(current) == 1
+        assert current[0].object_version == 3
+
+        # The two historical rows must have valid superseded_at timestamps
+        historical = [r for r in all_rows if r.superseded_at is not None]
+        assert len(historical) == 2
+
+
+def test_store_after_delete_creates_clean_row(store: DurableMemoryStore):
+    """Storing a new memory with a previously-deleted id must not crash or
+    resurface the old superseded row."""
+    mem = _make_memory("recycle-id")
+    store.store(mem)
+    store.delete(mem.id)
+
+    # Re-create with the same id (artificial, but tests the lookup filter)
+    mem2 = _make_memory("recycle-id")
+    mem2.id = mem.id  # force reuse of deleted id
+    store.store(mem2)
+
+    retrieved = store.retrieve(mem.id)
+    assert retrieved is not None
+    assert retrieved.content == "recycle-id"
+
+    from animus_kernel.memory.stores.durable import _ObjectRegistryRow
+
+    with store._session_factory() as session:
+        all_rows = session.query(_ObjectRegistryRow).where(
+            _ObjectRegistryRow.object_id == mem.id
+        ).all()
+        assert len(all_rows) == 2  # original deleted + new current
+        current = [r for r in all_rows if r.superseded_at is None]
+        assert len(current) == 1
+
+
+def test_atomic_registry_and_event(store: DurableMemoryStore):
+    """Registry row and event must be committed in the same transaction.
+
+    We verify this indirectly: after a successful store(), querying the
+    registry for the row must always return a matching event in the ledger.
+    """
+    mem = _make_memory("atomic")
+    store.store(mem)
+
+    from animus_kernel.memory.stores.durable import _EventLedgerRow, _ObjectRegistryRow
+
+    with store._session_factory() as session:
+        row = session.query(_ObjectRegistryRow).where(
+            _ObjectRegistryRow.object_id == mem.id,
+            _ObjectRegistryRow.superseded_at.is_(None),
+        ).one()
+
+        events = session.query(_EventLedgerRow).where(
+            _EventLedgerRow.event_kind == "memory.stored",
+            _EventLedgerRow.object_refs.contains(mem.id),
+        ).all()
+        assert len(events) == 1
+        assert row.recorded_at is not None
+        assert events[0].recorded_at is not None
+
+
+def test_update_atomicity(store: DurableMemoryStore):
+    """An update must atomically supersede the old row and write an event."""
+    mem = _make_memory("atomic-update")
+    store.store(mem)
+    mem.content = "changed"
+    store.update(mem)
+
+    from animus_kernel.memory.stores.durable import _EventLedgerRow, _ObjectRegistryRow
+
+    with store._session_factory() as session:
+        # Old row is superseded
+        old = session.query(_ObjectRegistryRow).where(
+            _ObjectRegistryRow.object_id == mem.id,
+            _ObjectRegistryRow.object_version == 1,
+        ).one()
+        assert old.superseded_at is not None
+
+        # New row is current
+        new = session.query(_ObjectRegistryRow).where(
+            _ObjectRegistryRow.object_id == mem.id,
+            _ObjectRegistryRow.object_version == 2,
+        ).one()
+        assert new.superseded_at is None
+
+        # Exactly one update event
+        events = session.query(_EventLedgerRow).where(
+            _EventLedgerRow.event_kind == "memory.updated",
+            _EventLedgerRow.object_refs.contains(mem.id),
+        ).all()
+        assert len(events) == 1
+
+
+def test_delete_atomicity(store: DurableMemoryStore):
+    """Delete must atomically mark the row and write the event."""
+    mem = _make_memory("atomic-delete")
+    store.store(mem)
+    store.delete(mem.id)
+
+    from animus_kernel.memory.stores.durable import _EventLedgerRow, _ObjectRegistryRow
+
+    with store._session_factory() as session:
+        row = session.query(_ObjectRegistryRow).where(
+            _ObjectRegistryRow.object_id == mem.id,
+        ).one()
+        assert row.superseded_at is not None
+        assert row.lifecycle_status == "deleted"
+
+        events = session.query(_EventLedgerRow).where(
+            _EventLedgerRow.event_kind == "memory.deleted",
+            _EventLedgerRow.object_refs.contains(mem.id),
+        ).all()
+        assert len(events) == 1
