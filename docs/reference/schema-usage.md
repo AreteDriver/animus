@@ -262,8 +262,8 @@ schema-validate:
 
 ## See Also
 
-- [Architecture → Packages](architecture/packages.md) — Dependency map and package responsibilities
-- [Packages → Types](packages/types/README.md) — Package README for `animus_types`
-- [Contracts → README](packages/contracts/README.md) — JSON Schema design conventions
+- [Architecture → Packages](../architecture/packages.md) — Dependency map and package responsibilities
+- [Packages → Types](../../packages/types/README.md) — Package README for `animus_types`
+- [Contracts → README](../../packages/contracts/README.md) — JSON Schema design conventions
 - `scripts/compile_schemas.py` — Compilation pipeline source
 - `scripts/validate_schemas.py` — CI validation gate source
