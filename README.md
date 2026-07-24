@@ -15,7 +15,7 @@ Before software I spent 17 years in manufacturing and logistics (IBM, Toyota Pro
 
 **Platform: Linux only** for the public open-source launch. macOS support is on the roadmap; Windows is out of scope.
 
-Eight packages (four installable via PyPI). ~17,000+ tests. Proactive engine with 6 self-healing checks and an autonomous improvement loop verified end-to-end against local inference.
+Eight packages (four installable via PyPI). Test corpus: ~13,500 unit/integration tests across packages, plus ~1,800 internal coverage-ratchet tests. Proactive engine with 6 self-healing checks and an autonomous improvement loop verified end-to-end against local inference.
 
 > **Development method:** Built with Claude Code (human-reviewed, human-verified). See [profile](https://github.com/AreteDriver) for the full transparency note.
 
@@ -382,16 +382,18 @@ Active development. Architecture stable. v2.3.0 (migrating to v2.1 baseline) rel
 
 | Component | Version | Tests | Stage | Notes |
 |-----------|---------|------:|-------|-------|
-| Core | 2.3.0 | ~2,800 | Stable | [Live on PyPI](https://pypi.org/project/animus-core/) — CLI, memory, MCP server |
-| Forge | 1.9.0 | ~10,300 | Active dev | Self-improve pipeline, workflow orchestration |
+| Core | 2.3.0 | ~2,900 | Stable | [Live on PyPI](https://pypi.org/project/animus-core/) — CLI, memory, MCP server |
+| Forge | 1.9.0 | ~8,500 | Active dev | Self-improve pipeline, workflow orchestration |
 | Quorum | 1.2.0 | ~960 | Stable | [Live on PyPI](https://pypi.org/project/convergentAI/) |
 | Bootstrap | 0.8.0 | ~2,000 | Stable | Daemon + wizard + dashboard + reflection |
-| Kernel | 0.1.0 | — | Stable | Autonomous builder engine |
+| Kernel | 0.1.0 | ~490 | Stable | Autonomous builder engine |
 | PWA | 0.1.0 | — | **Functional but early** | React + Vite, mounted at `/pwa/` |
 | Contracts | 0.1.0 | — | Stable | 20+ JSON schemas with runtime validation |
 | Types | 0.1.0 | — | Stable | Shared cross-package schemas |
 
-**Total: ~17,000+ tests across 8 packages.**
+**Test breakdown:**
+- **Unit + integration tests:** ~14,850 across Core, Forge, Bootstrap, Quorum, Kernel
+- **Internal coverage ratchets:** ~1,800 (development-only, moved to `tests/_internal_ratchets/`) |
 
 ### What's Ready vs Experimental
 
