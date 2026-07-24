@@ -12,7 +12,7 @@
 |---|---|---|---|
 | Core version 2.3.0 | `CLAUDE.md`, `README.md` | `packages/core/pyproject.toml`: `version = "2.3.0"` | ✅ Accurate |
 | Package names and imports | `docs/packages/README.md` | All 8 packages match `packages/` directory | ✅ Accurate |
-| PyPI badges | Root `README.md` | `convergentAI` badge matches `packages/quorum/pyproject.toml` name | ✅ Accurate |
+| PyPI badges | Root `README.md` | `animus-quorum` badge matches `packages/quorum/pyproject.toml` name | ✅ Accurate |
 | License MIT everywhere | All READMEs, all `pyproject.toml` | Confirmed in 8 packages | ✅ Accurate |
 | v2.1 architecture committed | `docs/roadmap/current.md` | ADL-20260618-001 exists in decisions | ✅ Accurate |
 | 20 canonical schemas in `contracts/` | `docs/roadmap/current.md` | `ls packages/contracts/*.schema.json` = 20 files | ✅ Accurate |

@@ -11,7 +11,7 @@
 | [Core](../packages/core/README.md) | `import animus` | 2.3.0 | ≥3.10 | ✅ | ~2,863 |
 | [Forge](../packages/forge/README.md) | `import animus_forge` | 1.9.0 | ≥3.12 | ✅ | ~10,297 |
 | [Bootstrap](../packages/bootstrap/README.md) | `import animus_bootstrap` | 0.8.0 | ≥3.11 | ✅ | ~2,048 |
-| [Quorum](../packages/quorum/README.md) | `import convergent` | 1.2.0 | ≥3.10 | ✅ (as `convergentAI`) | ~959 |
+| [Quorum](../packages/quorum/README.md) | `import animus_quorum` | 1.2.0 | ≥3.10 | ✅ (as `animus-quorum`) | ~959 |
 | [Kernel](../packages/kernel/README.md) | `import animus_kernel` | 0.1.0 | ≥3.11 | Local only | — |
 | [Types](../packages/types/README.md) | `import animus_types` | 0.1.0 | ≥3.10 | Local only | — |
 | [PWA](../packages/pwa/README.md) | N/A | — | Node | N/A | — |

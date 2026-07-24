@@ -18,7 +18,7 @@
 | `forge` | 1.9.0 | 352 Python | 10,431 | Workflow orchestration operational |
 | `bootstrap` | 0.8.0 | 136 Python | 1,874 | Daemon + onboarding + dashboard operational |
 | `kernel` | 0.1.0 | 189 Python | 107 | Extracted from Forge, durable core wired |
-| `quorum` | 1.2.0 (convergentAI) | 14 Rust + 10 Python | 961 | Rust core + Python bindings, active |
+| `quorum` | 1.2.0 (animus-quorum) | 14 Rust + 10 Python | 961 | Rust core + Python bindings, active |
 | `types` | 0.1.0 | 4 Python | 67 | Minimal but functional |
 | `pwa` | — | 19 TypeScript | 0 | Frontend scaffolded, wiring TBD |
 | `contracts` | — | 20 JSON schemas | 0 | Pure JSON, no runtime validation |
@@ -78,7 +78,7 @@
 - [x] Build schema validation layer (JSON Schema → Pydantic or dataclass) — `scripts/validate_schemas.py` checks all 25 schemas for meta-schema validity, unique $id, dangling $refs, and Pydantic model importability + minimal payload round-trip. Verified green.
 - [x] Add JSON Schema CI gate — `.github/workflows/ci.yml` has `schema-validate` job running on PR/push to main.
 - [ ] Document schema usage patterns in `docs/reference/`
-- [ ] Align `packages/quorum/` name (`convergentAI` → `animus-quorum` or document exception)
+- [x] Align `packages/quorum/` name (`convergentAI` → `animus-quorum`) — completed 2026-07-23
 
 ### Phase 2: Durable Core (Q3–Q4 2026) — COMPLETE
 
