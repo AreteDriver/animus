@@ -10,7 +10,7 @@ import json
 import logging
 
 from animus_forge.config import get_settings
-from animus_forge.workflow import (
+from animus_kernel.executor import (
     ExecutionResult,
     StepConfig,
     WorkflowConfig,
@@ -145,7 +145,7 @@ class WorkflowEngineAdapter:
             dry_run: If True, use mock responses
             execution_manager: Optional ExecutionManager for streaming logs
         """
-        from animus_forge.workflow.arete_hooks import get_arete_hooks
+        from animus_kernel.executor.arete_hooks import get_arete_hooks
 
         self._executor = WorkflowExecutor(
             checkpoint_manager=checkpoint_manager,

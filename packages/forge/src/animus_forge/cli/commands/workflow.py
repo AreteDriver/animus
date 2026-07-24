@@ -62,7 +62,7 @@ def _load_workflow_from_source(workflow: str, engine):
         try:
             from dataclasses import asdict
 
-            from animus_forge.workflow.loader import load_workflow
+            from animus_kernel.executor.loader import load_workflow
 
             wf_config = load_workflow(workflow_path, validate_path=False)
             workflow_id = wf_config.name or workflow_path.stem
@@ -284,7 +284,7 @@ def run(
 
         try:
             if wf_config is not None:
-                from animus_forge.workflow.executor_core import (
+                from animus_kernel.executor.executor_core import (
                     WorkflowExecutor,
                 )
 

@@ -101,7 +101,7 @@ async def lifespan(app: FastAPI):
     from animus_forge.webhooks import WebhookManager
     from animus_forge.webhooks.webhook_delivery import WebhookDeliveryManager
     from animus_forge.websocket import Broadcaster, ConnectionManager
-    from animus_forge.workflow import WorkflowVersionManager
+    from animus_kernel.executor import WorkflowVersionManager
 
     state.execution_manager = ExecutionManager(backend=backend)
     state.schedule_manager = ScheduleManager(backend=backend)

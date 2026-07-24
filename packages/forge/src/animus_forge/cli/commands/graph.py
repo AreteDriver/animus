@@ -82,8 +82,8 @@ def graph_execute(
         return
 
     try:
-        from animus_forge.workflow.graph_executor import ReactFlowExecutor
-        from animus_forge.workflow.graph_models import WorkflowGraph
+        from animus_kernel.executor.graph_executor import ReactFlowExecutor
+        from animus_kernel.executor.graph_models import WorkflowGraph
 
         graph = WorkflowGraph.from_dict(graph_data)
         executor = ReactFlowExecutor()
@@ -170,8 +170,8 @@ def _run_validation(graph_data: dict, json_output: bool) -> None:
     issues: list[dict] = []
 
     try:
-        from animus_forge.workflow.graph_models import WorkflowGraph
-        from animus_forge.workflow.graph_walker import GraphWalker
+        from animus_kernel.executor.graph_models import WorkflowGraph
+        from animus_kernel.executor.graph_walker import GraphWalker
 
         graph = WorkflowGraph.from_dict(graph_data)
     except Exception as e:

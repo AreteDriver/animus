@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from animus_forge.webhooks import WebhookManager
     from animus_forge.webhooks.webhook_delivery import WebhookDeliveryManager
     from animus_forge.websocket import Broadcaster, ConnectionManager
-    from animus_forge.workflow import WorkflowVersionManager
+    from animus_kernel.executor import WorkflowVersionManager
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +48,8 @@ from animus_forge.api_clients import OpenAIClient  # noqa: E402
 from animus_forge.config import get_settings  # noqa: E402
 from animus_forge.orchestrator.workflow_engine_adapter import WorkflowEngineAdapter  # noqa: E402
 from animus_forge.prompts import PromptTemplateManager  # noqa: E402
-from animus_forge.workflow.arete_hooks import get_arete_hooks  # noqa: E402
-from animus_forge.workflow.executor import WorkflowExecutor  # noqa: E402
+from animus_kernel.executor.arete_hooks import get_arete_hooks  # noqa: E402
+from animus_kernel.executor.executor import WorkflowExecutor  # noqa: E402
 
 workflow_engine = WorkflowEngineAdapter()
 prompt_manager = PromptTemplateManager()

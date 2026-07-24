@@ -378,7 +378,7 @@ def _run_yaml_workflow(
     live: bool,
 ) -> None:
     """Execute a task via a fixed YAML workflow (legacy path)."""
-    from animus_forge.workflow.loader import load_workflow
+    from animus_kernel.executor.loader import load_workflow
 
     console.print(
         Panel(

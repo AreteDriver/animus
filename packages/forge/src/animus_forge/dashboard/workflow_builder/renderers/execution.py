@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from animus_forge.workflow.loader import validate_workflow
+from animus_kernel.executor.loader import validate_workflow
 
 from ..yaml_ops import _build_yaml_from_state
 

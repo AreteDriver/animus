@@ -18,8 +18,8 @@ from animus_forge.api_models import (
     RecentExecution,
 )
 from animus_forge.api_routes.auth import verify_auth
-from animus_forge.contracts.base import AgentRole
-from animus_forge.contracts.definitions import _CONTRACT_REGISTRY
+from animus_kernel.contracts.base import AgentRole
+from animus_kernel.contracts.definitions import _CONTRACT_REGISTRY
 from animus_forge.state import get_database
 
 router = APIRouter()

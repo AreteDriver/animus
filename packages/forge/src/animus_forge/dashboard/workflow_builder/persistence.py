@@ -13,7 +13,7 @@ import yaml
 # Reference the package module for names that tests patch via
 # animus_forge.dashboard.workflow_builder.X (runtime attribute lookup).
 import animus_forge.dashboard.workflow_builder as _pkg
-from animus_forge.workflow.loader import validate_workflow
+from animus_kernel.executor.loader import validate_workflow
 
 from .yaml_ops import _build_yaml_from_state, _load_yaml_to_state
 

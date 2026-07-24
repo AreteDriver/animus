@@ -25,10 +25,10 @@ from animus_forge.api_models import (
 )
 from animus_forge.api_routes.auth import verify_auth
 from animus_forge.orchestrator import Workflow
-from animus_forge.workflow.loader import (
+from animus_kernel.executor.loader import (
     list_workflows as list_yaml_workflows,
 )
-from animus_forge.workflow.loader import (
+from animus_kernel.executor.loader import (
     load_workflow as load_yaml_workflow,
 )
 

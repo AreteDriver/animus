@@ -117,7 +117,7 @@ _async_executions: dict[str, dict[str, Any]] = {}
 
 def _build_workflow_graph(data: GraphExecuteRequest):
     """Convert API request model into a WorkflowGraph dataclass."""
-    from animus_forge.workflow.graph_models import WorkflowGraph
+    from animus_kernel.executor.graph_models import WorkflowGraph
 
     graph_dict = {
         "id": data.id or str(uuid.uuid4()),
@@ -175,7 +175,7 @@ async def execute_graph(
         raise bad_request(f"Invalid graph: {e}")
 
     try:
-        from animus_forge.workflow.graph_executor import ReactFlowExecutor
+        from animus_kernel.executor.graph_executor import ReactFlowExecutor
 
         executor = ReactFlowExecutor(
             execution_manager=state.execution_manager,
@@ -223,7 +223,7 @@ async def execute_graph_async(
 
     async def _run():
         try:
-            from animus_forge.workflow.graph_executor import ReactFlowExecutor
+            from animus_kernel.executor.graph_executor import ReactFlowExecutor
 
             executor = ReactFlowExecutor(
                 execution_manager=state.execution_manager,
@@ -276,7 +276,7 @@ def pause_graph_execution(
         )
 
     try:
-        from animus_forge.workflow.graph_executor import ReactFlowExecutor
+        from animus_kernel.executor.graph_executor import ReactFlowExecutor
 
         executor = ReactFlowExecutor(
             execution_manager=state.execution_manager,
@@ -320,7 +320,7 @@ async def resume_graph_execution(
         raise bad_request(f"Invalid graph: {e}")
 
     try:
-        from animus_forge.workflow.graph_executor import ReactFlowExecutor
+        from animus_kernel.executor.graph_executor import ReactFlowExecutor
 
         executor = ReactFlowExecutor(
             execution_manager=state.execution_manager,
@@ -358,7 +358,7 @@ def validate_graph(
             ],
         ).model_dump()
 
-    from animus_forge.workflow.graph_walker import GraphWalker
+    from animus_kernel.executor.graph_walker import GraphWalker
 
     walker = GraphWalker(graph)
 

@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from animus_forge.api_clients import ClaudeCodeClient
     from animus_forge.monitoring.tracker import ExecutionTracker
     from animus_forge.orchestrator import WorkflowEngineAdapter
-    from animus_forge.workflow.executor import WorkflowExecutor
+    from animus_kernel.executor.executor import WorkflowExecutor
 
 console = Console()
 
@@ -56,8 +56,8 @@ def get_workflow_executor(dry_run: bool = False) -> WorkflowExecutor:
     try:
         from animus_forge.budget import BudgetManager
         from animus_forge.state.checkpoint import CheckpointManager
-        from animus_forge.workflow.arete_hooks import get_arete_hooks
-        from animus_forge.workflow.executor import WorkflowExecutor
+        from animus_kernel.executor.arete_hooks import get_arete_hooks
+        from animus_kernel.executor.executor import WorkflowExecutor
 
         checkpoint_mgr = CheckpointManager()
         budget_mgr = BudgetManager()

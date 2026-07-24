@@ -18,7 +18,7 @@ def schedule_list(
 ):
     """List all scheduled workflows."""
     try:
-        from animus_forge.workflow import WorkflowScheduler
+        from animus_kernel.executor import WorkflowScheduler
 
         scheduler = WorkflowScheduler()
         schedules = scheduler.list()
@@ -69,7 +69,7 @@ def schedule_add(
         raise typer.Exit(1)
 
     try:
-        from animus_forge.workflow import ScheduleConfig, WorkflowScheduler
+        from animus_kernel.executor import ScheduleConfig, WorkflowScheduler
 
         scheduler = WorkflowScheduler()
 
@@ -98,7 +98,7 @@ def schedule_remove(
 ):
     """Remove a scheduled workflow."""
     try:
-        from animus_forge.workflow import WorkflowScheduler
+        from animus_kernel.executor import WorkflowScheduler
 
         scheduler = WorkflowScheduler()
 
@@ -118,7 +118,7 @@ def schedule_pause(
 ):
     """Pause a scheduled workflow."""
     try:
-        from animus_forge.workflow import WorkflowScheduler
+        from animus_kernel.executor import WorkflowScheduler
 
         scheduler = WorkflowScheduler()
 
@@ -138,7 +138,7 @@ def schedule_resume(
 ):
     """Resume a paused scheduled workflow."""
     try:
-        from animus_forge.workflow import WorkflowScheduler
+        from animus_kernel.executor import WorkflowScheduler
 
         scheduler = WorkflowScheduler()
 

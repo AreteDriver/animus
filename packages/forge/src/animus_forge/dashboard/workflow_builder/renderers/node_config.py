@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from animus_forge.workflow.loader import VALID_ON_FAILURE, VALID_OPERATORS
+from animus_kernel.executor.loader import VALID_ON_FAILURE, VALID_OPERATORS
 
 from ..constants import AGENT_ROLES, NODE_TYPE_CONFIG
 from ..state import _add_node
