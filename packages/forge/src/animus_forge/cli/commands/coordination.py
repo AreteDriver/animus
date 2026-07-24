@@ -37,9 +37,9 @@ def health(
     import json as json_mod
 
     try:
-        from animus_forge.agents.convergence import HAS_CONVERGENT
+        from animus_forge.agents.convergence import HAS_QUORUM
 
-        if not HAS_CONVERGENT:
+        if not HAS_QUORUM:
             console.print("[yellow]Convergent not installed[/yellow]")
             raise typer.Exit(1)
 
@@ -71,7 +71,7 @@ def health(
         # Reconstruct dataclass for the report renderer
         from dataclasses import fields
 
-        from convergent import CoordinationHealth, health_report
+        from animus_quorum import CoordinationHealth, health_report
 
         kwargs = {}
         for f in fields(CoordinationHealth):
@@ -95,13 +95,13 @@ def cycles(
 ) -> None:
     """Check for dependency cycles in the intent graph."""
     try:
-        from animus_forge.agents.convergence import HAS_CONVERGENT
+        from animus_forge.agents.convergence import HAS_QUORUM
 
-        if not HAS_CONVERGENT:
+        if not HAS_QUORUM:
             console.print("[yellow]Convergent not installed[/yellow]")
             raise typer.Exit(1)
 
-        from convergent import IntentResolver, SQLiteBackend
+        from animus_quorum import IntentResolver, SQLiteBackend
 
         path = db_path or _default_db_path()
         if not Path(path).exists():
@@ -149,13 +149,13 @@ def events(
 ) -> None:
     """Show coordination event timeline."""
     try:
-        from animus_forge.agents.convergence import HAS_CONVERGENT
+        from animus_forge.agents.convergence import HAS_QUORUM
 
-        if not HAS_CONVERGENT:
+        if not HAS_QUORUM:
             console.print("[yellow]Convergent not installed[/yellow]")
             raise typer.Exit(1)
 
-        from convergent import EventLog, EventType, event_timeline
+        from animus_quorum import EventLog, EventType, event_timeline
 
         path = db_path or _default_events_db_path()
         if not Path(path).exists():

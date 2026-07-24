@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 
 import pytest
-from convergent.coordination_config import CoordinationConfig
-from convergent.protocol import (
+from animus_quorum.coordination_config import CoordinationConfig
+from animus_quorum.protocol import (
     AgentIdentity,
     ConsensusRequest,
     Decision,
@@ -452,22 +452,22 @@ class TestCoordinationConfig:
 class TestPublicAPI:
     """Verify all Phase 3 types are importable from the top-level package."""
 
-    def test_import_from_convergent(self) -> None:
-        import convergent
+    def test_import_from_animus_quorum(self) -> None:
+        import animus_quorum
 
-        assert hasattr(convergent, "AgentIdentity")
-        assert hasattr(convergent, "Vote")
-        assert hasattr(convergent, "VoteChoice")
-        assert hasattr(convergent, "ConsensusRequest")
-        assert hasattr(convergent, "Decision")
-        assert hasattr(convergent, "DecisionOutcome")
-        assert hasattr(convergent, "QuorumLevel")
-        assert hasattr(convergent, "Signal")
-        assert hasattr(convergent, "StigmergyMarker")
-        assert hasattr(convergent, "CoordinationConfig")
+        assert hasattr(animus_quorum, "AgentIdentity")
+        assert hasattr(animus_quorum, "Vote")
+        assert hasattr(animus_quorum, "VoteChoice")
+        assert hasattr(animus_quorum, "ConsensusRequest")
+        assert hasattr(animus_quorum, "Decision")
+        assert hasattr(animus_quorum, "DecisionOutcome")
+        assert hasattr(animus_quorum, "QuorumLevel")
+        assert hasattr(animus_quorum, "Signal")
+        assert hasattr(animus_quorum, "StigmergyMarker")
+        assert hasattr(animus_quorum, "CoordinationConfig")
 
     def test_all_exports_listed(self) -> None:
-        import convergent
+        import animus_quorum
 
         phase3_types = [
             "AgentIdentity",
@@ -482,4 +482,4 @@ class TestPublicAPI:
             "VoteChoice",
         ]
         for name in phase3_types:
-            assert name in convergent.__all__, f"{name} not in __all__"
+            assert name in animus_quorum.__all__, f"{name} not in __all__"

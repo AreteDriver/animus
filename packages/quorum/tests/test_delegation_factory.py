@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from convergent import (
+from animus_quorum import (
     IntentResolver,
     PythonGraphBackend,
     SQLiteBackend,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from convergent.arete_bridge import (
+from animus_quorum.arete_bridge import (
     FAILURE_SEVERITY,
     leave_autopsy_marker,
     record_failure_outcome,

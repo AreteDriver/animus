@@ -5,7 +5,7 @@ delegate to specialized sub-agents, and synthesize results.
 """
 
 from .agent_config import AgentConfig, get_agent_config
-from .convergence import HAS_CONVERGENT, ConvergenceResult, DelegationConvergenceChecker
+from .convergence import HAS_QUORUM, ConvergenceResult, DelegationConvergenceChecker
 from .message_bus import AgentMessage, AgentMessageBus, MessagePriority
 from .process_registry import ProcessInfo, ProcessRegistry, ProcessState, ProcessType
 from .provider_wrapper import AgentProvider, create_agent_provider
@@ -23,7 +23,7 @@ __all__ = [
     "AgentTaskRunner",
     "ConvergenceResult",
     "DelegationConvergenceChecker",
-    "HAS_CONVERGENT",
+    "HAS_QUORUM",
     "MessagePriority",
     "ProcessInfo",
     "ProcessRegistry",

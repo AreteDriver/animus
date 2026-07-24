@@ -4650,7 +4650,7 @@ class TestApiLifecycleBatch5:
         """Lines 138-139: create_bridge exception fallback pattern."""
         bridge = None
         try:
-            raise ImportError("no convergent")
+            raise ImportError("no animus_quorum")
         except Exception:
             bridge = None
         assert bridge is None

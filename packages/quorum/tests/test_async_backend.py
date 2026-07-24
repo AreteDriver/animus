@@ -8,15 +8,15 @@ import pytest
 
 pytest.importorskip("pytest_asyncio")
 
-from convergent.async_backend import AsyncBackendWrapper
-from convergent.intent import (
+from animus_quorum.async_backend import AsyncBackendWrapper
+from animus_quorum.intent import (
     Evidence,
     Intent,
     InterfaceKind,
     InterfaceSpec,
 )
-from convergent.resolver import PythonGraphBackend
-from convergent.sqlite_backend import SQLiteBackend
+from animus_quorum.resolver import PythonGraphBackend
+from animus_quorum.sqlite_backend import SQLiteBackend
 
 # ---------------------------------------------------------------------------
 # Helpers

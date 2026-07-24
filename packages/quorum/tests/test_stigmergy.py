@@ -6,7 +6,7 @@ import math
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from convergent.stigmergy import StigmergyField
+from animus_quorum.stigmergy import StigmergyField
 
 
 class TestLeaveMarker:
@@ -254,12 +254,12 @@ class TestClose:
 
 
 class TestPublicAPI:
-    def test_import_from_convergent(self) -> None:
-        import convergent
+    def test_import_from_animus_quorum(self) -> None:
+        import animus_quorum
 
-        assert hasattr(convergent, "StigmergyField")
+        assert hasattr(animus_quorum, "StigmergyField")
 
     def test_all_exports_listed(self) -> None:
-        import convergent
+        import animus_quorum
 
-        assert "StigmergyField" in convergent.__all__
+        assert "StigmergyField" in animus_quorum.__all__

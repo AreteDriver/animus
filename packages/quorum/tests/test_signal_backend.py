@@ -6,8 +6,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
-from convergent.protocol import Signal
-from convergent.signal_backend import FilesystemSignalBackend, SignalBackend
+from animus_quorum.protocol import Signal
+from animus_quorum.signal_backend import FilesystemSignalBackend, SignalBackend
 
 
 def _signal(
@@ -194,7 +194,7 @@ class TestSignalBusWithExplicitBackend:
     """Test SignalBus with explicit backend parameter."""
 
     def test_explicit_backend(self, tmp_path: Path) -> None:
-        from convergent.signal_bus import SignalBus
+        from animus_quorum.signal_bus import SignalBus
 
         backend = FilesystemSignalBackend(tmp_path / "signals")
         bus = SignalBus(backend=backend)
@@ -203,26 +203,26 @@ class TestSignalBusWithExplicitBackend:
         assert len(signals) == 1
 
     def test_no_args_raises(self) -> None:
-        from convergent.signal_bus import SignalBus
+        from animus_quorum.signal_bus import SignalBus
 
         with pytest.raises(ValueError, match="Either signals_dir or backend"):
             SignalBus()
 
     def test_backend_property(self, tmp_path: Path) -> None:
-        from convergent.signal_bus import SignalBus
+        from animus_quorum.signal_bus import SignalBus
 
         backend = FilesystemSignalBackend(tmp_path / "signals")
         bus = SignalBus(backend=backend)
         assert bus.backend is backend
 
     def test_consumer_id_property(self, tmp_path: Path) -> None:
-        from convergent.signal_bus import SignalBus
+        from animus_quorum.signal_bus import SignalBus
 
         bus = SignalBus(signals_dir=tmp_path / "signals", consumer_id="my-consumer")
         assert bus.consumer_id == "my-consumer"
 
     def test_close_stops_polling_and_closes_backend(self, tmp_path: Path) -> None:
-        from convergent.signal_bus import SignalBus
+        from animus_quorum.signal_bus import SignalBus
 
         backend = FilesystemSignalBackend(tmp_path / "signals")
         bus = SignalBus(backend=backend, poll_interval=0.05)
@@ -352,13 +352,13 @@ class TestPathTraversalPrevention:
 
 class TestPublicAPI:
     def test_import_signal_backend(self) -> None:
-        import convergent
+        import animus_quorum
 
-        assert hasattr(convergent, "SignalBackend")
-        assert hasattr(convergent, "FilesystemSignalBackend")
+        assert hasattr(animus_quorum, "SignalBackend")
+        assert hasattr(animus_quorum, "FilesystemSignalBackend")
 
     def test_all_exports_listed(self) -> None:
-        import convergent
+        import animus_quorum
 
-        assert "SignalBackend" in convergent.__all__
-        assert "FilesystemSignalBackend" in convergent.__all__
+        assert "SignalBackend" in animus_quorum.__all__
+        assert "FilesystemSignalBackend" in animus_quorum.__all__

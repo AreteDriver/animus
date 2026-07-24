@@ -7,8 +7,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
-from convergent.protocol import Signal
-from convergent.signal_bus import SignalBus
+from animus_quorum.protocol import Signal
+from animus_quorum.signal_bus import SignalBus
 
 
 def _signal(
@@ -331,7 +331,7 @@ class TestSignalBusWithSQLiteBackend:
     """Test SignalBus wired to SQLiteSignalBackend."""
 
     def test_publish_and_poll(self) -> None:
-        from convergent.sqlite_signal_backend import SQLiteSignalBackend
+        from animus_quorum.sqlite_signal_backend import SQLiteSignalBackend
 
         backend = SQLiteSignalBackend(":memory:")
         bus = SignalBus(backend=backend)
@@ -344,7 +344,7 @@ class TestSignalBusWithSQLiteBackend:
         backend.close()
 
     def test_poll_idempotent(self) -> None:
-        from convergent.sqlite_signal_backend import SQLiteSignalBackend
+        from animus_quorum.sqlite_signal_backend import SQLiteSignalBackend
 
         backend = SQLiteSignalBackend(":memory:")
         bus = SignalBus(backend=backend)
@@ -357,7 +357,7 @@ class TestSignalBusWithSQLiteBackend:
         backend.close()
 
     def test_get_signals_delegates(self) -> None:
-        from convergent.sqlite_signal_backend import SQLiteSignalBackend
+        from animus_quorum.sqlite_signal_backend import SQLiteSignalBackend
 
         backend = SQLiteSignalBackend(":memory:")
         bus = SignalBus(backend=backend)
@@ -368,7 +368,7 @@ class TestSignalBusWithSQLiteBackend:
         backend.close()
 
     def test_cleanup_delegates(self) -> None:
-        from convergent.sqlite_signal_backend import SQLiteSignalBackend
+        from animus_quorum.sqlite_signal_backend import SQLiteSignalBackend
 
         backend = SQLiteSignalBackend(":memory:")
         bus = SignalBus(backend=backend)
@@ -380,7 +380,7 @@ class TestSignalBusWithSQLiteBackend:
         backend.close()
 
     def test_clear_delegates(self) -> None:
-        from convergent.sqlite_signal_backend import SQLiteSignalBackend
+        from animus_quorum.sqlite_signal_backend import SQLiteSignalBackend
 
         backend = SQLiteSignalBackend(":memory:")
         bus = SignalBus(backend=backend)
@@ -391,7 +391,7 @@ class TestSignalBusWithSQLiteBackend:
         backend.close()
 
     def test_close_stops_polling_and_closes_backend(self) -> None:
-        from convergent.sqlite_signal_backend import SQLiteSignalBackend
+        from animus_quorum.sqlite_signal_backend import SQLiteSignalBackend
 
         backend = SQLiteSignalBackend(":memory:")
         bus = SignalBus(backend=backend, poll_interval=0.05)
@@ -404,7 +404,7 @@ class TestMultiConsumer:
     """Test two SignalBus instances with different consumer_ids on same backend."""
 
     def test_independent_consumption(self) -> None:
-        from convergent.sqlite_signal_backend import SQLiteSignalBackend
+        from animus_quorum.sqlite_signal_backend import SQLiteSignalBackend
 
         backend = SQLiteSignalBackend(":memory:")
         bus_a = SignalBus(backend=backend, consumer_id="consumer-a")
@@ -427,7 +427,7 @@ class TestMultiConsumer:
         backend.close()
 
     def test_one_consumer_processes_other_still_sees(self) -> None:
-        from convergent.sqlite_signal_backend import SQLiteSignalBackend
+        from animus_quorum.sqlite_signal_backend import SQLiteSignalBackend
 
         backend = SQLiteSignalBackend(":memory:")
         bus_a = SignalBus(backend=backend, consumer_id="consumer-a")
@@ -443,7 +443,7 @@ class TestMultiConsumer:
         backend.close()
 
     def test_file_backed_multi_consumer(self, tmp_path: Path) -> None:
-        from convergent.sqlite_signal_backend import SQLiteSignalBackend
+        from animus_quorum.sqlite_signal_backend import SQLiteSignalBackend
 
         db_path = str(tmp_path / "shared.db")
         backend = SQLiteSignalBackend(db_path)
@@ -464,7 +464,7 @@ class TestMultiConsumer:
         backend.close()
 
     def test_targeted_signal_dispatch_with_sqlite(self) -> None:
-        from convergent.sqlite_signal_backend import SQLiteSignalBackend
+        from animus_quorum.sqlite_signal_backend import SQLiteSignalBackend
 
         backend = SQLiteSignalBackend(":memory:")
         bus = SignalBus(backend=backend, consumer_id="c")
@@ -497,12 +497,12 @@ class TestPollLoopExceptionHandling:
 
 
 class TestPublicAPI:
-    def test_import_from_convergent(self) -> None:
-        import convergent
+    def test_import_from_animus_quorum(self) -> None:
+        import animus_quorum
 
-        assert hasattr(convergent, "SignalBus")
+        assert hasattr(animus_quorum, "SignalBus")
 
     def test_all_exports_listed(self) -> None:
-        import convergent
+        import animus_quorum
 
-        assert "SignalBus" in convergent.__all__
+        assert "SignalBus" in animus_quorum.__all__

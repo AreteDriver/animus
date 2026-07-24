@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import pytest
-from convergent.coordination_bridge import GorgonBridge
-from convergent.coordination_config import CoordinationConfig
-from convergent.protocol import DecisionOutcome
+from animus_quorum.coordination_bridge import GorgonBridge
+from animus_quorum.coordination_config import CoordinationConfig
+from animus_quorum.protocol import DecisionOutcome
 
 
 @pytest.fixture()
@@ -238,7 +238,7 @@ class TestSignalBusBackendSelection:
     def test_default_uses_sqlite_backend(self, tmp_path: object) -> None:
         import pathlib
 
-        from convergent.sqlite_signal_backend import SQLiteSignalBackend
+        from animus_quorum.sqlite_signal_backend import SQLiteSignalBackend
 
         db_path = str(pathlib.Path(str(tmp_path)) / "coord.db")
         config = CoordinationConfig(db_path=db_path)
@@ -250,7 +250,7 @@ class TestSignalBusBackendSelection:
     def test_explicit_filesystem_backend(self, tmp_path: object) -> None:
         import pathlib
 
-        from convergent.signal_backend import FilesystemSignalBackend
+        from animus_quorum.signal_backend import FilesystemSignalBackend
 
         db_path = str(pathlib.Path(str(tmp_path)) / "coord.db")
         config = CoordinationConfig(db_path=db_path, signal_bus_type="filesystem")
@@ -290,7 +290,7 @@ class TestSignalBusBackendSelection:
     def test_sqlite_signal_db_path(self, tmp_path: object) -> None:
         import pathlib
 
-        from convergent.sqlite_signal_backend import SQLiteSignalBackend
+        from animus_quorum.sqlite_signal_backend import SQLiteSignalBackend
 
         db_path = str(pathlib.Path(str(tmp_path)) / "coord.db")
         config = CoordinationConfig(db_path=db_path)
@@ -371,19 +371,19 @@ class TestDefaultConfig:
 
 
 class TestPublicAPI:
-    def test_import_from_convergent(self) -> None:
-        import convergent
+    def test_import_from_animus_quorum(self) -> None:
+        import animus_quorum
 
-        assert hasattr(convergent, "GorgonBridge")
+        assert hasattr(animus_quorum, "GorgonBridge")
 
     def test_all_exports_listed(self) -> None:
-        import convergent
+        import animus_quorum
 
-        assert "GorgonBridge" in convergent.__all__
+        assert "GorgonBridge" in animus_quorum.__all__
 
     def test_resolution_types_exported(self) -> None:
-        import convergent
+        import animus_quorum
 
-        assert "Adjustment" in convergent.__all__
-        assert "ConflictReport" in convergent.__all__
-        assert "ResolutionResult" in convergent.__all__
+        assert "Adjustment" in animus_quorum.__all__
+        assert "ConflictReport" in animus_quorum.__all__
+        assert "ResolutionResult" in animus_quorum.__all__

@@ -6,9 +6,9 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from convergent.protocol import AgentIdentity, Vote, VoteChoice
-from convergent.score_store import ScoreStore
-from convergent.scoring import PhiScorer
+from animus_quorum.protocol import AgentIdentity, Vote, VoteChoice
+from animus_quorum.score_store import ScoreStore
+from animus_quorum.scoring import PhiScorer
 
 # --- ScoreStore tests ---
 
@@ -332,8 +332,8 @@ class TestDecisionHistory:
 
     def _make_decision(self, store: ScoreStore, task_id: str = "task-1") -> None:
         """Helper to create and persist a decision."""
-        from convergent.coordination_config import CoordinationConfig
-        from convergent.triumvirate import Triumvirate
+        from animus_quorum.coordination_config import CoordinationConfig
+        from animus_quorum.triumvirate import Triumvirate
 
         scorer = PhiScorer(store)
         tri = Triumvirate(scorer, CoordinationConfig(), store=store)
@@ -445,8 +445,8 @@ class TestDecisionHistory:
 
     def test_multiple_vote_choices_in_stats(self, store: ScoreStore) -> None:
         """Stats aggregate across multiple vote choices."""
-        from convergent.coordination_config import CoordinationConfig
-        from convergent.triumvirate import Triumvirate
+        from animus_quorum.coordination_config import CoordinationConfig
+        from animus_quorum.triumvirate import Triumvirate
 
         scorer = PhiScorer(store)
         tri = Triumvirate(scorer, CoordinationConfig(), store=store)
@@ -487,14 +487,14 @@ class TestDecisionHistory:
 
 
 class TestPublicAPI:
-    def test_import_from_convergent(self) -> None:
-        import convergent
+    def test_import_from_animus_quorum(self) -> None:
+        import animus_quorum
 
-        assert hasattr(convergent, "PhiScorer")
-        assert hasattr(convergent, "ScoreStore")
+        assert hasattr(animus_quorum, "PhiScorer")
+        assert hasattr(animus_quorum, "ScoreStore")
 
     def test_all_exports_listed(self) -> None:
-        import convergent
+        import animus_quorum
 
-        assert "PhiScorer" in convergent.__all__
-        assert "ScoreStore" in convergent.__all__
+        assert "PhiScorer" in animus_quorum.__all__
+        assert "ScoreStore" in animus_quorum.__all__

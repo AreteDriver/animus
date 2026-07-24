@@ -675,7 +675,7 @@ class SupervisorAgent:
         if self._event_log is None:
             return
         try:
-            from convergent import EventType
+            from animus_quorum import EventType
 
             event_type = EventType[event_type_name]
             self._event_log.record(event_type, agent_id=agent_id, payload=payload)

@@ -14,15 +14,15 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from convergent.benchmark import (
+from animus_quorum.benchmark import (
     BenchmarkMetrics,
     BenchmarkSuite,
     ScenarioType,
     run_benchmark,
     run_scaling_suite,
 )
-from convergent.codegen_demo import run_baseline, run_convergent, run_demo
-from convergent.gates import (
+from animus_quorum.codegen_demo import run_baseline, run_convergent, run_demo
+from animus_quorum.gates import (
     CommandGate,
     CompileGate,
     GateReport,
@@ -30,7 +30,7 @@ from convergent.gates import (
     GateRunResult,
     PytestGate,
 )
-from convergent.intent import (
+from animus_quorum.intent import (
     Evidence,
     EvidenceKind,
     Intent,

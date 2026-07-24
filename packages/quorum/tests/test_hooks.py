@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from convergent.intent import (
+from animus_quorum.intent import (
     ConflictReport,
     Evidence,
     Intent,
@@ -11,7 +11,7 @@ from convergent.intent import (
     InterfaceSpec,
     ResolutionResult,
 )
-from convergent.resolver import IntentResolver
+from animus_quorum.resolver import IntentResolver
 
 
 def _make_spec(name: str, tags: list[str] | None = None) -> InterfaceSpec:

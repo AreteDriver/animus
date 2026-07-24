@@ -3246,14 +3246,14 @@ class TestCoordinationCommands:
         return coordination_app
 
     def test_health_no_convergent(self, runner, app):
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", False):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", False):
             result = runner.invoke(app, ["health"])
             assert result.exit_code == 1
             assert "not installed" in result.output
 
     def test_health_no_db(self, runner, app):
         with (
-            patch("animus_forge.agents.convergence.HAS_CONVERGENT", True),
+            patch("animus_forge.agents.convergence.HAS_QUORUM", True),
             patch(
                 "animus_forge.cli.commands.coordination._default_db_path",
                 return_value="/nonexistent/path.db",
@@ -3267,7 +3267,7 @@ class TestCoordinationCommands:
         db_file = tmp_path / "coord.db"
         db_file.write_text("")
         with (
-            patch("animus_forge.agents.convergence.HAS_CONVERGENT", True),
+            patch("animus_forge.agents.convergence.HAS_QUORUM", True),
             patch(
                 "animus_forge.agents.convergence.create_bridge",
                 return_value=None,
@@ -3283,7 +3283,7 @@ class TestCoordinationCommands:
         mock_bridge = MagicMock()
         health_data = {"total_intents": 5, "healthy": True}
         with (
-            patch("animus_forge.agents.convergence.HAS_CONVERGENT", True),
+            patch("animus_forge.agents.convergence.HAS_QUORUM", True),
             patch(
                 "animus_forge.agents.convergence.create_bridge",
                 return_value=mock_bridge,
@@ -3302,7 +3302,7 @@ class TestCoordinationCommands:
         db_file.write_text("")
         mock_bridge = MagicMock()
         with (
-            patch("animus_forge.agents.convergence.HAS_CONVERGENT", True),
+            patch("animus_forge.agents.convergence.HAS_QUORUM", True),
             patch(
                 "animus_forge.agents.convergence.create_bridge",
                 return_value=mock_bridge,
@@ -3318,14 +3318,14 @@ class TestCoordinationCommands:
 
     def test_health_exception(self, runner, app):
         with patch(
-            "animus_forge.agents.convergence.HAS_CONVERGENT",
+            "animus_forge.agents.convergence.HAS_QUORUM",
             new_callable=lambda: property(lambda self: (_ for _ in ()).throw(RuntimeError("boom"))),
         ):
             # Import triggers the check
             pass
         # Simpler: patch the entire import chain to raise
         with patch.dict(
-            sys.modules, {"animus_forge.agents.convergence": MagicMock(HAS_CONVERGENT=True)}
+            sys.modules, {"animus_forge.agents.convergence": MagicMock(HAS_QUORUM=True)}
         ):
             with patch(
                 "animus_forge.agents.convergence.create_bridge",
@@ -3336,14 +3336,14 @@ class TestCoordinationCommands:
                 assert result.exit_code == 1
 
     def test_cycles_no_convergent(self, runner, app):
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", False):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", False):
             result = runner.invoke(app, ["cycles"])
             assert result.exit_code == 1
             assert "not installed" in result.output
 
     def test_cycles_no_db(self, runner, app):
         with (
-            patch("animus_forge.agents.convergence.HAS_CONVERGENT", True),
+            patch("animus_forge.agents.convergence.HAS_QUORUM", True),
             patch(
                 "animus_forge.cli.commands.coordination._default_db_path",
                 return_value="/nonexistent.db",
@@ -3353,14 +3353,14 @@ class TestCoordinationCommands:
             assert result.exit_code == 1
 
     def test_events_no_convergent(self, runner, app):
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", False):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", False):
             result = runner.invoke(app, ["events"])
             assert result.exit_code == 1
             assert "not installed" in result.output
 
     def test_events_no_db(self, runner, app):
         with (
-            patch("animus_forge.agents.convergence.HAS_CONVERGENT", True),
+            patch("animus_forge.agents.convergence.HAS_QUORUM", True),
             patch(
                 "animus_forge.cli.commands.coordination._default_events_db_path",
                 return_value="/nonexistent.db",

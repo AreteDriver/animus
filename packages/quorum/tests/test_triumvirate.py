@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from convergent.coordination_config import CoordinationConfig
-from convergent.protocol import (
+from animus_quorum.coordination_config import CoordinationConfig
+from animus_quorum.protocol import (
     AgentIdentity,
     ConsensusRequest,
     DecisionOutcome,
@@ -12,9 +12,9 @@ from convergent.protocol import (
     Vote,
     VoteChoice,
 )
-from convergent.score_store import ScoreStore
-from convergent.scoring import PhiScorer
-from convergent.triumvirate import Triumvirate
+from animus_quorum.score_store import ScoreStore
+from animus_quorum.scoring import PhiScorer
+from animus_quorum.triumvirate import Triumvirate
 
 
 @pytest.fixture()
@@ -393,7 +393,7 @@ class TestNaiveTimestamp:
         """ConsensusRequest with naive timestamp still evaluates correctly."""
         from datetime import datetime
 
-        from convergent.protocol import ConsensusRequest
+        from animus_quorum.protocol import ConsensusRequest
 
         tri = Triumvirate(scorer, CoordinationConfig())
         # Manually create a request with naive timestamp
@@ -519,12 +519,12 @@ class TestDecisionPersistence:
 
 
 class TestPublicAPI:
-    def test_import_from_convergent(self) -> None:
-        import convergent
+    def test_import_from_animus_quorum(self) -> None:
+        import animus_quorum
 
-        assert hasattr(convergent, "Triumvirate")
+        assert hasattr(animus_quorum, "Triumvirate")
 
     def test_all_exports_listed(self) -> None:
-        import convergent
+        import animus_quorum
 
-        assert "Triumvirate" in convergent.__all__
+        assert "Triumvirate" in animus_quorum.__all__

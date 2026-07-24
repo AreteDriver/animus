@@ -6,9 +6,9 @@ import json
 from pathlib import Path
 
 import pytest
-from convergent.event_log import EventLog, EventType
-from convergent.protocol import Signal
-from convergent.signal_bus import SignalBus
+from animus_quorum.event_log import EventLog, EventType
+from animus_quorum.protocol import Signal
+from animus_quorum.signal_bus import SignalBus
 
 
 class _RecordingBus:

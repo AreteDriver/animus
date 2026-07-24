@@ -10,7 +10,7 @@
 | `core` | `animus-core` | 2.3.0 | Production/Stable | Root version; CLI + memory operational |
 | `forge` | `animus-forge` | 1.9.0 | Production/Stable | Workflow orchestration; extracted kernel in 2026-03 |
 | `bootstrap` | `animus-bootstrap` | 0.8.0 | Alpha | Install daemon + dashboard |
-| `quorum` | `convergentAI` | 1.2.0 | Production/Stable | Rust core + Python bindings; name mismatch documented in ADR-001 |
+| `quorum` | `animus-quorum` | 1.2.0 | Production/Stable | Rust core + Python bindings; name mismatch documented in ADR-001 |
 | `types` | `animus-types` | 0.1.0 | Beta | Zero-prod-deps shared types; now includes 20 generated schema models |
 | `kernel` | `animus-kernel` | 0.1.0 | Alpha | Extracted from Forge 2026-03; 357 tests green |
 | `pwa` | `animus-pwa` (npm) | 0.1.0 | Alpha | TypeScript frontend; 25 Vitest tests green |
@@ -49,7 +49,7 @@ contracts ───► (none — pure JSON)
 | Risk | Impact | Mitigation |
 |---|---|---|
 | `kernel` at 0.1.0 vs `forge` at 1.9.0 | Medium | Kernel was extracted from Forge 1.9.0; they share code lineage. No breaking API changes since extraction. |
-| `quorum` PyPI name `convergentAI` | Low | Name mismatch is historical (Convergent project predecessor). Package imports as `convergent` not `animus_quorum`. Documented in ADR-001. |
+| `quorum` PyPI name `animus-quorum` | Low | Name mismatch is historical (Convergent project predecessor). Package imports as `convergent` not `animus_quorum`. Documented in ADR-001. |
 | `types` and `kernel` both at 0.1.0 | Low | Different packages, same version — not a conflict but confusing. |
 | No SemVer enforcement across packages | Medium | Each package versions independently. Breaking changes in `types` require coordinated bumps in `core`/`forge`/`bootstrap`. |
 

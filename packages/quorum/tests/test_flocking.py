@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from convergent.flocking import FlockingCoordinator, _extract_keywords
-from convergent.stigmergy import StigmergyField
+from animus_quorum.flocking import FlockingCoordinator, _extract_keywords
+from animus_quorum.stigmergy import StigmergyField
 
 
 def _field() -> StigmergyField:
@@ -290,12 +290,12 @@ class TestExtractKeywords:
 
 
 class TestPublicAPI:
-    def test_import_from_convergent(self) -> None:
-        import convergent
+    def test_import_from_animus_quorum(self) -> None:
+        import animus_quorum
 
-        assert hasattr(convergent, "FlockingCoordinator")
+        assert hasattr(animus_quorum, "FlockingCoordinator")
 
     def test_all_exports_listed(self) -> None:
-        import convergent
+        import animus_quorum
 
-        assert "FlockingCoordinator" in convergent.__all__
+        assert "FlockingCoordinator" in animus_quorum.__all__

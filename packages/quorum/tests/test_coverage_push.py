@@ -13,23 +13,23 @@ import importlib
 import subprocess
 from unittest.mock import MagicMock, patch
 
-from convergent.agent import (
+from animus_quorum.agent import (
     AgentAction,
     AgentLog,
     RoundLog,
     SimulatedAgent,
     SimulationResult,
 )
-from convergent.benchmark import BenchmarkMetrics, BenchmarkSuite
-from convergent.contract import ConflictClass, ResolutionPolicy
-from convergent.economics import (
+from animus_quorum.benchmark import BenchmarkMetrics, BenchmarkSuite
+from animus_quorum.contract import ConflictClass, ResolutionPolicy
+from animus_quorum.economics import (
     Budget,
     CoordinationCostReport,
     CostModel,
     EscalationAction,
     EscalationDecision,
 )
-from convergent.gates import (
+from animus_quorum.gates import (
     CommandGate,
     GateReport,
     GateRunResult,
@@ -37,13 +37,13 @@ from convergent.gates import (
     PytestGate,
     _extract_pytest_summary,
 )
-from convergent.governor import (
+from animus_quorum.governor import (
     AgentBranch,
     GovernorVerdict,
     MergeGovernor,
     VerdictKind,
 )
-from convergent.intent import (
+from animus_quorum.intent import (
     Adjustment,
     ConflictReport,
     Constraint,
@@ -54,18 +54,18 @@ from convergent.intent import (
     InterfaceSpec,
     ResolutionResult,
 )
-from convergent.matching import (
+from animus_quorum.matching import (
     normalize_constraint_target,
     normalize_name,
     normalize_type,
 )
-from convergent.replay import (
+from animus_quorum.replay import (
     OperationType,
     ReplayLog,
     _resolutions_equivalent,
 )
-from convergent.resolver import IntentResolver, PythonGraphBackend
-from convergent.versioning import VersionedGraph
+from animus_quorum.resolver import IntentResolver, PythonGraphBackend
+from animus_quorum.versioning import VersionedGraph
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -962,20 +962,20 @@ class TestInitImportGuard:
     """
 
     def test_import_guard_when_class_missing(self) -> None:
-        import convergent
-        import convergent.semantic as sem_mod
+        import animus_quorum
+        import animus_quorum.semantic as sem_mod
 
         # Remove AnthropicSemanticMatcher from the semantic module temporarily
         original_cls = getattr(sem_mod, "AnthropicSemanticMatcher", None)
         if original_cls is not None:
             delattr(sem_mod, "AnthropicSemanticMatcher")
         try:
-            importlib.reload(convergent)
-            assert "AnthropicSemanticMatcher" not in convergent.__all__
+            importlib.reload(animus_quorum)
+            assert "AnthropicSemanticMatcher" not in animus_quorum.__all__
         finally:
             if original_cls is not None:
                 sem_mod.AnthropicSemanticMatcher = original_cls
-            importlib.reload(convergent)
+            importlib.reload(animus_quorum)
 
 
 # ===================================================================
@@ -987,16 +987,16 @@ class TestMainModule:
     """Cover __main__.py CLI entry point."""
 
     def test_demo_subcommand_calls_run_demo(self) -> None:
-        from convergent.__main__ import main
+        from animus_quorum.__main__ import main
 
-        with patch("convergent.__main__._cmd_demo") as mock_cmd:
+        with patch("animus_quorum.__main__._cmd_demo") as mock_cmd:
             main(["demo"])
             mock_cmd.assert_called_once()
 
     def test_inspect_subcommand_missing_db(self) -> None:
         import contextlib
 
-        from convergent.__main__ import main
+        from animus_quorum.__main__ import main
 
         with contextlib.suppress(SystemExit):
             main(["inspect", "/nonexistent/db.sqlite"])
@@ -1004,7 +1004,7 @@ class TestMainModule:
     def test_no_subcommand_shows_help(self) -> None:
         import contextlib
 
-        from convergent.__main__ import main
+        from animus_quorum.__main__ import main
 
         with contextlib.suppress(SystemExit):
             main([])
@@ -1019,13 +1019,13 @@ class TestCodegenDemoBaselines:
     """Cover baseline code generation functions (lines 186, 238)."""
 
     def test_generate_api_code_baseline(self) -> None:
-        from convergent.codegen_demo import _generate_api_code_baseline
+        from animus_quorum.codegen_demo import _generate_api_code_baseline
 
         code = _generate_api_code_baseline()
         assert "UserEndpoints" in code
 
     def test_generate_storage_code_baseline(self) -> None:
-        from convergent.codegen_demo import _generate_storage_code_baseline
+        from animus_quorum.codegen_demo import _generate_storage_code_baseline
 
         code = _generate_storage_code_baseline()
         assert "UserRepository" in code
@@ -1035,9 +1035,9 @@ class TestCodegenDemoMain:
     """Cover main() and __name__ guard (lines 575-576, 580)."""
 
     def test_main_calls_run_demo(self) -> None:
-        from convergent.codegen_demo import main
+        from animus_quorum.codegen_demo import main
 
-        with patch("convergent.codegen_demo.run_demo") as mock_demo:
+        with patch("animus_quorum.codegen_demo.run_demo") as mock_demo:
             mock_demo.return_value = MagicMock(summary=MagicMock(return_value="test"))
             main()
             mock_demo.assert_called_once()
@@ -1072,7 +1072,7 @@ class TestResolverSemanticConflict:
     """Cover resolver.py:273 — semantic overlap where my stability >= theirs."""
 
     def test_semantic_conflict_when_my_stability_higher(self) -> None:
-        from convergent.semantic import SemanticMatch
+        from animus_quorum.semantic import SemanticMatch
 
         backend = PythonGraphBackend()
         resolver = IntentResolver(backend=backend, min_stability=0.0)
@@ -1172,7 +1172,7 @@ class TestResolverSemanticConstraintConflict:
     """Cover resolver.py:355-356 — semantic constraint conflict path."""
 
     def test_semantic_constraint_conflict_detected(self) -> None:
-        from convergent.semantic import ConstraintApplicability
+        from animus_quorum.semantic import ConstraintApplicability
 
         backend = PythonGraphBackend()
         resolver = IntentResolver(backend=backend, min_stability=0.0)
@@ -1234,7 +1234,7 @@ class TestHealthSameAgentSkip:
     """Cover health.py:163 — skip same-agent pairs in conflict counting."""
 
     def test_same_agent_intents_not_counted_as_conflict(self) -> None:
-        from convergent.health import HealthChecker
+        from animus_quorum.health import HealthChecker
 
         backend = PythonGraphBackend()
         # Same agent, overlapping specs → should NOT count as conflict
@@ -1265,7 +1265,7 @@ class TestHealthLowStabilityIssue:
     """Cover health.py:173 — low avg stability triggers issue."""
 
     def test_low_avg_stability_creates_issue(self) -> None:
-        from convergent.health import HealthChecker
+        from animus_quorum.health import HealthChecker
 
         backend = PythonGraphBackend()
         # Intent with conflicts → stability drops below 0.3 (base 0.3 - 0.15*2 = 0.0)
@@ -1291,8 +1291,8 @@ class TestHealthLowMarkerStrength:
     """Cover health.py:212 — low avg marker strength triggers issue."""
 
     def test_low_marker_strength_creates_issue(self) -> None:
-        from convergent.health import HealthChecker
-        from convergent.stigmergy import StigmergyField
+        from animus_quorum.health import HealthChecker
+        from animus_quorum.stigmergy import StigmergyField
 
         stig = StigmergyField(":memory:")
         stig.leave_marker("a1", "test", "target1", "context")
@@ -1311,8 +1311,8 @@ class TestHealthHighEscalationRate:
     """Cover health.py:295 — high escalation rate triggers issue."""
 
     def test_high_escalation_rate_creates_issue(self) -> None:
-        from convergent.health import HealthChecker
-        from convergent.score_store import ScoreStore
+        from animus_quorum.health import HealthChecker
+        from animus_quorum.score_store import ScoreStore
 
         store = ScoreStore(":memory:")
         # Insert 5+ decisions with >30% escalated
@@ -1381,8 +1381,8 @@ class TestScoringNaiveDatetime:
     """Cover scoring.py:180 — naive datetime gets UTC tzinfo."""
 
     def test_naive_timestamp_normalized_to_utc(self) -> None:
-        from convergent.score_store import ScoreStore
-        from convergent.scoring import PhiScorer
+        from animus_quorum.score_store import ScoreStore
+        from animus_quorum.scoring import PhiScorer
 
         store = ScoreStore(":memory:")
         scorer = PhiScorer(store=store)
@@ -1406,8 +1406,8 @@ class TestSignalBackendPathTraversal:
         import tempfile
 
         import pytest
-        from convergent.protocol import Signal
-        from convergent.signal_backend import FilesystemSignalBackend
+        from animus_quorum.protocol import Signal
+        from animus_quorum.signal_backend import FilesystemSignalBackend
 
         with tempfile.TemporaryDirectory() as tmpdir:
             from pathlib import Path
@@ -1428,7 +1428,7 @@ class TestSignalBackendPathTraversal:
             # Bypass sanitization to allow path traversal characters through
             with (
                 patch(
-                    "convergent.signal_backend._sanitize_filename_component",
+                    "animus_quorum.signal_backend._sanitize_filename_component",
                     side_effect=lambda x: x,
                 ),
                 pytest.raises(ValueError, match="outside signals directory"),
@@ -1440,7 +1440,7 @@ class TestStigmergyNaiveDatetime:
     """Cover stigmergy.py:213 — naive datetime gets UTC tzinfo in evaporation."""
 
     def test_naive_created_at_normalized(self) -> None:
-        from convergent.stigmergy import StigmergyField
+        from animus_quorum.stigmergy import StigmergyField
 
         stig = StigmergyField(":memory:")
         stig.leave_marker("a1", "test", "target", "context")
@@ -1474,7 +1474,7 @@ class TestTypedConstraintToBase:
     """Cover constraints.py:84 — TypedConstraint.to_base_constraint()."""
 
     def test_converts_to_base(self) -> None:
-        from convergent.constraints import TypedConstraint
+        from animus_quorum.constraints import TypedConstraint
 
         tc = TypedConstraint(
             target="User model",
@@ -1493,7 +1493,7 @@ class TestGateResultProperties:
     """Cover constraints.py:122,126 — GateResult property methods."""
 
     def test_total_checks_and_counts(self) -> None:
-        from convergent.constraints import (
+        from animus_quorum.constraints import (
             ConstraintCheckResult,
             ConstraintKind,
             GateResult,

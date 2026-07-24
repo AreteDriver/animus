@@ -7,7 +7,7 @@ import pytest
 
 pytest.importorskip("pytest_benchmark")
 
-from convergent import (
+from animus_quorum import (
     Intent,
     IntentResolver,
     InterfaceKind,
@@ -16,9 +16,9 @@ from convergent import (
     ScenarioType,
     run_benchmark,
 )
-from convergent.constraints import ConstraintEngine, ConstraintKind, TypedConstraint
-from convergent.score_store import ScoreStore
-from convergent.scoring import PhiScorer
+from animus_quorum.constraints import ConstraintEngine, ConstraintKind, TypedConstraint
+from animus_quorum.score_store import ScoreStore
+from animus_quorum.scoring import PhiScorer
 
 # ═══════════════════════════════════════════════════════════════════
 # Helpers

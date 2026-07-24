@@ -16,15 +16,15 @@ See ``docs/specs/quorum_v2_week3-4_active_inference_resolver.md``.
 
 from __future__ import annotations
 
-from convergent.coordination_config import CoordinationConfig
-from convergent.event_log import EventLog, EventType
-from convergent.intent import Intent
-from convergent.protocol import AgentIdentity, QuorumLevel, Vote, VoteChoice
-from convergent.resolver import PythonGraphBackend
-from convergent.score_store import ScoreStore
-from convergent.scoring import PhiScorer
-from convergent.stigmergy import StigmergyField
-from convergent.triumvirate import Triumvirate
+from animus_quorum.coordination_config import CoordinationConfig
+from animus_quorum.event_log import EventLog, EventType
+from animus_quorum.intent import Intent
+from animus_quorum.protocol import AgentIdentity, QuorumLevel, Vote, VoteChoice
+from animus_quorum.resolver import PythonGraphBackend
+from animus_quorum.score_store import ScoreStore
+from animus_quorum.scoring import PhiScorer
+from animus_quorum.stigmergy import StigmergyField
+from animus_quorum.triumvirate import Triumvirate
 
 
 def _agent(name: str = "agent-1") -> AgentIdentity:

@@ -198,8 +198,8 @@ class TestGetAreteHooks:
         with patch.dict(
             "sys.modules",
             {
-                "convergent.scoring": None,
-                "convergent.stigmergy": None,
+                "animus_quorum.scoring": None,
+                "animus_quorum.stigmergy": None,
                 "animus.memory": None,
             },
         ):
@@ -207,14 +207,14 @@ class TestGetAreteHooks:
         assert result is None
 
     def test_returns_hooks_with_phi_scorer(self):
-        fake_scoring = types.ModuleType("convergent.scoring")
+        fake_scoring = types.ModuleType("animus_quorum.scoring")
         fake_scoring.PhiScorer = MagicMock
         fake_scoring.ScoreStore = MagicMock
         with patch.dict(
             "sys.modules",
             {
-                "convergent.scoring": fake_scoring,
-                "convergent.stigmergy": None,
+                "animus_quorum.scoring": fake_scoring,
+                "animus_quorum.stigmergy": None,
                 "animus.memory": None,
             },
         ):
@@ -225,18 +225,18 @@ class TestGetAreteHooks:
         assert result._memory_layer is None
 
     def test_returns_hooks_with_all_deps(self):
-        fake_scoring = types.ModuleType("convergent.scoring")
+        fake_scoring = types.ModuleType("animus_quorum.scoring")
         fake_scoring.PhiScorer = MagicMock
         fake_scoring.ScoreStore = MagicMock
-        fake_stigmergy = types.ModuleType("convergent.stigmergy")
+        fake_stigmergy = types.ModuleType("animus_quorum.stigmergy")
         fake_stigmergy.StigmergyField = MagicMock
         fake_memory = types.ModuleType("animus.memory")
         fake_memory.MemoryLayer = MagicMock
         with patch.dict(
             "sys.modules",
             {
-                "convergent.scoring": fake_scoring,
-                "convergent.stigmergy": fake_stigmergy,
+                "animus_quorum.scoring": fake_scoring,
+                "animus_quorum.stigmergy": fake_stigmergy,
                 "animus.memory": fake_memory,
             },
         ):

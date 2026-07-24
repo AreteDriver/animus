@@ -17,15 +17,15 @@ These tests prove:
 import uuid
 
 import pytest
-from convergent.constraints import (
+from animus_quorum.constraints import (
     ConstraintEngine,
     ConstraintKind,
     TypedConstraint,
 )
-from convergent.contract import (
+from animus_quorum.contract import (
     ContractViolation,
 )
-from convergent.economics import (
+from animus_quorum.economics import (
     Budget,
     CoordinationCostReport,
     CostModel,
@@ -33,12 +33,12 @@ from convergent.economics import (
     EscalationDecision,
     EscalationPolicy,
 )
-from convergent.governor import (
+from animus_quorum.governor import (
     AgentBranch,
     MergeGovernor,
     VerdictKind,
 )
-from convergent.intent import (
+from animus_quorum.intent import (
     Constraint,
     ConstraintSeverity,
     Evidence,
@@ -46,8 +46,8 @@ from convergent.intent import (
     InterfaceKind,
     InterfaceSpec,
 )
-from convergent.resolver import IntentResolver
-from convergent.versioning import VersionedGraph
+from animus_quorum.resolver import IntentResolver
+from animus_quorum.versioning import VersionedGraph
 
 # ---------------------------------------------------------------------------
 # Helpers

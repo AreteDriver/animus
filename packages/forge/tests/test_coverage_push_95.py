@@ -7451,7 +7451,7 @@ class TestCoordinationCmdCoverage:
     def test_cycles_no_convergent(self, capsys):
         import typer
 
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", False):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", False):
             from animus_forge.cli.commands.coordination import cycles
 
             with pytest.raises(typer.Exit):
@@ -7460,7 +7460,7 @@ class TestCoordinationCmdCoverage:
     def test_events_no_convergent(self, capsys):
         import typer
 
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", False):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", False):
             from animus_forge.cli.commands.coordination import events
 
             with pytest.raises(typer.Exit):
@@ -7469,7 +7469,7 @@ class TestCoordinationCmdCoverage:
     def test_cycles_no_db(self, tmp_path):
         import typer
 
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             with patch(
                 "animus_forge.cli.commands.coordination._default_db_path",
                 return_value=str(tmp_path / "nonexistent.db"),
@@ -7482,7 +7482,7 @@ class TestCoordinationCmdCoverage:
     def test_events_no_db(self, tmp_path):
         import typer
 
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             with patch(
                 "animus_forge.cli.commands.coordination._default_events_db_path",
                 return_value=str(tmp_path / "nonexistent.db"),
@@ -8088,7 +8088,7 @@ class TestCoordinationCLIExtended:
         """Lines 43-44: health with no convergent."""
         import typer
 
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", False):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", False):
             from animus_forge.cli.commands.coordination import health
 
             with pytest.raises(typer.Exit):
@@ -8098,7 +8098,7 @@ class TestCoordinationCLIExtended:
         """Lines 49-51: health with missing DB."""
         import typer
 
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             with patch(
                 "animus_forge.cli.commands.coordination._default_db_path",
                 return_value=str(tmp_path / "nonexistent.db"),
@@ -8112,7 +8112,7 @@ class TestCoordinationCLIExtended:
         """Lines 67-69: health with JSON output."""
         db_file = tmp_path / "coord.db"
         db_file.touch()
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             mock_bridge = MagicMock()
             with patch(
                 "animus_forge.agents.convergence.create_bridge",
@@ -8130,7 +8130,7 @@ class TestCoordinationCLIExtended:
         """Lines 72-80: health dataclass reconstruction."""
         db_file = tmp_path / "coord.db"
         db_file.touch()
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             mock_bridge = MagicMock()
             with patch(
                 "animus_forge.agents.convergence.create_bridge",
@@ -8151,7 +8151,7 @@ class TestCoordinationCLIExtended:
 
         db_file = tmp_path / "coord.db"
         db_file.touch()
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             with patch(
                 "animus_forge.agents.convergence.create_bridge",
                 side_effect=RuntimeError("bridge creation failed"),
@@ -8165,7 +8165,7 @@ class TestCoordinationCLIExtended:
         """Lines 111-118: cycles with no cycles found."""
         db_file = tmp_path / "coord.db"
         db_file.touch()
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             with patch("convergent.SQLiteBackend"):
                 with patch("convergent.IntentResolver"):
                     with patch(
@@ -8180,7 +8180,7 @@ class TestCoordinationCLIExtended:
         """Lines 120-122: cycles with cycles found."""
         db_file = tmp_path / "coord.db"
         db_file.touch()
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             with patch("convergent.SQLiteBackend"):
                 with patch("convergent.IntentResolver"):
                     with patch(
@@ -8197,7 +8197,7 @@ class TestCoordinationCLIExtended:
 
         db_file = tmp_path / "coord.db"
         db_file.touch()
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             with patch("convergent.SQLiteBackend", side_effect=RuntimeError("broken")):
                 from animus_forge.cli.commands.coordination import cycles
 
@@ -8210,7 +8210,7 @@ class TestCoordinationCLIExtended:
 
         db_file = tmp_path / "events.db"
         db_file.touch()
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             with patch("convergent.EventType", side_effect=ValueError("bad")):
                 from animus_forge.cli.commands.coordination import events
 
@@ -8221,7 +8221,7 @@ class TestCoordinationCLIExtended:
         """Lines 179-181: events with no results."""
         db_file = tmp_path / "events.db"
         db_file.touch()
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             mock_log = MagicMock()
             mock_log.query.return_value = []
             with patch("convergent.EventLog", return_value=mock_log):
@@ -8233,7 +8233,7 @@ class TestCoordinationCLIExtended:
         """Line 183: events with results."""
         db_file = tmp_path / "events.db"
         db_file.touch()
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             mock_log = MagicMock()
             mock_log.query.return_value = [{"type": "test", "agent": "a1"}]
             with patch("convergent.EventLog", return_value=mock_log):
@@ -8248,7 +8248,7 @@ class TestCoordinationCLIExtended:
 
         db_file = tmp_path / "events.db"
         db_file.touch()
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             with patch("convergent.EventLog", side_effect=RuntimeError("broken")):
                 from animus_forge.cli.commands.coordination import events
 

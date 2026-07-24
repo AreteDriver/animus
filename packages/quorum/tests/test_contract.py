@@ -18,7 +18,7 @@ a second client can be built from the contract spec + these tests alone.
 import uuid
 
 import pytest
-from convergent.contract import (
+from animus_quorum.contract import (
     DEFAULT_CONTRACT,
     DEFAULT_STABILITY_WEIGHTS,
     ConflictClass,
@@ -32,7 +32,7 @@ from convergent.contract import (
     content_hash_intents,
     validate_publish,
 )
-from convergent.intent import (
+from animus_quorum.intent import (
     Constraint,
     ConstraintSeverity,
     Evidence,
@@ -41,9 +41,9 @@ from convergent.intent import (
     InterfaceKind,
     InterfaceSpec,
 )
-from convergent.replay import ReplayLog
-from convergent.resolver import IntentResolver
-from convergent.versioning import VersionedGraph
+from animus_quorum.replay import ReplayLog
+from animus_quorum.resolver import IntentResolver
+from animus_quorum.versioning import VersionedGraph
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -823,8 +823,8 @@ class TestDeterministicReplay:
 
     def test_replay_three_agents_deterministic(self):
         """Full 3-agent scenario: two independent replays produce same state."""
-        from convergent.agent import SimulationRunner
-        from convergent.demo import build_agent_a, build_agent_b, build_agent_c
+        from animus_quorum.agent import SimulationRunner
+        from animus_quorum.demo import build_agent_a, build_agent_b, build_agent_c
 
         # Run 1: record all publishes
         resolver1 = IntentResolver(min_stability=0.0)

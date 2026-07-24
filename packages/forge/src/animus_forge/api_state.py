@@ -83,8 +83,8 @@ subagent_manager: SubAgentManager | None = None
 task_runner: AgentTaskRunner | None = None
 agent_configs: dict | None = None  # dict[str, AgentConfig] from config_loader
 
-coordination_event_log = None  # convergent.EventLog or None
-coordination_bridge = None  # convergent.GorgonBridge or None
+coordination_event_log = None  # animus_quorum.EventLog or None
+coordination_bridge = None  # animus_quorum.GorgonBridge or None
 consciousness_bridge = None  # ConsciousnessBridge or None
 
 # ---------------------------------------------------------------------------

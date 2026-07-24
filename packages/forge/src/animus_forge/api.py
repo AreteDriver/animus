@@ -174,7 +174,7 @@ async def lifespan(app: FastAPI):
             # Try to create a VersionedGraph for Quorum integration
             _cb_graph = None
             try:
-                from convergent import VersionedGraph
+                from animus_quorum import VersionedGraph
 
                 _cb_graph = VersionedGraph()
             except Exception:

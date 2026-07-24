@@ -13,9 +13,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from convergent.agent import SimulationRunner
-from convergent.demo import build_agent_a, build_agent_b, build_agent_c
-from convergent.intent import (
+from animus_quorum.agent import SimulationRunner
+from animus_quorum.demo import build_agent_a, build_agent_b, build_agent_c
+from animus_quorum.intent import (
     Adjustment,
     ConflictReport,
     Constraint,
@@ -25,8 +25,8 @@ from convergent.intent import (
     InterfaceSpec,
     ResolutionResult,
 )
-from convergent.resolver import IntentResolver
-from convergent.semantic import (
+from animus_quorum.resolver import IntentResolver
+from animus_quorum.semantic import (
     ConstraintApplicability,
     SemanticMatch,
     SemanticMatcher,

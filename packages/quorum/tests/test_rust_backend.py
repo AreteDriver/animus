@@ -10,15 +10,15 @@ import pytest
 
 pytest.importorskip("convergent._core")
 
-from convergent.intent import (  # noqa: E402
+from animus_quorum.intent import (  # noqa: E402
     Constraint,
     Evidence,
     Intent,
     InterfaceKind,
     InterfaceSpec,
 )
-from convergent.resolver import IntentResolver  # noqa: E402
-from convergent.rust_backend import (  # noqa: E402
+from animus_quorum.resolver import IntentResolver  # noqa: E402
+from animus_quorum.rust_backend import (  # noqa: E402
     HAS_RUST,
     RustGraphBackend,
     _rust_dict_to_spec,

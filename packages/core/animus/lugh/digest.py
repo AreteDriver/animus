@@ -48,7 +48,6 @@ PORTFOLIO_PROJECTS: set[str] = {
     "lugh",
     "ogma",
     "quorum",
-    "convergent",
     "monolith",
     "witness",
     "gatekeeper",

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from convergent.health import (
+from animus_quorum.health import (
     CoordinationHealth,
     HealthChecker,
     IntentGraphHealth,
@@ -11,10 +11,10 @@ from convergent.health import (
     VotingHealth,
     health_report,
 )
-from convergent.intent import Evidence, EvidenceKind, Intent, InterfaceKind, InterfaceSpec
-from convergent.resolver import IntentResolver, PythonGraphBackend
-from convergent.score_store import ScoreStore
-from convergent.stigmergy import StigmergyField
+from animus_quorum.intent import Evidence, EvidenceKind, Intent, InterfaceKind, InterfaceSpec
+from animus_quorum.resolver import IntentResolver, PythonGraphBackend
+from animus_quorum.score_store import ScoreStore
+from animus_quorum.stigmergy import StigmergyField
 
 
 class TestHealthCheckerEmpty:

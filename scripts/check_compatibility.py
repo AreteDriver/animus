@@ -28,7 +28,7 @@ PACKAGE_DIRS: dict[str, str] = {
     "animus-bootstrap": "bootstrap",
     "animus-contracts": "contracts",
     "animus-types": "types",
-    "convergentai": "quorum",
+    "animus-quorum": "quorum",
 }
 
 # Compatibility promise: consumer → [(required_package, min_version, max_version)]
@@ -38,7 +38,7 @@ COMPAT_PROMISE: dict[str, list[tuple[str, str, str]]] = {
     ],
     "animus-forge": [
         ("animus-types", "0.1.0", "1.0.0"),
-        ("convergentai", "1.1.0", "2.0.0"),
+        ("animus-quorum", "1.1.0", "2.0.0"),
     ],
     "animus-bootstrap": [
         # Bootstrap depends on core and types at runtime but they are

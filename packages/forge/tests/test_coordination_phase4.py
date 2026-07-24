@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from animus_forge.agents.convergence import (
-    HAS_CONVERGENT,
+    HAS_QUORUM,
     check_dependency_cycles,
     create_event_log,
     get_coordination_health,
@@ -23,32 +23,32 @@ from animus_forge.agents.convergence import (
 class TestCreateEventLog:
     """Test the create_event_log factory function."""
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
-    def test_returns_event_log_when_convergent_available(self, tmp_path):
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
+    def test_returns_event_log_when_quorum_available(self, tmp_path):
         db_path = str(tmp_path / "test.events.db")
         event_log = create_event_log(db_path=db_path)
         assert event_log is not None
         event_log.close()
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_in_memory_mode(self):
         event_log = create_event_log(db_path=":memory:")
         assert event_log is not None
         event_log.close()
 
-    def test_returns_none_when_convergent_unavailable(self, monkeypatch):
+    def test_returns_none_when_quorum_unavailable(self, monkeypatch):
         import animus_forge.agents.convergence as conv_mod
 
-        monkeypatch.setattr(conv_mod, "HAS_CONVERGENT", False)
+        monkeypatch.setattr(conv_mod, "HAS_QUORUM", False)
         assert create_event_log() is None
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_returns_none_on_exception(self):
-        with patch("convergent.EventLog", side_effect=RuntimeError("boom")):
+        with patch("animus_quorum.EventLog", side_effect=RuntimeError("boom")):
             result = create_event_log(db_path=":memory:")
             assert result is None
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_default_path_creates_directory(self, tmp_path, monkeypatch):
         monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
         event_log = create_event_log()
@@ -68,15 +68,15 @@ class TestGetCoordinationHealth:
     def test_returns_empty_when_bridge_is_none(self):
         assert get_coordination_health(None) == {}
 
-    def test_returns_empty_when_convergent_unavailable(self, monkeypatch):
+    def test_returns_empty_when_quorum_unavailable(self, monkeypatch):
         import animus_forge.agents.convergence as conv_mod
 
-        monkeypatch.setattr(conv_mod, "HAS_CONVERGENT", False)
+        monkeypatch.setattr(conv_mod, "HAS_QUORUM", False)
         assert get_coordination_health(MagicMock()) == {}
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_returns_health_dict(self):
-        from convergent import CoordinationConfig, GorgonBridge
+        from animus_quorum import CoordinationConfig, GorgonBridge
 
         bridge = GorgonBridge(CoordinationConfig(db_path=":memory:"))
         try:
@@ -88,13 +88,13 @@ class TestGetCoordinationHealth:
         finally:
             bridge.close()
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_handles_exception_gracefully(self):
         bridge = MagicMock()
         # HealthChecker.from_bridge will try to access attrs, mock will provide them
         # but we'll break it at the check() level
         with patch(
-            "convergent.HealthChecker.from_bridge",
+            "animus_quorum.HealthChecker.from_bridge",
             side_effect=RuntimeError("broken"),
         ):
             result = get_coordination_health(bridge)
@@ -112,15 +112,15 @@ class TestCheckDependencyCycles:
     def test_returns_empty_when_resolver_is_none(self):
         assert check_dependency_cycles(None) == []
 
-    def test_returns_empty_when_convergent_unavailable(self, monkeypatch):
+    def test_returns_empty_when_quorum_unavailable(self, monkeypatch):
         import animus_forge.agents.convergence as conv_mod
 
-        monkeypatch.setattr(conv_mod, "HAS_CONVERGENT", False)
+        monkeypatch.setattr(conv_mod, "HAS_QUORUM", False)
         assert check_dependency_cycles(MagicMock()) == []
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_no_cycles_returns_empty(self):
-        from convergent import (
+        from animus_quorum import (
             Evidence,
             EvidenceKind,
             Intent,
@@ -142,9 +142,9 @@ class TestCheckDependencyCycles:
         resolver = IntentResolver(backend=backend)
         assert check_dependency_cycles(resolver) == []
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_detects_cycles(self):
-        from convergent import (
+        from animus_quorum import (
             Evidence,
             EvidenceKind,
             Intent,
@@ -199,15 +199,15 @@ class TestGetExecutionOrder:
     def test_returns_empty_when_resolver_is_none(self):
         assert get_execution_order(None) == []
 
-    def test_returns_empty_when_convergent_unavailable(self, monkeypatch):
+    def test_returns_empty_when_quorum_unavailable(self, monkeypatch):
         import animus_forge.agents.convergence as conv_mod
 
-        monkeypatch.setattr(conv_mod, "HAS_CONVERGENT", False)
+        monkeypatch.setattr(conv_mod, "HAS_QUORUM", False)
         assert get_execution_order(MagicMock()) == []
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_returns_ordered_list(self):
-        from convergent import (
+        from animus_quorum import (
             Evidence,
             EvidenceKind,
             Intent,
@@ -243,9 +243,9 @@ class TestGetExecutionOrder:
         order = get_execution_order(resolver)
         assert order.index("db") < order.index("api")
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_returns_empty_on_cycle(self):
-        from convergent import (
+        from animus_quorum import (
             Evidence,
             EvidenceKind,
             Intent,
@@ -296,14 +296,14 @@ class TestGetExecutionOrder:
 class TestCoordinationAPI:
     """Test coordination API endpoints."""
 
-    def test_health_no_convergent(self, monkeypatch):
+    def test_health_no_quorum(self, monkeypatch):
         from animus_forge.api_routes.coordination import coordination_health
 
         monkeypatch.setattr(
             "animus_forge.api_routes.coordination.state",
             MagicMock(coordination_bridge=None),
         )
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", False):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", False):
             result = coordination_health()
         assert result["available"] is False
 
@@ -314,15 +314,15 @@ class TestCoordinationAPI:
         mock_state.coordination_bridge = None
         monkeypatch.setattr("animus_forge.api_routes.coordination.state", mock_state)
 
-        if not HAS_CONVERGENT:
-            pytest.skip("convergent not installed")
+        if not HAS_QUORUM:
+            pytest.skip("animus_quorum not installed")
 
         result = coordination_health()
         assert "no active coordination bridge" in result.get("reason", "")
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_health_with_bridge(self, monkeypatch):
-        from convergent import CoordinationConfig, GorgonBridge
+        from animus_quorum import CoordinationConfig, GorgonBridge
 
         from animus_forge.api_routes.coordination import coordination_health
 
@@ -338,20 +338,20 @@ class TestCoordinationAPI:
         finally:
             bridge.close()
 
-    def test_events_no_convergent(self, monkeypatch):
+    def test_events_no_quorum(self, monkeypatch):
         from animus_forge.api_routes.coordination import coordination_events
 
         monkeypatch.setattr(
             "animus_forge.api_routes.coordination.state",
             MagicMock(coordination_event_log=None),
         )
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", False):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", False):
             result = coordination_events()
         assert result["available"] is False
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_events_with_log(self, monkeypatch):
-        from convergent import EventLog, EventType
+        from animus_quorum import EventLog, EventType
 
         from animus_forge.api_routes.coordination import coordination_events
 
@@ -368,9 +368,9 @@ class TestCoordinationAPI:
         assert result["events"][0]["agent_id"] == "a1"
         log.close()
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_events_invalid_type(self, monkeypatch):
-        from convergent import EventLog
+        from animus_quorum import EventLog
 
         from animus_forge.api_routes.coordination import coordination_events
 
@@ -387,8 +387,8 @@ class TestCoordinationAPI:
     def test_events_no_log(self, monkeypatch):
         from animus_forge.api_routes.coordination import coordination_events
 
-        if not HAS_CONVERGENT:
-            pytest.skip("convergent not installed")
+        if not HAS_QUORUM:
+            pytest.skip("animus_quorum not installed")
 
         mock_state = MagicMock()
         mock_state.coordination_event_log = None
@@ -407,20 +407,20 @@ class TestCoordinationAPI:
 class TestCoordinationCLI:
     """Test coordination CLI commands."""
 
-    def test_health_no_convergent(self, monkeypatch):
+    def test_health_no_quorum(self, monkeypatch):
         from typer.testing import CliRunner
 
         from animus_forge.cli.commands.coordination import coordination_app
 
-        monkeypatch.setattr("animus_forge.agents.convergence.HAS_CONVERGENT", False)
+        monkeypatch.setattr("animus_forge.agents.convergence.HAS_QUORUM", False)
         runner = CliRunner()
         result = runner.invoke(coordination_app, ["health"])
         assert result.exit_code == 1
         assert "not installed" in result.output
 
     def test_health_no_db_file(self, tmp_path):
-        if not HAS_CONVERGENT:
-            pytest.skip("convergent not installed")
+        if not HAS_QUORUM:
+            pytest.skip("animus_quorum not installed")
 
         from typer.testing import CliRunner
 
@@ -433,31 +433,31 @@ class TestCoordinationCLI:
         assert result.exit_code == 1
         assert "No coordination database" in result.output
 
-    def test_events_no_convergent(self, monkeypatch):
+    def test_events_no_quorum(self, monkeypatch):
         from typer.testing import CliRunner
 
         from animus_forge.cli.commands.coordination import coordination_app
 
-        monkeypatch.setattr("animus_forge.agents.convergence.HAS_CONVERGENT", False)
+        monkeypatch.setattr("animus_forge.agents.convergence.HAS_QUORUM", False)
         runner = CliRunner()
         result = runner.invoke(coordination_app, ["events"])
         assert result.exit_code == 1
         assert "not installed" in result.output
 
-    def test_cycles_no_convergent(self, monkeypatch):
+    def test_cycles_no_quorum(self, monkeypatch):
         from typer.testing import CliRunner
 
         from animus_forge.cli.commands.coordination import coordination_app
 
-        monkeypatch.setattr("animus_forge.agents.convergence.HAS_CONVERGENT", False)
+        monkeypatch.setattr("animus_forge.agents.convergence.HAS_QUORUM", False)
         runner = CliRunner()
         result = runner.invoke(coordination_app, ["cycles"])
         assert result.exit_code == 1
         assert "not installed" in result.output
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_events_with_db(self, tmp_path):
-        from convergent import EventLog, EventType
+        from animus_quorum import EventLog, EventType
         from typer.testing import CliRunner
 
         from animus_forge.cli.commands.coordination import coordination_app
@@ -497,7 +497,7 @@ class TestSupervisorEventRecording:
         sup = SupervisorAgent(provider=provider)
         assert sup._event_log is None
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="animus_quorum not installed")
     def test_coherence_events_recorded(self):
         from animus_forge.agents.supervisor import SupervisorAgent
 

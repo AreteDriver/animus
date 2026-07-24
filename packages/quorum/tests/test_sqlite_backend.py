@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from convergent.intent import (
+from animus_quorum.intent import (
     Constraint,
     ConstraintSeverity,
     Evidence,
@@ -12,9 +12,9 @@ from convergent.intent import (
     InterfaceKind,
     InterfaceSpec,
 )
-from convergent.resolver import IntentResolver, PythonGraphBackend
-from convergent.sqlite_backend import SQLiteBackend
-from convergent.versioning import VersionedGraph
+from animus_quorum.resolver import IntentResolver, PythonGraphBackend
+from animus_quorum.sqlite_backend import SQLiteBackend
+from animus_quorum.versioning import VersionedGraph
 
 # ---------------------------------------------------------------------------
 # Fixtures

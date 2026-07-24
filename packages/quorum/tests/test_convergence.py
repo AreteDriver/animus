@@ -10,8 +10,8 @@ These tests verify that:
 """
 
 import pytest
-from convergent.agent import AgentAction, SimulatedAgent, SimulationRunner
-from convergent.intent import (
+from animus_quorum.agent import AgentAction, SimulatedAgent, SimulationRunner
+from animus_quorum.intent import (
     DEFAULT_STABILITY_SCORER,
     Constraint,
     DefaultStabilityScorer,
@@ -21,13 +21,13 @@ from convergent.intent import (
     InterfaceSpec,
     StabilityScorer,
 )
-from convergent.matching import (
+from animus_quorum.matching import (
     names_overlap,
     normalize_constraint_target,
     normalize_name,
     signatures_compatible,
 )
-from convergent.resolver import IntentResolver
+from animus_quorum.resolver import IntentResolver
 
 
 @pytest.fixture
@@ -373,7 +373,7 @@ class TestSimulatedConvergence:
         resolver = IntentResolver(min_stability=0.0)
 
         # Import demo agents
-        from convergent.demo import build_agent_a, build_agent_b, build_agent_c
+        from animus_quorum.demo import build_agent_a, build_agent_b, build_agent_c
 
         agent_a = build_agent_a(resolver)
         agent_b = build_agent_b(resolver)

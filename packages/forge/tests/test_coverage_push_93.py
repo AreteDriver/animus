@@ -918,7 +918,7 @@ class TestCoordinationRoutesCoverage:
 
         health_data = {"grade": "A", "components": {"intent_graph": "healthy"}}
         with patch(
-            "animus_forge.agents.convergence.HAS_CONVERGENT",
+            "animus_forge.agents.convergence.HAS_QUORUM",
             True,
         ):
             with patch(
@@ -934,13 +934,13 @@ class TestCoordinationRoutesCoverage:
     def test_health_no_bridge(self, client):
         client._api_state.coordination_bridge = None
 
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             resp = client.get("/v1/coordination/health")
         assert resp.status_code == 200
         assert resp.json()["reason"] == "no active coordination bridge"
 
     def test_health_convergent_unavailable(self, client):
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", False):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", False):
             resp = client.get("/v1/coordination/health")
         assert resp.status_code == 200
         assert resp.json()["available"] is False
@@ -948,7 +948,7 @@ class TestCoordinationRoutesCoverage:
     def test_health_exception(self, client):
         client._api_state.coordination_bridge = MagicMock()
 
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             with patch(
                 "animus_forge.agents.convergence.get_coordination_health",
                 side_effect=RuntimeError("boom"),
@@ -960,7 +960,7 @@ class TestCoordinationRoutesCoverage:
     def test_health_empty_report(self, client):
         client._api_state.coordination_bridge = MagicMock()
 
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             with patch(
                 "animus_forge.agents.convergence.get_coordination_health",
                 return_value=None,
@@ -984,7 +984,7 @@ class TestCoordinationRoutesCoverage:
 
         fake = self._fake_convergent()
         with patch.dict(sys.modules, {"convergent": fake}):
-            with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+            with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
                 with patch(
                     "animus_forge.agents.convergence.check_dependency_cycles",
                     return_value=[["a", "b", "a"]],
@@ -995,7 +995,7 @@ class TestCoordinationRoutesCoverage:
         assert data["cycle_count"] == 1
 
     def test_cycles_no_convergent(self, client):
-        with patch("animus_forge.agents.convergence.HAS_CONVERGENT", False):
+        with patch("animus_forge.agents.convergence.HAS_QUORUM", False):
             resp = client.get("/v1/coordination/cycles")
         assert resp.status_code == 200
         assert resp.json()["available"] is False
@@ -1006,7 +1006,7 @@ class TestCoordinationRoutesCoverage:
         fake = self._fake_convergent()
         fake.IntentResolver = MagicMock(side_effect=RuntimeError("fail"))
         with patch.dict(sys.modules, {"convergent": fake}):
-            with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+            with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
                 resp = client.get("/v1/coordination/cycles")
         assert resp.status_code == 200
         assert resp.json()["error"] == "internal error"
@@ -1028,7 +1028,7 @@ class TestCoordinationRoutesCoverage:
 
         fake = self._fake_convergent()
         with patch.dict(sys.modules, {"convergent": fake}):
-            with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+            with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
                 resp = client.get(
                     "/v1/coordination/events?event_type=intent_published&agent=agent-1&limit=10"
                 )
@@ -1042,7 +1042,7 @@ class TestCoordinationRoutesCoverage:
         client._api_state.coordination_event_log = None
         fake = self._fake_convergent()
         with patch.dict(sys.modules, {"convergent": fake}):
-            with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+            with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
                 resp = client.get("/v1/coordination/events")
         assert resp.status_code == 200
         assert resp.json()["reason"] == "no active event log"
@@ -1056,7 +1056,7 @@ class TestCoordinationRoutesCoverage:
         fake = self._fake_convergent()
         fake.EventType = MagicMock(side_effect=ValueError("bad"))
         with patch.dict(sys.modules, {"convergent": fake}):
-            with patch("animus_forge.agents.convergence.HAS_CONVERGENT", True):
+            with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
                 resp = client.get("/v1/coordination/events?event_type=bogus")
         assert resp.status_code == 200
         assert "Unknown event type" in resp.json()["error"]

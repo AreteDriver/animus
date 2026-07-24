@@ -158,11 +158,11 @@ def run_consensus(
     to accept proposed improvements.
     """
     try:
-        from convergent.coordination_config import CoordinationConfig
-        from convergent.protocol import AgentIdentity, Vote, VoteChoice
-        from convergent.score_store import ScoreStore
-        from convergent.scoring import PhiScorer
-        from convergent.triumvirate import Triumvirate
+        from animus_quorum.coordination_config import CoordinationConfig
+        from animus_quorum.protocol import AgentIdentity, Vote, VoteChoice
+        from animus_quorum.score_store import ScoreStore
+        from animus_quorum.scoring import PhiScorer
+        from animus_quorum.triumvirate import Triumvirate
 
         # In-memory score store for bootstrap (no persistence needed yet)
         store = ScoreStore(":memory:")
@@ -220,7 +220,7 @@ def run_consensus(
         )
 
     except ImportError:
-        logger.warning("Quorum (convergent) not installed, using local consensus fallback")
+        logger.warning("Quorum (animus_quorum) not installed, using local consensus fallback")
         return _local_consensus_fallback(
             agent_a_vote,
             agent_a_confidence,

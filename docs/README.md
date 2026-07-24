@@ -41,7 +41,7 @@ Each package has its own documentation lane:
 - [Core](packages/core/README.md) — Personal AI exocortex (`import animus`)
 - [Forge](packages/forge/README.md) — Multi-agent orchestration (`import animus_forge`)
 - [Bootstrap](packages/bootstrap/README.md) — System daemon and onboarding (`import animus_bootstrap`)
-- [Quorum](packages/quorum/README.md) — Agent coordination protocol (`import convergent`)
+- [Quorum](packages/quorum/README.md) — Agent coordination protocol (`import animus_quorum`)
 - [Kernel](packages/kernel/README.md) — Autonomous builder engine (standalone)
 - [Types](packages/types/README.md) — Shared schema types
 - [PWA](packages/pwa/README.md) — Progressive web app interface

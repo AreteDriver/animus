@@ -6,9 +6,9 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from convergent.protocol import Signal
-from convergent.signal_backend import SignalBackend
-from convergent.sqlite_signal_backend import SQLiteSignalBackend
+from animus_quorum.protocol import Signal
+from animus_quorum.signal_backend import SignalBackend
+from animus_quorum.sqlite_signal_backend import SQLiteSignalBackend
 
 
 def _signal(
@@ -309,12 +309,12 @@ class TestProperties:
 
 
 class TestPublicAPI:
-    def test_import_from_convergent(self) -> None:
-        import convergent
+    def test_import_from_animus_quorum(self) -> None:
+        import animus_quorum
 
-        assert hasattr(convergent, "SQLiteSignalBackend")
+        assert hasattr(animus_quorum, "SQLiteSignalBackend")
 
     def test_all_exports_listed(self) -> None:
-        import convergent
+        import animus_quorum
 
-        assert "SQLiteSignalBackend" in convergent.__all__
+        assert "SQLiteSignalBackend" in animus_quorum.__all__

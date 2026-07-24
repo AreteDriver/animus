@@ -7,7 +7,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from convergent.event_log import EventLog, EventType
+from animus_quorum.event_log import EventLog, EventType
 
 
 def _iso(year: int, month: int, day: int) -> str:

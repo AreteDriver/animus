@@ -9,8 +9,8 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from convergent.event_log import EventLog, EventType
-from convergent.protocol import Signal
+from animus_quorum.event_log import EventLog, EventType
+from animus_quorum.protocol import Signal
 
 
 class _NoopBus:

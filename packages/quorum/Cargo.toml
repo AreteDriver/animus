@@ -1,11 +1,11 @@
 [package]
-name = "convergent-core"
+name = "animus-quorum-core"
 version = "0.1.0"
 edition = "2021"
-description = "High-performance core for Convergent intent graph"
+description = "High-performance core for Animus Quorum intent graph"
 
 [lib]
-name = "convergent_core"
+name = "animus_quorum_core"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]

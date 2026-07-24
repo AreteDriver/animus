@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from animus_forge.agents.convergence import (
-    HAS_CONVERGENT,
+    HAS_QUORUM,
     ConvergenceResult,
     DelegationConvergenceChecker,
     create_bridge,
@@ -44,17 +44,17 @@ class TestDelegationConvergenceChecker:
         assert not result.has_conflicts
         assert result.dropped_agents == set()
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="convergent not installed")
     def test_enabled_with_convergent(self):
-        from convergent import IntentResolver
+        from animus_quorum import IntentResolver
 
         resolver = IntentResolver(min_stability=0.0)
         checker = DelegationConvergenceChecker(resolver=resolver)
         assert checker.enabled
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="convergent not installed")
     def test_independent_agents_no_conflicts(self):
-        from convergent import IntentResolver
+        from animus_quorum import IntentResolver
 
         resolver = IntentResolver(min_stability=0.0)
         checker = DelegationConvergenceChecker(resolver=resolver)
@@ -68,9 +68,9 @@ class TestDelegationConvergenceChecker:
         # Independent roles with different tags should not conflict
         assert result.dropped_agents == set()
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="convergent not installed")
     def test_overlapping_delegations_detected(self):
-        from convergent import IntentResolver
+        from animus_quorum import IntentResolver
 
         resolver = IntentResolver(min_stability=0.0)
         checker = DelegationConvergenceChecker(resolver=resolver)
@@ -84,7 +84,7 @@ class TestDelegationConvergenceChecker:
         # Overlapping tags should produce adjustments or conflicts
         assert len(result.adjustments) > 0 or len(result.conflicts) > 0
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="convergent not installed")
     def test_delegation_to_intent_structure(self):
         checker = DelegationConvergenceChecker(resolver=MagicMock())
         intent = checker._delegation_to_intent({"agent": "builder", "task": "Build auth"})
@@ -101,7 +101,7 @@ class TestCreateChecker:
         checker = create_checker()
         assert isinstance(checker, DelegationConvergenceChecker)
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="convergent not installed")
     def test_enabled_when_convergent_available(self):
         checker = create_checker()
         assert checker.enabled is True
@@ -109,11 +109,11 @@ class TestCreateChecker:
     def test_disabled_when_convergent_unavailable(self, monkeypatch):
         import animus_forge.agents.convergence as conv_mod
 
-        monkeypatch.setattr(conv_mod, "HAS_CONVERGENT", False)
+        monkeypatch.setattr(conv_mod, "HAS_QUORUM", False)
         checker = create_checker()
         assert checker.enabled is False
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="convergent not installed")
     def test_checker_can_process_delegations(self):
         checker = create_checker()
         result = checker.check_delegations(
@@ -177,14 +177,14 @@ class TestFormatConvergenceAlert:
 class TestCreateBridge:
     """Test the create_bridge factory function."""
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="convergent not installed")
     def test_returns_bridge_when_convergent_available(self, tmp_path):
         db_path = str(tmp_path / "coord.db")
         bridge = create_bridge(db_path=db_path)
         assert bridge is not None
         bridge.close()
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="convergent not installed")
     def test_in_memory_mode(self):
         bridge = create_bridge(db_path=":memory:")
         assert bridge is not None
@@ -193,12 +193,12 @@ class TestCreateBridge:
     def test_returns_none_when_convergent_unavailable(self, monkeypatch):
         import animus_forge.agents.convergence as conv_mod
 
-        monkeypatch.setattr(conv_mod, "HAS_CONVERGENT", False)
+        monkeypatch.setattr(conv_mod, "HAS_QUORUM", False)
         assert create_bridge() is None
 
-    @pytest.mark.skipif(not HAS_CONVERGENT, reason="convergent not installed")
+    @pytest.mark.skipif(not HAS_QUORUM, reason="convergent not installed")
     def test_returns_none_on_exception(self):
-        with patch("convergent.GorgonBridge", side_effect=RuntimeError("boom")):
+        with patch("animus_quorum.GorgonBridge", side_effect=RuntimeError("boom")):
             result = create_bridge(db_path=":memory:")
             assert result is None
 

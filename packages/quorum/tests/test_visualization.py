@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import pytest
-from convergent.intent import (
+from animus_quorum.intent import (
     Evidence,
     Intent,
     InterfaceKind,
     InterfaceSpec,
 )
-from convergent.resolver import IntentResolver
-from convergent.visualization import dot_graph, html_report, overlap_matrix, text_table
+from animus_quorum.resolver import IntentResolver
+from animus_quorum.visualization import dot_graph, html_report, overlap_matrix, text_table
 
 
 def _make_spec(name: str, tags: list[str] | None = None) -> InterfaceSpec:

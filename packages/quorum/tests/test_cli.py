@@ -6,14 +6,14 @@ import os
 from unittest.mock import patch
 
 import pytest
-from convergent.__main__ import main
-from convergent.intent import (
+from animus_quorum.__main__ import main
+from animus_quorum.intent import (
     Evidence,
     Intent,
     InterfaceKind,
     InterfaceSpec,
 )
-from convergent.sqlite_backend import SQLiteBackend
+from animus_quorum.sqlite_backend import SQLiteBackend
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -76,7 +76,7 @@ def db_with_data(tmp_path):
 
 class TestDemo:
     def test_demo_calls_run_demo(self):
-        with patch("convergent.__main__._cmd_demo") as mock_demo:
+        with patch("animus_quorum.__main__._cmd_demo") as mock_demo:
             main(["demo"])
             mock_demo.assert_called_once()
 

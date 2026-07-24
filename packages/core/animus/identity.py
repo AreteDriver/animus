@@ -44,7 +44,7 @@ class AnimusIdentity:
         default_factory=lambda: {
             "core": "packages/core/animus",
             "forge": "packages/forge/src/animus_forge",
-            "quorum": "packages/quorum/python/convergent",
+            "quorum": "packages/quorum/python/animus_quorum",
             "bootstrap": "packages/bootstrap/src/animus_bootstrap",
         }
     )

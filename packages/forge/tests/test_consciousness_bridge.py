@@ -359,7 +359,7 @@ class TestQuorumPublish:
         mock_graph,
     ):
         with patch(
-            "animus_forge.coordination.consciousness_bridge.HAS_CONVERGENT",
+            "animus_forge.coordination.consciousness_bridge.HAS_QUORUM",
             True,
         ):
             bridge = ConsciousnessBridge(
@@ -393,7 +393,7 @@ class TestQuorumPublish:
             }
         )
         with patch(
-            "animus_forge.coordination.consciousness_bridge.HAS_CONVERGENT",
+            "animus_forge.coordination.consciousness_bridge.HAS_QUORUM",
             True,
         ):
             bridge = ConsciousnessBridge(
@@ -422,7 +422,7 @@ class TestQuorumPublish:
     ):
         mock_graph.publish.side_effect = RuntimeError("graph broken")
         with patch(
-            "animus_forge.coordination.consciousness_bridge.HAS_CONVERGENT",
+            "animus_forge.coordination.consciousness_bridge.HAS_QUORUM",
             True,
         ):
             bridge = ConsciousnessBridge(
@@ -575,7 +575,7 @@ class TestEdgeCases:
         snapshot.intents = [intent_mock]
         mock_graph.snapshot.return_value = snapshot
         with patch(
-            "animus_forge.coordination.consciousness_bridge.HAS_CONVERGENT",
+            "animus_forge.coordination.consciousness_bridge.HAS_QUORUM",
             True,
         ):
             bridge = ConsciousnessBridge(
@@ -592,7 +592,7 @@ class TestEdgeCases:
         mock_graph = MagicMock()
         mock_graph.snapshot.side_effect = RuntimeError("graph broken")
         with patch(
-            "animus_forge.coordination.consciousness_bridge.HAS_CONVERGENT",
+            "animus_forge.coordination.consciousness_bridge.HAS_QUORUM",
             True,
         ):
             bridge = ConsciousnessBridge(

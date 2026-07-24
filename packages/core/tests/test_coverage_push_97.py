@@ -1437,15 +1437,15 @@ class TestRunConsensus:
             sys.modules,
             {
                 "convergent": MagicMock(),
-                "convergent.coordination_config": MagicMock(CoordinationConfig=mock_config),
-                "convergent.protocol": MagicMock(
+                "animus_quorum.coordination_config": MagicMock(CoordinationConfig=mock_config),
+                "animus_quorum.protocol": MagicMock(
                     AgentIdentity=mock_identity,
                     Vote=mock_vote,
                     VoteChoice=mock_choice,
                 ),
-                "convergent.score_store": MagicMock(ScoreStore=mock_store),
-                "convergent.scoring": MagicMock(PhiScorer=mock_scorer),
-                "convergent.triumvirate": MagicMock(Triumvirate=mock_triumvirate_cls),
+                "animus_quorum.score_store": MagicMock(ScoreStore=mock_store),
+                "animus_quorum.scoring": MagicMock(PhiScorer=mock_scorer),
+                "animus_quorum.triumvirate": MagicMock(Triumvirate=mock_triumvirate_cls),
             },
         ):
             result = run_consensus(
@@ -1482,15 +1482,15 @@ class TestRunConsensus:
             sys.modules,
             {
                 "convergent": MagicMock(),
-                "convergent.coordination_config": MagicMock(CoordinationConfig=MagicMock()),
-                "convergent.protocol": MagicMock(
+                "animus_quorum.coordination_config": MagicMock(CoordinationConfig=MagicMock()),
+                "animus_quorum.protocol": MagicMock(
                     AgentIdentity=MagicMock(),
                     Vote=MagicMock(),
                     VoteChoice=MagicMock(),
                 ),
-                "convergent.score_store": MagicMock(ScoreStore=MagicMock()),
-                "convergent.scoring": MagicMock(PhiScorer=MagicMock()),
-                "convergent.triumvirate": MagicMock(Triumvirate=mock_triumvirate_cls),
+                "animus_quorum.score_store": MagicMock(ScoreStore=MagicMock()),
+                "animus_quorum.scoring": MagicMock(PhiScorer=MagicMock()),
+                "animus_quorum.triumvirate": MagicMock(Triumvirate=mock_triumvirate_cls),
             },
         ):
             result = run_consensus(
@@ -1510,11 +1510,11 @@ class TestRunConsensus:
             sys.modules,
             {
                 "convergent": None,
-                "convergent.coordination_config": None,
-                "convergent.protocol": None,
-                "convergent.score_store": None,
-                "convergent.scoring": None,
-                "convergent.triumvirate": None,
+                "animus_quorum.coordination_config": None,
+                "animus_quorum.protocol": None,
+                "animus_quorum.score_store": None,
+                "animus_quorum.scoring": None,
+                "animus_quorum.triumvirate": None,
             },
         ):
             result = run_consensus(

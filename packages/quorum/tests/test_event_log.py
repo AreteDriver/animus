@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from convergent.event_log import CoordinationEvent, EventLog, EventType, event_timeline
+from animus_quorum.event_log import CoordinationEvent, EventLog, EventType, event_timeline
 
 
 class TestEventLog:

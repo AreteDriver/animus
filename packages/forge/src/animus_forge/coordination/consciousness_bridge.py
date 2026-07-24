@@ -27,12 +27,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Quorum imports are optional — bridge degrades gracefully
-HAS_CONVERGENT = False
+HAS_QUORUM = False
 try:
-    from convergent.intent import Intent, InterfaceKind, InterfaceSpec
-    from convergent.versioning import VersionedGraph
+    from animus_quorum.intent import Intent, InterfaceKind, InterfaceSpec
+    from animus_quorum.versioning import VersionedGraph
 
-    HAS_CONVERGENT = True
+    HAS_QUORUM = True
 except ImportError:
     pass  # Quorum not installed — bridge degrades gracefully
 
@@ -275,7 +275,7 @@ class ConsciousnessBridge:
                 logger.debug("Could not read metrics store", exc_info=True)
 
         open_nodes: list[dict[str, Any]] = []
-        if self._graph is not None and HAS_CONVERGENT:
+        if self._graph is not None and HAS_QUORUM:
             try:
                 snapshot = self._graph.snapshot()
                 if hasattr(snapshot, "intents"):
@@ -376,7 +376,7 @@ class ConsciousnessBridge:
         # Workflow review queue is independent of Quorum availability
         self._queue_workflow_reviews(output.workflow_patch_ids)
 
-        if self._graph is None or not HAS_CONVERGENT:
+        if self._graph is None or not HAS_QUORUM:
             return
 
         for insight in output.insights:

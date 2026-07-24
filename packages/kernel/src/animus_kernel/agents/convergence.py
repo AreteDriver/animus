@@ -14,16 +14,16 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 try:
-    from convergent import (
+    from animus_quorum import (
         Intent,
         InterfaceKind,
         InterfaceSpec,
         create_delegation_checker,
     )
 
-    HAS_CONVERGENT = True
+    HAS_QUORUM = True
 except ImportError:
-    HAS_CONVERGENT = False
+    HAS_QUORUM = False
 
 
 @dataclass
@@ -47,7 +47,7 @@ class DelegationConvergenceChecker:
 
     def __init__(self, resolver: Any | None = None) -> None:
         self._resolver = resolver
-        self._enabled = HAS_CONVERGENT and resolver is not None
+        self._enabled = HAS_QUORUM and resolver is not None
 
     @property
     def enabled(self) -> bool:
@@ -140,7 +140,7 @@ def create_checker() -> DelegationConvergenceChecker:
 
     Returns a disabled checker if Convergent is not installed.
     """
-    if not HAS_CONVERGENT:
+    if not HAS_QUORUM:
         logger.info("Convergent not installed — delegation coherence checking disabled")
         return DelegationConvergenceChecker(resolver=None)
 
@@ -178,13 +178,13 @@ def create_bridge(db_path: str | None = None) -> Any:
 
     Returns None if Convergent is not installed.
     """
-    if not HAS_CONVERGENT:
+    if not HAS_QUORUM:
         logger.info("Convergent not installed — coordination bridge disabled")
         return None
     try:
         from pathlib import Path
 
-        from convergent import CoordinationConfig, GorgonBridge
+        from animus_quorum import CoordinationConfig, GorgonBridge
 
         if db_path is None:
             db_dir = Path.home() / ".animus"
@@ -210,13 +210,13 @@ def create_event_log(db_path: str | None = None) -> Any:
     Returns:
         EventLog instance or None.
     """
-    if not HAS_CONVERGENT:
+    if not HAS_QUORUM:
         logger.info("Convergent not installed — coordination event log disabled")
         return None
     try:
         from pathlib import Path
 
-        from convergent import EventLog
+        from animus_quorum import EventLog
 
         if db_path is None:
             db_dir = Path.home() / ".animus"
@@ -240,12 +240,12 @@ def get_coordination_health(bridge: Any) -> dict[str, Any]:
     Returns:
         Dict with grade, issues, and subsystem metrics. Empty dict on failure.
     """
-    if not HAS_CONVERGENT or bridge is None:
+    if not HAS_QUORUM or bridge is None:
         return {}
     try:
         from dataclasses import asdict
 
-        from convergent import HealthChecker
+        from animus_quorum import HealthChecker
 
         checker = HealthChecker.from_bridge(bridge)
         health = checker.check()
@@ -264,10 +264,10 @@ def check_dependency_cycles(resolver: Any) -> list[dict[str, Any]]:
     Returns:
         List of cycle dicts with intent_ids and agent_ids. Empty on failure.
     """
-    if not HAS_CONVERGENT or resolver is None:
+    if not HAS_QUORUM or resolver is None:
         return []
     try:
-        from convergent import find_cycles
+        from animus_quorum import find_cycles
 
         cycles = find_cycles(resolver)
         return [
@@ -292,10 +292,10 @@ def get_execution_order(resolver: Any) -> list[str]:
     Returns:
         List of intent IDs in dependency-first order. Empty on failure.
     """
-    if not HAS_CONVERGENT or resolver is None:
+    if not HAS_QUORUM or resolver is None:
         return []
     try:
-        from convergent import topological_order
+        from animus_quorum import topological_order
 
         return topological_order(resolver)
     except Exception as e:

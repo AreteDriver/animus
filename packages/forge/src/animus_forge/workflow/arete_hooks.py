@@ -14,7 +14,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 try:
-    from convergent.arete_bridge import (
+    from animus_quorum.arete_bridge import (
         leave_autopsy_marker,
         record_failure_outcome,
     )
@@ -172,14 +172,14 @@ def get_arete_hooks() -> AreteHooks | None:
     memory_layer = None
 
     try:
-        from convergent.scoring import PhiScorer, ScoreStore
+        from animus_quorum.scoring import PhiScorer, ScoreStore
 
         phi_scorer = PhiScorer(store=ScoreStore())
     except Exception:
         logger.debug("PhiScorer not available for Arete hooks")
 
     try:
-        from convergent.stigmergy import StigmergyField
+        from animus_quorum.stigmergy import StigmergyField
 
         stigmergy_field = StigmergyField()
     except Exception:

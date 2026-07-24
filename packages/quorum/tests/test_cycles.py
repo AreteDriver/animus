@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import pytest
-from convergent.cycles import DependencyCycle, DependencyGraph, find_cycles, topological_order
-from convergent.intent import Evidence, EvidenceKind, Intent, InterfaceKind, InterfaceSpec
-from convergent.resolver import IntentResolver, PythonGraphBackend
+from animus_quorum.cycles import DependencyCycle, DependencyGraph, find_cycles, topological_order
+from animus_quorum.intent import Evidence, EvidenceKind, Intent, InterfaceKind, InterfaceSpec
+from animus_quorum.resolver import IntentResolver, PythonGraphBackend
 
 
 def _make_intent(

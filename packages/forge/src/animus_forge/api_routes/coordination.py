@@ -32,10 +32,10 @@ def coordination_health() -> dict:
     and voting subsystems with an A-F grade.
     """
     try:
-        from animus_forge.agents.convergence import HAS_CONVERGENT, get_coordination_health
+        from animus_forge.agents.convergence import HAS_QUORUM, get_coordination_health
 
-        if not HAS_CONVERGENT:
-            return {"available": False, "reason": "convergent not installed"}
+        if not HAS_QUORUM:
+            return {"available": False, "reason": "animus_quorum not installed"}
 
         # Try to get bridge from the module-level variable in api.py lifespan
         # The bridge is stored as a local in lifespan and passed to supervisors,
@@ -62,13 +62,13 @@ def coordination_cycles() -> dict:
     agent deadlocks.
     """
     try:
-        from animus_forge.agents.convergence import HAS_CONVERGENT, check_dependency_cycles
+        from animus_forge.agents.convergence import HAS_QUORUM, check_dependency_cycles
 
-        if not HAS_CONVERGENT:
-            return {"available": False, "reason": "convergent not installed"}
+        if not HAS_QUORUM:
+            return {"available": False, "reason": "animus_quorum not installed"}
 
         # Cycles require a resolver — create a fresh one for inspection
-        from convergent import IntentResolver, PythonGraphBackend
+        from animus_quorum import IntentResolver, PythonGraphBackend
 
         resolver = IntentResolver(backend=PythonGraphBackend())
         cycles = check_dependency_cycles(resolver)
@@ -94,16 +94,16 @@ def coordination_events(
     decisions, markers, score updates).
     """
     try:
-        from animus_forge.agents.convergence import HAS_CONVERGENT
+        from animus_forge.agents.convergence import HAS_QUORUM
 
-        if not HAS_CONVERGENT:
-            return {"available": False, "reason": "convergent not installed"}
+        if not HAS_QUORUM:
+            return {"available": False, "reason": "animus_quorum not installed"}
 
         event_log = state.coordination_event_log
         if event_log is None:
             return {"available": True, "reason": "no active event log", "events": []}
 
-        from convergent import EventType
+        from animus_quorum import EventType
 
         et = None
         if event_type is not None:

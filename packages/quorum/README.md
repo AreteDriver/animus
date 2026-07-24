@@ -15,7 +15,7 @@ Agents read a shared intent graph and self-adjust based on stability scores — 
 ## Install
 
 ```bash
-pip install convergentAI
+pip install animus-quorum
 ```
 
 Or from source:
@@ -26,7 +26,7 @@ pip install -e packages/quorum/
 ## Quick Start
 
 ```python
-from convergent import IntentNode, StabilityScorer
+from animus_quorum import IntentNode, StabilityScorer
 
 # Create an intent node
 node = IntentNode(
@@ -44,7 +44,7 @@ score = scorer.evaluate(node)
 
 ```
 quorum/
-├── python/convergent/          # Python package: import convergent
+├── python/animus_quorum/          # Python package: import animus_quorum
 ├── src/                        # Rust PyO3 core
 ├── tests/                      # 926 tests, 97% coverage
 ├── benches/                    # Benchmarks (Rust)
