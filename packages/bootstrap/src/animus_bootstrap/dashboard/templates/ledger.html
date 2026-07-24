@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Animus Dashboard — Cognitive Event Ledger{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl">
+    <h2 class="text-2xl font-bold text-animus-green mb-6">Cognitive Event Ledger</h2>
+
+    <!-- Stats Summary -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <h3 class="text-xs text-animus-muted uppercase tracking-wide mb-2">Total Events</h3>
+            <p class="text-2xl font-bold text-animus-text">{{ stats.total }}</p>
+        </div>
+        <div class="bg-animus-surface border border-animus-border rounded-lg p-4">
+            <h3 class="text-xs text-animus-muted uppercase tracking-wide mb-2">Integrity</h3>
+            <p class="text-2xl font-bold text-animus-green" id="integrity-badge">Checking…</p>
+        </div>
+    </div>
+
+    <!-- Event Table -->
+    <div class="bg-animus-surface border border-animus-border rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-animus-border flex items-center justify-between">
+            <h3 class="text-sm text-animus-muted uppercase tracking-wide">Recent Events</h3>
+            <span class="text-xs text-animus-muted">Append-only, cryptographically chained</span>
+        </div>
+
+        {% if events %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-animus-border text-animus-muted">
+                        <th class="px-4 py-3 text-left font-medium">Event ID</th>
+                        <th class="px-4 py-3 text-left font-medium">Type</th>
+                        <th class="px-4 py-3 text-left font-medium">Object</th>
+                        <th class="px-4 py-3 text-left font-medium">Principal</th>
+                        <th class="px-4 py-3 text-left font-medium">Workspace</th>
+                        <th class="px-4 py-3 text-left font-medium">Time</th>
+                        <th class="px-4 py-3 text-left font-medium">Chain Hash</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-animus-border">
+                    {% for event in events %}
+                    <tr class="hover:bg-animus-border/30 transition-colors">
+                        <td class="px-4 py-3 font-mono text-animus-green">{{ event.event_id }}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded text-xs bg-animus-border text-animus-text">{{ event.event_type }}</span>
+                        </td>
+                        <td class="px-4 py-3 font-mono">{{ event.object_id }}</td>
+                        <td class="px-4 py-3">{{ event.principal }}</td>
+                        <td class="px-4 py-3 font-mono">{{ event.workspace_id }}</td>
+                        <td class="px-4 py-3 text-animus-muted">{{ event.tx_time[:19] if event.tx_time else '' }}</td>
+                        <td class="px-4 py-3 font-mono text-animus-muted truncate max-w-xs">{{ event.chain_hash[:16] }}…</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="px-6 py-12 text-center text-animus-muted">
+            <p class="mb-2">No events recorded yet.</p>
+            <p class="text-xs">Events are appended automatically as cognitive objects change state.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Poll integrity status
+    async function checkIntegrity() {
+        try {
+            const res = await fetch('/api/ledger/verify');
+            const data = await res.json();
+            const badge = document.getElementById('integrity-badge');
+            if (data.integrity_valid) {
+                badge.textContent = 'Valid';
+                badge.className = 'text-2xl font-bold text-animus-green';
+            } else {
+                badge.textContent = 'Broken';
+                badge.className = 'text-2xl font-bold text-animus-red';
+            }
+        } catch {
+            const badge = document.getElementById('integrity-badge');
+            badge.textContent = 'Unknown';
+            badge.className = 'text-2xl font-bold text-animus-yellow';
+        }
+    }
+    checkIntegrity();
+    setInterval(checkIntegrity, 30000);
+</script>
+{% endblock %}

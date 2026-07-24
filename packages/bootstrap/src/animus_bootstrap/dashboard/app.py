@@ -33,6 +33,7 @@ from animus_bootstrap.dashboard.routers import (
     forge_page,
     home,
     identity_page,
+    ledger,
     logs,
     memory,
     personas_page,
@@ -212,6 +213,7 @@ app.include_router(session.router)
 app.include_router(capture.router)
 app.include_router(push.router)
 app.include_router(controls.router)
+app.include_router(ledger.router)
 
 
 def _health_payload(request: Request) -> dict[str, object]:
