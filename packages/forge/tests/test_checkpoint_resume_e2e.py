@@ -183,6 +183,102 @@ class TestCheckpointResumeE2E:
         assert result2.steps[0].step_id == "step2"
         assert result2.steps[1].step_id == "step3"
 
+    @pytest.mark.xfail(
+        reason="Automatic crash recovery not yet wired end-to-end: "
+               "WorkflowExecutor.execute() creates a new workflow record on every call "
+               "and does not reconstruct prior step outputs from persisted checkpoints. "
+               "ADL-20260724-002 tracks completion.",
+        strict=True,
+    )
+    def test_crash_recovery_reconstructs_context_and_continues(self, checkpoint_manager, temp_db):
+        """Verify a NEW WorkflowExecutor can recover a failed workflow by ID.
+
+        This is the true crash-recovery test: a workflow fails mid-execution,
+        a new executor instance is created, and it resumes the SAME workflow
+        by rehydrating prior checkpoint outputs and continuing from the failure
+        point. This is distinct from step-skipping (test_resume_from_specific_step).
+        """
+        failing_workflow = WorkflowConfig(
+            name="crash_recovery_workflow",
+            version="1.0",
+            description="Workflow that fails on step 2",
+            steps=[
+                StepConfig(
+                    id="step1",
+                    type="shell",
+                    params={"command": "echo 'step1_output_value'"},
+                    outputs=["stdout"],
+                    on_failure="abort",
+                    max_retries=0,
+                    timeout_seconds=30,
+                ),
+                StepConfig(
+                    id="step2_failing",
+                    type="shell",
+                    params={"command": "exit 1"},
+                    outputs=["stdout"],
+                    on_failure="abort",
+                    max_retries=0,
+                    timeout_seconds=30,
+                ),
+                StepConfig(
+                    id="step3",
+                    type="shell",
+                    params={"command": "echo 'step3_complete'"},
+                    outputs=["stdout"],
+                    on_failure="abort",
+                    max_retries=0,
+                    timeout_seconds=30,
+                ),
+            ],
+            inputs={},
+            outputs=["stdout"],
+        )
+
+        # FIRST EXECUTION: fails at step 2
+        executor1 = WorkflowExecutor(checkpoint_manager=checkpoint_manager)
+        result1 = executor1.execute(failing_workflow)
+
+        assert result1.status == "failed"
+        assert result1.steps[0].status == StepStatus.SUCCESS  # step1 succeeded
+        assert result1.steps[1].status == StepStatus.FAILED   # step2 failed
+
+        # Capture the original workflow ID
+        workflows = checkpoint_manager.persistence.list_workflows()
+        original_wf_id = workflows[0]["id"]
+
+        # Verify step1 checkpoint exists with output data
+        checkpoints = checkpoint_manager.persistence.get_all_checkpoints(original_wf_id)
+        step1_cp = next((cp for cp in checkpoints if cp["stage"] == "step1"), None)
+        assert step1_cp is not None
+        assert step1_cp["status"] == "success"
+        assert step1_cp["output_data"] is not None
+
+        # CRASH RECOVERY: Create a completely NEW executor
+        executor2 = WorkflowExecutor(checkpoint_manager=checkpoint_manager)
+
+        # The correct API for crash recovery (not yet implemented):
+        # Resume the SAME workflow by ID, reconstructing step1 outputs so
+        # step2 (and step3) can run with full context.
+        # Currently execute() only accepts resume_from as a step ID string,
+        # which skips steps rather than rehydrating them from checkpoints.
+        result2 = executor2.execute(
+            failing_workflow,
+            resume_workflow_id=original_wf_id,  # Hypothetical API
+        )
+
+        # Assertions that would pass if crash recovery were implemented:
+        assert result2.status == "success"
+        # Should have completed step2 (retry) and step3
+        assert len(result2.steps) == 2
+        assert result2.steps[0].status == StepStatus.SUCCESS  # step2 succeeded on retry
+        assert result2.steps[1].status == StepStatus.SUCCESS  # step3 completed
+
+        # Verify the workflow ID was retained, not a new one created
+        workflows_after = checkpoint_manager.persistence.list_workflows()
+        assert len(workflows_after) == 1  # Same workflow, not a new record
+        assert workflows_after[0]["id"] == original_wf_id
+
     def test_checkpoint_preserves_context(self, checkpoint_manager, temp_db):
         """Verify checkpoint preserves input/output data."""
         workflow = WorkflowConfig(

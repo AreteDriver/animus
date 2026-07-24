@@ -973,7 +973,7 @@ class TestCoordinationRoutesCoverage:
         """Create a fake convergent module in sys.modules for lazy imports."""
         import types
 
-        fake = types.ModuleType("convergent")
+        fake = types.ModuleType("animus_quorum")
         fake.IntentResolver = MagicMock()
         fake.PythonGraphBackend = MagicMock()
         fake.EventType = MagicMock(side_effect=lambda v: v)
@@ -983,7 +983,7 @@ class TestCoordinationRoutesCoverage:
         import sys
 
         fake = self._fake_convergent()
-        with patch.dict(sys.modules, {"convergent": fake}):
+        with patch.dict(sys.modules, {"animus_quorum": fake}):
             with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
                 with patch(
                     "animus_forge.agents.convergence.check_dependency_cycles",
@@ -1005,7 +1005,7 @@ class TestCoordinationRoutesCoverage:
 
         fake = self._fake_convergent()
         fake.IntentResolver = MagicMock(side_effect=RuntimeError("fail"))
-        with patch.dict(sys.modules, {"convergent": fake}):
+        with patch.dict(sys.modules, {"animus_quorum": fake}):
             with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
                 resp = client.get("/v1/coordination/cycles")
         assert resp.status_code == 200
@@ -1027,7 +1027,7 @@ class TestCoordinationRoutesCoverage:
         client._api_state.coordination_event_log = mock_log
 
         fake = self._fake_convergent()
-        with patch.dict(sys.modules, {"convergent": fake}):
+        with patch.dict(sys.modules, {"animus_quorum": fake}):
             with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
                 resp = client.get(
                     "/v1/coordination/events?event_type=intent_published&agent=agent-1&limit=10"
@@ -1041,7 +1041,7 @@ class TestCoordinationRoutesCoverage:
 
         client._api_state.coordination_event_log = None
         fake = self._fake_convergent()
-        with patch.dict(sys.modules, {"convergent": fake}):
+        with patch.dict(sys.modules, {"animus_quorum": fake}):
             with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
                 resp = client.get("/v1/coordination/events")
         assert resp.status_code == 200
@@ -1055,7 +1055,7 @@ class TestCoordinationRoutesCoverage:
 
         fake = self._fake_convergent()
         fake.EventType = MagicMock(side_effect=ValueError("bad"))
-        with patch.dict(sys.modules, {"convergent": fake}):
+        with patch.dict(sys.modules, {"animus_quorum": fake}):
             with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
                 resp = client.get("/v1/coordination/events?event_type=bogus")
         assert resp.status_code == 200

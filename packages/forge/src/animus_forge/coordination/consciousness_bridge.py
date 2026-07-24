@@ -379,6 +379,10 @@ class ConsciousnessBridge:
         if self._graph is None or not HAS_QUORUM:
             return
 
+        # Local import: module-level import may have failed if Quorum
+        # was not on PYTHONPATH at import time (e.g. Forge tests).
+        from animus_quorum.intent import Intent, InterfaceKind, InterfaceSpec
+
         for insight in output.insights:
             try:
                 tags = ["reflection", "auto-generated"]

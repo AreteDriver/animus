@@ -8140,7 +8140,7 @@ class TestCoordinationCLIExtended:
                     "animus_forge.agents.convergence.get_coordination_health",
                     return_value={"agents": 3, "intents": 10},
                 ):
-                    with patch("convergent.health_report", return_value="Report"):
+                    with patch("animus_quorum.health_report", return_value="Report"):
                         from animus_forge.cli.commands.coordination import health
 
                         health(db_path=str(db_file), json_output=False)
@@ -8166,8 +8166,8 @@ class TestCoordinationCLIExtended:
         db_file = tmp_path / "coord.db"
         db_file.touch()
         with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
-            with patch("convergent.SQLiteBackend"):
-                with patch("convergent.IntentResolver"):
+            with patch("animus_quorum.SQLiteBackend"):
+                with patch("animus_quorum.IntentResolver"):
                     with patch(
                         "animus_forge.agents.convergence.check_dependency_cycles",
                         return_value=[],
@@ -8181,8 +8181,8 @@ class TestCoordinationCLIExtended:
         db_file = tmp_path / "coord.db"
         db_file.touch()
         with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
-            with patch("convergent.SQLiteBackend"):
-                with patch("convergent.IntentResolver"):
+            with patch("animus_quorum.SQLiteBackend"):
+                with patch("animus_quorum.IntentResolver"):
                     with patch(
                         "animus_forge.agents.convergence.check_dependency_cycles",
                         return_value=[{"display": "A -> B -> A"}],
@@ -8198,7 +8198,7 @@ class TestCoordinationCLIExtended:
         db_file = tmp_path / "coord.db"
         db_file.touch()
         with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
-            with patch("convergent.SQLiteBackend", side_effect=RuntimeError("broken")):
+            with patch("animus_quorum.SQLiteBackend", side_effect=RuntimeError("broken")):
                 from animus_forge.cli.commands.coordination import cycles
 
                 with pytest.raises(typer.Exit):
@@ -8211,7 +8211,7 @@ class TestCoordinationCLIExtended:
         db_file = tmp_path / "events.db"
         db_file.touch()
         with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
-            with patch("convergent.EventType", side_effect=ValueError("bad")):
+            with patch("animus_quorum.EventType", side_effect=ValueError("bad")):
                 from animus_forge.cli.commands.coordination import events
 
                 with pytest.raises(typer.Exit):
@@ -8224,7 +8224,7 @@ class TestCoordinationCLIExtended:
         with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             mock_log = MagicMock()
             mock_log.query.return_value = []
-            with patch("convergent.EventLog", return_value=mock_log):
+            with patch("animus_quorum.EventLog", return_value=mock_log):
                 from animus_forge.cli.commands.coordination import events
 
                 events(db_path=str(db_file), event_type=None, agent=None, limit=20)
@@ -8236,8 +8236,8 @@ class TestCoordinationCLIExtended:
         with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
             mock_log = MagicMock()
             mock_log.query.return_value = [{"type": "test", "agent": "a1"}]
-            with patch("convergent.EventLog", return_value=mock_log):
-                with patch("convergent.event_timeline", return_value="timeline"):
+            with patch("animus_quorum.EventLog", return_value=mock_log):
+                with patch("animus_quorum.event_timeline", return_value="timeline"):
                     from animus_forge.cli.commands.coordination import events
 
                     events(db_path=str(db_file), event_type=None, agent=None, limit=20)
@@ -8249,7 +8249,7 @@ class TestCoordinationCLIExtended:
         db_file = tmp_path / "events.db"
         db_file.touch()
         with patch("animus_forge.agents.convergence.HAS_QUORUM", True):
-            with patch("convergent.EventLog", side_effect=RuntimeError("broken")):
+            with patch("animus_quorum.EventLog", side_effect=RuntimeError("broken")):
                 from animus_forge.cli.commands.coordination import events
 
                 with pytest.raises(typer.Exit):
