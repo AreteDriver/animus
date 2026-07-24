@@ -517,7 +517,7 @@ jobs:
         run: docker run --rm --platform linux/amd64 animus-kernel:ci python -c "import animus_kernel; print('OK amd64')"
 
       - name: Test CLI inside container (amd64)
-        run: docker run --rm --platform linux/amd64 animus-kernel:ci python -m animus_kernel --help || true
+        run: docker run --rm --platform linux/amd64 animus-kernel:ci python -m animus_kernel --help
 
   sbom:
     name: Generate SBOMs
