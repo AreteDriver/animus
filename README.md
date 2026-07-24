@@ -401,7 +401,7 @@ Active development. Architecture stable. v2.3.0 (migrating to v2.1 baseline) rel
 |---------|--------|-------|
 | Dashboard (HTMX) | ✅ Stable | localhost:7700, full CRUD for personas, tasks, memory |
 | PWA | ⚠️ Functional but early | React 19 + Vite, calls `/api/*`, offline via service worker |
-| Web Push | ⚠️ Scaffolded | VAPID key endpoints wired, delivery not yet end-to-end tested |
+| Web Push | ✅ Stable | VAPID key endpoints + test-push trigger + e2e HTTP-mock test verified |
 | Contracts validation | ✅ Stable | 20+ JSON schemas, runtime `jsonschema` gating via FastAPI dependency |
 | PostgreSQL backend | ✅ Stable | `DurableMemoryStore` with bitemporal event ledger, auto-selected when `ANIMUS_DATABASE_URL` is set |
 | Forge self-improve | 🔄 Active dev | Analyze → plan → sandbox → apply → PR pipeline |

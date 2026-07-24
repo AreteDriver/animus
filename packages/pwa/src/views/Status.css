@@ -99,3 +99,30 @@
   opacity: 0.5;
   cursor: default;
 }
+
+.status-button {
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.status-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.status-ok {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: rgba(74, 222, 128, 0.1);
+  color: var(--success);
+  font-size: 13px;
+  line-height: 1.5;
+}

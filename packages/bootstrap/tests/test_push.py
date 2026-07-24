@@ -150,6 +150,12 @@ class TestVapidKeys:
 # ------------------------------------------------------------------
 
 
+def _csrf_headers(client: TestClient) -> dict[str, str]:
+    """Extract CSRF token from client cookies for POST requests."""
+    token = client.cookies.get("animus_csrf")
+    return {"x-csrf-token": token} if token else {}
+
+
 @pytest.fixture()
 def restore_push_store() -> Iterator[None]:
     had = hasattr(app.state, "push_store")
@@ -168,13 +174,14 @@ class TestPushRouter:
         store = PushSubscriptionStore(tmp_path / "push.db")
         app.state.push_store = store
         client = TestClient(app)
+        client.get("/health")  # Prime CSRF cookie
         try:
             sub = {"endpoint": "https://push.example/z", "keys": {"p256dh": "x", "auth": "y"}}
-            resp = client.post("/api/push/subscribe", json={"subscription": sub})
+            resp = client.post("/api/push/subscribe", json={"subscription": sub}, headers=_csrf_headers(client))
             assert resp.status_code == 200
             assert store.count() == 1
 
-            resp = client.post("/api/push/unsubscribe", json={"endpoint": "https://push.example/z"})
+            resp = client.post("/api/push/unsubscribe", json={"endpoint": "https://push.example/z"}, headers=_csrf_headers(client))
             assert resp.status_code == 200
             assert store.count() == 0
         finally:
@@ -183,21 +190,24 @@ class TestPushRouter:
     def test_subscribe_unavailable_without_store(self, restore_push_store: None) -> None:
         app.state.push_store = None
         client = TestClient(app)
-        resp = client.post("/api/push/subscribe", json={"subscription": {"endpoint": "e"}})
+        client.get("/health")  # Prime CSRF cookie
+        resp = client.post("/api/push/subscribe", json={"subscription": {"endpoint": "e"}}, headers=_csrf_headers(client))
         assert resp.status_code == 503
 
     def test_unsubscribe_unavailable_without_store(self, restore_push_store: None) -> None:
         app.state.push_store = None
         client = TestClient(app)
-        resp = client.post("/api/push/unsubscribe", json={"endpoint": "e"})
+        client.get("/health")  # Prime CSRF cookie
+        resp = client.post("/api/push/unsubscribe", json={"endpoint": "e"}, headers=_csrf_headers(client))
         assert resp.status_code == 503
 
     def test_subscribe_rejects_missing_endpoint(self, tmp_path, restore_push_store: None) -> None:  # type: ignore[no-untyped-def]
         store = PushSubscriptionStore(tmp_path / "push.db")
         app.state.push_store = store
         client = TestClient(app)
+        client.get("/health")  # Prime CSRF cookie
         try:
-            resp = client.post("/api/push/subscribe", json={"subscription": {"keys": {}}})
+            resp = client.post("/api/push/subscribe", json={"subscription": {"keys": {}}}, headers=_csrf_headers(client))
             assert resp.status_code == 400
         finally:
             store.close()
@@ -215,3 +225,73 @@ class TestPushRouter:
             assert resp.json()["publicKey"] == "PUBKEY123"
         finally:
             app.state.config = original
+
+    def test_send_test_unavailable_without_store(self, restore_push_store: None) -> None:
+        app.state.push_store = None
+        client = TestClient(app)
+        client.get("/health")  # Prime CSRF cookie
+        resp = client.post("/api/push/send-test", json={"title": "T", "body": "B"}, headers=_csrf_headers(client))
+        assert resp.status_code == 503
+
+    def test_send_test_no_subscriptions(self, tmp_path, restore_push_store: None) -> None:  # type: ignore[no-untyped-def]
+        store = PushSubscriptionStore(tmp_path / "push.db")
+        app.state.push_store = store
+        client = TestClient(app)
+        client.get("/health")  # Prime CSRF cookie
+        try:
+            resp = client.post("/api/push/send-test", json={"title": "T", "body": "B"}, headers=_csrf_headers(client))
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["sent"] == 0
+            assert data["pruned"] == 0
+            assert "No subscriptions" in data["detail"]
+        finally:
+            store.close()
+
+    def test_send_test_delivers_and_prunes(self, tmp_path, monkeypatch, restore_push_store: None) -> None:  # type: ignore[no-untyped-def]
+        # Build a fake pywebpush module.
+        fake = types.ModuleType("pywebpush")
+
+        class WebPushException(Exception):
+            def __init__(self, message: str, status: int) -> None:
+                super().__init__(message)
+                self.response = types.SimpleNamespace(status_code=status)
+
+        def webpush(*, subscription_info, data, vapid_private_key, vapid_claims):  # type: ignore[no-untyped-def]
+            endpoint = subscription_info["endpoint"]
+            if endpoint.endswith("gone"):
+                raise WebPushException("gone", 410)
+            if endpoint.endswith("err"):
+                raise WebPushException("server error", 500)
+            return MagicMock()
+
+        fake.WebPushException = WebPushException  # type: ignore[attr-defined]
+        fake.webpush = webpush  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "pywebpush", fake)
+
+        store = PushSubscriptionStore(tmp_path / "push.db")
+        store.add({"endpoint": "https://push.example/ok", "keys": {"p256dh": "x", "auth": "y"}})
+        store.add({"endpoint": "https://push.example/gone", "keys": {"p256dh": "x", "auth": "y"}})
+        store.add({"endpoint": "https://push.example/err", "keys": {"p256dh": "x", "auth": "y"}})
+        app.state.push_store = store
+
+        client = TestClient(app)
+        client.get("/health")  # Prime CSRF cookie
+        try:
+            resp = client.post("/api/push/send-test", json={"title": "Hello", "body": "World", "url": "/x"}, headers=_csrf_headers(client))
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["sent"] == 1
+            assert data["pruned"] == 1
+            # Verify the 410 subscription was pruned; the 500 stays.
+            endpoints = {s["endpoint"] for s in store.all()}
+            assert endpoints == {"https://push.example/ok", "https://push.example/err"}
+        finally:
+            store.close()
+
+    def test_send_test_rejects_missing_title(self, restore_push_store: None) -> None:
+        app.state.push_store = None
+        client = TestClient(app)
+        client.get("/health")  # Prime CSRF cookie
+        resp = client.post("/api/push/send-test", json={"body": "B"}, headers=_csrf_headers(client))
+        assert resp.status_code == 422

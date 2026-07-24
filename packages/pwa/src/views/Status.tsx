@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getHealth, type HealthResponse } from "../api";
+import { getHealth, sendTestPush, type HealthResponse } from "../api";
 import { disablePush, enablePush, isPushEnabled, pushSupported } from "../push";
 import "./Status.css";
 
@@ -19,6 +19,8 @@ export function StatusView() {
   const [pushOn, setPushOn] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushError, setPushError] = useState<string | null>(null);
+  const [testPushResult, setTestPushResult] = useState<string | null>(null);
+  const [testPushBusy, setTestPushBusy] = useState(false);
 
   const refresh = useCallback(() => {
     getHealth()
@@ -47,6 +49,7 @@ export function StatusView() {
   const togglePush = useCallback(async () => {
     setPushBusy(true);
     setPushError(null);
+    setTestPushResult(null);
     try {
       if (pushOn) {
         await disablePush();
@@ -61,6 +64,20 @@ export function StatusView() {
       setPushBusy(false);
     }
   }, [pushOn]);
+
+  const onTestPush = useCallback(async () => {
+    setTestPushBusy(true);
+    setTestPushResult(null);
+    setPushError(null);
+    try {
+      const res = await sendTestPush("Animus Test", "This is a test push notification.", "/pwa/status");
+      setTestPushResult(`Sent ${res.sent} notification(s)` + (res.pruned ? `, pruned ${res.pruned} stale.` : "."));
+    } catch (err: unknown) {
+      setPushError(err instanceof Error ? err.message : "Test push failed");
+    } finally {
+      setTestPushBusy(false);
+    }
+  }, []);
 
   return (
     <div className="status">
@@ -138,8 +155,19 @@ export function StatusView() {
             >
               {pushBusy ? "..." : pushOn ? "On" : "Off"}
             </button>
+            {pushOn && (
+              <button
+                className="status-button"
+                onClick={onTestPush}
+                disabled={testPushBusy}
+                title="Send a test push notification to this device"
+              >
+                {testPushBusy ? "Sending..." : "Test Push"}
+              </button>
+            )}
           </div>
           {pushError && <p className="status-error">{pushError}</p>}
+          {testPushResult && <p className="status-ok">{testPushResult}</p>}
         </div>
       )}
 

@@ -246,6 +246,13 @@ export async function unsubscribePush(endpoint: string): Promise<void> {
   });
 }
 
+export async function sendTestPush(title: string, body: string, url?: string): Promise<{ sent: number; pruned: number; detail?: string }> {
+  return request("/push/send-test", {
+    method: "POST",
+    body: JSON.stringify({ title, body, url: url ?? "/" }),
+  });
+}
+
 // Session continuity (checkpoint load/save)
 export interface CheckpointPayload {
   session_id?: string;
