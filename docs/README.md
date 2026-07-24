@@ -67,6 +67,7 @@ Each package has its own documentation lane:
 - [FAQ](reference/faq.md) — Frequently asked questions
 - [Changelog](reference/changelog.md) — Release history
 - [Security](reference/security.md) — Threat model, security layer, best practices
+- [Schema Usage](reference/schema-usage.md) — JSON Schema contracts, Pydantic models, CI pipeline
 - [Whitepapers](reference/whitepapers/README.md) — Architecture whitepapers
 
 ### Roadmap
