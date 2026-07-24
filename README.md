@@ -1,6 +1,6 @@
 # Animus — AI Operating Environment You Own
 
-**Multi-agent orchestration framework with budget controls, quality gates, and checkpoint/resume.**
+**Multi-agent orchestration framework with budget controls, quality gates, and stage persistence.**
 
 ![CI](https://github.com/AreteDriver/animus/workflows/CI/badge.svg)
 ![First-Run](https://github.com/AreteDriver/animus/workflows/First-Run%20Verification/badge.svg)
@@ -9,7 +9,7 @@
 [![PyPI - convergentAI](https://img.shields.io/pypi/v/convergentAI?label=convergentAI&color=blue)](https://pypi.org/project/convergentAI/)
 ![License](https://img.shields.io/github/license/AreteDriver/animus)
 
-Running AI agents in production creates three predictable failures: **costs spiral** because no one tracks token spend, **pipelines break halfway through** and restart from scratch wasting compute, and **multi-agent systems bottleneck** on a single supervisor that burns tokens just watching. Animus fixes this with manufacturing-line discipline — every agent gets a token budget, every workflow checkpoints state to SQLite for resume on failure, and agent coordination uses shared intent graphs instead of a central supervisor.
+Running AI agents in production creates three predictable failures: **costs spiral** because no one tracks token spend, **pipelines break halfway through** and restart from scratch wasting compute, and **multi-agent systems bottleneck** on a single supervisor that burns tokens just watching. Animus fixes this with manufacturing-line discipline — every agent gets a token budget, every workflow persists stage inputs and outputs to SQLite for manual restart on failure, and agent coordination uses shared intent graphs instead of a central supervisor.
 
 Before software I spent 17 years in manufacturing and logistics (IBM, Toyota Production System). The same principles apply here: make cost visible, make waste impossible to ignore, stop and fix before propagating errors.
 
@@ -135,7 +135,7 @@ The philosophy behind Animus is documented in essays, not just code:
 
 ### Forge — Workflow Orchestration Engine
 
-Production orchestration for AI agent pipelines. Define workflows in YAML, assign token budgets per agent, set quality gates, and checkpoint state to SQLite for automatic resume on failure. Supports 10 agent archetypes, streaming execution logs, MCP tool execution, and consensus voting.
+Production orchestration for AI agent pipelines. Define workflows in YAML, assign token budgets per agent, set quality gates, and persist stage state to SQLite for manual restart at any step. Automatic context-restoring crash recovery is under completion. Supports 10 agent archetypes, streaming execution logs, MCP tool execution, and consensus voting.
 
 [`packages/forge/`](packages/forge/) | `import animus_forge`
 
@@ -163,7 +163,7 @@ One-command install, Rich-based onboarding wizard, FastAPI+HTMX ops dashboard at
 
 These are visible in the code, not aspirational:
 
-- **Checkpoint/resume by default** — Every Forge workflow persists state to SQLite. If step 4 of 6 fails, restart at step 4. No wasted compute. The state machine is in `packages/forge/src/animus_forge/executor.py`.
+- **Stage persistence by default** — Every Forge workflow records stage inputs, outputs, and status to SQLite. You can manually restart execution at any prior step index. Automatic crash recovery that rehydrates full context from a prior run is implemented in the checkpoint store but not yet wired end-to-end in the executor. The state machine is in `packages/forge/src/animus_forge/executor.py`.
 - **Token budgets per agent** — Every agent declaration includes a `budget` field. The executor enforces it. No surprise API bills. See `packages/forge/workflows/*.yml` for examples.
 - **Quality gates before merge** — Deterministic scoring (tool/completeness/structure) with adversarial test harness. A feature doesn't ship unless the gate passes. Implemented in `packages/forge/src/animus_forge/gates/`.
 - **Provider-agnostic dispatch** — LLM calls go through a shared interface. Swap Claude for OpenAI or Ollama without touching agent code. Native tool use dispatches by provider. See `packages/core/animus/inference/`.
@@ -415,7 +415,7 @@ Active development. Architecture stable. v2.3.0 (migrating to v2.1 baseline) rel
 
 **No supervisor bottleneck.** The industry default for multi-agent coordination is a supervisor that watches everything. This burns tokens on monitoring and creates a single point of failure. Quorum replaces this with environmental awareness — agents read a shared intent graph and self-adjust based on stability scores. No inter-agent messaging required.
 
-**Checkpoint/resume.** All Forge workflows persist state to SQLite. If a pipeline fails at step 4 of 6, it restarts at step 4. No wasted compute.
+**Stage persistence.** All Forge workflows record stage inputs, outputs, and status to SQLite. You can manually restart at any prior step. Automatic context-restoring recovery is under completion.
 
 **Provider-agnostic.** LLM calls go through a shared interface. Swap Claude for OpenAI or Ollama without touching agent code. Native tool use dispatches by provider.
 
