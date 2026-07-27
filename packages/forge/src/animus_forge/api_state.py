@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from animus_forge.executions import ExecutionManager
     from animus_forge.jobs import JobManager
     from animus_forge.mcp import MCPConnectorManager
-    from animus_forge.scheduler import ScheduleManager
+    from animus_forge.scheduler import MissionScheduler, ScheduleManager
     from animus_forge.settings import SettingsManager
     from animus_forge.state.agent_memory import AgentMemory
     from animus_forge.webhooks import WebhookManager
@@ -73,6 +73,7 @@ budget_manager: PersistentBudgetManager | None = None
 task_store: TaskStore | None = None
 citizen_commissioner: Any | None = None
 arete_guard: Any | None = None
+mission_scheduler: MissionScheduler | None = None
 
 # ---------------------------------------------------------------------------
 # Coordination (initialized in lifespan, optional)

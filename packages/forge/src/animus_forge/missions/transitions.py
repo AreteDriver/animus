@@ -86,6 +86,7 @@ ALLOWED_TASK_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
         TaskStatus.COMPLETED,
         TaskStatus.FAILED,
         TaskStatus.BLOCKED,
+        TaskStatus.READY,  # retry after failure
     },
     TaskStatus.WAITING: {
         TaskStatus.RUNNING,

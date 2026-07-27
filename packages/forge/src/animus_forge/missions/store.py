@@ -16,7 +16,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from animus_forge.missions.domain import Mission, MissionStatus, Task, TaskStatus
+from animus_forge.missions.domain import Artifact, Checkpoint, Mission, MissionStatus, Task, TaskStatus
 from animus_forge.missions.transitions import TransitionError, transition
 
 if TYPE_CHECKING:
@@ -68,6 +68,20 @@ CREATE INDEX IF NOT EXISTS idx_missions_status ON missions(status);
 CREATE INDEX IF NOT EXISTS idx_missions_priority ON missions(priority DESC);
 CREATE INDEX IF NOT EXISTS idx_tasks_mission ON tasks(mission_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+
+CREATE TABLE IF NOT EXISTS checkpoints (
+    checkpoint_id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL REFERENCES tasks(task_id) ON DELETE CASCADE,
+    attempt_id TEXT NOT NULL,
+    stage TEXT NOT NULL,
+    inputs TEXT NOT NULL DEFAULT '{}',
+    outputs TEXT NOT NULL DEFAULT '{}',
+    artifacts TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_checkpoints_task ON checkpoints(task_id);
+CREATE INDEX IF NOT EXISTS idx_checkpoints_attempt ON checkpoints(task_id, attempt_id);
 """
 
 
@@ -260,6 +274,115 @@ class MissionLedger:
             t for t in all_tasks
             if t.status == TaskStatus.READY and t.can_start(completed)
         ]
+
+    def count_active_missions(self) -> int:
+        """Count missions currently in RUNNING state."""
+        row = self._backend.fetchone(
+            "SELECT COUNT(*) AS count FROM missions WHERE status = ?",
+            (MissionStatus.RUNNING.value,),
+        )
+        return row["count"] if row else 0
+
+    def increment_attempt(self, task_id: UUID) -> None:
+        """Bump the attempt counter for a task."""
+        with self._backend.transaction():
+            self._backend.execute(
+                "UPDATE tasks SET current_attempt = current_attempt + 1 WHERE task_id = ?",
+                (str(task_id),),
+            )
+
+    def get_task_by_id(self, task_id: str) -> Task | None:
+        """Fetch a task by string ID (convenience)."""
+        return self.get_task(UUID(task_id))
+
+    def list_tasks(self, mission_id: UUID | None = None) -> list[Task]:
+        """Return tasks, optionally filtered by mission."""
+        if mission_id:
+            return self.list_tasks_for_mission(mission_id)
+        rows = self._backend.fetchall("SELECT * FROM tasks ORDER BY created_at")
+        return [self._parse_task_row(r) for r in rows]
+
+    # =====================================================================
+    # Checkpoint persistence
+    # =====================================================================
+
+    def save_checkpoint(self, task_id: UUID, attempt_id: UUID, stage: str, *, inputs: dict[str, Any] | None = None, outputs: dict[str, Any] | None = None, artifacts: list[dict[str, Any]] | None = None) -> None:
+        """Persist a checkpoint for a task attempt."""
+        from animus_forge.missions.domain import Checkpoint
+        checkpoint = Checkpoint(
+            attempt_id=attempt_id,
+            stage=stage,
+            inputs=inputs or {},
+            outputs=outputs or {},
+            artifacts=[Artifact(**a) for a in (artifacts or [])],
+        )
+        with self._backend.transaction():
+            self._backend.execute(
+                """
+                INSERT INTO checkpoints
+                    (checkpoint_id, task_id, attempt_id, stage, inputs, outputs, artifacts, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(checkpoint.checkpoint_id),
+                    str(task_id),
+                    str(attempt_id),
+                    checkpoint.stage,
+                    json.dumps(checkpoint.inputs),
+                    json.dumps(checkpoint.outputs),
+                    json.dumps([a.model_dump(mode="json") for a in checkpoint.artifacts]),
+                    checkpoint.created_at.isoformat(),
+                ),
+            )
+
+    def get_latest_checkpoint(self, task_id: UUID, attempt_id: UUID | None = None) -> Checkpoint | None:
+        """Fetch the most recent checkpoint for a task (optionally filtered by attempt)."""
+        if attempt_id:
+            row = self._backend.fetchone(
+                """
+                SELECT * FROM checkpoints
+                WHERE task_id = ? AND attempt_id = ?
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (str(task_id), str(attempt_id)),
+            )
+        else:
+            row = self._backend.fetchone(
+                """
+                SELECT * FROM checkpoints
+                WHERE task_id = ?
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (str(task_id),),
+            )
+        return self._parse_checkpoint_row(row) if row else None
+
+    def list_checkpoints(self, task_id: UUID) -> list[Checkpoint]:
+        """Return all checkpoints for a task, oldest first."""
+        rows = self._backend.fetchall(
+            """
+            SELECT * FROM checkpoints
+            WHERE task_id = ?
+            ORDER BY created_at
+            """,
+            (str(task_id),),
+        )
+        return [self._parse_checkpoint_row(r) for r in rows]
+
+    @staticmethod
+    def _parse_checkpoint_row(row: dict) -> Checkpoint:
+        from animus_forge.missions.domain import Checkpoint
+        return Checkpoint(
+            checkpoint_id=UUID(row["checkpoint_id"]),
+            attempt_id=UUID(row["attempt_id"]),
+            stage=row["stage"],
+            inputs=json.loads(row["inputs"]),
+            outputs=json.loads(row["outputs"]),
+            artifacts=[Artifact(**a) for a in json.loads(row["artifacts"])],
+            created_at=datetime.fromisoformat(row["created_at"]),
+        )
 
     # =====================================================================
     # Serialization helpers

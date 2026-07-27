@@ -89,6 +89,7 @@ class TaskContext(BaseModel):
     protected_paths: list[str] = Field(default_factory=list)
     relevant_files: list[str] = Field(default_factory=list)
     prior_attempts: list[dict[str, Any]] = Field(default_factory=list)
+    checkpoint: dict[str, Any] | None = None
     budget_remaining_usd: Decimal = Field(default=Decimal("10.00"))
     output_schema: dict[str, Any] | None = None
 

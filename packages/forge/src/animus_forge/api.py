@@ -11,6 +11,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
+from decimal import Decimal
 
 from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -174,6 +175,58 @@ async def lifespan(app: FastAPI):
         logger.info("Research Citizen commissioner initialized")
     except Exception as e:
         logger.warning("Citizen commissioner not initialized: %s", e)
+
+    # Initialize Mission Scheduler (Phase 5)
+    try:
+        from animus_forge.missions.store import MissionLedger
+        from animus_forge.scheduler import (
+            CitizenWorkerPool,
+            ContainerConfig,
+            ContainerManager,
+            CostEnforcer,
+            LeaseManager,
+            MissionScheduler,
+            PoolConfig,
+            SchedulerConfig,
+        )
+        from animus_forge.scheduler.metrics import SchedulerMetrics
+
+        ledger = MissionLedger(backend=backend)
+        lease_mgr = LeaseManager(backend=backend, default_ttl_seconds=300)
+        cost_enf = CostEnforcer(
+            backend=backend,
+            default_mission_cap_usd=Decimal("10.00"),
+            global_cap_usd=Decimal("100.00"),
+        )
+        # Optional container isolation (Phase 6)
+        container_cfg = ContainerConfig(image=os.getenv("ANIMUS_CITIZEN_IMAGE", "python:3.12-slim"))
+        container_mgr = ContainerManager(container_cfg)
+        pool_cfg = PoolConfig(max_workers=4)
+        if container_mgr.is_available() and os.getenv("ANIMUS_CONTAINER_MODE", "").lower() in ("1", "true", "yes"):
+            pool_cfg.isolation_mode = "container"
+            logger.info("Container isolation enabled for citizen workers")
+        else:
+            logger.info("Process isolation enabled for citizen workers")
+
+        pool = CitizenWorkerPool(
+            lease_mgr,
+            config=pool_cfg,
+            container_manager=container_mgr if pool_cfg.isolation_mode == "container" else None,
+        )
+        metrics = SchedulerMetrics(backend=backend)
+        scheduler = MissionScheduler(
+            ledger=ledger,
+            lease_manager=lease_mgr,
+            worker_pool=pool,
+            cost_enforcer=cost_enf,
+            metrics=metrics,
+            config=SchedulerConfig(poll_interval_seconds=5.0),
+        )
+        state.mission_scheduler = scheduler
+        logger.info("Mission scheduler initialized")
+    except Exception as e:
+        logger.warning("Mission scheduler not initialized: %s", e)
+        state.mission_scheduler = None
 
     # Initialize WebSocket components
     state.ws_manager = ConnectionManager()
@@ -387,6 +440,14 @@ async def lifespan(app: FastAPI):
 
     state.schedule_manager.start()
 
+    # Start mission scheduler if initialized
+    if state.mission_scheduler:
+        try:
+            await state.mission_scheduler.start()
+            logger.info("Mission scheduler started")
+        except Exception as e:
+            logger.warning("Mission scheduler failed to start: %s", e)
+
     # Mark application as ready
     state._app_state["ready"] = True
     logger.info("Application startup complete - ready to serve requests")
@@ -411,6 +472,13 @@ async def lifespan(app: FastAPI):
         await asyncio.sleep(0.1)
 
     # Shutdown managers
+    if state.mission_scheduler:
+        try:
+            await state.mission_scheduler.stop()
+            logger.info("Mission scheduler stopped")
+        except Exception as e:
+            logger.warning("Mission scheduler stop failed: %s", e)
+
     state.schedule_manager.shutdown()
     state.job_manager.shutdown()
 
@@ -630,6 +698,7 @@ from animus_forge.api_routes import (  # noqa: E402
     history,
     jobs,
     mcp,
+    mission_scheduler,
     prompts,
     schedules,
     settings,
@@ -655,6 +724,7 @@ v1_router.include_router(graph.router)
 v1_router.include_router(coordination.router)
 v1_router.include_router(agents.router)
 v1_router.include_router(citizens.router)
+v1_router.include_router(mission_scheduler.router)
 v1_router.include_router(evals.router)
 
 app.include_router(v1_router)
