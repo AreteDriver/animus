@@ -1,0 +1,23 @@
+name: fix_bounded_python_bug
+description: |
+  Evaluates whether a citizen can fix an off-by-one pagination bug
+  without changing the public API or modifying protected paths.
+category: implementation
+fixture: eval_suites/autonomous_engineering/fixtures/python_service
+mission: Fix the off-by-one pagination bug without changing the public API.
+constraints:
+  max_changed_files: 4
+  protected_paths:
+    - tests/
+    - pyproject.toml
+required_outcomes:
+  - regression test added
+  - original failure reproduced
+  - full suite passes
+  - public API unchanged
+scoring:
+  correctness: 0.35
+  scope_discipline: 0.20
+  test_quality: 0.20
+  evidence_quality: 0.15
+  efficiency: 0.10
