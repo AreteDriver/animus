@@ -46,6 +46,8 @@ class SuiteResult:
     total_score: float = 0.0
     duration_ms: float = 0
     timestamp: datetime = field(default_factory=datetime.now)
+    as_of: datetime = field(default_factory=datetime.now)
+    score_variance: float = 0.0
 
     @property
     def total(self) -> int:
@@ -68,8 +70,10 @@ class SuiteResult:
             "total": self.total,
             "pass_rate": self.pass_rate,
             "total_score": self.total_score,
+            "score_variance": self.score_variance,
             "duration_ms": self.duration_ms,
             "timestamp": self.timestamp.isoformat(),
+            "as_of": self.as_of.isoformat(),
             "results": [r.to_dict() for r in self.results],
         }
 
@@ -120,6 +124,7 @@ class EvalRunner:
         import time
 
         start_time = time.time()
+        as_of = datetime.now()
 
         # Filter cases if needed
         cases = suite.cases
@@ -133,13 +138,14 @@ class EvalRunner:
 
         # Run evaluations
         if parallel and len(cases) > 1:
-            results = self._run_parallel(cases, metrics)
+            results = self._run_parallel(cases, metrics, as_of=as_of)
         else:
-            results = self._run_sequential(cases, metrics)
+            results = self._run_sequential(cases, metrics, as_of=as_of)
 
         # Aggregate results
         suite_result = self._aggregate_results(suite, results)
         suite_result.duration_ms = (time.time() - start_time) * 1000
+        suite_result.as_of = as_of
 
         return suite_result
 
@@ -162,6 +168,7 @@ class EvalRunner:
         import time
 
         start_time = time.time()
+        as_of = datetime.now()
 
         # Filter cases
         cases = suite.cases
@@ -173,16 +180,19 @@ class EvalRunner:
         metrics = suite.metrics
 
         if parallel and len(cases) > 1:
-            results = await self._run_parallel_async(cases, metrics)
+            results = await self._run_parallel_async(cases, metrics, as_of=as_of)
         else:
-            results = await self._run_sequential_async(cases, metrics)
+            results = await self._run_sequential_async(cases, metrics, as_of=as_of)
 
         suite_result = self._aggregate_results(suite, results)
         suite_result.duration_ms = (time.time() - start_time) * 1000
+        suite_result.as_of = as_of
 
         return suite_result
 
-    def _run_sequential(self, cases: list[EvalCase], metrics: list[EvalMetric]) -> list[EvalResult]:
+    def _run_sequential(
+        self, cases: list[EvalCase], metrics: list[EvalMetric], *, as_of: datetime
+    ) -> list[EvalResult]:
         """Run cases sequentially."""
         results = []
         total = len(cases)
@@ -200,6 +210,7 @@ class EvalRunner:
                     error=str(e),
                 )
 
+            result.as_of = as_of
             results.append(result)
 
             if self.progress_callback:
@@ -207,7 +218,9 @@ class EvalRunner:
 
         return results
 
-    def _run_parallel(self, cases: list[EvalCase], metrics: list[EvalMetric]) -> list[EvalResult]:
+    def _run_parallel(
+        self, cases: list[EvalCase], metrics: list[EvalMetric], *, as_of: datetime
+    ) -> list[EvalResult]:
         """Run cases in parallel using threads."""
         results = [None] * len(cases)
         total = len(cases)
@@ -225,6 +238,7 @@ class EvalRunner:
                     output=None,
                     error=str(e),
                 )
+            result.as_of = as_of
             return idx, result
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -241,7 +255,7 @@ class EvalRunner:
         return results
 
     async def _run_sequential_async(
-        self, cases: list[EvalCase], metrics: list[EvalMetric]
+        self, cases: list[EvalCase], metrics: list[EvalMetric], *, as_of: datetime
     ) -> list[EvalResult]:
         """Run cases sequentially (async)."""
         results = []
@@ -260,6 +274,7 @@ class EvalRunner:
                     error=str(e),
                 )
 
+            result.as_of = as_of
             results.append(result)
 
             if self.progress_callback:
@@ -268,7 +283,7 @@ class EvalRunner:
         return results
 
     async def _run_parallel_async(
-        self, cases: list[EvalCase], metrics: list[EvalMetric]
+        self, cases: list[EvalCase], metrics: list[EvalMetric], *, as_of: datetime
     ) -> list[EvalResult]:
         """Run cases in parallel (async)."""
 
@@ -284,6 +299,7 @@ class EvalRunner:
                     output=None,
                     error=str(e),
                 )
+            result.as_of = as_of
             return idx, result
 
         # Create semaphore to limit concurrency
@@ -327,6 +343,9 @@ class EvalRunner:
 
         if scores:
             suite_result.total_score = sum(scores) / len(scores)
+            mean = suite_result.total_score
+            variance = sum((s - mean) ** 2 for s in scores) / len(scores)
+            suite_result.score_variance = variance
 
         return suite_result
 

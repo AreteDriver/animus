@@ -51,15 +51,46 @@ class EvalStore:
     ) -> str:
         """Record a completed evaluation run with all case results.
 
-        Returns the generated run UUID.
+        Returns the generated run UUID.  If an equivalent run was recorded
+        within the last 60 minutes (same suite, agent, model, mode and an
+        identical pass_rate within 0.01) the existing run_id is returned
+        instead of writing a duplicate row.
         """
-        run_id = str(uuid.uuid4())
         now = datetime.now()
         started_at = (result.timestamp or now).isoformat()
         completed_at = now.isoformat()
         total_tokens = sum(r.tokens_used for r in result.results)
         total_cost_usd = sum(getattr(r, "cost_usd", 0.0) or 0.0 for r in result.results)
         meta_json = json.dumps(metadata) if metadata else None
+
+        # Deduplication: look for a near-identical run in the last hour.
+        cutoff = (now - timedelta(hours=1)).isoformat()
+        dup_row = self.backend.fetchone(
+            """
+            SELECT id, pass_rate
+            FROM eval_runs
+            WHERE suite_name = ?
+              AND (agent_role IS NULL OR agent_role = ?)
+              AND (model IS NULL OR model = ?)
+              AND run_mode = ?
+              AND completed_at >= ?
+            ORDER BY completed_at DESC
+            LIMIT 1
+            """,
+            (suite_name, agent_role, model, run_mode, cutoff),
+        )
+        if dup_row is not None:
+            stored_pass = float(dup_row["pass_rate"] or 0.0)
+            if abs(stored_pass - result.pass_rate) <= 0.01:
+                logger.info(
+                    "Deduplicated eval run for suite '%s' (pass_rate=%.2f, existing=%s)",
+                    suite_name,
+                    result.pass_rate,
+                    dup_row["id"][:8],
+                )
+                return dup_row["id"]
+
+        run_id = str(uuid.uuid4())
 
         with self.backend.transaction():
             self.backend.execute(
@@ -68,10 +99,10 @@ class EvalStore:
                     (id, suite_name, agent_role, model, run_mode,
                      started_at, completed_at, duration_ms,
                      total_cases, passed, failed, errors, skipped,
-                     avg_score, pass_rate, total_tokens, metadata,
+                     avg_score, pass_rate, score_variance, total_tokens, metadata,
                      rubric_name, rubric_version, config_hash,
                      prompt_version, total_cost_usd)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                         ?, ?, ?, ?, ?)
                 """,
                 (
@@ -90,6 +121,7 @@ class EvalStore:
                     result.skipped,
                     result.total_score,
                     result.pass_rate,
+                    result.score_variance,
                     total_tokens,
                     meta_json,
                     rubric_name,

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -52,6 +52,7 @@ from animus_kernel.executor.arete_hooks import get_arete_hooks  # noqa: E402
 from animus_kernel.executor.executor import WorkflowExecutor  # noqa: E402
 
 workflow_engine = WorkflowEngineAdapter()
+yaml_workflow_executor = WorkflowExecutor()
 prompt_manager = PromptTemplateManager()
 openai_client = OpenAIClient()
 yaml_workflow_executor = WorkflowExecutor(arete_hooks=get_arete_hooks())
@@ -70,6 +71,7 @@ mcp_manager: MCPConnectorManager | None = None
 settings_manager: SettingsManager | None = None
 budget_manager: PersistentBudgetManager | None = None
 task_store: TaskStore | None = None
+citizen_commissioner: Any | None = None
 
 # ---------------------------------------------------------------------------
 # Coordination (initialized in lifespan, optional)

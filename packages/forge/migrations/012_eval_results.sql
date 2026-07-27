@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS eval_runs (
     skipped INTEGER DEFAULT 0,
     avg_score REAL DEFAULT 0.0,
     pass_rate REAL DEFAULT 0.0,
+    score_variance REAL DEFAULT 0.0,
     total_tokens INTEGER DEFAULT 0,
     metadata TEXT
 );
@@ -24,6 +25,8 @@ CREATE TABLE IF NOT EXISTS eval_runs (
 CREATE INDEX IF NOT EXISTS idx_eval_runs_suite ON eval_runs(suite_name);
 CREATE INDEX IF NOT EXISTS idx_eval_runs_completed ON eval_runs(completed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_eval_runs_agent ON eval_runs(agent_role);
+CREATE INDEX IF NOT EXISTS idx_eval_runs_dedup
+ON eval_runs(suite_name, agent_role, model, run_mode, completed_at DESC);
 
 CREATE TABLE IF NOT EXISTS eval_case_results (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

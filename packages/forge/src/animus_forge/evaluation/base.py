@@ -77,6 +77,7 @@ class EvalResult:
     latency_ms: float = 0
     tokens_used: int = 0
     timestamp: datetime = field(default_factory=datetime.now)
+    as_of: datetime = field(default_factory=datetime.now)
     metadata: dict[str, Any] = field(default_factory=dict)
     failure_mode: str | None = None
     rubric_band: str | None = None

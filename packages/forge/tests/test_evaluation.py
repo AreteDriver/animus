@@ -2250,6 +2250,44 @@ class TestEndToEnd:
         assert result.passed == 2
         assert result.pass_rate == 1.0
 
+    def test_as_of_injected_into_results(self):
+        """All case results share the same as_of timestamp."""
+        evaluator = _DummyEvaluator()
+        suite = EvalSuite(name="as_of_suite")
+        suite.add_case(input="a")
+        suite.add_case(input="b")
+
+        runner = EvalRunner(evaluator)
+        result = runner.run(suite)
+
+        assert result.as_of is not None
+        for r in result.results:
+            assert r.as_of == result.as_of
+
+    def test_score_variance_calculated(self):
+        """SuiteResult computes population variance of case scores."""
+        evaluator = AgentEvaluator(lambda x: x, threshold=0.5)
+        suite = EvalSuite(name="variance_suite", threshold=0.5)
+        suite.add_metric(ExactMatchMetric())
+        suite.add_case(input="hello", expected="hello", name="match")
+        suite.add_case(input="world", expected="wrong", name="mismatch")
+
+        runner = EvalRunner(evaluator)
+        result = runner.run(suite)
+
+        # scores: 1.0 and 0.0  → mean 0.5, variance 0.25
+        assert result.score_variance == 0.25
+
+    def test_suite_result_to_dict_includes_new_fields(self):
+        evaluator = _DummyEvaluator()
+        suite = EvalSuite(name="dict_suite")
+        suite.add_case(input="x")
+        result = EvalRunner(evaluator).run(suite)
+        d = result.to_dict()
+        assert "as_of" in d
+        assert "score_variance" in d
+        assert d["score_variance"] == 0.0
+
 
 class TestCodeExecutionSandbox:
     """B4: model-generated code runs under kernel resource limits, so a

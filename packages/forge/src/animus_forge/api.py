@@ -117,6 +117,53 @@ async def lifespan(app: FastAPI):
 
     state.task_store = TaskStore(backend=backend)
 
+    # Initialize Research Citizen commissioner
+    try:
+        from animus_forge.citizens import CitizenCommissioner, ResearchCitizen
+        from animus_forge.citizens.store import MissionStore
+        from animus_forge.evaluation.base import AgentEvaluator
+        from animus_forge.evaluation.loader import SuiteLoader
+        from animus_forge.evaluation.runner import EvalRunner
+        from animus_forge.evaluation.store import get_eval_store
+        from animus_forge.intelligence.cross_workflow_memory import CrossWorkflowMemory
+        from animus_forge.intelligence.evidence_bridge import EvidenceBridge
+        from animus_forge.intelligence.outcome_tracker import OutcomeTracker
+        from animus_forge.state import AgentMemory
+
+        mission_store = MissionStore(backend=backend)
+        eval_store = get_eval_store()
+        outcome_tracker = OutcomeTracker(backend=backend)
+        cross_memory = CrossWorkflowMemory(AgentMemory(backend=backend))
+        suite_loader = SuiteLoader()
+
+        # Use live provider if available, else mock evaluator for safety
+        try:
+            from animus_forge.providers import get_provider
+            from animus_forge.evaluation.base import ProviderEvaluator
+
+            provider = get_provider()
+            evaluator = ProviderEvaluator(provider=provider)
+        except Exception:
+            evaluator = AgentEvaluator(agent_fn=lambda x: "mock output")
+
+        eval_runner = EvalRunner(evaluator)
+        evidence_bridge = EvidenceBridge(
+            eval_store=eval_store,
+            outcome_tracker=outcome_tracker,
+            cross_memory=cross_memory,
+        )
+        citizen = ResearchCitizen(
+            mission_store=mission_store,
+            workflow_engine=state.workflow_engine,
+            eval_runner=eval_runner,
+            eval_loader=suite_loader,
+            evidence_bridge=evidence_bridge,
+        )
+        state.citizen_commissioner = CitizenCommissioner(citizen)
+        logger.info("Research Citizen commissioner initialized")
+    except Exception as e:
+        logger.warning("Citizen commissioner not initialized: %s", e)
+
     # Initialize WebSocket components
     state.ws_manager = ConnectionManager()
     state.ws_broadcaster = Broadcaster(state.ws_manager)
@@ -562,6 +609,7 @@ from animus_forge.api_routes import (  # noqa: E402
     agents,
     auth,
     budgets,
+    citizens,
     coordination,
     dashboard,
     executions,
@@ -594,6 +642,7 @@ v1_router.include_router(history.router)
 v1_router.include_router(graph.router)
 v1_router.include_router(coordination.router)
 v1_router.include_router(agents.router)
+v1_router.include_router(citizens.router)
 
 app.include_router(v1_router)
 app.include_router(health.router)

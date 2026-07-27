@@ -107,6 +107,7 @@ def memory_backend():
                 skipped INTEGER DEFAULT 0,
                 avg_score REAL DEFAULT 0.0,
                 pass_rate REAL DEFAULT 0.0,
+                score_variance REAL DEFAULT 0.0,
                 total_tokens INTEGER DEFAULT 0,
                 metadata TEXT,
                 rubric_name TEXT,
@@ -115,6 +116,8 @@ def memory_backend():
                 prompt_version TEXT,
                 total_cost_usd REAL DEFAULT 0.0
             );
+            CREATE INDEX IF NOT EXISTS idx_eval_runs_dedup
+            ON eval_runs(suite_name, agent_role, model, run_mode, completed_at DESC);
             CREATE TABLE IF NOT EXISTS eval_case_results (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 run_id TEXT NOT NULL,
@@ -371,8 +374,9 @@ class TestEvalStore:
         assert error_case["error"] == "Something broke"
 
     def test_get_suite_trend(self, eval_store: EvalStore, sample_suite_result: SuiteResult) -> None:
-        for _ in range(3):
-            eval_store.record_run("trend_suite", sample_suite_result)
+        for i in range(3):
+            # Vary model so deduplication does not collapse the runs
+            eval_store.record_run("trend_suite", sample_suite_result, model=f"model-{i}")
 
         trend = eval_store.get_suite_trend("trend_suite", days=30)
         assert len(trend) == 3
@@ -742,6 +746,39 @@ class TestEvalIntegration:
 
         assert result.total == 1
         assert result.results[0].score > 0
+
+
+    def test_record_run_deduplicates_identical_recent_run(
+        self, eval_store: EvalStore, sample_suite_result: SuiteResult
+    ) -> None:
+        """An identical run within 60 min returns the existing run_id."""
+        run_id_1 = eval_store.record_run(
+            "dedup_suite",
+            sample_suite_result,
+            agent_role="tester",
+            model="m",
+            run_mode="live",
+        )
+        run_id_2 = eval_store.record_run(
+            "dedup_suite",
+            sample_suite_result,
+            agent_role="tester",
+            model="m",
+            run_mode="live",
+        )
+        assert run_id_1 == run_id_2
+        # Only one row should exist
+        assert len(eval_store.query_runs(suite_name="dedup_suite")) == 1
+
+    def test_record_run_stores_variance(
+        self, eval_store: EvalStore, sample_suite_result: SuiteResult
+    ) -> None:
+        """score_variance from SuiteResult is persisted."""
+        sample_suite_result.score_variance = 0.42
+        run_id = eval_store.record_run("var_suite", sample_suite_result)
+        run = eval_store.get_run(run_id)
+        assert run is not None
+        assert run["score_variance"] == 0.42
 
 
 # =============================================================================
