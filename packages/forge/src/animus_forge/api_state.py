@@ -72,6 +72,7 @@ settings_manager: SettingsManager | None = None
 budget_manager: PersistentBudgetManager | None = None
 task_store: TaskStore | None = None
 citizen_commissioner: Any | None = None
+arete_guard: Any | None = None
 
 # ---------------------------------------------------------------------------
 # Coordination (initialized in lifespan, optional)

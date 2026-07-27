@@ -117,6 +117,16 @@ async def lifespan(app: FastAPI):
 
     state.task_store = TaskStore(backend=backend)
 
+    # Initialize AreteGuard
+    try:
+        from animus_forge.security.arete_guard import AreteGuard
+
+        state.arete_guard = AreteGuard(mode="warn")
+        logger.info("AreteGuard initialized")
+    except Exception as e:
+        logger.warning("AreteGuard initialization skipped: %s", e)
+        state.arete_guard = None
+
     # Initialize Research Citizen commissioner
     try:
         from animus_forge.citizens import CitizenCommissioner, ResearchCitizen
@@ -158,6 +168,7 @@ async def lifespan(app: FastAPI):
             eval_runner=eval_runner,
             eval_loader=suite_loader,
             evidence_bridge=evidence_bridge,
+            guard=state.arete_guard,
         )
         state.citizen_commissioner = CitizenCommissioner(citizen)
         logger.info("Research Citizen commissioner initialized")
@@ -612,6 +623,7 @@ from animus_forge.api_routes import (  # noqa: E402
     citizens,
     coordination,
     dashboard,
+    evals,
     executions,
     graph,
     health,
@@ -643,6 +655,7 @@ v1_router.include_router(graph.router)
 v1_router.include_router(coordination.router)
 v1_router.include_router(agents.router)
 v1_router.include_router(citizens.router)
+v1_router.include_router(evals.router)
 
 app.include_router(v1_router)
 app.include_router(health.router)

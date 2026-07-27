@@ -300,6 +300,88 @@ class EvalStore:
         }
 
     # =========================================================================
+    # Baseline / Regression
+    # =========================================================================
+
+    def set_baseline(self, suite_name: str, run_id: str) -> None:
+        """Mark a specific eval run as the gold baseline for a suite."""
+        with self.backend.transaction():
+            # Unset any existing baseline for this suite
+            self.backend.execute(
+                """
+                UPDATE eval_runs
+                SET metadata = json_set(COALESCE(metadata, '{}'), '$.is_baseline', 0)
+                WHERE suite_name = ? AND json_extract(COALESCE(metadata, '{}'), '$.is_baseline') = 1
+                """,
+                (suite_name,),
+            )
+            # Set new baseline
+            self.backend.execute(
+                """
+                UPDATE eval_runs
+                SET metadata = json_set(COALESCE(metadata, '{}'), '$.is_baseline', 1)
+                WHERE id = ?
+                """,
+                (run_id,),
+            )
+        logger.info("Baseline set for suite '%s': run=%s", suite_name, run_id[:8])
+
+    def get_baseline(self, suite_name: str) -> dict | None:
+        """Get the current baseline run for a suite."""
+        row = self.backend.fetchone(
+            """
+            SELECT id, pass_rate, avg_score, score_variance, metadata, completed_at
+            FROM eval_runs
+            WHERE suite_name = ?
+              AND json_extract(COALESCE(metadata, '{}'), '$.is_baseline') = 1
+            ORDER BY completed_at DESC
+            LIMIT 1
+            """,
+            (suite_name,),
+        )
+        if not row:
+            return None
+        result = dict(row)
+        if result.get("metadata"):
+            try:
+                result["metadata"] = json.loads(result["metadata"])
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return result
+
+    def check_regression(
+        self,
+        suite_name: str,
+        current_pass_rate: float,
+        *,
+        delta_threshold: float = 0.2,
+    ) -> dict:
+        """Compare current pass_rate against the stored baseline.
+
+        Returns:
+            Dict with ``regression_detected``, ``delta``, ``baseline_pass_rate``.
+        """
+        baseline = self.get_baseline(suite_name)
+        if baseline is None:
+            return {
+                "regression_detected": False,
+                "delta": 0.0,
+                "baseline_pass_rate": None,
+                "reason": "no_baseline",
+            }
+
+        baseline_pass_rate = float(baseline.get("pass_rate", 1.0))
+        delta = baseline_pass_rate - current_pass_rate
+        detected = delta > delta_threshold
+
+        return {
+            "regression_detected": detected,
+            "delta": round(delta, 4),
+            "baseline_pass_rate": baseline_pass_rate,
+            "reason": "regression" if detected else "within_tolerance",
+        }
+
+    # =========================================================================
     # OutcomeTracker bridge
     # =========================================================================
 

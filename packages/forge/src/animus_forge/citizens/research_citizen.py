@@ -40,12 +40,14 @@ class ResearchCitizen:
         eval_runner: EvalRunner,
         eval_loader: SuiteLoader,
         evidence_bridge: EvidenceBridge,
+        arete_guard: Any | None = None,
     ):
         self.mission_store = mission_store
         self.workflow_engine = workflow_engine
         self.eval_runner = eval_runner
         self.eval_loader = eval_loader
         self.evidence_bridge = evidence_bridge
+        self.arete_guard = arete_guard
 
     # ------------------------------------------------------------------
     # Public API
@@ -100,6 +102,13 @@ class ResearchCitizen:
             workflow.variables["objective"] = mission.config.objective
             temp = mission.metadata.get("temperature", 0.7)
             workflow.variables["temperature"] = temp
+
+            # Guard check before execution
+            if self.arete_guard is not None:
+                self.arete_guard.check(
+                    workflow_name=mission.config.workflow_template,
+                    mission_id=mission_id,
+                )
 
             # 2. Execute workflow
             wf_result = self.workflow_engine.execute_workflow(workflow)
