@@ -14,7 +14,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 try:
-    from animus_quorum.arete_bridge import (
+    from animus_quorum.arete_bridge import (  # boundary-ok: optional Quorum integration
         leave_autopsy_marker,
         record_failure_outcome,
     )
@@ -172,14 +172,14 @@ def get_arete_hooks() -> AreteHooks | None:
     memory_layer = None
 
     try:
-        from animus_quorum.scoring import PhiScorer, ScoreStore
+        from animus_quorum.scoring import PhiScorer, ScoreStore  # boundary-ok: optional Quorum integration
 
         phi_scorer = PhiScorer(store=ScoreStore())
     except Exception:
         logger.debug("PhiScorer not available for Arete hooks")
 
     try:
-        from animus_quorum.stigmergy import StigmergyField
+        from animus_quorum.stigmergy import StigmergyField  # boundary-ok: optional Quorum integration
 
         stigmergy_field = StigmergyField()
     except Exception:

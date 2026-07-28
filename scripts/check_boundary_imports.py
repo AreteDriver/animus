@@ -54,9 +54,9 @@ PACKAGE_ROOTS: list[tuple[str, str]] = [
     ("packages/kernel/src/animus_kernel/", "animus_kernel"),
     ("packages/forge/src/animus_forge/", "animus_forge"),
     ("packages/bootstrap/src/animus_bootstrap/", "animus_bootstrap"),
-    ("packages/quorum/python/convergent/", "convergent"),
+    ("packages/quorum/python/animus_quorum/", "animus_quorum"),
     ("packages/types/src/animus_types/", "animus_types"),
-    ("packages/contracts/", "animus_contracts"),
+    ("packages/contracts/src/animus_contracts/", "animus_contracts"),
     ("packages/pwa/", "pwa"),
 ]
 
@@ -68,7 +68,7 @@ LAYERS: dict[str, int] = {
     "animus_kernel": 2,      # Memory / Kernel
     "animus_contracts": 3,   # Contracts (cognitive layer)
     "animus_forge": 3,       # Cognitive — Forge
-    "convergent": 3,          # Cognitive — Quorum
+    "animus_quorum": 3,       # Cognitive — Quorum
     "animus_bootstrap": 4,    # Interface — Bootstrap
     "pwa": 4,                 # Interface — PWA
 }

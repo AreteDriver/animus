@@ -19,7 +19,7 @@ from animus_types import ValidationError as _ContractValidationError
 logger = get_logger("policy.capability_store")
 
 try:
-    from animus_contracts import validate as _validate_contract
+    from animus_contracts import validate as _validate_contract  # boundary-ok: optional contract validation
 
     _HAS_CONTRACTS = True
 except ImportError:  # pragma: no cover

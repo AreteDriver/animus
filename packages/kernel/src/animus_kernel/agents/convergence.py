@@ -14,7 +14,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 try:
-    from animus_quorum import (
+    from animus_quorum import (  # boundary-ok: optional Quorum integration
         Intent,
         InterfaceKind,
         InterfaceSpec,
@@ -184,7 +184,7 @@ def create_bridge(db_path: str | None = None) -> Any:
     try:
         from pathlib import Path
 
-        from animus_quorum import CoordinationConfig, GorgonBridge
+        from animus_quorum import CoordinationConfig, GorgonBridge  # boundary-ok: optional Quorum integration
 
         if db_path is None:
             db_dir = Path.home() / ".animus"
@@ -216,7 +216,7 @@ def create_event_log(db_path: str | None = None) -> Any:
     try:
         from pathlib import Path
 
-        from animus_quorum import EventLog
+        from animus_quorum import EventLog  # boundary-ok: optional Quorum integration
 
         if db_path is None:
             db_dir = Path.home() / ".animus"
@@ -245,7 +245,7 @@ def get_coordination_health(bridge: Any) -> dict[str, Any]:
     try:
         from dataclasses import asdict
 
-        from animus_quorum import HealthChecker
+        from animus_quorum import HealthChecker  # boundary-ok: optional Quorum integration
 
         checker = HealthChecker.from_bridge(bridge)
         health = checker.check()
@@ -267,7 +267,7 @@ def check_dependency_cycles(resolver: Any) -> list[dict[str, Any]]:
     if not HAS_QUORUM or resolver is None:
         return []
     try:
-        from animus_quorum import find_cycles
+        from animus_quorum import find_cycles  # boundary-ok: optional Quorum integration
 
         cycles = find_cycles(resolver)
         return [
@@ -295,7 +295,7 @@ def get_execution_order(resolver: Any) -> list[str]:
     if not HAS_QUORUM or resolver is None:
         return []
     try:
-        from animus_quorum import topological_order
+        from animus_quorum import topological_order  # boundary-ok: optional Quorum integration
 
         return topological_order(resolver)
     except Exception as e:

@@ -158,11 +158,11 @@ def run_consensus(
     to accept proposed improvements.
     """
     try:
-        from animus_quorum.coordination_config import CoordinationConfig
-        from animus_quorum.protocol import AgentIdentity, Vote, VoteChoice
-        from animus_quorum.score_store import ScoreStore
-        from animus_quorum.scoring import PhiScorer
-        from animus_quorum.triumvirate import Triumvirate
+        from animus_quorum.coordination_config import CoordinationConfig  # boundary-ok: optional Quorum integration
+        from animus_quorum.protocol import AgentIdentity, Vote, VoteChoice  # boundary-ok: optional Quorum integration
+        from animus_quorum.score_store import ScoreStore  # boundary-ok: optional Quorum integration
+        from animus_quorum.scoring import PhiScorer  # boundary-ok: optional Quorum integration
+        from animus_quorum.triumvirate import Triumvirate  # boundary-ok: optional Quorum integration
 
         # In-memory score store for bootstrap (no persistence needed yet)
         store = ScoreStore(":memory:")
