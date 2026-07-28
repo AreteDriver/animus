@@ -231,7 +231,7 @@ def scenario_stage4_gitleaks_blocks_dirty_commit(data_dir: Path) -> str:
     import subprocess
     from unittest.mock import patch
 
-    from animus_forge.self_improve.pr_manager import PRManager, SecretsDetectedError
+    from animus_forge.self_improve.pr_manager import PRManager, SecretsDetectedError  # boundary-ok: integration test exercising Forge safety gates
 
     mgr = PRManager(repo_path=data_dir)
     dirty_result = subprocess.CompletedProcess(
@@ -258,7 +258,7 @@ def scenario_stage4_gitleaks_blocks_dirty_commit(data_dir: Path) -> str:
 
 def scenario_stage4_safety_allow_list_blocks_random_file(data_dir: Path) -> str:
     """A file outside the allow-list emits a not_allow_listed violation."""
-    from animus_forge.self_improve.safety import SafetyChecker, SafetyConfig
+    from animus_forge.self_improve.safety import SafetyChecker, SafetyConfig  # boundary-ok: integration test exercising Forge safety gates
 
     cfg = SafetyConfig(allowed_files=["packages/*/src/**/*.py"])
     checker = SafetyChecker(cfg)
@@ -277,7 +277,7 @@ def scenario_stage4_default_branch_strict_mode(data_dir: Path) -> str:
     """ANIMUS_FORGE_REQUIRE_DEFAULT_BRANCH=1 refuses checkout without config."""
     import os
 
-    from animus_forge.self_improve.pr_manager import PRManager
+    from animus_forge.self_improve.pr_manager import PRManager  # boundary-ok: integration test exercising Forge safety gates
 
     saved_default = os.environ.get("ANIMUS_FORGE_DEFAULT_BRANCH")
     saved_strict = os.environ.get("ANIMUS_FORGE_REQUIRE_DEFAULT_BRANCH")
@@ -339,7 +339,7 @@ def scenario_stage5_pi_footer_warns_consumer(data_dir: Path) -> str:
 
 def scenario_stage3d_completion_request_carries_sensitivity(data_dir: Path) -> str:
     """``CompletionRequest`` accepts a sensitivity field defaulting to PUBLIC."""
-    from animus_forge.providers.base import CompletionRequest
+    from animus_forge.providers.base import CompletionRequest  # boundary-ok: integration test exercising provider sensitivity
 
     req_default = CompletionRequest(prompt="x")
     assert req_default.sensitivity is Sensitivity.PUBLIC
@@ -352,7 +352,7 @@ def scenario_stage3d_forge_egress_blocks_confidential(data_dir: Path) -> str:
     """Forge vendored egress helper refuses cloud for CONFIDENTIAL/SECRET tiers."""
     import os
 
-    from animus_forge.network import is_egress_allowed as forge_is_egress_allowed
+    from animus_forge.network import is_egress_allowed as forge_is_egress_allowed  # boundary-ok: integration test exercising egress gating
 
     saved = os.environ.get("ANIMUS_OFFLINE")
     try:
@@ -382,9 +382,9 @@ def scenario_stage3d_anthropic_provider_refuses_confidential(data_dir: Path) -> 
     before invoking the cloud client."""
     from unittest.mock import MagicMock
 
-    from animus_forge.network import EgressDeniedError
-    from animus_forge.providers.anthropic_provider import AnthropicProvider
-    from animus_forge.providers.base import (
+    from animus_forge.network import EgressDeniedError  # boundary-ok: integration test exercising egress gating
+    from animus_forge.providers.anthropic_provider import AnthropicProvider  # boundary-ok: integration test exercising provider sensitivity
+    from animus_forge.providers.base import (  # boundary-ok: integration test exercising provider sensitivity
         CompletionRequest,
         ProviderConfig,
         ProviderType,
@@ -411,12 +411,12 @@ def scenario_stage3d_tier_router_forces_local_for_secret(data_dir: Path) -> str:
     """TierRouter routes SECRET requests to local providers."""
     from unittest.mock import MagicMock
 
-    from animus_forge.providers.base import (
+    from animus_forge.providers.base import (  # boundary-ok: integration test exercising provider sensitivity
         CompletionRequest,
         ProviderType,
     )
-    from animus_forge.providers.manager import ProviderManager
-    from animus_forge.providers.router import RoutingConfig, TierRouter
+    from animus_forge.providers.manager import ProviderManager  # boundary-ok: integration test exercising provider routing
+    from animus_forge.providers.router import RoutingConfig, TierRouter  # boundary-ok: integration test exercising provider routing
 
     pm = MagicMock(spec=ProviderManager)
     pm.list_providers.return_value = ["ollama", "anthropic"]
@@ -440,13 +440,13 @@ def scenario_stage3d_tier_router_raises_when_no_local(data_dir: Path) -> str:
     raise instead of silently falling back."""
     from unittest.mock import MagicMock
 
-    from animus_forge.providers.base import (
+    from animus_forge.providers.base import (  # boundary-ok: integration test exercising provider sensitivity
         CompletionRequest,
         ProviderError,
         ProviderType,
     )
-    from animus_forge.providers.manager import ProviderManager
-    from animus_forge.providers.router import RoutingConfig, TierRouter
+    from animus_forge.providers.manager import ProviderManager  # boundary-ok: integration test exercising provider routing
+    from animus_forge.providers.router import RoutingConfig, TierRouter  # boundary-ok: integration test exercising provider routing
 
     pm = MagicMock(spec=ProviderManager)
     pm.list_providers.return_value = ["anthropic"]
@@ -477,7 +477,7 @@ def scenario_stage3d_rag_assembled_propagates_max_tier(data_dir: Path) -> str:
     from datetime import datetime, timezone
     from unittest.mock import MagicMock
 
-    from animus_forge.intelligence.cross_workflow_memory import (
+    from animus_forge.intelligence.cross_workflow_memory import (  # boundary-ok: integration test exercising cross-workflow memory
         AssembledContext,
         CrossWorkflowMemory,
     )

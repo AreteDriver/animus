@@ -1,6 +1,10 @@
 """AI Workflow Orchestrator - A unified automation layer for AI-powered workflows."""
 
-__version__ = "1.8.0"
+try:
+    from importlib.metadata import version as _version, PackageNotFoundError
+    __version__ = _version("animus-forge")
+except PackageNotFoundError:  # pragma: no cover
+    __version__ = "0.0.0+dev"
 
 from .auth import TokenAuth, create_access_token, verify_token
 from .config import Settings, get_settings

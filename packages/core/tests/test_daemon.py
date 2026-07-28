@@ -308,11 +308,18 @@ class TestDaemonCore:
         assert temp_daemon.config.max_concurrent_tasks == 2
 
     def test_pid_file(self, temp_daemon):
-        temp_daemon._write_pid()
-        pid = temp_daemon._read_pid()
-        assert pid == os.getpid()
-        assert temp_daemon.is_running() is True
-        temp_daemon._remove_pid()
+        from animus.infrastructure import LockedPidFile
+
+        assert temp_daemon.is_running() is False
+
+        # Simulate another daemon holding the lock
+        lock = LockedPidFile(temp_daemon.pid_file, "daemon")
+        lock.acquire()
+        try:
+            assert temp_daemon.is_running() is True
+        finally:
+            lock.release()
+
         assert temp_daemon.is_running() is False
 
     def test_save_load_state(self, temp_daemon):

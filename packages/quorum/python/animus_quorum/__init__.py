@@ -1,6 +1,10 @@
 """Convergent — Multi-agent coherence and coordination for AI systems."""
 
-__version__ = "1.1.0"
+try:
+    from importlib.metadata import version as _version, PackageNotFoundError
+    __version__ = _version("animus-quorum")
+except PackageNotFoundError:  # pragma: no cover
+    __version__ = "0.0.0+dev"
 
 from animus_quorum.async_backend import AsyncBackendWrapper, AsyncGraphBackend
 from animus_quorum.benchmark import (

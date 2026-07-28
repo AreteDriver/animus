@@ -1,6 +1,6 @@
 {
   "project": "animus",
-  "timestamp": "2026-07-20T05:01:57.896623+00:00",
+  "timestamp": "2026-07-27T21:02:07.220829+00:00",
   "summary": {
     "pass": 39,
     "fail": 0,
@@ -62,18 +62,18 @@
       "check_type": "test_count",
       "status": "PASS",
       "expected": 1,
-      "actual": 3512,
+      "actual": 3540,
       "claim_source": "",
-      "message": "Collected 3512 tests; expected >= 1"
+      "message": "Collected 3540 tests; expected >= 1"
     },
     {
       "name": "forge_tests",
       "check_type": "test_count",
       "status": "PASS",
       "expected": 1,
-      "actual": 10496,
+      "actual": 10497,
       "claim_source": "",
-      "message": "Collected 10496 tests; expected >= 1"
+      "message": "Collected 10497 tests; expected >= 1"
     },
     {
       "name": "root_architecture_dirs",
@@ -152,13 +152,13 @@
         "contracts": "pure JSON schemas, no Python package manifest",
         "core": "2.3.0",
         "forge": "1.9.0",
-        "kernel": "0.1.0",
+        "kernel": "0.1.1",
         "pwa": "0.1.0",
         "quorum": "1.2.0",
         "types": "0.1.0"
       },
       "claim_source": "",
-      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.0', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'0.8.0', '1.2.0', '2.3.0', '1.9.0', '0.1.0'} (expected failure)"
+      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.1', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'2.3.0', '0.1.0', '0.8.0', '1.2.0', '0.1.1', '1.9.0'} (expected failure)"
     },
     {
       "name": "compatibility_matrix",
@@ -181,7 +181,7 @@
       "expected": "compatibility check passes",
       "actual": {
         "returncode": 0,
-        "stdout": "Packages found: 7\n  animus-bootstrap     0.8.0\n  animus-contracts     0.1.0\n  animus-core          2.3.0\n  animus-forge         1.9.0\n  animus-kernel        0.1.0\n  animus-types         0.1.0\n  convergentai         1.2.0\n\nPASS — all compatibility checks satisfied.",
+        "stdout": "Packages found: 7\n  animus-bootstrap     0.8.0\n  animus-contracts     0.1.0\n  animus-core          2.3.0\n  animus-forge         1.9.0\n  animus-kernel        0.1.1\n  animus-quorum        1.2.0\n  animus-types         0.1.0\n\nPASS — all compatibility checks satisfied.",
         "stderr": ""
       },
       "claim_source": "scripts/check_compatibility.py",
@@ -405,9 +405,9 @@
       "check_type": "test_count",
       "status": "PASS",
       "expected": 1,
-      "actual": 357,
+      "actual": 493,
       "claim_source": "",
-      "message": "Collected 357 tests; expected >= 1"
+      "message": "Collected 493 tests; expected >= 1"
     },
     {
       "name": "traceability_linter",

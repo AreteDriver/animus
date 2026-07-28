@@ -1,6 +1,6 @@
 # Animus Contracts
 
-**Canonical JSON schemas for the Animus v2.1 Mind-class architecture.**
+**Canonical JSON schemas for the Animus v2.3 Kernel-native architecture.**
 
 These 20+ schemas define the data contracts across all Animus subsystems: memory, events, actions, assessments, and more. Every package that produces or consumes structured data validates against these schemas.
 
@@ -29,7 +29,7 @@ These 20+ schemas define the data contracts across all Animus subsystems: memory
 | `source.schema.json` | Provenance and citation tracking |
 | `trace.schema.json` | Execution traces for debugging and audit |
 
-### Mind-class Schemas (v2.3+)
+### Registry Schemas (v2.3+)
 
 | Schema | Purpose |
 |---|---|

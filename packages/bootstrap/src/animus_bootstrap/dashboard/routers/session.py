@@ -28,30 +28,30 @@ class CheckpointPayload:
     session_id: str | None = None
 
 
-def _checkpoint_store() -> Any | None:
-    """Import the kernel checkpoint store lazily to avoid bootstrap → kernel
-tight coupling at import time."""
+def _checkpoint_facade() -> Any | None:
+    """Create a CheckpointFacade lazily to avoid bootstrap → kernel tight
+    coupling at import time."""
     try:
-        from animus_kernel.head.checkpoint import HeadCheckpointStore
+        from animus_kernel.checkpoint_facade import CheckpointFacade
 
         db_path = Path.home() / ".animus" / "sessions" / "head.db"
-        return HeadCheckpointStore(db_path=db_path)
+        return CheckpointFacade(db_path=db_path)
     except Exception as exc:
-        logger.warning("Could not initialise HeadCheckpointStore: %s", exc)
+        logger.warning("Could not initialise CheckpointFacade: %s", exc)
         return None
 
 
 @router.get("/api/session/checkpoint")
 async def get_checkpoint(request: Request) -> JSONResponse:
-    """Return the most recent HeadCheckpoint for this PWA session.
+    """Return the most recent checkpoint for this PWA session.
 
     Falls back to an empty checkpoint when the store is unreadable.
     """
-    store = _checkpoint_store()
-    if store is None:
+    facade = _checkpoint_facade()
+    if facade is None:
         return JSONResponse(content={"messages": [], "summary": "", "turns": 0})
 
-    recent = store.list_recent(limit=1)
+    recent = facade.list_recent(limit=1)
     if not recent:
         return JSONResponse(content={"messages": [], "summary": "", "turns": 0})
 
@@ -78,17 +78,17 @@ async def post_checkpoint(request: Request) -> JSONResponse:
     summary = body.get("summary", "")
     turns = body.get("turns", 0)
 
-    store = _checkpoint_store()
-    if store is None:
+    facade = _checkpoint_facade()
+    if facade is None:
         return JSONResponse(
             status_code=503,
             content={"detail": "Checkpoint store unavailable."},
         )
 
     try:
-        from animus_kernel.head.checkpoint import HeadCheckpoint
+        from animus_kernel.checkpoint_facade import CheckpointData
 
-        cp = HeadCheckpoint(
+        cp = CheckpointData(
             session_id=session_id,
             started_at=datetime.now(UTC),
             last_active_at=datetime.now(UTC),
@@ -96,7 +96,7 @@ async def post_checkpoint(request: Request) -> JSONResponse:
             summary=summary,
             turns=turns,
         )
-        store.save(cp)
+        facade.save(cp)
     except Exception as exc:
         logger.exception("Failed to save checkpoint")
         return JSONResponse(

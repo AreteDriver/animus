@@ -16,7 +16,7 @@
 6. **MUST** forward `min_relevance` to Ogma synthesis; forward optional `model` to Ogma's `_resolve_provider()`.
 7. **MUST** push structured concepts to Animus semantic memory only when `tag=True` and `synthesis` is non-None.
 8. **MUST NOT** import or reference `quorum`, `convergent`, or any multi-agent coordination types.
-9. **MUST** default Ogma provider to local Ollama (`ModelConfig.ollama()`); remote OpenRouter tier is opt-in via `ANIMUS_OGMA_REMOTE` env var (preserving ADL-20260511-001 behavior).
+9. **MUST** default Ogma provider to local Ollama (`ModelConfig.ollama()`); an explicit `model` argument overrides the default. No environment-variable opt-in for remote tiers.
 10. **MAY** support batch ingestion (`list[str]` urls) by iterating serially; parallelization is out of scope.
 11. **MUST NOT** fork, vendor, or modify Lugh or Ogma internals; only compose their public interfaces.
 

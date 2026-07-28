@@ -1,4 +1,4 @@
-"""Tests for Mind-class schemas upstreamed from animus-mind.
+"""Tests for Kernel-native contract schemas.
 
 Ensures all 5 new schemas compile under Draft 2020-12 and validate
 representative positive/negative fixtures.

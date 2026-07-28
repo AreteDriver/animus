@@ -3,7 +3,7 @@
 Evaluates action requests against capability grants and policy rules.
 Default deny. No model involvement.
 
-Upstreamed from ``animus-mind`` (Mind-class architecture, 2026-07-06).
+Kernel-native policy layer (v2.3, 2026-07-06).
 """
 
 from __future__ import annotations

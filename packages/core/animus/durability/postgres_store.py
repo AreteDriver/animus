@@ -4,7 +4,7 @@ Optional dependency gated by ``sqlalchemy`` availability. When unavailable,
 :class:`DurableObjectStore` raises :exc:`RuntimeError` on instantiation with a
 helpful install message.
 
-Upstreamed from ``animus-mind`` (Mind-class architecture, 2026-07-06).
+Kernel-native durability layer (v2.3, 2026-07-06).
 
 Usage::
 
@@ -29,11 +29,11 @@ from enum import Enum
 from typing import Any
 
 from animus.logging import get_logger
+from animus_types import ValidationError as _ContractValidationError
 
 logger = get_logger("durability.postgres_store")
 
 try:
-    from animus_contracts import ValidationError as _ContractValidationError
     from animus_contracts import validate as _validate_contract
 
     _HAS_CONTRACTS = True
@@ -65,7 +65,7 @@ except ImportError:  # pragma: no cover
 
 
 # ------------------------------------------------------------------
-# Domain enums (Mind-class, not kernel memory types)
+# Domain enums (bitemporal registry types, not kernel memory types)
 # ------------------------------------------------------------------
 
 

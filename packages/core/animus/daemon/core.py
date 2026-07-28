@@ -20,6 +20,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from animus.infrastructure import AlreadyRunningError, LockedPidFile
 from animus.logging import get_logger
 
 from .resource_guard import ResourceGuard, ResourceLimits
@@ -139,6 +140,7 @@ class AnimusDaemon:
         # Task tracking
         self._active_tasks: dict[str, asyncio.Task] = {}
         self._shutdown_event = asyncio.Event()
+        self._pid_lock: LockedPidFile | None = None
 
         # Stats
         self.stats = {
@@ -151,35 +153,17 @@ class AnimusDaemon:
 
     # ── Lifecycle ─────────────────────────────────────────────────────
 
-    def _write_pid(self) -> None:
-        self.pid_file.write_text(str(os.getpid()))
-
-    def _read_pid(self) -> int | None:
-        if self.pid_file.exists():
-            try:
-                return int(self.pid_file.read_text().strip())
-            except ValueError:
-                return None
-        return None
-
     def _remove_pid(self) -> None:
-        if self.pid_file.exists():
-            self.pid_file.unlink()
+        # Best-effort cleanup; LockedPidFile owns the unlink on release
+        try:
+            self.pid_file.unlink(missing_ok=True)
+        except OSError:
+            pass
 
     def is_running(self) -> bool:
-        """Check if another daemon instance is running."""
-        pid = self._read_pid()
-        if pid is None:
-            return False
-        try:
-            os.kill(pid, 0)  # Signal 0 is error check
-            return True
-        except ProcessLookupError:
-            # Stale PID file
-            self._remove_pid()
-            return False
-        except PermissionError:
-            return True  # Can't check, assume running
+        """Check if another daemon instance is running via locked PID file."""
+        running, _ = LockedPidFile.peek(self.pid_file, "daemon")
+        return running
 
     def _save_state(self) -> None:
         state = {
@@ -231,12 +215,17 @@ class AnimusDaemon:
 
     async def start(self) -> bool:
         """Start the daemon. Returns True if started, False if already running."""
-        if self.is_running():
-            logger.warning("Daemon is already running (PID file exists)")
+        if self._pid_lock is not None and self._pid_lock._acquired:
+            logger.warning("Daemon start() called twice on the same instance")
+            return False
+        try:
+            self._pid_lock = LockedPidFile(self.pid_file, "daemon")
+            self._pid_lock.acquire()
+        except AlreadyRunningError as exc:
+            logger.warning("Daemon is already running (pid %s)", exc.pid)
             return False
 
         self.state = DaemonState.STARTING
-        self._write_pid()
         self._running = True
         self.stats["start_time"] = time.time()
 
@@ -292,7 +281,9 @@ class AnimusDaemon:
 
         # Final state save
         self._save_state()
-        self._remove_pid()
+        if self._pid_lock is not None:
+            self._pid_lock.release()
+            self._pid_lock = None
 
         self.state = DaemonState.STOPPED
         logger.info("Daemon stopped")
@@ -302,7 +293,9 @@ class AnimusDaemon:
         if self.state != DaemonState.STOPPED:
             logger.info("Running synchronous cleanup")
             try:
-                self._remove_pid()
+                if self._pid_lock is not None:
+                    self._pid_lock.release()
+                    self._pid_lock = None
             except Exception:
                 pass
 
@@ -495,10 +488,15 @@ class AnimusDaemon:
         if self.stats["start_time"]:
             uptime = time.time() - self.stats["start_time"]
 
+        # PID: report our own PID if running, else peek the lock file
+        pid: int | None = os.getpid() if self._running else None
+        if pid is None:
+            _, pid = LockedPidFile.peek(self.pid_file, "daemon")
+
         return {
             "state": self.state.value,
             "running": self._running,
-            "pid": self._read_pid(),
+            "pid": pid,
             "tick_count": self._tick_count,
             "uptime_seconds": round(uptime, 2),
             "events_processed": self.stats["events_processed"],

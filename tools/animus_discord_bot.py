@@ -43,6 +43,7 @@ from discord.ext import tasks
 
 from animus.config import AnimusConfig
 from animus.cognitive import CognitiveLayer, ModelConfig as CogModelConfig, ModelProvider
+from animus.infrastructure import AlreadyRunningError, LockedPidFile
 from animus.memory import MemoryLayer, MemoryType
 
 # ---------------------------------------------------------------------------
@@ -784,6 +785,15 @@ def main() -> None:
         )
         sys.exit(1)
 
+    # Strong singleton — refuse duplicate bot processes
+    pid_file = Path.home() / ".animus" / "discord_bot.pid"
+    try:
+        lock = LockedPidFile(pid_file, "discord_bot")
+        lock.acquire()
+    except AlreadyRunningError as exc:
+        print(f"animus_discord_bot: already running (pid {exc.pid})", file=sys.stderr)
+        sys.exit(2)
+
     channel_id_str = os.environ.get("ANIMUS_DISCORD_CHANNEL", "")
     intel_channel: int | None = None
     if channel_id_str:
@@ -818,7 +828,10 @@ def main() -> None:
     else:
         logger.info("No ANIMUS_CHAT_CHANNEL set — responding to @mentions only")
 
-    bot.run(token, log_handler=None)
+    try:
+        bot.run(token, log_handler=None)
+    finally:
+        lock.release()
 
 
 if __name__ == "__main__":

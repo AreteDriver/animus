@@ -220,8 +220,8 @@ class ForgeCommissioner:
         if self._local_engine is not None:
             return self._local_engine
         try:
-            from animus_forge.engine import ForgeEngine
-            from animus_forge.state import AppState
+            from animus_forge.engine import ForgeEngine  # boundary-ok: citizen degrades gracefully without Forge
+            from animus_forge.state import AppState  # boundary-ok: citizen degrades gracefully without Forge
 
             state = AppState()
             if self._cognitive:

@@ -23,6 +23,34 @@ permissions:
   contents: read
 
 jobs:
+  boundary-imports:
+    name: Boundary Import Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v6
+        with:
+          python-version: "3.12"
+
+      - name: Check boundary imports
+        run: python3 scripts/check_boundary_imports.py
+
+  version-alignment:
+    name: Version Alignment Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v6
+        with:
+          python-version: "3.12"
+
+      - name: Check version alignment
+        run: python3 scripts/check_version_alignment.py
+
   docs:
     name: Docs Validation
     runs-on: ubuntu-latest

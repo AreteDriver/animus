@@ -3,8 +3,15 @@
 
 from __future__ import annotations
 
+try:
+    from importlib.metadata import version as _version, PackageNotFoundError
+    __version__ = _version("animus-types")
+except PackageNotFoundError:  # pragma: no cover
+    __version__ = "0.0.0+dev"
+
 # Re-export legacy types (preserved for backward compatibility)
 from animus_types.egress import EgressDeniedError, is_egress_allowed
+from animus_types.exceptions import ValidationError
 from animus_types.sensitivity import Sensitivity
 
 # Generated contract models
@@ -42,9 +49,12 @@ from animus_types.signal import AnimusSignalObject
 from animus_types.source import AnimusSourceObject
 
 __all__ = [
+    # Package metadata
+    "__version__",
     # Legacy
     "EgressDeniedError",
     "is_egress_allowed",
+    "ValidationError",
     "Sensitivity",
     # Common
     "Common",

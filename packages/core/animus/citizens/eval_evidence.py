@@ -24,7 +24,7 @@ _eval_db_available: bool | None = None
 def _try_import_eval_store() -> Any | None:
     """Attempt to import Forge EvalStore."""
     try:
-        from animus_forge.evaluation.store import EvalStore
+        from animus_forge.evaluation.store import EvalStore  # boundary-ok: citizen degrades gracefully without Forge
         return EvalStore
     except ImportError:
         return None
@@ -33,7 +33,7 @@ def _try_import_eval_store() -> Any | None:
 def _try_create_backend(db_path: str = "") -> Any | None:
     """Create a Forge database backend for EvalStore."""
     try:
-        from animus_forge.state.backends import create_backend
+        from animus_forge.state.backends import create_backend  # boundary-ok: citizen degrades gracefully without Forge
         if db_path:
             return create_backend(db_path=db_path)
         return create_backend()
@@ -44,7 +44,7 @@ def _try_create_backend(db_path: str = "") -> Any | None:
 def _try_import_suite_result() -> Any | None:
     """Attempt to import Forge SuiteResult."""
     try:
-        from animus_forge.evaluation.base import EvalResult
+        from animus_forge.evaluation.base import EvalResult  # boundary-ok: citizen degrades gracefully without Forge
         return EvalResult
     except ImportError:
         return None

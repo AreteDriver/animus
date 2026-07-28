@@ -44,7 +44,7 @@ from animus.memory.types import MemoryType
 
 if TYPE_CHECKING:
     from animus.memory import MemoryLayer
-    from animus_forge.self_improve.analyzer import CodebaseAnalyzer, ImprovementSuggestion
+    from animus_forge.self_improve.analyzer import CodebaseAnalyzer, ImprovementSuggestion  # boundary-ok: TYPE_CHECKING-only import
 
 logger = get_logger("citizens.architect")
 
@@ -124,7 +124,7 @@ class ArchitectCitizen:
             return self._analyzer
 
         try:
-            from animus_forge.self_improve.analyzer import CodebaseAnalyzer
+            from animus_forge.self_improve.analyzer import CodebaseAnalyzer  # boundary-ok: citizen degrades gracefully without Forge
 
             self._analyzer = CodebaseAnalyzer(codebase_path=self.codebase_path)
             logger.info("Forge CodebaseAnalyzer loaded for Architect")

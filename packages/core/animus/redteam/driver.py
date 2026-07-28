@@ -199,7 +199,7 @@ def _probe_forge_sandbox(attack_input: str) -> tuple[bool, str]:
     Attack_input is supposed to be a file path that should NOT be writable
     by Forge. If the allow-list blocks → OK. If it sneaks through → bypass.
     """
-    from animus_forge.self_improve.safety import SafetyChecker, SafetyConfig
+    from animus_forge.self_improve.safety import SafetyChecker, SafetyConfig  # boundary-ok: redteam probes Forge safety surface
 
     cfg = SafetyConfig(allowed_files=["packages/*/src/**/*.py", "packages/*/tests/**/*.py"])
     checker = SafetyChecker(cfg)

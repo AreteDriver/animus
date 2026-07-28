@@ -32,4 +32,8 @@ Core primitives for autonomous code improvement:
 - utils: Retry, circuit breaker, validation
 """
 
-__version__ = "0.1.1"
+try:
+    from importlib.metadata import version as _version, PackageNotFoundError
+    __version__ = _version("animus-kernel")
+except PackageNotFoundError:  # pragma: no cover
+    __version__ = "0.0.0+dev"

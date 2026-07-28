@@ -7,10 +7,15 @@ interactive REPL.
 from __future__ import annotations
 
 import argparse
+import os
+import signal
 import sys
+import time
 from datetime import timedelta
 from pathlib import Path
 
+from animus.infrastructure import SystemProcessRegistry
+from animus.infrastructure.process_lifecycle import print_status_table, run_cleanup
 from animus.workflows.ingest import ingest
 
 
@@ -297,12 +302,96 @@ def _cmd_test_oracle(args: argparse.Namespace) -> int:
 
 
 # ------------------------------------------------------------------
+# Daemon
+# ------------------------------------------------------------------
+
+
+def _cmd_daemon_start(args: argparse.Namespace) -> int:
+    from animus.daemon.core import AnimusDaemon, DaemonConfig
+
+    config = DaemonConfig()
+    daemon = AnimusDaemon(config=config)
+
+    if args.replace:
+        if daemon.is_running():
+            print("Existing daemon detected — stopping it first...", file=sys.stderr)
+            # Find and kill the existing daemon
+            import signal as _signal
+            from animus.infrastructure import LockedPidFile
+
+            pid_file = Path(config.persistence_dir).expanduser() / "daemon.pid"
+            running, existing_pid = LockedPidFile.peek(pid_file, "daemon")
+            if running and existing_pid:
+                try:
+                    os.kill(existing_pid, _signal.SIGTERM)
+                    for _ in range(30):
+                        time.sleep(0.5)
+                        if not daemon.is_running():
+                            break
+                    else:
+                        os.kill(existing_pid, _signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
+            # Clean up stale PID file just in case
+            pid_file.unlink(missing_ok=True)
+
+    if daemon.is_running():
+        print("Daemon is already running.", file=sys.stderr)
+        return 1
+
+    import asyncio
+
+    async def _run() -> None:
+        started = await daemon.start()
+        if not started:
+            print("Failed to start daemon.", file=sys.stderr)
+            return
+        print(f"Daemon started (PID: {os.getpid()}). Press Ctrl+C to stop.")
+        try:
+            await daemon.run()
+        except KeyboardInterrupt:
+            await daemon.stop()
+
+    try:
+        asyncio.run(_run())
+    except KeyboardInterrupt:
+        pass
+    return 0
+
+
+def _cmd_daemon_stop(args: argparse.Namespace) -> int:
+    from animus.daemon.core import AnimusDaemon, DaemonConfig
+    from animus.infrastructure import LockedPidFile
+
+    config = DaemonConfig()
+    daemon = AnimusDaemon(config=config)
+
+    if not daemon.is_running():
+        print("Daemon is not running.", file=sys.stderr)
+        return 0
+
+    pid_file = Path(config.persistence_dir).expanduser() / "daemon.pid"
+    running, existing_pid = LockedPidFile.peek(pid_file, "daemon")
+    if running and existing_pid:
+        try:
+            os.kill(existing_pid, signal.SIGTERM)
+            print(f"Sent SIGTERM to daemon (pid {existing_pid}).")
+        except (ProcessLookupError, PermissionError) as e:
+            print(f"Failed to signal daemon: {e}", file=sys.stderr)
+            return 1
+    else:
+        print("Daemon PID file stale or missing.", file=sys.stderr)
+        return 1
+    return 0
+
+
+# ------------------------------------------------------------------
 # Session
 # ------------------------------------------------------------------
 
 
 def _cmd_session(args: argparse.Namespace) -> int:
-    from animus_kernel.head.repl import HeadREPL
+    from animus.session import get_head_repl
 
     timer = None
     if args.timer:
@@ -319,7 +408,7 @@ def _cmd_session(args: argparse.Namespace) -> int:
     wrapup = args.wrapup_at if args.wrapup_at < 1.0 else 1.0
 
     try:
-        repl = HeadREPL(
+        repl = get_head_repl(
             model=args.model,
             project_root=args.project,
             session_timer=timer,
@@ -375,17 +464,14 @@ def _cmd_session_steward(args: argparse.Namespace) -> int:
     # Reconstruct a minimal SessionController from JSON data
     try:
         data = json.loads(telemetry_data)
-        from animus_kernel.head.session_controller import SessionController, SessionPolicy
+        from animus.session import SessionLifecycleEvent, create_session_controller
 
-        policy = SessionPolicy(
+        controller = create_session_controller(
             wrapup_threshold=data.get("wrapup_threshold", 0.96),
-            session_timer=timedelta(minutes=data.get("session_timer_minutes", 30)),
+            session_timer_minutes=data.get("session_timer_minutes", 30),
             auto_restart=data.get("auto_restart", True),
         )
-        controller = SessionController(policy=policy)
         for ev in data.get("events", []):
-            from animus_kernel.head.session_controller import SessionLifecycleEvent
-
             controller.log_event(
                 session_id=ev.get("session_id", "unknown"),
                 event=SessionLifecycleEvent[ev.get("event", "RUNNING")],
@@ -1345,6 +1431,26 @@ def _cmd_intelligence(args: argparse.Namespace) -> int:
     return 1
 
 
+def _cmd_status(args: argparse.Namespace) -> int:
+    registry = SystemProcessRegistry()
+    print_status_table(registry, json=args.json)
+    return 0
+
+
+def _cmd_cleanup(args: argparse.Namespace) -> int:
+    registry = SystemProcessRegistry()
+    affected = run_cleanup(registry, dry_run=args.dry_run, kill_orphans=args.kill_orphans)
+    if args.dry_run:
+        print(f"# Cleanup dry-run: would remove {len(affected)} dead/orphan entries")
+        for p in affected:
+            print(f"  [{p.component}] pid {p.pid} → remove")
+        return 0
+    print(f"# Cleanup complete: removed {len(affected)} dead/orphan entries")
+    for p in affected:
+        print(f"  [{p.component}] pid {p.pid} → removed")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="animus")
     subparsers = parser.add_subparsers(dest="command")
@@ -1662,6 +1768,24 @@ def main(argv: list[str] | None = None) -> int:
     )
     intel_analyze.set_defaults(func=_cmd_intelligence)
 
+    # Daemon
+    daemon_parser = subparsers.add_parser(
+        "daemon",
+        help="Control the Animus background daemon",
+    )
+    daemon_subparsers = daemon_parser.add_subparsers(dest="daemon_command")
+
+    daemon_start = daemon_subparsers.add_parser("start", help="Start the Animus daemon")
+    daemon_start.add_argument(
+        "--replace",
+        action="store_true",
+        help="Kill existing daemon if already running, then start fresh",
+    )
+    daemon_start.set_defaults(func=_cmd_daemon_start)
+
+    daemon_stop = daemon_subparsers.add_parser("stop", help="Stop the Animus daemon")
+    daemon_stop.set_defaults(func=_cmd_daemon_stop)
+
     # Session
     session_parser = subparsers.add_parser(
         "session",
@@ -1771,6 +1895,18 @@ def main(argv: list[str] | None = None) -> int:
 
     cc_summary = council_subparsers.add_parser("summary", help="Show summary statistics")
     cc_summary.set_defaults(func=_cmd_citizen_council_summary)
+
+    # ------------------------------------------------------------------
+    # Process lifecycle
+    # ------------------------------------------------------------------
+    status_parser = subparsers.add_parser("status", help="Show all running Animus processes")
+    status_parser.add_argument("--json", action="store_true", help="Output as JSON")
+    status_parser.set_defaults(func=_cmd_status)
+
+    cleanup_parser = subparsers.add_parser("cleanup", help="Remove dead/orphan processes from registry")
+    cleanup_parser.add_argument("--dry-run", action="store_true", help="Show what would be removed")
+    cleanup_parser.add_argument("--kill-orphans", action="store_true", help="Send SIGTERM to orphan processes")
+    cleanup_parser.set_defaults(func=_cmd_cleanup)
 
     args = parser.parse_args(argv)
     if not args.command:

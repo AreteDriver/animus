@@ -4,7 +4,7 @@ In-memory implementation backed by optional schema validation via
 ``animus_contracts``. Will be replaced with PostgreSQL-backed store
 in Phase 3 completion.
 
-Upstreamed from ``animus-mind`` (Mind-class architecture, 2026-07-06).
+Kernel-native policy layer (v2.3, 2026-07-06).
 """
 
 from __future__ import annotations
@@ -14,11 +14,11 @@ from datetime import datetime, timezone
 from typing import Any
 
 from animus.logging import get_logger
+from animus_types import ValidationError as _ContractValidationError
 
 logger = get_logger("policy.capability_store")
 
 try:
-    from animus_contracts import ValidationError as _ContractValidationError
     from animus_contracts import validate as _validate_contract
 
     _HAS_CONTRACTS = True

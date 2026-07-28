@@ -20,6 +20,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from animus_types import ValidationError
 from jsonschema import Draft202012Validator
 
 logger = logging.getLogger(__name__)
@@ -68,20 +69,6 @@ def _get_registry():
 
 
 _REGISTRY = _get_registry()
-
-
-class ValidationError(Exception):
-    """Raised when a payload fails schema validation.
-
-    Attributes:
-        schema_name: The schema that was requested (e.g. ``"action"``).
-        errors: Human-readable list of validation failures.
-    """
-
-    def __init__(self, schema_name: str, errors: list[str]) -> None:
-        self.schema_name = schema_name
-        self.errors = errors
-        super().__init__(f"Validation failed for schema '{schema_name}': {errors}")
 
 
 def _make_validator(schema_uri: str, schema: dict[str, Any]) -> Draft202012Validator:

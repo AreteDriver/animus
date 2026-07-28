@@ -16,6 +16,7 @@ from datetime import datetime
 from animus.audit import EgressAuditLog
 from animus.citizens import ImprovementProposal
 from animus.config import AnimusConfig
+from animus.infrastructure import AlreadyRunningError, LockedPidFile
 from animus.logging import get_logger
 from animus.memory import MemoryLayer, MemoryType
 from animus.memory.redaction import redact
@@ -119,6 +120,16 @@ if FastMCP is not None:
             super().__init__(*args, **kwargs)
             self._tool_gater = MCPToolGater(max_full_schemas=5)
             self._gater_initialized = False
+
+        @property
+        def _tools(self):
+            """Backward-compat dict {name: tool} for internal consumers.
+
+            MCP >=1.6 removed the ``_tools`` dict in favour of
+            ``_tool_manager.list_tools()``. This property bridges the gap so
+            callers don't need to know the internal FastMCP layout.
+            """
+            return {tool.name: tool for tool in self._tool_manager.list_tools()}
 
         def _ensure_gater(self) -> None:
             """Populate gater with metadata from the tool manager."""
@@ -870,8 +881,8 @@ def create_mcp_server():
             return f"Path not found: {codebase_path}"
 
         try:
-            from animus_forge.agents.provider_wrapper import create_agent_provider
-            from animus_forge.self_improve.orchestrator import SelfImproveOrchestrator
+            from animus_forge.agents.provider_wrapper import create_agent_provider  # boundary-ok: MCP tool handler composes Forge
+            from animus_forge.self_improve.orchestrator import SelfImproveOrchestrator  # boundary-ok: MCP tool handler composes Forge
         except ImportError:
             return (
                 "Forge not installed. Install with: pip install animus-forge\n"
@@ -1877,17 +1888,14 @@ def create_mcp_server():
         if session_controller_data:
             try:
                 data = json.loads(session_controller_data)
-                from animus_kernel.head.session_controller import SessionController, SessionPolicy
+                from animus.session import SessionLifecycleEvent, create_session_controller
 
-                policy = SessionPolicy(
+                controller = create_session_controller(
                     wrapup_threshold=data.get("wrapup_threshold", 0.96),
-                    session_timer=timedelta(minutes=data.get("session_timer_minutes", 30)),
+                    session_timer_minutes=data.get("session_timer_minutes", 30),
                     auto_restart=data.get("auto_restart", True),
                 )
-                controller = SessionController(policy=policy)
                 for ev in data.get("events", []):
-                    from animus_kernel.head.session_controller import SessionLifecycleEvent
-
                     controller.log_event(
                         session_id=ev.get("session_id", "unknown"),
                         event=SessionLifecycleEvent[ev.get("event", "RUNNING")],
@@ -3310,8 +3318,21 @@ def create_mcp_server():
 
 def main():
     """Run the MCP server via stdio."""
-    mcp = create_mcp_server()
-    mcp.run()
+    from pathlib import Path
+
+    pid_file = Path.home() / ".animus" / "mcp_server.pid"
+    try:
+        lock = LockedPidFile(pid_file, "mcp_server")
+        lock.acquire()
+    except AlreadyRunningError as exc:
+        print(f"animus.mcp_server: already running (pid {exc.pid})", file=sys.stderr)
+        sys.exit(2)
+
+    try:
+        mcp = create_mcp_server()
+        mcp.run()
+    finally:
+        lock.release()
 
 
 if __name__ == "__main__":
