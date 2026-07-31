@@ -1,6 +1,6 @@
 """Rust-backed intent graph backend.
 
-Wraps the PyO3 ``IntentGraph`` from ``convergent._core`` and converts
+Wraps the PyO3 ``IntentGraph`` from ``animus_quorum._core`` and converts
 between Python ``Intent`` dataclasses and the dict format used by
 the Rust layer.
 
@@ -117,7 +117,7 @@ class RustGraphBackend:
     """Intent graph backend powered by the Rust ``IntentGraph`` via PyO3.
 
     Drop-in replacement for ``SQLiteBackend`` or ``PythonGraphBackend``.
-    Requires ``convergent._core`` (built with ``maturin develop --release``).
+    Requires ``animus_quorum._core`` (built with ``maturin develop --release``).
 
     Args:
         db_path: Path to SQLite database file, or ``None`` for in-memory.

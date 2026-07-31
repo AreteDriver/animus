@@ -1,14 +1,14 @@
 """Tests for RustGraphBackend — Rust PyO3 intent graph wrapper.
 
 All tests require the Rust extension (``maturin develop --release``).
-Skipped automatically if ``convergent._core`` is not importable.
+Skipped automatically if ``animus_quorum._core`` is not importable.
 """
 
 from __future__ import annotations
 
 import pytest
 
-pytest.importorskip("convergent._core")
+pytest.importorskip("animus_quorum._core")
 
 from animus_quorum.intent import (  # noqa: E402
     Constraint,

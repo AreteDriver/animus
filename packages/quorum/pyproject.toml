@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=68.0"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
 
 [project]
 name = "animus-quorum"
@@ -10,18 +10,17 @@ readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 authors = [
-    { name = "AreteDriver" }
+    { name = "your-org" }
 ]
 keywords = ["multi-agent", "ai", "orchestration", "convergence", "intent-graph"]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries",
@@ -40,21 +39,17 @@ dev = [
 llm = [
     "anthropic>=0.39.0",
 ]
-rust = [
-    "maturin>=1.0,<2.0",
-]
 
 [project.urls]
-Homepage = "https://github.com/AreteDriver/animus"
-Repository = "https://github.com/AreteDriver/animus"
-Issues = "https://github.com/AreteDriver/animus/issues"
+Homepage = "https://github.com/your-org/animus"
+Repository = "https://github.com/your-org/animus"
+Issues = "https://github.com/your-org/animus/issues"
 
-[tool.setuptools.packages.find]
-where = ["python"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-asyncio_mode = "auto"
+[tool.maturin]
+manifest-path = "Cargo.toml"
+module-name = "animus_quorum._core"
+python-packages = ["animus_quorum"]
+python-source = "python"
 
 [tool.ruff]
 target-version = "py310"
@@ -63,14 +58,9 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM"]
 
-[tool.ruff.lint.per-file-ignores]
-"python/convergent/contract.py" = ["N818"]  # ContractViolation is the public API name
-
 [tool.coverage.run]
-omit = [
-    "python/convergent/semantic.py",
-    "python/convergent/demo.py",
-]
+source = ["python/animus_quorum"]
+omit = ["*/tests/*"]
 
 [tool.mypy]
 python_version = "3.10"

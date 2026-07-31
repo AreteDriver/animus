@@ -1,4 +1,4 @@
-name: Publish Quorum (convergentAI)
+name: Publish Quorum
 
 on:
   push:
@@ -16,23 +16,39 @@ jobs:
       contents: write
       id-token: write
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v6
         with:
           python-version: "3.12"
 
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install dependencies
         run: pip install -e "packages/quorum/[dev]"
 
-      - name: Run tests
+      - name: Verify native extension is importable
+        run: python -c "from animus_quorum._core import IntentGraph; from animus_quorum.rust_backend import HAS_RUST; assert HAS_RUST"
+
+      - name: Run Python tests
         run: PYTHONPATH=packages/quorum/python pytest packages/quorum/tests/ -q --no-header --tb=short
 
       - name: Build package
         run: |
           pip install build
           python -m build packages/quorum/
+
+      - name: Inspect wheel for native extension
+        run: |
+          python - <<'PY'
+          import zipfile, sys
+          wheel = next(__import__('pathlib').Path('packages/quorum/dist/').glob('*.whl'))
+          names = zipfile.ZipFile(wheel).namelist()
+          assert any('animus_quorum/_core' in n and n.endswith('.so') for n in names), "native extension missing from wheel"
+          print("native extension present in wheel")
+          PY
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

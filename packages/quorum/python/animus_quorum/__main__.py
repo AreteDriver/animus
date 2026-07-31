@@ -1,4 +1,4 @@
-"""CLI entry point for ``python -m convergent``.
+"""CLI entry point for ``python -m animus_quorum``.
 
 Subcommands:
     inspect <db_path>  — Inspect a SQLite intent graph

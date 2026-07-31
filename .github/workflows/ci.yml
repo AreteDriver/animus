@@ -298,12 +298,15 @@ jobs:
     name: Test Quorum
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v6
         with:
           python-version: "3.12"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache pip
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
@@ -314,6 +317,12 @@ jobs:
 
       - name: Install dependencies
         run: pip install -e "packages/quorum/[dev]"
+
+      - name: Verify native extension is importable
+        run: python -c "from animus_quorum._core import IntentGraph; from animus_quorum.rust_backend import HAS_RUST; assert HAS_RUST"
+
+      - name: Native backend tests
+        run: pytest packages/quorum/tests/test_rust_backend.py -q --tb=short
 
       - name: Test with coverage
         run: PYTHONPATH=packages/quorum/python pytest packages/quorum/tests/ -v --tb=short
@@ -562,6 +571,10 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Rust toolchain
+        if: matrix.package == 'quorum'
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install package and SBOM tools
         run: |
           pip install -e "packages/${{ matrix.package }}/" pip-licenses cyclonedx-bom
@@ -616,6 +629,9 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v6
         with:
           python-version: "3.12"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Cache pip
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5

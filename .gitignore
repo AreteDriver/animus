@@ -72,12 +72,15 @@ site/
 
 # Secrets
 .env
+*.env
+secrets.env
 .env.local
 *.pem
 *.key
 secrets.yaml
 config/local.yaml
 token.json
+credentials.json
 
 # Benchmarks
 .benchmarks/
@@ -124,3 +127,4 @@ gorgon-memory.db
 packages/**/gorgon-memory.db
 packages/**/gorgon-state.db
 2026-*-*.txt
+packages/quorum/target/
