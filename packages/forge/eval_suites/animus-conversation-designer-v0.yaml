@@ -1,0 +1,240 @@
+name: animus-conversation-designer-v0
+description: >
+  Evaluates Animus Citizen 002 — the Conversation Designer — against
+  synthetic conversation logs. Tests pattern detection (repeated prompts,
+  vague requests, correction loops), proposal generation, and edge cases
+  (empty logs, malformed entries, intentional short commands).
+
+  This is a pure-code benchmark: no API keys, no Ollama, no network.
+  It directly exercises ``animus.citizens.conversation_designer`` and is
+  designed to be CI-friendly.
+
+  Run with the personal-quality rubric:
+    animus-forge eval run animus-conversation-designer-v0 \
+      --adapter eval_suites.adapters.animus_conversation_designer_v0:run_analyze \
+      --rubric personal-quality \
+      --model claude-haiku-4-5 \
+      --prompt-version v0-initial
+
+  Mock / structural smoke test:
+    animus-forge eval run animus-conversation-designer-v0 --mock
+
+agent_role: animus-conversation-designer
+
+# Threshold calibrated for the local qwen2.5-coder:14b judge. Cloud-judge
+# baselines (Claude Haiku/Sonnet) should target 0.70+.
+threshold: 0.65
+
+tags:
+  - product:animus
+  - component:conversation-designer
+  - citizen:002
+  - owner:arete
+
+# Universal floor: the citizen must return some non-empty output.
+# Quality scoring is rubric-driven (personal-quality).
+metrics:
+  - type: regex
+    pattern: '\S'
+    fail_fast: true
+
+cases:
+  - name: repeated_prompt_single_pattern
+    input:
+      log_entries:
+        - "summarize the last session"
+        - "summarize the previous session"
+        - "can you summarize the last session"
+        - "give me a summary of the last session"
+        - "summarize what we did last session"
+      mode: analyze
+    expected:
+      focus: "detect a repeated-prompt pattern around session summarization"
+      format: "structured pattern list with severity, frequency, and suggestion"
+    metadata:
+      tags: [repeated_prompt, pattern-detection, single-pattern]
+
+  - name: vague_request_detection
+    input:
+      log_entries:
+        - "help"
+        - "fix this"
+        - "make it better"
+        - "do something"
+        - "what should I do now"
+        - "can you improve the code"
+      mode: analyze
+    expected:
+      focus: "detect vague-request patterns and propose clarifying questions"
+      format: "structured pattern list"
+    metadata:
+      tags: [vague_request, pattern-detection]
+
+  - name: correction_loop_detection
+    input:
+      log_entries:
+        - session_id: eval-correction-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "deploy the new feature" }
+        - session_id: eval-correction-001
+          type: assistant
+          origin: { kind: assistant }
+          message: { role: assistant, content: "Deployed to staging." }
+        - session_id: eval-correction-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "no, I meant production" }
+        - session_id: eval-correction-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "that's not what I asked, rephrase" }
+        - session_id: eval-correction-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "actually, deploy both" }
+      mode: analyze
+    expected:
+      focus: "detect a correction loop in session eval-correction-001"
+      format: "structured pattern list"
+    metadata:
+      tags: [correction_loop, pattern-detection, session-grouping]
+
+  - name: mixed_patterns_ranking
+    input:
+      log_entries:
+        - session_id: eval-mixed-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "run tests" }
+        - session_id: eval-mixed-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "run tests" }
+        - session_id: eval-mixed-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "run tests" }
+        - session_id: eval-mixed-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "fix the failing test" }
+        - session_id: eval-mixed-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "no, not that one" }
+        - session_id: eval-mixed-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "you misunderstood, try again" }
+      mode: analyze
+    expected:
+      focus: "rank repeated prompts and correction loops; repeated 'run tests' should appear as the top or high-frequency pattern"
+      format: "structured pattern list"
+    metadata:
+      tags: [repeated_prompt, correction_loop, ranking, mixed]
+
+  - name: intentional_short_commands_ignored
+    input:
+      log_entries:
+        - "help"
+        - "status"
+        - "clear"
+        - "exit"
+        - "logs"
+        - "build"
+        - "test"
+      mode: analyze
+    expected:
+      focus: "intentional single-word commands should NOT be flagged as vague requests"
+      format: "empty pattern list or no vague_request entries"
+    metadata:
+      tags: [vague_request, negative-case, intentional-commands]
+
+  - name: empty_log_directory
+    input:
+      log_entries: []
+      mode: analyze
+    expected:
+      focus: "gracefully report no patterns when no logs are present"
+      format: "plain text stating no patterns detected"
+    metadata:
+      tags: [edge-case, empty-input, no-patterns]
+
+  - name: malformed_entries_ignored
+    input:
+      log_entries:
+        - { type: assistant, message: { role: assistant, content: "Hello." } }
+        - { type: user, origin: { kind: human }, message: { role: user, content: "" } }
+        - { not_a_real_field: true }
+        - { type: user, origin: { kind: human }, message: { role: user, content: "summarize session" } }
+        - { type: user, origin: { kind: human }, message: { role: user, content: "summarize session" } }
+      mode: analyze
+    expected:
+      focus: "ignore non-human and malformed entries but still detect the repeated 'summarize session'"
+      format: "structured pattern list"
+    metadata:
+      tags: [edge-case, malformed-entries, repeated_prompt]
+
+  - name: proposal_from_repeated_pattern
+    input:
+      log_entries:
+        - "summarize the last session"
+        - "summarize the last session"
+        - "summarize the last session"
+        - "summarize the last session"
+        - "summarize the last session"
+      mode: proposal
+    expected:
+      focus: "generate an actionable ImprovementProposal targeting the repeated session-summarization prompt"
+      format: "proposal text with problem, recommendation, affected components, success metrics"
+    metadata:
+      tags: [repeated_prompt, proposal-generation]
+
+  - name: proposal_focus_correction_loop
+    input:
+      log_entries:
+        - session_id: eval-focus-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "deploy to prod" }
+        - session_id: eval-focus-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "no, staging first" }
+        - session_id: eval-focus-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "wrong environment" }
+        - session_id: eval-focus-001
+          type: user
+          origin: { kind: human }
+          message: { role: user, content: "actually deploy to prod" }
+      mode: proposal
+      focus_pattern: correction_loop
+    expected:
+      focus: "generate a proposal focused on reducing correction loops, even if a repeated prompt also exists"
+      format: "proposal text"
+    metadata:
+      tags: [correction_loop, proposal-generation, focus-pattern]
+
+  - name: high_frequency_threshold
+    input:
+      log_entries:
+        - "run the linter"
+        - "run the linter"
+        - "run the linter"
+        - "run the linter"
+        - "run the linter"
+        - "run the linter"
+        - "run the linter"
+        - "run the linter"
+        - "run the linter"
+        - "run the linter"
+        - "run the linter"
+      mode: analyze
+    expected:
+      focus: "flag high-frequency repeated prompts (≥10) with severity high"
+      format: "structured pattern list with high severity"
+    metadata:
+      tags: [repeated_prompt, high-frequency, severity]
