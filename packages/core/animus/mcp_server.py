@@ -17,10 +17,10 @@ from animus.audit import EgressAuditLog
 from animus.citizens import ImprovementProposal
 from animus.config import AnimusConfig
 from animus.logging import get_logger
+from animus.mcp_gating import MCPToolGater, get_mcp_intent, set_mcp_intent
 from animus.memory import MemoryLayer, MemoryType
 from animus.memory.redaction import redact
 from animus.memory.types import Sensitivity
-from animus.mcp_gating import MCPToolGater, get_mcp_intent, set_mcp_intent
 from animus.tasks import TaskTracker
 
 logger = get_logger("mcp_server")
@@ -542,7 +542,7 @@ def create_mcp_server():
         from animus.forge import ForgeEngine
         from animus.forge.loader import load_workflow
         from animus.forge.models import ForgeError
-        from animus.tools import create_default_registry
+        from animus.tools import WorkspaceToolPolicy, create_default_registry
 
         wf_path = Path(workflow_path)
         if not wf_path.exists():
@@ -557,10 +557,20 @@ def create_mcp_server():
             existing = wf_config.agents[0].system_prompt or ""
             wf_config.agents[0].system_prompt = f"{existing}\n\n## Task\n{task_description}"
 
+        # Restrictive, registry-owned policy for MCP workflows. Writes are
+        # sandboxed to a dedicated workspace; network is disabled by default.
+        workflow_workspace = config.data_dir / "mcp_workflows" / wf_path.stem
+        workflow_workspace.mkdir(parents=True, exist_ok=True)
+        workflow_policy = WorkspaceToolPolicy(
+            allowed_paths=[str(wf_path.parent.resolve()), str(config.data_dir)],
+            write_roots=[str(workflow_workspace)],
+            command_enabled=True,
+        )
+
         # Use default model config
         model_config = ModelConfig.ollama()
         cognitive = CognitiveLayer(model_config)
-        tools = create_default_registry()
+        tools = create_default_registry(policy=workflow_policy)
 
         cp_dir = config.data_dir / "checkpoints"
         cp_dir.mkdir(exist_ok=True)

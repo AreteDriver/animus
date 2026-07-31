@@ -1143,34 +1143,32 @@ class TestOpenAIModel:
 
 
 class TestWriteRootsSandbox:
-    """Test write_roots sandbox in ToolsSecurityConfig."""
+    """Test write_roots sandbox behavior via WorkspaceToolPolicy."""
 
     def test_write_file_blocked_outside_write_roots(self, tmp_path):
         from animus.config import ToolsSecurityConfig
-        from animus.tools import _set_security_config, _tool_write_file
+        from animus.tools import WorkspaceToolPolicy, _tool_write_file
 
         config = ToolsSecurityConfig(
             allowed_paths=[str(tmp_path)],
             write_roots=[str(tmp_path / "sandbox")],
         )
-        _set_security_config(config)
-        try:
-            # Write inside sandbox — should succeed
-            sandbox = tmp_path / "sandbox"
-            sandbox.mkdir()
-            result = _tool_write_file({"path": str(sandbox / "ok.txt"), "content": "hello"})
-            assert result.success
+        policy = WorkspaceToolPolicy.from_tools_security_config(config)
 
-            # Write outside sandbox — should fail
-            result = _tool_write_file({"path": str(tmp_path / "outside.txt"), "content": "nope"})
-            assert not result.success
-            assert "write_roots" in result.error.lower() or "Write denied" in result.error
-        finally:
-            _set_security_config(None)
+        # Write inside sandbox — should succeed
+        sandbox = tmp_path / "sandbox"
+        sandbox.mkdir()
+        result = _tool_write_file({"path": str(sandbox / "ok.txt"), "content": "hello"}, policy=policy)
+        assert result.success
+
+        # Write outside sandbox — should fail
+        result = _tool_write_file({"path": str(tmp_path / "outside.txt"), "content": "nope"}, policy=policy)
+        assert not result.success
+        assert "write_roots" in result.error.lower() or "Write denied" in result.error
 
     def test_edit_file_blocked_outside_write_roots(self, tmp_path):
         from animus.config import ToolsSecurityConfig
-        from animus.tools import _set_security_config, _tool_edit_file
+        from animus.tools import WorkspaceToolPolicy, _tool_edit_file
 
         # Create a file outside sandbox
         target = tmp_path / "real.py"
@@ -1180,30 +1178,26 @@ class TestWriteRootsSandbox:
             allowed_paths=[str(tmp_path)],
             write_roots=[str(tmp_path / "sandbox")],
         )
-        _set_security_config(config)
-        try:
-            result = _tool_edit_file({"path": str(target), "old_text": "old", "new_text": "new"})
-            assert not result.success
-            assert "Write denied" in result.error
-            # File should be unchanged
-            assert target.read_text() == "old content"
-        finally:
-            _set_security_config(None)
+        policy = WorkspaceToolPolicy.from_tools_security_config(config)
+
+        result = _tool_edit_file({"path": str(target), "old_text": "old", "new_text": "new"}, policy=policy)
+        assert not result.success
+        assert "Write denied" in result.error
+        # File should be unchanged
+        assert target.read_text() == "old content"
 
     def test_no_write_roots_allows_all(self, tmp_path):
         from animus.config import ToolsSecurityConfig
-        from animus.tools import _set_security_config, _tool_write_file
+        from animus.tools import WorkspaceToolPolicy, _tool_write_file
 
         config = ToolsSecurityConfig(
             allowed_paths=[str(tmp_path)],
             write_roots=[],  # No restriction
         )
-        _set_security_config(config)
-        try:
-            result = _tool_write_file({"path": str(tmp_path / "anywhere.txt"), "content": "ok"})
-            assert result.success
-        finally:
-            _set_security_config(None)
+        policy = WorkspaceToolPolicy.from_tools_security_config(config)
+
+        result = _tool_write_file({"path": str(tmp_path / "anywhere.txt"), "content": "ok"}, policy=policy)
+        assert result.success
 
 
 class TestMockModelWithTools:

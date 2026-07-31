@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from animus.tools import ToolResult
+from animus.tools import ToolResult, WorkspaceToolPolicy
 
 # ── tools.py ───────────────────────────────────────────────────────────
 
@@ -55,9 +55,10 @@ class TestToolReadFile:
         """File exceeds max size."""
         from animus.tools import _tool_read_file
 
+        policy = WorkspaceToolPolicy(allowed_paths=[str(tmp_path)])
         f = tmp_path / "big.txt"
         f.write_text("x" * 2_000_000)
-        result = _tool_read_file({"path": str(f)})
+        result = _tool_read_file({"path": str(f)}, policy=policy)
         assert not result.success
         assert "large" in result.error.lower()
 
@@ -65,40 +66,51 @@ class TestToolReadFile:
 class TestToolListFiles:
     """Cover _tool_list_files exception path (lines 376-377)."""
 
-    def test_list_files_exception(self):
+    def test_list_files_exception(self, tmp_path):
         from animus.tools import _tool_list_files
 
+        policy = WorkspaceToolPolicy(allowed_paths=[str(tmp_path)])
         with patch("animus.tools.glob_module.glob", side_effect=OSError("disk error")):
-            result = _tool_list_files({"pattern": "*", "directory": "."})
+            result = _tool_list_files({"pattern": "*", "directory": str(tmp_path)}, policy=policy)
             assert not result.success
 
 
 class TestToolRunCommand:
     """Cover _tool_run_command paths."""
 
-    def test_run_command_stderr(self):
+    def _make_policy(self, tmp_path):
+        return WorkspaceToolPolicy(
+            allowed_paths=[str(tmp_path)],
+            write_roots=[str(tmp_path)],
+            command_enabled=True,
+        )
+
+    def test_run_command_stderr(self, tmp_path):
         """Line 422: command with stderr output."""
         from animus.tools import _tool_run_command
 
-        result = _tool_run_command({"command": "echo hello && echo err >&2"})
+        policy = self._make_policy(tmp_path)
+        result = _tool_run_command({"command": "echo hello && echo err >&2"}, policy=policy)
         assert result.success
         assert "hello" in result.output
         assert "err" in result.output
 
-    def test_run_command_timeout(self):
+    def test_run_command_timeout(self, tmp_path):
         """Lines 437-438: timeout exception."""
         from animus.tools import _tool_run_command
 
-        result = _tool_run_command({"command": "sleep 60", "timeout": 1})
+        policy = self._make_policy(tmp_path)
+        result = _tool_run_command({"command": "sleep 60", "timeout": 1}, policy=policy)
         assert not result.success
         assert "timed out" in result.error.lower()
 
-    def test_run_command_general_exception(self):
+    def test_run_command_general_exception(self, tmp_path):
         """Lines 437-438: general exception."""
         from animus.tools import _tool_run_command
 
+        policy = self._make_policy(tmp_path)
         with patch("animus.tools.subprocess.run", side_effect=OSError("not found")):
-            result = _tool_run_command({"command": "some_command"})
+            result = _tool_run_command({"command": "some_command"}, policy=policy)
             assert not result.success
 
 

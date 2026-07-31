@@ -11,29 +11,28 @@ are used.
 
 from __future__ import annotations
 
-import json
+import importlib
 import logging
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from animus.config import ToolsSecurityConfig
 from animus.memory import MemoryLayer
 from animus.memory.types import Sensitivity
-from animus.network import is_egress_allowed
 from animus.tools import (
+    DenyAllToolPolicy,
     Tool,
+    ToolPolicy,
     ToolRegistry,
     ToolResult,
-    _set_security_config,
+    WorkspaceToolPolicy,
+    _tool_http_request,
     _validate_command,
     _validate_path,
-    _tool_http_request,
+    create_default_registry,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════
 # Helpers
@@ -72,70 +71,127 @@ def _stop_mock_server(server: HTTPServer) -> None:
 # ═══════════════════════════════════════════════════════════════════
 
 
-class TestMissingConfigFailOpen:
-    def test_validate_path_allows_blocked_path_when_config_is_none(self):
-        """When _security_config is None, _validate_path returns True for /etc/shadow."""
-        _set_security_config(None)
+class TestMissingPolicyFailsClosed:
+    def test_validate_path_denies_blocked_path_when_no_policy(self):
+        """When no policy is supplied, _validate_path fails closed."""
         is_valid, error = _validate_path("/etc/shadow")
-        assert is_valid is True, f"expected fail-open, got error={error!r}"
-        assert error is None
+        assert is_valid is False, f"expected fail-closed, got is_valid={is_valid}"
+        assert error is not None
+        assert "no tool policy" in error.lower()
 
-    def test_validate_command_allows_any_command_when_config_is_none(self):
-        """When _security_config is None, _validate_command allows arbitrary input."""
-        _set_security_config(None)
+    def test_validate_command_denies_any_command_when_no_policy(self):
+        """When no policy is supplied, _validate_command fails closed."""
         is_valid, error = _validate_command("rm -rf /")
-        assert is_valid is True, f"expected fail-open, got error={error!r}"
-        assert error is None
+        assert is_valid is False, f"expected fail-closed, got is_valid={is_valid}"
+        assert error is not None
+        assert "no tool policy" in error.lower()
+
+    def test_registry_without_policy_uses_deny_all(self, tmp_path: Path):
+        """A ToolRegistry created without an explicit policy defaults to DenyAllToolPolicy."""
+        registry = create_default_registry()
+        assert isinstance(registry.policy, DenyAllToolPolicy)
+
+        # read_file through the registry should be denied.
+        result = registry.execute("read_file", {"path": str(tmp_path / "file.txt")})
+        assert result.success is False
+        assert result.error is not None
+        assert "no tool policy" in result.error.lower()
 
 
 # ═══════════════════════════════════════════════════════════════════
-# SEC-02 — /build finally block clears security config globally
+# SEC-02 — registry-owned policies are isolated; no global mutable state
 # ═══════════════════════════════════════════════════════════════════
 
 
-class TestBuildFinallyClearsPolicy:
-    def test_build_clears_security_config_in_finally(self, tmp_path: Path):
-        """Mimics /build's try/finally that sets _set_security_config(None).
+class TestRegistryPoliciesAreIsolated:
+    def test_two_registries_can_use_different_policies(self, tmp_path: Path):
+        """Multiple registries in one process must not share mutable policy state."""
+        restricted_dir = tmp_path / "restricted"
+        build_dir = tmp_path / "build"
+        restricted_dir.mkdir()
+        build_dir.mkdir()
 
-        After the block, even if a previous policy was active, the global
-        config is gone and validation is unrestricted.
-        """
-        restricted = ToolsSecurityConfig(
-            allowed_paths=[str(tmp_path)],
+        restricted = WorkspaceToolPolicy(
+            allowed_paths=[str(restricted_dir)],
             blocked_paths=["/etc/shadow"],
             command_enabled=True,
             command_blocklist=["rm -rf /"],
         )
-        _set_security_config(restricted)
+        build = WorkspaceToolPolicy(
+            allowed_paths=[str(build_dir)],
+            write_roots=[str(build_dir)],
+            command_enabled=True,
+        )
 
-        # Simulate /build sandbox body
+        restricted_registry = create_default_registry(policy=restricted)
+        build_registry = create_default_registry(policy=build)
+
+        # The build registry can write inside its workspace.
+        write_result = build_registry.execute(
+            "write_file",
+            {"path": str(build_dir / "file.py"), "content": "x = 1\n"},
+        )
+        assert write_result.success is True, write_result.error
+
+        # The restricted registry still denies writes outside its scope.
+        denied = restricted_registry.execute(
+            "write_file",
+            {"path": str(build_dir / "file.py"), "content": "x = 1\n"},
+        )
+        assert denied.success is False
+        assert "denied" in denied.error.lower()
+
+        # The restricted registry still blocks /etc/shadow.
+        shadow = restricted_registry.execute("read_file", {"path": "/etc/shadow"})
+        assert shadow.success is False
+        assert "blocked" in shadow.error.lower() or "denied" in shadow.error.lower()
+
+    def test_build_does_not_clear_global_state(self, tmp_path: Path):
+        """After /build constructs a local registry, the main registry's policy is unchanged."""
+        # Simulating the new /build behavior: create a local registry with a workspace policy.
         build_workspace = tmp_path / "build"
         build_workspace.mkdir()
-        sandbox_config = ToolsSecurityConfig(
+        build_policy = WorkspaceToolPolicy(
             allowed_paths=[str(build_workspace)],
             write_roots=[str(build_workspace)],
             command_enabled=True,
         )
-        _set_security_config(sandbox_config)
+        build_registry = create_default_registry(policy=build_policy)
 
-        # /build finally resets global config to None
-        _set_security_config(None)
+        # Meanwhile, a main registry keeps its own policy.
+        main_dir = tmp_path / "main"
+        main_dir.mkdir()
+        main_policy = WorkspaceToolPolicy(
+            allowed_paths=[str(main_dir)],
+            write_roots=[str(main_dir)],
+            command_enabled=True,
+        )
+        main_registry = create_default_registry(policy=main_policy)
 
-        # Post-build: the previously-restricted policy is gone
-        is_valid, error = _validate_path("/etc/shadow")
-        assert is_valid is True, f"expected cleared policy, got error={error!r}"
+        # Execute in build registry.
+        build_registry.execute(
+            "write_file",
+            {"path": str(build_workspace / "file.py"), "content": "x = 1\n"},
+        )
+
+        # Main registry policy is unaffected; write to its own workspace still works.
+        main_result = main_registry.execute(
+            "write_file",
+            {"path": str(main_dir / "file.py"), "content": "y = 2\n"},
+        )
+        assert main_result.success is True, main_result.error
 
 
 # ═══════════════════════════════════════════════════════════════════
-# SEC-03 — MCP server creates default registry with no security policy
+# SEC-03 — MCP server creates default registry with a restrictive policy
 # ═══════════════════════════════════════════════════════════════════
 
 
-class TestMCPServerRegistryHasNoPolicy:
-    def test_mcp_server_run_workflow_uses_default_registry_without_security_config(self, tmp_path: Path):
+class TestMCPServerRegistryUsesRestrictivePolicy:
+    def test_mcp_server_run_workflow_uses_restrictive_policy(self, tmp_path: Path):
         """Inside the MCP ``animus_run_workflow`` tool handler, ``create_default_registry()``
-        is called with no security_config argument. We exercise the tool handler with the
-        MCP SDK stubbed so no real LLM or Forge run happens."""
+        is called with an explicit ``WorkspaceToolPolicy``. We exercise the tool handler with
+        the MCP SDK stubbed so no real LLM or Forge run happens."""
 
         # Stub FastMCP and record every tool function registered by the server.
         registered_tools: dict[str, Any] = {}
@@ -155,7 +211,6 @@ class TestMCPServerRegistryHasNoPolicy:
         stub_module.FastMCP = _StubFastMCP
 
         with patch.dict("sys.modules", {"mcp.server.fastmcp": stub_module}):
-            import importlib
             import animus.mcp_server as _mcp_server_module
             importlib.reload(_mcp_server_module)
 
@@ -179,12 +234,12 @@ class TestMCPServerRegistryHasNoPolicy:
         )
         animus_run_workflow = registered_tools["animus_run_workflow"]
 
-        captured_calls: list = []
+        captured_policies: list[ToolPolicy] = []
         from animus.tools import create_default_registry as original_create_registry
 
-        def _capture_create_registry(security_config=None):
-            captured_calls.append(security_config)
-            return original_create_registry(security_config)
+        def _capture_create_registry(policy=None, security_config=None):
+            captured_policies.append(policy)
+            return original_create_registry(policy=policy, security_config=security_config)
 
         # Stub everything the workflow handler needs so no real execution occurs.
         fake_state = MagicMock()
@@ -221,10 +276,14 @@ class TestMCPServerRegistryHasNoPolicy:
                 api_key="",
             )
 
-        # The handler invoked create_default_registry() with no explicit policy.
-        assert any(c is None for c in captured_calls), (
-            "Expected create_default_registry to be called with security_config=None; "
-            f"captured={captured_calls}"
+        # The handler invoked create_default_registry() with an explicit restrictive policy.
+        assert captured_policies, "Expected create_default_registry to be called"
+        assert all(p is not None for p in captured_policies), (
+            "Expected create_default_registry to be called with a non-None policy; "
+            f"captured={captured_policies}"
+        )
+        assert any(isinstance(p, WorkspaceToolPolicy) for p in captured_policies), (
+            "Expected a WorkspaceToolPolicy; " f"captured={captured_policies}"
         )
 
 
@@ -317,8 +376,16 @@ class TestMemoryLayerLogsRawSecrets:
         data_dir = tmp_path / "memory"
         memory = MemoryLayer(data_dir, backend="json")
 
-        with caplog.at_level(logging.INFO, logger="animus.memory"):
-            memory.remember(content, sensitivity=Sensitivity.PUBLIC)
+        # Ensure log records reach pytest's root capture handler even if a
+        # previous test configured the animus logger with propagate=False.
+        animus_logger = logging.getLogger("animus")
+        old_propagate = animus_logger.propagate
+        animus_logger.propagate = True
+        try:
+            with caplog.at_level(logging.INFO, logger="animus.memory"):
+                memory.remember(content, sensitivity=Sensitivity.PUBLIC)
+        finally:
+            animus_logger.propagate = old_propagate
 
         # The stored memory must be redacted.
         stored = memory.store.list_all()
