@@ -1,0 +1,573 @@
+# Animus release baseline — REL-00 package compatibility matrix
+# Generated: 2026-07-31
+# Baseline git revision: 866101891b271bf1d573ff22f2b82ba64f760205
+# Method: python -m build per package; wheel/sdist inspection; clean-room venv smoke tests
+
+baseline:
+  date: "2026-07-31"
+  git_rev: "866101891b271bf1d573ff22f2b82ba64f760205"
+  plan_baseline: "6338784561efa6395fb83072318ff7771284842f"
+  test_runner: "local x86_64, Python 3.12"
+  artifact_dir: "/tmp/animus-rel00/wheelhouse"
+
+supported_profiles:
+  - id: types-only
+    name: Shared types
+    python_floor: ">=3.10"
+    install: "pip install animus-types"
+  - id: contracts-only
+    name: Contracts validator
+    python_floor: ">=3.11"
+    install: "pip install animus-contracts"
+    note: "requires undeclared animus-types; schemas missing from wheel"
+  - id: kernel-only
+    name: Kernel runtime
+    python_floor: ">=3.11"
+    install: "pip install animus-kernel"
+    note: "requires undeclared animus-types for real module usage"
+  - id: core-only
+    name: Core exocortex
+    python_floor: ">=3.10 (metadata); >=3.12 in practice because of forge"
+    install: "pip install animus-core"
+    note: "avoid extras[all] — references wrong distribution 'animus' on PyPI"
+  - id: forge-only
+    name: Forge orchestration
+    python_floor: ">=3.12"
+    install: "pip install animus-forge"
+  - id: bootstrap-only
+    name: Bootstrap installer
+    python_floor: ">=3.11"
+    install: "pip install animus-bootstrap"
+  - id: quorum-only
+    name: Quorum coordination
+    python_floor: ">=3.10"
+    install: "pip install animus-quorum"
+    note: "Python-only wheel; native Rust extension not packaged"
+  - id: full-local-stack
+    name: Full local stack
+    python_floor: ">=3.12"
+    install: "pip install --find-links <wheelhouse> <all local wheels>"
+    note: "Works when all wheels are co-installed; individual packages do not all install cleanly"
+  - id: full-dev-stack
+    name: Full development stack
+    python_floor: ">=3.12"
+    install: "editable monorepo install (not a distributable product)"
+
+packages:
+  animus-types:
+    source_dir: packages/types
+    distribution: animus-types
+    import_root: animus_types
+    version: "0.1.0"
+    runtime_version: "0.1.0"
+    requires_python: ">=3.10"
+    build_backend: "setuptools>=68.0"
+    maturity: "Beta"
+    has_native_component: false
+    cli_entry_point: null
+    runtime_dependencies:
+      - "pydantic>=2.0.0,<3"
+    optional_extras:
+      dev:
+        - "pytest>=7.0"
+        - "pytest-cov>=4.0"
+        - "ruff>=0.1"
+    internal_dependencies: []
+    declared_internal_dependencies: []
+    wheel_smoke:
+      no_deps:
+        install: PASS
+        pip_check: FAIL
+        import_root: FAIL
+        reason: "Missing pydantic at runtime (expected for --no-deps test)"
+      full_resolution:
+        install: PASS
+        pip_check: PASS
+        import_root: PASS
+        cli: N/A
+    notes: []
+
+  animus-contracts:
+    source_dir: packages/contracts
+    distribution: animus-contracts
+    import_root: animus_contracts
+    version: "0.1.0"
+    runtime_version: "0.1.0"
+    requires_python: ">=3.11"
+    build_backend: "hatchling"
+    maturity: "Alpha"
+    has_native_component: false
+    cli_entry_point: null
+    runtime_dependencies:
+      - "jsonschema>=4.17.0"
+      - "referencing>=0.30.0"
+    optional_extras: {}
+    internal_dependencies:
+      - animus-types
+    declared_internal_dependencies: []
+    wheel_smoke:
+      no_deps:
+        install: PASS
+        pip_check: FAIL
+        import_root: FAIL
+        reason: "Imports animus_types.ValidationError; animus-types not declared/installed"
+      full_resolution:
+        install: PASS
+        pip_check: PASS
+        import_root: FAIL
+        reason: "Same undeclared animus-types dependency; even with types+pydantic installed, schemas list is empty"
+    notes:
+      - "Wheel contains only __init__.py and validator.py; 23 *.schema.json files in source root are not packaged"
+      - "validator.py loads schemas from site-packages/*.schema.json via source-tree-relative path"
+
+  animus-kernel:
+    source_dir: packages/kernel
+    distribution: animus-kernel
+    import_root: animus_kernel
+    version: "0.1.1"
+    runtime_version: "0.1.1"
+    requires_python: ">=3.11"
+    build_backend: "hatchling"
+    maturity: "Alpha"
+    has_native_component: false
+    cli_entry_point: "animus-kernel"
+    runtime_dependencies:
+      - "httpx>=0.27"
+      - "jsonschema>=4.17"
+      - "psycopg2-binary>=2.9"
+      - "pydantic>=2.0"
+      - "pydantic-settings>=2.0"
+      - "pyyaml>=6.0"
+      - "rich>=13.0"
+      - "sqlalchemy>=2.0"
+      - "typer>=0.12"
+    optional_extras:
+      all:
+        - "openai>=1.30"
+        - "anthropic>=0.28"
+      anthropic:
+        - "anthropic>=0.28"
+      openai:
+        - "openai>=1.30"
+      dev:
+        - "pytest>=8.0"
+        - "pytest-asyncio>=0.23"
+        - "pytest-cov>=6.0"
+        - "ruff>=0.4"
+        - "mypy>=1.10"
+    internal_dependencies:
+      - animus-types
+    declared_internal_dependencies: []
+    wheel_smoke:
+      no_deps:
+        install: PASS
+        pip_check: FAIL
+        import_root: PASS
+        cli: FAIL
+        reason: "Missing all declared runtime deps; root import is empty enough to succeed but CLI needs typer"
+      full_resolution:
+        install: PASS
+        pip_check: PASS
+        import_root: PASS
+        cli: PASS
+        internal_module_import:
+          animus_kernel.memory.types: FAIL
+          animus_kernel.providers.base: FAIL
+          animus_kernel.network.egress: FAIL
+        reason: "animus-types is imported by many kernel modules but not declared as a dependency"
+    notes:
+      - "Source tree contains a vendored copy of animus_types under packages/kernel/src/animus_types but it is not included in the wheel"
+      - "publish-kernel.yml builds from an editable install that does not include animus-types, hiding the missing dep"
+
+  animus-core:
+    source_dir: packages/core
+    distribution: animus-core
+    import_root: animus
+    version: "2.3.0"
+    runtime_version: "2.3.0"
+    requires_python: ">=3.10"
+    build_backend: "setuptools>=61.0"
+    maturity: "Production/Stable"
+    has_native_component: false
+    cli_entry_point: "animus"
+    runtime_dependencies:
+      - "ollama>=0.1.0,<1"
+      - "chromadb>=0.4.22"
+      - "pyyaml>=6.0,<7"
+      - "pydantic>=2.6.0,<3"
+      - "rich>=13.7.0,<15"
+      - "prompt-toolkit>=3.0.43,<4"
+      - "cryptography>=48.0.1"
+      - "animus-types>=0.1.0,<1"
+    optional_extras:
+      anthropic: ["anthropic>=0.18.0"]
+      openai: ["openai>=1.12.0"]
+      hybrid-search: ["rank-bm25>=0.2.2"]
+      api: ["fastapi>=0.109.0", "uvicorn[standard]>=0.27.0", "python-multipart>=0.0.6"]
+      voice: ["openai-whisper>=20231117", "pyttsx3>=2.90", "sounddevice>=0.4.6", "soundfile>=0.12.1"]
+      integrations: ["google-api-python-client>=2.100.0", "google-auth>=2.20.0", "google-auth-oauthlib>=1.0.0", "todoist-api-python>=2.0.0"]
+      sync: ["websockets>=12.0", "zeroconf>=0.131.0"]
+      mcp: ["mcp>=1.0.0"]
+      postgres: ["sqlalchemy>=2.0", "psycopg[binary]>=3.1"]
+      dev: ["pytest>=8.0.0", "pytest-asyncio>=0.23.0", "pytest-benchmark>=4.0.0", "pytest-cov>=4.1.0", "ruff>=0.2.0", "mypy>=1.8.0", "pre-commit>=3.6.0", "httpx>=0.26.0"]
+      all: ["animus[anthropic,openai,api,voice,integrations,sync,mcp,dev]"]
+    internal_dependencies:
+      - animus-types
+    declared_internal_dependencies:
+      - animus-types
+    wheel_smoke:
+      no_deps:
+        install: PASS
+        pip_check: FAIL
+        import_root: FAIL
+        reason: "Missing animus-types and other declared deps"
+      full_resolution:
+        install: PASS
+        pip_check: PASS
+        import_root: PASS
+        cli: PASS
+    notes:
+      - "extras[all] references distribution 'animus', not 'animus-core'; pip installs unrelated PyPI package 'animus-0.0.2'"
+
+  animus-forge:
+    source_dir: packages/forge
+    distribution: animus-forge
+    import_root: animus_forge
+    version: "1.9.0"
+    runtime_version: "1.9.0"
+    requires_python: ">=3.12"
+    build_backend: "setuptools>=68.0"
+    maturity: "Production/Stable"
+    has_native_component: false
+    cli_entry_point: "animus-forge"
+    runtime_dependencies:
+      - "openai>=2.15.0,<3"
+      - "anthropic>=0.79.0,<1"
+      - "fastapi>=0.128.0,<1"
+      - "uvicorn>=0.40.0,<1"
+      - "streamlit>=1.53.0,<2"
+      - "google-auth>=2.35.0,<3"
+      - "google-auth-oauthlib>=1.2.0,<2"
+      - "google-auth-httplib2>=0.3.0,<1"
+      - "google-api-python-client>=2.150.0,<3"
+      - "notion-client>=3.0.0,<4"
+      - "PyGithub>=2.4.0,<3"
+      - "pydantic>=2.12.0,<3"
+      - "pydantic-settings>=2.13.0,<3"
+      - "python-dotenv>=1.0.0,<2"
+      - "aiofiles>=25.1.0,<26"
+      - "apscheduler>=3.11.0,<4"
+      - "urllib3>=2.6.0,<3"
+      - "pynacl>=1.6.0,<2"
+      - "pyasn1>=0.6.1,<1"
+      - "typer>=0.23.0,<1"
+      - "rich>=14.0.0,<15"
+      - "pyyaml>=6.0.0,<7"
+      - "jsonschema>=4.23.0,<5"
+      - "slowapi>=0.1.9,<1"
+      - "bcrypt>=5.0.0,<6"
+      - "cryptography>=48.0.1"
+      - "textual>=8.0.0,<9"
+      - "animus-quorum>=1.1.0,<2"
+      - "animus-kernel>=0.1.0,<1"
+      - "animus-types>=0.1.0,<1"
+    optional_extras:
+      postgres: ["psycopg2-binary>=2.9.0"]
+      mcp: ["mcp>=1.0.0"]
+      messaging: ["python-telegram-bot>=22.0", "discord-py>=2.3.0"]
+      browser: ["playwright>=1.40.0"]
+      local: ["httpx>=0.28.0", "psutil>=7.0.0"]
+      all: ["animus-forge[postgres,mcp,messaging,browser,local]"]
+      dev: ["pytest>=9.0.2", "pytest-cov>=7.0.0", "pytest-asyncio>=1.3.0", "pytest-benchmark>=4.0.0", "ruff>=0.15.1"]
+    internal_dependencies:
+      - animus-quorum
+      - animus-kernel
+      - animus-types
+    declared_internal_dependencies:
+      - animus-quorum
+      - animus-kernel
+      - animus-types
+    wheel_smoke:
+      no_deps:
+        install: PASS
+        pip_check: FAIL
+        import_root: FAIL
+        reason: "Missing all runtime dependencies"
+      full_resolution:
+        install: PASS
+        pip_check: PASS
+        import_root: PASS
+        cli: PASS
+    notes:
+      - "Runtime logs/config/workflow/job/plugin directories are created inside the installed package path during settings import (REL-03)"
+      - "publish-forge.yml uses editable installs for types and forge only, not kernel/quorum, yet the wheel builds successfully because those are declared deps resolved from TestPyPI/PyPI at publish time"
+
+  animus-bootstrap:
+    source_dir: packages/bootstrap
+    distribution: animus-bootstrap
+    import_root: animus_bootstrap
+    version: "0.8.0"
+    runtime_version: "0.8.0"
+    requires_python: ">=3.11"
+    build_backend: "setuptools>=68.0"
+    maturity: "Alpha"
+    has_native_component: false
+    cli_entry_point: "animus-bootstrap"
+    runtime_dependencies:
+      - "typer>=0.9.0,<1"
+      - "rich>=13.0.0,<15"
+      - "fastapi>=0.104.0,<1"
+      - "uvicorn[standard]>=0.24.0,<1"
+      - "pydantic>=2.0.0,<3"
+      - "pydantic-settings>=2.0.0,<3"
+      - "tomli-w>=1.0.0,<2"
+      - "httpx>=0.25.0,<1"
+      - "jinja2>=3.1.0,<4"
+      - "python-multipart>=0.0.6,<1"
+      - "sse-starlette>=1.6.0,<4"
+    optional_extras:
+      dev: ["pytest>=7.0.0", "pytest-cov>=4.0.0", "pytest-asyncio>=0.23.0", "ruff>=0.1.0", "mypy>=1.0.0", "respx>=0.20.0"]
+      telegram: ["python-telegram-bot>=22.0"]
+      discord: ["discord.py>=2.3"]
+      slack: ["slack-bolt>=1.18"]
+      matrix: ["matrix-nio>=0.24"]
+      email: ["aiosmtplib>=3.0"]
+      push: ["pywebpush>=2.0"]
+      all-channels: ["python-telegram-bot>=22.0", "discord.py>=2.3", "slack-bolt>=1.18", "matrix-nio>=0.24", "aiosmtplib>=3.0"]
+      intelligence: ["duckduckgo-search>=4.0", "trafilatura>=1.6.0", "croniter>=1.4.0"]
+      mcp: ["mcp>=1.0.0"]
+      chromadb: ["chromadb>=0.4.0"]
+    internal_dependencies: []
+    declared_internal_dependencies: []
+    wheel_smoke:
+      no_deps:
+        install: PASS
+        pip_check: FAIL
+        import_root: PASS
+        cli: FAIL
+        reason: "Root import is empty enough; CLI needs typer"
+      full_resolution:
+        install: PASS
+        pip_check: PASS
+        import_root: PASS
+        cli: PASS
+    notes:
+      - "pytest filterwarnings broadly suppresses PytestUnraisableExceptionWarning and 'coroutine was never awaited'"
+
+  animus-quorum:
+    source_dir: packages/quorum
+    distribution: animus-quorum
+    import_root: animus_quorum
+    version: "1.2.0"
+    runtime_version: "1.2.0"
+    requires_python: ">=3.10"
+    build_backend: "setuptools>=68.0"
+    maturity: "Production/Stable"
+    has_native_component: true
+    native_status: "source .so present but not included in wheel; build backend is not Rust-aware"
+    cli_entry_point: null
+    runtime_dependencies: []
+    optional_extras:
+      dev: ["pytest>=7.0", "pytest-asyncio>=0.21", "pytest-benchmark>=4.0", "ruff>=0.1.0", "mypy>=1.0"]
+      llm: ["anthropic>=0.39.0"]
+      rust: ["maturin>=1.0,<2.0"]
+    internal_dependencies: []
+    declared_internal_dependencies: []
+    wheel_smoke:
+      no_deps:
+        install: PASS
+        pip_check: PASS
+        import_root: PASS
+        cli: N/A
+      full_resolution:
+        install: PASS
+        pip_check: PASS
+        import_root: PASS
+        cli: N/A
+    notes:
+      - "README and examples may still instruct 'import convergent' and link to convergentAI on PyPI (not re-verified in this run)"
+      - "Stale artifacts: empty python/convergent directory and convergentAI.egg-info/; ruff/coverage omit paths use 'python/convergent/'"
+      - "Classifiers claim 'Programming Language :: Rust' and 'Production/Stable' but wheel ships no native extension"
+
+  animus-workspace:
+    source_dir: "."
+    distribution: animus-workspace
+    import_root: N/A
+    version: "2.3.0"
+    requires_python: ">=3.10"
+    build_backend: "unknown (root is not built as a wheel)"
+    maturity: "N/A"
+    has_native_component: false
+    cli_entry_point: null
+    runtime_dependencies: []
+    optional_extras:
+      dev: ["pytest>=9.0.0", "pytest-cov>=7.0.0", "pytest-asyncio>=1.3.0", "pytest-benchmark>=4.0.0", "ruff>=0.15.0", "pre-commit>=4.0.0"]
+    internal_dependencies: []
+    declared_internal_dependencies: []
+    notes:
+      - "Root requires-python >=3.10 disagrees with kernel >=3.11 and forge >=3.12; full-stack effective floor is >=3.12"
+      - "pytest pythonpath uses source tree paths, which can hide undeclared dependencies in CI"
+
+discrepancies:
+  - id: D1
+    severity: critical
+    task: REL-02
+    package: animus-kernel
+    description: Kernel imports animus_types throughout the codebase but does not declare animus-types as a runtime dependency.
+    evidence:
+      - "Grep finds from animus_types in packages/kernel/src/animus_kernel/memory/types.py, providers/base.py, network/egress.py, etc."
+      - "Clean-room 'pip install animus-kernel' allows root import but fails on animus_kernel.memory.types, providers.base, network.egress."
+      - "packages/kernel/src/animus_types/ is a vendored copy that is not included in the wheel."
+
+  - id: D2
+    severity: critical
+    task: REL-02
+    package: animus-contracts
+    description: Contracts imports animus_types.ValidationError but does not declare animus-types; schemas are not packaged in the wheel.
+    evidence:
+      - "validator.py line 23: from animus_types import ValidationError"
+      - "Wheel contains only animus_contracts/__init__.py and validator.py; no *.schema.json files."
+      - "Even with animus-types+pydantic installed, _SCHEMA_STORE is empty because schemas are not next to the installed module."
+
+  - id: D3
+    severity: high
+    task: REL-01
+    package: animus-quorum
+    description: Quorum native Rust extension is not built into the wheel despite classifiers and optional rust extra.
+    evidence:
+      - "packages/quorum/python/animus_quorum/_core.cpython-312-x86_64-linux-gnu.so exists in source tree."
+      - "Wheel contains no .so/.dylib/.dll/_core artifacts."
+      - "Build backend is setuptools, not maturin or setuptools-rust."
+
+  - id: D4
+    severity: high
+    task: REL-01
+    package: animus-quorum
+    description: Quorum still carries stale convergent identity artifacts.
+    evidence:
+      - "Empty python/convergent directory and convergentAI.egg-info/ remain in the repo."
+      - "pyproject.toml ruff per-file-ignores reference 'python/convergent/contract.py'."
+      - "coverage.run omits reference 'python/convergent/semantic.py' and 'python/convergent/demo.py'."
+
+  - id: D5
+    severity: critical
+    task: REL-02
+    package: animus-core
+    description: "extras[all] references the wrong distribution name 'animus', causing pip to install an unrelated PyPI package."
+    evidence:
+      - "pyproject.toml line: all = ['animus[anthropic,openai,api,voice,integrations,sync,mcp,dev]']"
+      - "pip install 'animus-core[all]' from wheelhouse fetched and installed 'animus-0.0.2' from PyPI."
+      - "This creates a dependency-confusion / shadowing risk for the animus import root."
+
+  - id: D6
+    severity: high
+    task: REL-04
+    package: animus-workspace
+    description: Monorepo Python support claims are inconsistent.
+    evidence:
+      - "Root/animus-types/animus-quorum/animus-core declare >=3.10."
+      - "animus-kernel and animus-bootstrap declare >=3.11."
+      - "animus-forge declares >=3.12."
+      - "Full-stack install therefore requires >=3.12, but docs may claim 3.11+."
+
+  - id: D7
+    severity: medium
+    task: REL-04
+    package: animus-core
+    description: Core claims Production/Stable while packaging and maturity evidence are incomplete.
+    evidence:
+      - "Classifier 'Development Status :: 5 - Production/Stable'."
+      - "Open critical/higher-priority issues remain in REL-02 and core[all] distribution bug."
+
+  - id: D8
+    severity: medium
+    task: REL-05
+    package: animus-bootstrap
+    description: Broad async warning suppression in pytest config.
+    evidence:
+      - "filterwarnings ignores PytestUnraisableExceptionWarning and RuntimeWarning for 'coroutine was never awaited'."
+
+  - id: D9
+    severity: medium
+    task: REL-04
+    package: animus-workspace
+    description: docs-deploy.yml uses invalid action versions.
+    evidence:
+      - "actions/checkout@v7 and actions/setup-python@v7 do not exist; current latest major is v4 for setup-python and v4 for checkout."
+
+  - id: D10
+    severity: medium
+    task: REL-07
+    package: animus-kernel
+    description: Kernel publish workflow builds from an editable install that does not include animus-types.
+    evidence:
+      - "publish-kernel.yml runs 'pip install -e packages/kernel/' with no sibling packages."
+      - "Editable install can import the vendored src/animus_types, hiding the missing declared dependency."
+
+  - id: D11
+    severity: medium
+    task: REL-07
+    package: animus-forge
+    description: Forge publish workflow builds from an editable install that does not include kernel/quorum.
+    evidence:
+      - "publish-forge.yml runs 'pip install -e packages/types/ -e packages/forge/[dev]'."
+      - "Runtime deps animus-kernel and animus-quorum are not editable-installed before build."
+
+  - id: D12
+    severity: low
+    task: REL-06
+    package: animus-core
+    description: README/tool counts and install commands are manually maintained and drift-prone.
+    evidence:
+      - "Plan problem statement #14; no generated truth file currently exists."
+
+ci_matrix_alignment:
+  status: partial
+  notes:
+    - "All publish workflows pin setup-python@v6 with python-version 3.12."
+    - "CI test matrices not fully generated from package-matrix.yaml; root pytest pythonpath uses source paths."
+    - "No CI job currently fails when Quorum native tests skip."
+    - "docs-deploy.yml uses non-existent action versions and will fail."
+
+artifact_inventory:
+  wheelhouse: "/tmp/animus-rel00/wheelhouse"
+  wheels:
+    - animus_types-0.1.0-py3-none-any.whl
+    - animus_contracts-0.1.0-py3-none-any.whl
+    - animus_kernel-0.1.1-py3-none-any.whl
+    - animus_core-2.3.0-py3-none-any.whl
+    - animus_forge-1.9.0-py3-none-any.whl
+    - animus_bootstrap-0.8.0-py3-none-any.whl
+    - animus_quorum-1.2.0-py3-none-any.whl
+  sdists:
+    - animus_types-0.1.0.tar.gz
+    - animus_contracts-0.1.0.tar.gz
+    - animus_kernel-0.1.1.tar.gz
+    - animus_core-2.3.0.tar.gz
+    - animus_forge-1.9.0.tar.gz
+    - animus_bootstrap-0.8.0.tar.gz
+    - animus_quorum-1.2.0.tar.gz
+
+clean_room_summary:
+  full_resolution_flat_wheelhouse:
+    types: { import: PASS, pip_check: PASS }
+    contracts: { import: FAIL, pip_check: PASS }
+    kernel: { root_import: PASS, real_module_import: FAIL, pip_check: PASS }
+    core: { import: PASS, pip_check: PASS }
+    forge: { import: PASS, pip_check: PASS }
+    bootstrap: { import: PASS, pip_check: PASS }
+    quorum: { import: PASS, pip_check: PASS }
+    full_stack: { import_all: PASS, pip_check: PASS, all_clis: PASS }
+  no_deps:
+    types: { import: FAIL, pip_check: FAIL }
+    contracts: { import: FAIL, pip_check: FAIL }
+    kernel: { root_import: PASS, cli: FAIL, pip_check: FAIL }
+    core: { import: FAIL, pip_check: FAIL }
+    forge: { import: FAIL, pip_check: FAIL }
+    bootstrap: { root_import: PASS, cli: FAIL, pip_check: FAIL }
+    quorum: { import: PASS, pip_check: PASS }
+
+exit_criteria:
+  - "Every discrepancy above has an assigned task ID."
+  - "No package can be called independently installable without a passing clean-room test; contracts and kernel currently fail."
+  - "Canonical decisions recorded before implementation tasks."
