@@ -7,17 +7,19 @@ Provides tool definitions, registry, and built-in tools for agentic capabilities
 import asyncio
 import fnmatch
 import glob as glob_module
+import hashlib
 import inspect
 import json
 import re
 import shlex
 import subprocess
+import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from animus.logging import get_logger
 
@@ -340,6 +342,195 @@ class ExplicitUnrestrictedDevelopmentPolicy(ToolPolicy):
         return AuthorizationResult(allowed=True)
 
 
+# =============================================================================
+# Approval layer
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class ApprovalDecision:
+    """Immutable record of a human/operator approval decision for a tool call.
+
+    The decision binds a specific tool name and a stable hash of the logical
+    parameters.  Sensitive parameter values are never stored verbatim; only
+    the opaque ``params_hash`` is retained so approvals cannot be replayed with
+    different inputs.
+    """
+
+    request_id: str
+    tool_name: str
+    params_hash: str
+    requesting_actor: str
+    scope: str
+    expiry: datetime
+    decision: Literal["allow", "deny"]
+    approver: str
+    reason: str
+
+    def is_expired(self, now: datetime | None = None) -> bool:
+        if now is None:
+            now = datetime.now(timezone.utc)
+        return now > self.expiry
+
+
+class ApprovalStore(ABC):
+    """Persistent or in-memory backing store for approval decisions.
+
+    Implementations must be able to create, lookup, and expire approvals.
+    Verification logic (allow vs. deny, expiry, tool/parameter match) lives on
+    the store so it can be reused by custom backends.
+    """
+
+    @abstractmethod
+    def request_approval(
+        self,
+        tool_name: str,
+        params_hash: str,
+        requesting_actor: str,
+        scope: str,
+        expiry: datetime,
+        decision: Literal["allow", "deny"],
+        approver: str,
+        reason: str,
+    ) -> ApprovalDecision:
+        """Record a new approval decision and return it."""
+        ...
+
+    @abstractmethod
+    def lookup(self, request_id: str) -> ApprovalDecision | None:
+        """Fetch an approval decision by id."""
+        ...
+
+    @abstractmethod
+    def verify(
+        self,
+        decision: ApprovalDecision,
+        tool_name: str,
+        params_hash: str,
+    ) -> tuple[bool, str]:
+        """Return (is_valid, reason) for using ``decision`` to run ``tool_name``
+        with ``params_hash``.
+        """
+        ...
+
+    @abstractmethod
+    def expire_approvals(self, now: datetime | None = None) -> int:
+        """Remove expired approvals.  Returns the number deleted."""
+        ...
+
+
+class InMemoryApprovalStore(ApprovalStore):
+    """Default, process-local approval store."""
+
+    def __init__(self) -> None:
+        self._approvals: dict[str, ApprovalDecision] = {}
+
+    def request_approval(
+        self,
+        tool_name: str,
+        params_hash: str,
+        requesting_actor: str,
+        scope: str,
+        expiry: datetime,
+        decision: Literal["allow", "deny"],
+        approver: str,
+        reason: str,
+    ) -> ApprovalDecision:
+        request_id = str(uuid.uuid4())
+        decision_obj = ApprovalDecision(
+            request_id=request_id,
+            tool_name=tool_name,
+            params_hash=params_hash,
+            requesting_actor=requesting_actor,
+            scope=scope,
+            expiry=expiry,
+            decision=decision,
+            approver=approver,
+            reason=reason,
+        )
+        self._approvals[request_id] = decision_obj
+        return decision_obj
+
+    def lookup(self, request_id: str) -> ApprovalDecision | None:
+        return self._approvals.get(request_id)
+
+    def verify(
+        self,
+        decision: ApprovalDecision,
+        tool_name: str,
+        params_hash: str,
+    ) -> tuple[bool, str]:
+        if decision.decision != "allow":
+            return False, "Approval decision is deny"
+        if decision.is_expired():
+            return False, "Approval expired"
+        if decision.tool_name != tool_name:
+            return False, "Approval tool mismatch"
+        if decision.params_hash != params_hash:
+            return False, "Approval parameter mismatch"
+        return True, ""
+
+    def expire_approvals(self, now: datetime | None = None) -> int:
+        if now is None:
+            now = datetime.now(timezone.utc)
+        expired_ids = [
+            request_id
+            for request_id, decision in self._approvals.items()
+            if decision.is_expired(now)
+        ]
+        for request_id in expired_ids:
+            del self._approvals[request_id]
+        return len(expired_ids)
+
+
+# Internal execution-control parameters that must not reach the tool handler or
+# be included in the canonical parameter hash.
+_INTERNAL_PARAM_KEYS = {"_approval_id", "approval_id"}
+
+# Keys whose values are considered sensitive.  Their canonical representation is
+# replaced by a short one-way hash so the approval hash binds to the exact
+# secret without leaking it in logs or the approval store.
+_SENSITIVE_KEY_RE = re.compile(
+    r"(?:^|[^a-z0-9])(password|secret|token|credential|private|api[_-]?key|auth[_-]?value|bearer|apikey)(?:$|[^a-z0-9])",
+    re.IGNORECASE,
+)
+
+
+def _canonical_params_hash(params: Any) -> str:
+    """Return a stable SHA-256 hash of the logical tool parameters.
+
+    * Dict keys are sorted recursively for deterministic serialization.
+    * Internal control keys (e.g. ``_approval_id``) are stripped.
+    * Values for sensitive-looking keys are replaced by a one-way hash so the
+      canonical hash binds to the secret without exposing it.
+    """
+
+    def _mask_sensitive(key: str, value: Any) -> Any:
+        if _SENSITIVE_KEY_RE.search(key):
+            # Use a stable keyed-like representation: hash the canonical form
+            # of the value so different secrets produce different parameter
+            # hashes, but the secret itself is not stored or logged.
+            canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
+            digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+            return f"__redacted_{digest}"
+        return value
+
+    def _normalize(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                k: _normalize(_mask_sensitive(k, v))
+                for k, v in sorted(value.items())
+                if k not in _INTERNAL_PARAM_KEYS
+            }
+        if isinstance(value, list):
+            return [_normalize(item) for item in value]
+        return value
+
+    normalized = _normalize(params)
+    canonical = json.dumps(normalized, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 # Legacy helpers used by direct callers and tests. When no policy is provided,
 # the registry default (DenyAllToolPolicy) is used, which makes missing policy
 # fail closed.
@@ -455,13 +646,49 @@ class ToolRegistry:
 
     _MAX_INTENT_CACHE = 50  # Prevent unbounded growth
 
-    def __init__(self, policy: ToolPolicy | None = None):
+    def __init__(
+        self,
+        policy: ToolPolicy | None = None,
+        approval_store: ApprovalStore | None = None,
+    ):
         self._tools: dict[str, Tool] = {}
         self._tool_history: dict[str, list[dict]] = {}
         # Session-scoped intent cache: intent string -> sorted list of (score, tool_name)
         self._intent_cache: dict[str, list[tuple[float, str]]] = {}
         self.policy = policy if policy is not None else DenyAllToolPolicy()
+        self.approval_store = approval_store if approval_store is not None else InMemoryApprovalStore()
         logger.debug("ToolRegistry initialized")
+
+    def request_approval(
+        self,
+        tool_name: str,
+        params: dict,
+        *,
+        requesting_actor: str = "system",
+        scope: str = "execution",
+        expiry_seconds: int = 300,
+        decision: Literal["allow", "deny"] = "allow",
+        approver: str = "human",
+        reason: str = "Interactive approval",
+    ) -> str:
+        """Create an approval decision for ``tool_name`` with ``params``.
+
+        Returns the ``request_id`` that must be supplied to ``execute()`` via
+        the ``_approval_id`` execution parameter or the ``context`` dict.
+        """
+        params_hash = _canonical_params_hash(params)
+        expiry = datetime.now(timezone.utc) + timedelta(seconds=expiry_seconds)
+        decision_obj = self.approval_store.request_approval(
+            tool_name=tool_name,
+            params_hash=params_hash,
+            requesting_actor=requesting_actor,
+            scope=scope,
+            expiry=expiry,
+            decision=decision,
+            approver=approver,
+            reason=reason,
+        )
+        return decision_obj.request_id
 
     def register(self, tool: Tool) -> None:
         """Register a tool."""
@@ -727,13 +954,25 @@ class ToolRegistry:
             lines.append(f"  {i}: {tool.name}{params_hint} — {tool.description[:80]}")
         return "\n".join(lines), number_map
 
-    def execute(self, name: str, params: dict) -> ToolResult:
+    def execute(
+        self,
+        name: str,
+        params: dict,
+        context: dict[str, Any] | None = None,
+    ) -> ToolResult:
         """
         Execute a tool by name with given parameters.
+
+        If the tool has ``requires_approval=True``, the caller must supply a
+        valid ``_approval_id`` either in the ``context`` dict or in ``params``.
+        The approval decision is verified against the canonical hash of the
+        logical parameters.  Approval failures produce a structured denial
+        without invoking the tool handler.
 
         Args:
             name: Tool name
             params: Parameters to pass to the tool
+            context: Optional execution context (may contain ``_approval_id``)
 
         Returns:
             ToolResult with success/failure and output
@@ -748,9 +987,72 @@ class ToolRegistry:
                 error=f"Tool '{name}' not found",
             )
 
+        # Strip internal execution-control keys before hashing or passing to the
+        # tool handler so they cannot leak into tool logic or the audit log.
+        handler_params: Any
+        if isinstance(params, dict):
+            handler_params = {
+                k: v for k, v in params.items() if k not in _INTERNAL_PARAM_KEYS
+            }
+        else:
+            handler_params = params
+
+        if tool.requires_approval:
+            approval_id: str | None = None
+            if context is not None:
+                approval_id = context.get("_approval_id") or context.get("approval_id")
+            if not approval_id and isinstance(params, dict):
+                approval_id = params.get("_approval_id") or params.get("approval_id")
+
+            if not approval_id:
+                logger.warning(
+                    f"Approval required but no approval_id provided for tool '{name}'"
+                )
+                return ToolResult(
+                    tool_name=name,
+                    success=False,
+                    output=None,
+                    error="Approval required but no approval_id provided",
+                )
+
+            decision = self.approval_store.lookup(approval_id)
+            if decision is None:
+                logger.warning(
+                    f"Approval '{approval_id}' not found for tool '{name}'"
+                )
+                return ToolResult(
+                    tool_name=name,
+                    success=False,
+                    output=None,
+                    error=f"Approval '{approval_id}' not found",
+                )
+
+            params_hash = _canonical_params_hash(handler_params)
+            allowed, reason = self.approval_store.verify(
+                decision, tool.name, params_hash
+            )
+            if not allowed:
+                logger.warning(
+                    f"Approval verification failed for tool '{name}': {reason}"
+                )
+                return ToolResult(
+                    tool_name=name,
+                    success=False,
+                    output=None,
+                    error=f"Approval verification failed: {reason}",
+                )
+
+            logger.info(
+                f"Approval allowed: tool={name} request_id={approval_id} "
+                f"actor={decision.requesting_actor} approver={decision.approver} "
+                f"reason={decision.reason}"
+            )
+
         try:
-            logger.debug(f"Executing tool: {name} with params: {params}")
-            result = tool.handler(params)
+            logger.debug(
+                f"Executing tool: {name} with param keys: {list(handler_params.keys())}"
+            )
+            result = tool.handler(handler_params)
             logger.debug(f"Tool {name} completed: success={result.success}")
             return result
         except Exception as e:
@@ -762,9 +1064,14 @@ class ToolRegistry:
                 error=str(e),
             )
 
-    async def execute_async(self, name: str, params: dict) -> ToolResult:
+    async def execute_async(
+        self,
+        name: str,
+        params: dict,
+        context: dict[str, Any] | None = None,
+    ) -> ToolResult:
         """Async wrapper for tool execution."""
-        return await asyncio.to_thread(self.execute, name, params)
+        return await asyncio.to_thread(self.execute, name, params, context)
 
 
 # =============================================================================

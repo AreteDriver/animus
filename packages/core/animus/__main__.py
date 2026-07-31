@@ -1141,10 +1141,27 @@ def main():
 
                 # Approval for sensitive tools
                 if tool.requires_approval:
-                    confirm = prompt(f"Execute '{tool_name}'? (y/n): ").strip().lower()
-                    if confirm != "y":
-                        console.print("[yellow]Tool execution cancelled.[/yellow]")
-                        continue
+                    auto_approve = os.environ.get("ANIMUS_AUTO_APPROVE", "").lower() in (
+                        "1",
+                        "true",
+                        "yes",
+                    )
+                    if not auto_approve:
+                        confirm = prompt(f"Execute '{tool_name}'? (y/n): ").strip().lower()
+                        if confirm != "y":
+                            console.print("[yellow]Tool execution cancelled.[/yellow]")
+                            continue
+                    params = dict(params)
+                    params["_approval_id"] = tools.request_approval(
+                        tool_name,
+                        params,
+                        approver="auto-approve" if auto_approve else "cli-user",
+                        reason=(
+                            "ANIMUS_AUTO_APPROVE enabled"
+                            if auto_approve
+                            else "Interactive CLI approval"
+                        ),
+                    )
 
                 with perf_log("tool_execute", tool_name=tool_name) as _tctx:
                     result = tools.execute(tool_name, params)

@@ -99,7 +99,7 @@ class TestMissingPolicyFailsClosed:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# SEC-02 — registry-owned policies are isolated; no global mutable state
+# SEC-01A — registry-owned policies are isolated; no global mutable state
 # ═══════════════════════════════════════════════════════════════════
 
 
@@ -126,18 +126,23 @@ class TestRegistryPoliciesAreIsolated:
         restricted_registry = create_default_registry(policy=restricted)
         build_registry = create_default_registry(policy=build)
 
-        # The build registry can write inside its workspace.
-        write_result = build_registry.execute(
-            "write_file",
-            {"path": str(build_dir / "file.py"), "content": "x = 1\n"},
+        # The build registry can write inside its workspace once approved.
+        build_write_params = {"path": str(build_dir / "file.py"), "content": "x = 1\n"}
+        build_write_params["_approval_id"] = build_registry.request_approval(
+            "write_file", build_write_params
         )
+        write_result = build_registry.execute("write_file", build_write_params)
         assert write_result.success is True, write_result.error
 
         # The restricted registry still denies writes outside its scope.
-        denied = restricted_registry.execute(
-            "write_file",
-            {"path": str(build_dir / "file.py"), "content": "x = 1\n"},
+        restricted_write_params = {
+            "path": str(build_dir / "file.py"),
+            "content": "x = 1\n",
+        }
+        restricted_write_params["_approval_id"] = restricted_registry.request_approval(
+            "write_file", restricted_write_params
         )
+        denied = restricted_registry.execute("write_file", restricted_write_params)
         assert denied.success is False
         assert "denied" in denied.error.lower()
 
@@ -168,17 +173,25 @@ class TestRegistryPoliciesAreIsolated:
         )
         main_registry = create_default_registry(policy=main_policy)
 
-        # Execute in build registry.
-        build_registry.execute(
-            "write_file",
-            {"path": str(build_workspace / "file.py"), "content": "x = 1\n"},
+        # Execute in build registry after requesting approval.
+        build_write_params = {
+            "path": str(build_workspace / "file.py"),
+            "content": "x = 1\n",
+        }
+        build_write_params["_approval_id"] = build_registry.request_approval(
+            "write_file", build_write_params
         )
+        build_registry.execute("write_file", build_write_params)
 
         # Main registry policy is unaffected; write to its own workspace still works.
-        main_result = main_registry.execute(
-            "write_file",
-            {"path": str(main_dir / "file.py"), "content": "y = 2\n"},
+        main_write_params = {
+            "path": str(main_dir / "file.py"),
+            "content": "y = 2\n",
+        }
+        main_write_params["_approval_id"] = main_registry.request_approval(
+            "write_file", main_write_params
         )
+        main_result = main_registry.execute("write_file", main_write_params)
         assert main_result.success is True, main_result.error
 
 
@@ -288,16 +301,12 @@ class TestMCPServerRegistryUsesRestrictivePolicy:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# SEC-06 — requires_approval is metadata, not enforced by registry
+# SEC-02 — approval is enforced at the registry execution boundary
 # ═══════════════════════════════════════════════════════════════════
 
 
-class TestRequiresApprovalNotEnforced:
-    def test_registry_executes_approval_required_tool_without_callback(self):
-        """ToolRegistry.execute() runs a requires_approval=True tool even though
-        no approval callback is registered."""
-        registry = ToolRegistry()
-
+class TestRequiresApprovalEnforced:
+    def _register_dangerous_tool(self, registry: ToolRegistry):
         def handler(params: dict) -> ToolResult:
             return ToolResult(tool_name="dangerous", success=True, output="ran")
 
@@ -309,10 +318,130 @@ class TestRequiresApprovalNotEnforced:
             requires_approval=True,
         )
         registry.register(tool)
+        return handler
+
+    def test_registry_rejects_approval_required_tool_without_approval_id(self):
+        """ToolRegistry.execute() denies a requires_approval=True tool when no
+        approval_id is supplied."""
+        registry = ToolRegistry()
+        self._register_dangerous_tool(registry)
 
         result = registry.execute("dangerous", {})
+        assert result.success is False
+        assert "approval" in result.error.lower()
+
+    def test_registry_executes_approved_tool(self):
+        """A valid approval_id lets an approved tool run."""
+        registry = ToolRegistry()
+        self._register_dangerous_tool(registry)
+
+        params = {"target": "production"}
+        approval_id = registry.request_approval(
+            "dangerous", params, approver="test", reason="test approval"
+        )
+        params["_approval_id"] = approval_id
+
+        result = registry.execute("dangerous", params)
         assert result.success is True
         assert result.output == "ran"
+
+    def test_registry_rejects_unknown_approval_id(self):
+        """An approval_id that does not exist in the store is rejected."""
+        registry = ToolRegistry()
+        self._register_dangerous_tool(registry)
+
+        params = {"_approval_id": "does-not-exist"}
+        result = registry.execute("dangerous", params)
+        assert result.success is False
+        assert "approval" in result.error.lower()
+
+    def test_registry_rejects_approval_with_mismatched_params(self):
+        """Reusing an approval for different parameters is rejected."""
+        registry = ToolRegistry()
+        self._register_dangerous_tool(registry)
+
+        approval_id = registry.request_approval(
+            "dangerous", {"target": "production"}, approver="test", reason="test approval"
+        )
+
+        result = registry.execute(
+            "dangerous", {"target": "production", "_approval_id": approval_id}
+        )
+        assert result.success is True, result.error
+
+        # Reuse the same approval_id with a different logical parameter.
+        result2 = registry.execute(
+            "dangerous", {"target": "staging", "_approval_id": approval_id}
+        )
+        assert result2.success is False
+        assert "mismatch" in result2.error.lower()
+
+    def test_registry_rejects_approval_for_different_tool(self):
+        """An approval granted for one tool cannot authorize another."""
+        registry = ToolRegistry()
+        self._register_dangerous_tool(registry)
+        registry.register(
+            Tool(
+                name="other",
+                description="another tool",
+                parameters={},
+                handler=lambda p: ToolResult(tool_name="other", success=True, output="ok"),
+                requires_approval=True,
+            )
+        )
+
+        approval_id = registry.request_approval(
+            "dangerous", {}, approver="test", reason="test approval"
+        )
+        result = registry.execute("other", {"_approval_id": approval_id})
+        assert result.success is False
+        assert "mismatch" in result.error.lower()
+
+    def test_registry_rejects_expired_approval(self):
+        """An expired approval cannot authorize execution."""
+        registry = ToolRegistry()
+        self._register_dangerous_tool(registry)
+
+        params = {}
+        approval_id = registry.request_approval(
+            "dangerous",
+            params,
+            approver="test",
+            reason="short-lived approval",
+            expiry_seconds=1,
+        )
+        params["_approval_id"] = approval_id
+
+        import time
+
+        time.sleep(1.1)
+        result = registry.execute("dangerous", params)
+        assert result.success is False
+        assert "expired" in result.error.lower()
+
+    def test_sensitive_values_not_leaked_in_audit_hash(self):
+        """The canonical parameter hash binds to a secret without exposing it."""
+        from animus.tools import _canonical_params_hash
+
+        secret_a = {"auth_value": "super-secret-token-a"}
+        secret_b = {"auth_value": "super-secret-token-b"}
+
+        hash_a = _canonical_params_hash(secret_a)
+        hash_b = _canonical_params_hash(secret_b)
+
+        # Different secrets must produce different hashes (binding).
+        assert hash_a != hash_b
+        # The secret value itself does not appear in the hash output.
+        assert "super-secret-token" not in hash_a
+
+    def test_canonical_hash_stable_for_same_logical_request(self):
+        """The same logical parameters must always hash to the same value."""
+        from animus.tools import _canonical_params_hash
+
+        params = {"b": 2, "a": 1, "nested": {"c": True, "d": "x"}}
+        assert _canonical_params_hash(params) == _canonical_params_hash(
+            {"a": 1, "b": 2, "nested": {"d": "x", "c": True}}
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════
