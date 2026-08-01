@@ -26,6 +26,20 @@ logger = logging.getLogger(__name__)
 _INSECURE_SECRET_KEY = "change-me-in-production"
 _INSECURE_DATABASE_URL = "sqlite:///gorgon-state.db"
 
+# Package-root defaults that were used before runtime state moved to platform dirs.
+# Kept for backward-compatible relocation in model_post_init.
+_PACKAGE_SRC = Path(__file__).parent.parent
+_PKG_RUNTIME_DIR_DEFAULTS: dict[str, Path] = {
+    "logs_dir": _PACKAGE_SRC / "logs",
+    "workflows_dir": _PACKAGE_SRC / "workflows",
+    "schedules_dir": _PACKAGE_SRC / "schedules",
+    "webhooks_dir": _PACKAGE_SRC / "webhooks",
+    "jobs_dir": _PACKAGE_SRC / "jobs",
+    "plugins_dir": _PACKAGE_SRC / "plugins" / "custom",
+}
+# Old base_dir default pointed at the package root / monorepo package directory.
+_OLD_BASE_DIR_DEFAULT = Path(__file__).parent.parent.parent.parent
+
 # Minimum requirements for secure configuration
 _MIN_SECRET_KEY_LENGTH = 32
 # Regex for ${ENV_VAR} placeholders in YAML values
@@ -147,15 +161,21 @@ class Settings(BaseSettings):
     sanitize_logs: bool = Field(True, description="Sanitize sensitive data from logs")
 
     # Paths
-    base_dir: Path = Field(default_factory=lambda: Path(__file__).parent.parent.parent.parent)
-    logs_dir: Path = Field(default_factory=lambda: Path(__file__).parent.parent / "logs")
-    prompts_dir: Path = Field(default_factory=lambda: Path(__file__).parent.parent / "prompts")
-    workflows_dir: Path = Field(default_factory=lambda: Path(__file__).parent.parent / "workflows")
-    schedules_dir: Path = Field(default_factory=lambda: Path(__file__).parent.parent / "schedules")
-    webhooks_dir: Path = Field(default_factory=lambda: Path(__file__).parent.parent / "webhooks")
-    jobs_dir: Path = Field(default_factory=lambda: Path(__file__).parent.parent / "jobs")
+    # Runtime state defaults to ~/.animus so wheel installs don't write into
+    # site-packages.  Fields still accept env overrides (e.g. LOGS_DIR).
+    base_dir: Path = Field(default_factory=lambda: Path.home() / ".animus")
+    logs_dir: Path = Field(default_factory=lambda: _PKG_RUNTIME_DIR_DEFAULTS["logs_dir"])
+    prompts_dir: Path = Field(default_factory=lambda: _PACKAGE_SRC / "prompts")
+    workflows_dir: Path = Field(default_factory=lambda: _PKG_RUNTIME_DIR_DEFAULTS["workflows_dir"])
+    schedules_dir: Path = Field(
+        default_factory=lambda: _PKG_RUNTIME_DIR_DEFAULTS["schedules_dir"]
+    )
+    webhooks_dir: Path = Field(
+        default_factory=lambda: _PKG_RUNTIME_DIR_DEFAULTS["webhooks_dir"]
+    )
+    jobs_dir: Path = Field(default_factory=lambda: _PKG_RUNTIME_DIR_DEFAULTS["jobs_dir"])
     plugins_dir: Path = Field(
-        default_factory=lambda: Path(__file__).parent.parent / "plugins" / "custom"
+        default_factory=lambda: _PKG_RUNTIME_DIR_DEFAULTS["plugins_dir"]
     )
     skills_dir: Path = Field(
         default_factory=lambda: Path(__file__).parent.parent.parent.parent / "skills",
@@ -377,6 +397,23 @@ class Settings(BaseSettings):
 
     def model_post_init(self, __context) -> None:
         """Ensure directories exist and validate production config."""
+        # Relocate any runtime directory still using the old package-relative
+        # default to the user data directory.  This prevents wheel installs from
+        # writing state into site-packages when callers only override base_dir or
+        # rely on defaults.
+        if self.base_dir.resolve() == _OLD_BASE_DIR_DEFAULT.resolve():
+            self.base_dir = Path.home() / ".animus"
+
+        for field_name, old_default in _PKG_RUNTIME_DIR_DEFAULTS.items():
+            current = getattr(self, field_name)
+            try:
+                if current.resolve() == old_default.resolve():
+                    subdir = old_default.relative_to(_PACKAGE_SRC)
+                    setattr(self, field_name, self.base_dir / subdir)
+            except OSError:
+                # If the path cannot be resolved (e.g. broken symlink), leave it.
+                pass
+
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.prompts_dir.mkdir(parents=True, exist_ok=True)
         self.workflows_dir.mkdir(parents=True, exist_ok=True)
