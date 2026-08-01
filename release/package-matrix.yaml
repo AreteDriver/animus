@@ -1,12 +1,12 @@
-# Animus release baseline — REL-00 through REL-03 package compatibility matrix
+# Animus release baseline — REL-00 through REL-04 package compatibility matrix
 # Generated: 2026-07-31
 # Last refreshed: 2026-08-01
-# Baseline git revision: d28e463358f55890124aa4d88f23ad272a4c5f3b
+# Baseline git revision: a0b7670fdd12fb8e0ef0232726cc3436e05ade8f
 # Method: python -m build per package; wheel/sdist inspection; clean-room venv smoke tests
 
 baseline:
   date: "2026-08-01"
-  git_rev: "d28e463"
+  git_rev: "a0b7670"
   plan_baseline: "6338784561efa6395fb83072318ff7771284842f"
   test_runner: "local x86_64, Python 3.12"
   artifact_dir: "/tmp/animus-rel00/wheelhouse"
@@ -14,19 +14,19 @@ baseline:
 supported_profiles:
   - id: types-only
     name: Shared types
-    python_floor: ">=3.10"
+    python_floor: ">=3.12"
     install: "pip install animus-types"
   - id: contracts-only
     name: Contracts validator
-    python_floor: ">=3.11"
+    python_floor: ">=3.12"
     install: "pip install animus-contracts"
   - id: kernel-only
     name: Kernel runtime
-    python_floor: ">=3.11"
+    python_floor: ">=3.12"
     install: "pip install animus-kernel"
   - id: core-only
     name: Core exocortex
-    python_floor: ">=3.10 (metadata); >=3.12 in practice because of forge"
+    python_floor: ">=3.12"
     install: "pip install animus-core"
   - id: forge-only
     name: Forge orchestration
@@ -34,11 +34,11 @@ supported_profiles:
     install: "pip install animus-forge"
   - id: bootstrap-only
     name: Bootstrap installer
-    python_floor: ">=3.11"
+    python_floor: ">=3.12"
     install: "pip install animus-bootstrap"
   - id: quorum-only
     name: Quorum coordination
-    python_floor: ">=3.10"
+    python_floor: ">=3.12"
     install: "pip install animus-quorum"
   - id: full-local-stack
     name: Full local stack
@@ -57,7 +57,7 @@ packages:
     import_root: animus_types
     version: "0.1.0"
     runtime_version: "0.1.0"
-    requires_python: ">=3.10"
+    requires_python: ">=3.12"
     build_backend: "setuptools>=68.0"
     maturity: "Beta"
     has_native_component: false
@@ -90,7 +90,7 @@ packages:
     import_root: animus_contracts
     version: "0.1.0"
     runtime_version: "0.1.0"
-    requires_python: ">=3.11"
+    requires_python: ">=3.12"
     build_backend: "hatchling"
     maturity: "Alpha"
     has_native_component: false
@@ -124,7 +124,7 @@ packages:
     import_root: animus_kernel
     version: "0.1.1"
     runtime_version: "0.1.1"
-    requires_python: ">=3.11"
+    requires_python: ">=3.12"
     build_backend: "hatchling"
     maturity: "Alpha"
     has_native_component: false
@@ -184,7 +184,7 @@ packages:
     import_root: animus
     version: "2.3.0"
     runtime_version: "2.3.0"
-    requires_python: ">=3.10"
+    requires_python: ">=3.12"
     build_backend: "setuptools>=61.0"
     maturity: "Production/Stable"
     has_native_component: false
@@ -308,7 +308,7 @@ packages:
     import_root: animus_bootstrap
     version: "0.8.0"
     runtime_version: "0.8.0"
-    requires_python: ">=3.11"
+    requires_python: ">=3.12"
     build_backend: "setuptools>=68.0"
     maturity: "Alpha"
     has_native_component: false
@@ -360,7 +360,7 @@ packages:
     import_root: animus_quorum
     version: "1.2.0"
     runtime_version: "1.2.0"
-    requires_python: ">=3.10"
+    requires_python: ">=3.12"
     build_backend: "maturin>=1.0,<2.0"
     maturity: "Alpha"
     has_native_component: true
@@ -548,7 +548,8 @@ ci_matrix_alignment:
     - "All publish workflows pin setup-python@v6 with python-version 3.12."
     - "CI test matrices not fully generated from package-matrix.yaml; root pytest pythonpath uses source paths."
     - "No CI job currently fails when Quorum native tests skip."
-    - "docs-deploy.yml uses non-existent action versions and will fail."
+    - "docs-deploy.yml action versions fixed to checkout@v4 and setup-python@v5 (REL-04 closed); GitHub Pages deployment still blocked for private repos."
+    - "Python support claims aligned to >=3.12 across root workspace and all packages (REL-04 closed)."
 
 artifact_inventory:
   wheelhouse: "/tmp/animus-rel00/wheelhouse"
