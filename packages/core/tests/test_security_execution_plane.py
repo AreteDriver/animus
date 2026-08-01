@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+import pytest
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -21,6 +22,7 @@ from unittest.mock import MagicMock, patch
 
 from animus.memory import MemoryLayer
 from animus.memory.types import Sensitivity
+from animus.mcp_server import MCPDeploymentMode
 from animus.tools import (
     DenyAllToolPolicy,
     Tool,
@@ -488,6 +490,111 @@ class TestHttpRequestBypassesEgressPolicy:
             )
         finally:
             _stop_mock_server(server)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SEC-04 — MCP boundary is not deliberate (no auth, no authorization,
+# no rate limits, unsafe tool construction)
+# ═══════════════════════════════════════════════════════════════════
+
+
+class TestMCPBoundaryHardening:
+    """Verify deliberate MCP boundary: authentication, authorization,
+    deployment-mode fail-closed semantics, explicit tool policy, and
+    workspace isolation.
+    """
+
+    def test_mcp_auth_uses_constant_time_compare(self, monkeypatch):
+        """API-key validation must use a constant-time comparison so timing
+        side-channels cannot leak key bytes."""
+        from animus import mcp_server as msp
+
+        monkeypatch.setattr(
+            msp, "_MCP_DEPLOYMENT_MODE", msp.MCPDeploymentMode.authenticated_local_network
+        )
+        monkeypatch.setattr(msp, "_MCP_API_KEY", "valid-key-32-bytes-longggg")
+
+        # Correct key is accepted.
+        assert msp._check_auth("valid-key-32-bytes-longggg") is None
+
+        # Wrong key is rejected with the standard message.
+        result = msp._check_auth("valid-key-32-bytes-longggX")
+        assert result is not None
+        assert "Invalid API key" in result
+
+        # Empty/default keys must be rejected in authenticated mode.
+        for bad_key in ("", "default", "changeme", "password"):
+            monkeypatch.setattr(msp, "_MCP_API_KEY", bad_key)
+            assert msp._check_auth("anything") is not None
+
+    def test_mcp_local_stdio_no_auth(self, monkeypatch):
+        """local_stdio mode is the safe default and must not require an API key."""
+        from animus import mcp_server as msp
+
+        monkeypatch.setattr(msp, "_MCP_DEPLOYMENT_MODE", msp.MCPDeploymentMode.local_stdio)
+        monkeypatch.setattr(msp, "_MCP_API_KEY", "")
+        assert msp._check_auth("") is None
+        assert msp._check_auth("anything") is None
+
+    def test_mcp_remote_without_key_fails_closed(self, monkeypatch):
+        """Remote deployment must be prohibited unless an API key is configured."""
+        from animus import mcp_server as msp
+
+        monkeypatch.setattr(msp, "_MCP_DEPLOYMENT_MODE", msp.MCPDeploymentMode.remote)
+        monkeypatch.setattr(msp, "_MCP_API_KEY", "")
+        with pytest.raises(RuntimeError, match="MCP remote deployment requires"):
+            msp._validate_mcp_startup_config()
+
+    def test_mcp_authenticated_without_key_fails_closed(self, monkeypatch):
+        """authenticated_local_network mode must fail closed with an empty/default key."""
+        from animus import mcp_server as msp
+
+        monkeypatch.setattr(
+            msp, "_MCP_DEPLOYMENT_MODE", msp.MCPDeploymentMode.authenticated_local_network
+        )
+        monkeypatch.setattr(msp, "_MCP_API_KEY", "default")
+        with pytest.raises(RuntimeError, match="MCP authenticated_local_network mode requires"):
+            msp._validate_mcp_startup_config()
+
+    def test_create_mcp_server_defaults_to_deny_all_policy(self, monkeypatch):
+        """create_mcp_server must default to DenyAllToolPolicy when no explicit
+        policy is provided."""
+        from animus import mcp_server as msp
+
+        monkeypatch.setattr(msp, "_MCP_DEPLOYMENT_MODE", msp.MCPDeploymentMode.local_stdio)
+        server = msp.create_mcp_server()
+        assert server.policy is not None
+        assert isinstance(server.policy, DenyAllToolPolicy)
+
+    def test_create_mcp_server_accepts_explicit_tool_policy(self, monkeypatch):
+        """create_mcp_server must honour an explicitly supplied tool policy."""
+        from animus import mcp_server as msp
+
+        monkeypatch.setattr(msp, "_MCP_DEPLOYMENT_MODE", msp.MCPDeploymentMode.local_stdio)
+        policy = WorkspaceToolPolicy()
+        server = msp.create_mcp_server(policy=policy)
+        assert server.policy is policy
+
+    def test_create_mcp_server_rejects_remote_without_auth(self, monkeypatch):
+        """create_mcp_server must raise when remote mode is requested without a key."""
+        from animus import mcp_server as msp
+
+        monkeypatch.setattr(msp, "_MCP_DEPLOYMENT_MODE", msp.MCPDeploymentMode.remote)
+        monkeypatch.setattr(msp, "_MCP_API_KEY", "")
+        with pytest.raises(RuntimeError, match="MCP remote deployment requires"):
+            msp.create_mcp_server()
+
+    def test_mcp_workspace_escape_blocked_by_policy(self, tmp_path, monkeypatch):
+        """A read outside the configured workspace must be denied by the tool
+        policy before any filesystem access occurs."""
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        policy = WorkspaceToolPolicy(allowed_paths=[str(workspace)])
+
+        # Path escapes the allowed workspace after normalization.
+        result = policy.authorize_read(str(tmp_path / "../../etc/passwd"))
+        assert not result.allowed
+        assert "not in allowed directories" in result.reason
 
 
 # ═══════════════════════════════════════════════════════════════════

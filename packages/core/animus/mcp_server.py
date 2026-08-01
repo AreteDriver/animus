@@ -9,9 +9,15 @@ Auth: Set ANIMUS_MCP_API_KEY env var to require authentication.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
+import secrets
+import time
+from contextlib import asynccontextmanager
 from datetime import datetime
+from enum import Enum
+from typing import Any
 
 from animus.audit import EgressAuditLog
 from animus.citizens import ImprovementProposal
@@ -22,6 +28,14 @@ from animus.memory import MemoryLayer, MemoryType
 from animus.memory.redaction import redact
 from animus.memory.types import Sensitivity
 from animus.tasks import TaskTracker
+from animus.tools import (
+    DenyAllToolPolicy,
+    ToolPolicy,
+    ToolRegistry,
+    ToolResult,
+    WorkspaceToolPolicy,
+    create_default_registry,
+)
 
 logger = get_logger("mcp_server")
 
@@ -30,8 +44,10 @@ logger = get_logger("mcp_server")
 # out of the critical path for environments that don't need MCP).
 try:
     from mcp.server.fastmcp import FastMCP
+    from mcp.types import TextContent
 except ImportError:
     FastMCP = None  # type: ignore[misc,assignment]
+    TextContent = None  # type: ignore[misc,assignment]
 
 # Tools that should always be returned with full schemas regardless of intent.
 # These are the "core" tools that every session likely needs.
@@ -46,16 +62,163 @@ _ALWAYS_EXPOSE = frozenset({
 })
 
 # Optional API key for MCP server authentication
-_MCP_API_KEY = os.environ.get("ANIMUS_MCP_API_KEY")
+_MCP_API_KEY = os.environ.get("ANIMUS_MCP_API_KEY") or None
 
 
-def _check_auth(api_key: str = "") -> str | None:
-    """Validate API key if one is configured. Returns error message or None."""
-    if not _MCP_API_KEY:
-        return None  # No auth configured
-    if api_key == _MCP_API_KEY:
+class MCPDeploymentMode(str, Enum):
+    """Deliberate deployment modes for the MCP boundary."""
+
+    local_stdio = "local_stdio"
+    authenticated_local_network = "authenticated_local_network"
+    remote = "remote"
+
+
+# Known weak/default secrets that must never satisfy authenticated mode.
+_INSECURE_DEFAULT_KEYS = frozenset(
+    {"", "default", "changeme", "password", "secret", "123456", "animus"}
+)
+
+
+def _load_deployment_mode() -> MCPDeploymentMode:
+    raw = os.environ.get("ANIMUS_MCP_DEPLOYMENT_MODE", "local_stdio").lower()
+    try:
+        return MCPDeploymentMode(raw)
+    except ValueError:
+        # Unknown mode fails closed: treat as authenticated until corrected.
+        return MCPDeploymentMode.authenticated_local_network
+
+
+_MCP_DEPLOYMENT_MODE = _load_deployment_mode()
+
+
+def _load_allowed_tools() -> frozenset[str] | None:
+    """Optional per-tool allowlist exposed via ANIMUS_MCP_ALLOWED_TOOLS."""
+    raw = os.environ.get("ANIMUS_MCP_ALLOWED_TOOLS", "").strip()
+    if not raw:
         return None
-    return "Authentication required. Pass api_key parameter matching ANIMUS_MCP_API_KEY."
+    return frozenset(t.strip() for t in raw.split(",") if t.strip())
+
+
+_MCP_ALLOWED_TOOLS = _load_allowed_tools()
+
+
+def _is_insecure_key(key: str | None) -> bool:
+    """True for missing, empty, or known-default keys."""
+    if key is None:
+        return True
+    if key in _INSECURE_DEFAULT_KEYS:
+        return True
+    return False
+
+
+def _effective_mode(requested: MCPDeploymentMode | None = None) -> MCPDeploymentMode:
+    """Return the effective deployment mode, preserving backward compatibility.
+
+    When the operator has not explicitly requested a mode, a configured API key
+    implies authenticated operation unless ``local_stdio`` was explicitly chosen.
+    The hardened ``call_tool`` path always passes the explicit module-level mode,
+    so ``local_stdio`` never enforces authentication there.
+    """
+    if requested is not None:
+        return requested
+    mode = _MCP_DEPLOYMENT_MODE
+    if mode == MCPDeploymentMode.local_stdio and _MCP_API_KEY is not None:
+        return MCPDeploymentMode.authenticated_local_network
+    return mode
+
+
+def _check_auth(api_key: str = "", mode: MCPDeploymentMode | None = None) -> str | None:
+    """Validate API key using a constant-time comparison.
+
+    Returns an error message or None when the request is authorized.
+
+    The deployment mode is authoritative: when ``mode`` is omitted, the current
+    ``_MCP_DEPLOYMENT_MODE`` is used. ``local_stdio`` never requires a key.
+    """
+    effective = mode if mode is not None else _MCP_DEPLOYMENT_MODE
+    if effective == MCPDeploymentMode.local_stdio:
+        return None
+    if _is_insecure_key(_MCP_API_KEY):
+        return "Authentication required. Server API key is not configured."
+    if not secrets.compare_digest(api_key, _MCP_API_KEY or ""):
+        return "Authentication required. Invalid API key."
+    return None
+
+
+def _caller_hash(api_key: str) -> str:
+    """Return a non-reversible caller identity hint for audit logs."""
+    if not api_key:
+        return "anonymous"
+    return hashlib.sha256(api_key.encode("utf-8")).hexdigest()[:16]
+
+
+def _audit_mcp_call(
+    tool_name: str,
+    caller_id: str,
+    allowed: bool,
+    status: str,
+    latency_ms: float,
+    mode: MCPDeploymentMode,
+    denial_reason: str | None = None,
+) -> None:
+    """Audit an MCP boundary call without recording secrets."""
+    logger.info(
+        "MCP_AUDIT tool=%s caller=%s allowed=%s status=%s mode=%s "
+        "latency_ms=%.3f denial_reason=%s",
+        tool_name,
+        caller_id,
+        allowed,
+        status,
+        mode.value,
+        latency_ms,
+        denial_reason or "none",
+    )
+
+
+@asynccontextmanager
+async def _null_context():
+    """No-op async context manager for the unlimited-concurrency path."""
+    yield
+
+
+def _validate_mcp_startup_config() -> None:
+    """Fail closed on dangerous deployment and authentication combinations."""
+    mode = _MCP_DEPLOYMENT_MODE
+    if mode == MCPDeploymentMode.remote and _is_insecure_key(_MCP_API_KEY):
+        raise RuntimeError(
+            "MCP remote deployment requires a non-empty ANIMUS_MCP_API_KEY"
+        )
+    if mode == MCPDeploymentMode.authenticated_local_network and _is_insecure_key(
+        _MCP_API_KEY
+    ):
+        raise RuntimeError(
+            "MCP authenticated_local_network mode requires a non-empty ANIMUS_MCP_API_KEY"
+        )
+
+
+def _execute_registry_with_approval(
+    registry: ToolRegistry, tool_name: str, params: dict
+) -> ToolResult:
+    """Execute a registry tool, auto-requesting approval when required.
+
+    Centralizes the SEC-02 approval enforcement so MCP handlers cannot forget to
+    supply an ``_approval_id`` for dangerous tools.
+    """
+    tool = registry.get(tool_name)
+    if tool is None:
+        return ToolResult(
+            tool_name=tool_name,
+            success=False,
+            output=None,
+            error=f"Tool '{tool_name}' not found",
+        )
+    if tool.requires_approval:
+        exec_params = {
+            k: v for k, v in params.items() if k not in {"_approval_id", "approval_id"}
+        }
+        approval_id = registry.request_approval(tool_name, exec_params)
+        params = {**exec_params, "_approval_id": approval_id}
+    return registry.execute(tool_name, params)
 
 
 def _scrub_egress(text: str) -> tuple[str, int]:
@@ -109,16 +272,24 @@ def _wrap_untrusted(content: str, memory_id: str) -> str:
 if FastMCP is not None:
 
     class GatedFastMCP(FastMCP):  # type: ignore[misc]
-        """FastMCP subclass with intent-based tool gating.
+        """FastMCP subclass with intent-based tool gating and MCP hardening."""
 
-        Overrides ``list_tools()`` to return full schemas for top-ranked tools
-        and compact schemas for the rest, based on session intent.
-        """
-
-        def __init__(self, *args, **kwargs):
+        def __init__(
+            self,
+            *args,
+            policy: ToolPolicy | None = None,
+            max_request_size: int = 0,
+            max_concurrent_calls: int = 0,
+            **kwargs,
+        ):
             super().__init__(*args, **kwargs)
             self._tool_gater = MCPToolGater(max_full_schemas=5)
             self._gater_initialized = False
+            self.policy = policy if policy is not None else DenyAllToolPolicy()
+            self.max_request_size = max(max_request_size, 0)
+            self._concurrency_semaphore: asyncio.Semaphore | None = None
+            if max_concurrent_calls > 0:
+                self._concurrency_semaphore = asyncio.Semaphore(max_concurrent_calls)
 
         def _ensure_gater(self) -> None:
             """Populate gater with metadata from the tool manager."""
@@ -135,33 +306,147 @@ if FastMCP is not None:
                 )
             self._gater_initialized = True
 
-    async def list_tools(self) -> list:
-        """Override to return gated schemas based on session intent."""
-        from mcp.types import Tool as MCPTool
+        async def list_tools(self) -> list:
+            """Override to return gated schemas based on session intent."""
+            from mcp.types import Tool as MCPTool
 
-        self._ensure_gater()
-        intent = get_mcp_intent()
-        if not intent:
-            # No intent set — backward compatible, return all full schemas
-            return await super().list_tools()
+            self._ensure_gater()
+            intent = get_mcp_intent()
+            if not intent:
+                # No intent set — backward compatible, return all full schemas
+                return await super().list_tools()
 
-        gated = self._tool_gater.get_gated_schemas(intent=intent)
-        return [
-            MCPTool(
-                name=g.name,
-                description=g.description,
-                inputSchema=g.input_schema,
-            )
-            for g in gated
-        ]
+            gated = self._tool_gater.get_gated_schemas(intent=intent)
+            return [
+                MCPTool(
+                    name=g.name,
+                    description=g.description,
+                    inputSchema=g.input_schema,
+                )
+                for g in gated
+            ]
+
+        async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
+            """Invoke a tool through the hardened MCP boundary."""
+            return await self._secure_call_tool(name, arguments)
+
+        async def _secure_call_tool(
+            self, name: str, arguments: dict[str, Any]
+        ) -> Any:
+            """Enforce auth, scopes, size limits, concurrency, and audit logging."""
+            mode = _MCP_DEPLOYMENT_MODE
+            api_key = ""
+            if isinstance(arguments, dict):
+                api_key = str(arguments.get("api_key", ""))
+            caller_id = _caller_hash(api_key)
+
+            # Request size limit
+            if self.max_request_size > 0 and isinstance(arguments, dict):
+                try:
+                    payload_size = len(json.dumps(arguments, default=str))
+                except Exception:
+                    payload_size = 0
+                if payload_size > self.max_request_size:
+                    denial_reason = "request_too_large"
+                    text = (
+                        f"Request denied: payload size {payload_size} bytes exceeds "
+                        f"maximum {self.max_request_size} bytes."
+                    )
+                    _audit_mcp_call(
+                        tool_name=name,
+                        caller_id=caller_id,
+                        allowed=False,
+                        status="denied",
+                        latency_ms=0.0,
+                        mode=mode,
+                        denial_reason=denial_reason,
+                    )
+                    return (
+                        [TextContent(type="text", text=text)],  # type: ignore[list-item]
+                        {"result": text},
+                    )
+
+            # Authentication
+            auth_err = _check_auth(api_key, mode=mode)
+            denial_reason: str | None = None
+            if auth_err is None and _MCP_ALLOWED_TOOLS is not None:
+                if name not in _MCP_ALLOWED_TOOLS:
+                    auth_err = (
+                        f"Access denied: tool '{name}' is not in the MCP allowlist."
+                    )
+                    denial_reason = "tool_not_allowed"
+
+            if auth_err:
+                denial_reason = denial_reason or "auth_required"
+                _audit_mcp_call(
+                    tool_name=name,
+                    caller_id=caller_id,
+                    allowed=False,
+                    status="denied",
+                    latency_ms=0.0,
+                    mode=mode,
+                    denial_reason=denial_reason,
+                )
+                return (
+                    [TextContent(type="text", text=auth_err)],  # type: ignore[list-item]
+                    {"result": auth_err},
+                )
+
+            # Concurrency limit and execution
+            ctx = self._concurrency_semaphore or _null_context()
+            async with ctx:
+                start = time.perf_counter()
+                try:
+                    result = await super().call_tool(name, arguments)
+                    status = "success"
+                except Exception as exc:
+                    elapsed_ms = (time.perf_counter() - start) * 1000
+                    _audit_mcp_call(
+                        tool_name=name,
+                        caller_id=caller_id,
+                        allowed=True,
+                        status="error",
+                        latency_ms=elapsed_ms,
+                        mode=mode,
+                        denial_reason=str(exc),
+                    )
+                    raise
+
+                elapsed_ms = (time.perf_counter() - start) * 1000
+                _audit_mcp_call(
+                    tool_name=name,
+                    caller_id=caller_id,
+                    allowed=True,
+                    status=status,
+                    latency_ms=elapsed_ms,
+                    mode=mode,
+                    denial_reason=None,
+                )
+                return result
 
 
-def create_mcp_server():
-    """Create and configure the Animus MCP server."""
+def create_mcp_server(policy: ToolPolicy | None = None) -> "GatedFastMCP":
+    """Create and configure the Animus MCP server.
+
+    Args:
+        policy: Explicit ``ToolPolicy`` for registry construction inside MCP.
+            Defaults to ``DenyAllToolPolicy`` when omitted so no MCP path can
+            create an unrestricted registry.
+    """
     if FastMCP is None:
         raise ImportError(
             "MCP server requires the mcp SDK. Install with: pip install 'mcp>=1.0.0'"
         )
+
+    _validate_mcp_startup_config()
+
+    if policy is None:
+        policy = DenyAllToolPolicy()
+
+    max_request_size = int(os.environ.get("ANIMUS_MCP_MAX_REQUEST_SIZE", "0") or 0)
+    max_concurrent_calls = int(
+        os.environ.get("ANIMUS_MCP_MAX_CONCURRENT_CALLS", "0") or 0
+    )
 
     config = AnimusConfig.load()
     config.ensure_dirs()
@@ -170,7 +455,11 @@ def create_mcp_server():
     audit_log = EgressAuditLog(config.data_dir)
 
     mcp = GatedFastMCP(
-        "animus", instructions="Animus exocortex — persistent memory, tasks, and tools."
+        "animus",
+        instructions="Animus exocortex — persistent memory, tasks, and tools.",
+        policy=policy,
+        max_request_size=max_request_size,
+        max_concurrent_calls=max_concurrent_calls,
     )
 
     # -----------------------------------------------------------------------
