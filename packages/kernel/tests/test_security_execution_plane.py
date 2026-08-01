@@ -1,125 +1,110 @@
-"""SEC-00 — execution-plane security regression tests for animus kernel.
+"""SEC-05 — execution-plane SSRF / egress regression tests for animus kernel.
 
-Reproduces defects SEC-04 and SEC-05 from
-``security/SEC-00-threat-model.md``:
-
-- ForgeToolRegistry validates only the first command token and uses
-  ``subprocess.run(..., shell=True)``.
-- HeadToolOrchestrator repeats the same shell=True pattern.
-
-All proofs monkeypatch ``subprocess.run`` so no real command is executed.
+All proofs use temporary mock HTTP servers bound to loopback and fake
+secrets.  No live credentials or destructive actions are used.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
+from animus.network.client import EgressDeniedError, GovernedClient, SSRFBlockedError
 
-from animus_kernel.head.tool_orchestrator import HeadToolOrchestrator
-from animus_kernel.tools.registry import ForgeToolRegistry
-
-
-# ═══════════════════════════════════════════════════════════════════
-# SEC-04 — ForgeToolRegistry token-only validation + shell=True
-# ═══════════════════════════════════════════════════════════════════
+from animus_kernel.tools_core import _tool_http_request
 
 
-class TestForgeToolRegistryShellInjection:
-    def test_run_command_uses_shell_true(self):
-        """_handle_run_command passes shell=True to subprocess.run even though only
-        the first token was validated against the allowlist."""
-        registry = ForgeToolRegistry(
-            project_root=Path.cwd(),
-            enable_shell=True,
-            allowed_commands=["python"],
-        )
+class _MockHTTPHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"mock-server-ok")
 
-        captured: dict = {}
+    def log_message(self, _fmt, *_args):
+        pass
 
-        def _fake_subprocess_run(cmd, *, shell=False, **kwargs):
-            captured["cmd"] = cmd
-            captured["shell"] = shell
-            return MagicMock(returncode=0, stdout="safe-output", stderr="")
 
-        with patch("subprocess.run", side_effect=_fake_subprocess_run):
-            result = registry.execute(
-                "run_command",
-                {"command": "python -c \"print('injected body')\"", "timeout": 30},
-                agent_id="test-agent",
+def _start_mock_server() -> tuple[HTTPServer, str]:
+    server = HTTPServer(("127.0.0.1", 0), _MockHTTPHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    host, port = server.server_address
+    return server, f"http://{host}:{port}"
+
+
+def _stop_mock_server(server: HTTPServer) -> None:
+    server.shutdown()
+    server.server_close()
+
+
+class TestKernelHttpRequestSSRF:
+    def test_tool_blocks_loopback_127(self):
+        server, url = _start_mock_server()
+        try:
+            result = _tool_http_request({"url": url, "method": "GET", "timeout": 5})
+            assert result.success is False
+            assert "SSRF" in result.error or "loopback" in result.error.lower()
+        finally:
+            _stop_mock_server(server)
+
+    def test_tool_blocks_localhost_hostname(self):
+        server, url = _start_mock_server()
+        try:
+            host, port = server.server_address
+            url = f"http://localhost:{port}/"
+            result = _tool_http_request({"url": url, "method": "GET", "timeout": 5})
+            assert result.success is False
+        finally:
+            _stop_mock_server(server)
+
+
+class TestKernelGovernedClientSSRF:
+    @pytest.mark.parametrize(
+        "host",
+        [
+            "127.0.0.1",
+            "[::1]",
+            "0.0.0.0",
+            "10.0.0.1",
+            "172.16.0.1",
+            "192.168.1.1",
+            "169.254.169.254",
+            "100.100.100.200",
+        ],
+    )
+    def test_blocks_disallowed_addresses(self, host):
+        with pytest.raises(SSRFBlockedError):
+            GovernedClient.request(f"http://{host}/", timeout=2)
+
+    def test_blocks_encoded_ipv4(self):
+        with pytest.raises(SSRFBlockedError):
+            GovernedClient.request("http://2130706433/", timeout=2)
+
+    def test_blocks_metadata_hostnames(self):
+        for host in [
+            "metadata.google.internal",
+            "metadata.oraclecloud.com",
+            "169.254.169.254.nip.io",
+        ]:
+            with pytest.raises(SSRFBlockedError, match=host):
+                GovernedClient.request(f"http://{host}/", timeout=2)
+
+    def test_allows_loopback_when_explicitly_allowed(self):
+        server, url = _start_mock_server()
+        try:
+            result = GovernedClient.request(url, timeout=5, allow_loopback=True)
+            assert result.status == 200
+            assert "mock-server-ok" in result.body
+        finally:
+            _stop_mock_server(server)
+
+    def test_outbound_secret_blocked_by_egress_dlp(self):
+        with pytest.raises(EgressDeniedError):
+            GovernedClient.request(
+                "http://example.com/api",
+                method="POST",
+                body='{"token": "ghp_fake1234567890abcdef"}',
+                timeout=2,
             )
-
-        assert result is not None
-        assert captured.get("shell") is True, (
-            "Expected shell=True in subprocess.run; "
-            f"captured={captured}"
-        )
-        # The full string is handed to the shell; only the first token was checked.
-        assert captured.get("cmd") == "python -c \"print('injected body')\""
-
-    def test_only_first_token_validated(self):
-        """The allowlist check uses ``Path(cmd_parts[0]).name``; everything after the
-        first whitespace token is unreviewed by the registry."""
-        registry = ForgeToolRegistry(
-            project_root=Path.cwd(),
-            enable_shell=True,
-            allowed_commands=["echo"],
-        )
-
-        captured: dict = {}
-
-        def _fake_subprocess_run(cmd, *, shell=False, **kwargs):
-            captured["cmd"] = cmd
-            captured["shell"] = shell
-            return MagicMock(returncode=0, stdout="ok", stderr="")
-
-        with patch("subprocess.run", side_effect=_fake_subprocess_run):
-            registry.execute(
-                "run_command",
-                {"command": "echo hello; not-a-real-token-but-passes-first-check", "timeout": 30},
-                agent_id="test-agent",
-            )
-
-        assert captured.get("shell") is True
-        # Pre-fix: the entire command string reaches the shell.
-        assert "not-a-real-token-but-passes-first-check" in captured.get("cmd", "")
-
-
-# ═══════════════════════════════════════════════════════════════════
-# SEC-05 — HeadToolOrchestrator repeats shell=True
-# ═══════════════════════════════════════════════════════════════════
-
-
-class TestHeadToolOrchestratorShellInjection:
-    def test_run_shell_uses_shell_true(self, tmp_path: Path):
-        """HeadToolOrchestrator._handle_run_shell also uses shell=True with only a
-        base-command allowlist check."""
-        orchestrator = HeadToolOrchestrator(
-            project_root=tmp_path,
-            memory_dir=tmp_path / "memory",
-            enable_shell=True,
-            allowed_commands=["python"],
-        )
-
-        captured: dict = {}
-
-        def _fake_subprocess_run(cmd, *, shell=False, capture_output=False, text=False, cwd=None, timeout=None):
-            captured["cmd"] = cmd
-            captured["shell"] = shell
-            captured["cwd"] = cwd
-            captured["timeout"] = timeout
-            return MagicMock(returncode=0, stdout="head-ok", stderr="")
-
-        with patch("subprocess.run", side_effect=_fake_subprocess_run):
-            result = orchestrator.execute(
-                "run_shell",
-                {"command": "python -c \"print('head injected body')\"", "cwd": str(tmp_path)},
-            )
-
-        assert captured.get("shell") is True, (
-            "Expected HeadToolOrchestrator to use shell=True; "
-            f"captured={captured}"
-        )
-        assert captured.get("cmd") == "python -c \"print('head injected body')\""
-        assert "head-ok" in result

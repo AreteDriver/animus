@@ -19,8 +19,11 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from animus.memory import MemoryLayer
 from animus.memory.types import Sensitivity
+from animus.network.client import EgressDeniedError, GovernedClient, SSRFBlockedError
 from animus.tools import (
     DenyAllToolPolicy,
     Tool,
@@ -445,49 +448,187 @@ class TestRequiresApprovalEnforced:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# SEC-07 — generic HTTP tool bypasses centralized egress policy
+# SEC-05 — generic HTTP tool enforces SSRF guards and centralized egress
 # ═══════════════════════════════════════════════════════════════════
 
 
-class TestHttpRequestBypassesEgressPolicy:
-    def test_http_request_ignores_egress_policy_when_blocked(self, monkeypatch):
-        """_tool_http_request reaches the network even when is_egress_allowed says
-        the destination should be blocked."""
+class TestHttpRequestEgressAndSSRFGuards:
+    """Post-SEC-05 behavior: the generic HTTP tool is funneled through the
+    governed client, which validates every destination and outbound payload.
+    """
+
+    def test_http_request_blocked_for_loopback_127(self):
         server, url = _start_mock_server()
         try:
-            # Centralized egress policy says "deny everything"
-            monkeypatch.setattr(
-                "animus.network.egress.is_egress_allowed", lambda *args, **kwargs: False
-            )
-
             result = _tool_http_request({"url": url, "method": "GET", "timeout": 5})
-            # Pre-fix: the request ignores the policy and succeeds.
-            assert result.success is True, f"expected success (egress ignored), got {result.error}"
-            assert "mock-server-ok" in result.output
+            assert result.success is False, "expected loopback to be blocked"
+            assert "SSRF" in result.error or "loopback" in result.error.lower()
         finally:
             _stop_mock_server(server)
 
-    def test_http_request_no_egress_call_for_private_target(self, monkeypatch):
-        """_tool_http_request does not consult is_egress_allowed at all."""
+    def test_http_request_blocked_for_localhost_hostname(self):
+        server, url = _start_mock_server()
+        try:
+            host, port = server.server_address
+            url = f"http://localhost:{port}/"
+            result = _tool_http_request({"url": url, "method": "GET", "timeout": 5})
+            assert result.success is False
+        finally:
+            _stop_mock_server(server)
+
+    def test_http_request_egress_policy_denies_blocked_destination(self, monkeypatch):
+        server, url = _start_mock_server()
+        try:
+            monkeypatch.setattr(
+                "animus.network.client.is_egress_allowed", lambda *args, **kwargs: False
+            )
+
+            with pytest.raises(EgressDeniedError):
+                GovernedClient.request(
+                    url, timeout=5, allow_loopback=True, sensitivity="PUBLIC"
+                )
+        finally:
+            _stop_mock_server(server)
+
+    def test_egress_policy_is_consulted_for_allowed_request(self, monkeypatch):
+        """The governed client calls the centralized egress policy before sending."""
         call_log: list[tuple] = []
 
-        def _log_and_allow(destination, tier=None, content=None):
-            call_log.append((destination, tier, content))
+        def _log_and_allow(destination, tier=None, *, sensitivity=None, content=None):
+            call_log.append((destination, tier, sensitivity, content))
             return True
 
-        monkeypatch.setattr("animus.network.egress.is_egress_allowed", _log_and_allow)
+        monkeypatch.setattr("animus.network.client.is_egress_allowed", _log_and_allow)
 
         server, url = _start_mock_server()
         try:
-            result = _tool_http_request({"url": url, "method": "GET", "timeout": 5})
-            assert result.success is True
-            # Pre-fix: no egress check was performed.
-            assert call_log == [], (
-                "Expected no egress-policy call before fix; calls were logged: "
-                f"{call_log}"
+            result = GovernedClient.request(
+                url, timeout=5, allow_loopback=True, sensitivity="PUBLIC"
+            )
+            assert result.status == 200
+            assert call_log != [], (
+                "Expected egress-policy call after fix; calls: " f"{call_log}"
             )
         finally:
             _stop_mock_server(server)
+
+
+class TestGovernedClientSSRFBlocks:
+    """Direct SSRF regression tests for ``animus.network.client.GovernedClient``."""
+
+    def test_blocks_plain_ipv4_loopback(self):
+        with pytest.raises(SSRFBlockedError):
+            GovernedClient.request("http://127.0.0.1:8000/", timeout=2)
+
+    def test_blocks_ipv6_loopback(self):
+        with pytest.raises(SSRFBlockedError):
+            GovernedClient.request("http://[::1]:8000/", timeout=2)
+
+    def test_blocks_unspecified_address(self):
+        with pytest.raises(SSRFBlockedError):
+            GovernedClient.request("http://0.0.0.0:8000/", timeout=2)
+
+    @pytest.mark.parametrize(
+        "host",
+        [
+            "10.0.0.1",
+            "10.255.255.255",
+            "172.16.0.1",
+            "172.31.255.255",
+            "192.168.0.1",
+            "192.168.255.255",
+        ],
+    )
+    def test_blocks_rfc1918_addresses(self, host):
+        with pytest.raises(SSRFBlockedError):
+            GovernedClient.request(f"http://{host}:8000/", timeout=2)
+
+    @pytest.mark.parametrize(
+        "host",
+        [
+            "169.254.169.254",
+            "100.100.100.200",
+            "fd00:ec2::254",
+        ],
+    )
+    def test_blocks_metadata_and_link_local_addresses(self, host):
+        with pytest.raises(SSRFBlockedError):
+            GovernedClient.request(f"http://{host}/", timeout=2)
+
+    @pytest.mark.parametrize(
+        "host",
+        [
+            "2130706433",
+            "0x7f000001",
+            "0177.0.0.1",
+        ],
+    )
+    def test_blocks_encoded_ipv4_loopback(self, host):
+        with pytest.raises(SSRFBlockedError):
+            GovernedClient.request(f"http://{host}:8000/", timeout=2)
+
+    def test_blocks_metadata_hostnames(self):
+        for host in [
+            "metadata.google.internal",
+            "metadata.platform.instance.net",
+            "metadata.oraclecloud.com",
+            "169.254.169.254.nip.io",
+        ]:
+            with pytest.raises(SSRFBlockedError, match=host):
+                GovernedClient.request(f"http://{host}/", timeout=2)
+
+    def test_allows_loopback_when_explicitly_allowed(self):
+        server, url = _start_mock_server()
+        try:
+            result = GovernedClient.request(url, timeout=5, allow_loopback=True)
+            assert result.status == 200
+            assert "mock-server-ok" in result.body
+        finally:
+            _stop_mock_server(server)
+
+    def test_allows_localhost_when_explicitly_allowed(self):
+        server, _ = _start_mock_server()
+        try:
+            host, port = server.server_address
+            url = f"http://localhost:{port}/"
+            result = GovernedClient.request(url, timeout=5, allow_loopback=True)
+            assert result.status == 200
+            assert "mock-server-ok" in result.body
+        finally:
+            _stop_mock_server(server)
+
+    def test_redirect_to_private_host_is_blocked(self):
+        class _RedirectHandler(_MockHTTPHandler):
+            def do_GET(self):
+                if self.path == "/redirect":
+                    self.send_response(302)
+                    self.send_header("Location", "http://169.254.169.254/")
+                    self.end_headers()
+                else:
+                    super().do_GET()
+
+        server = HTTPServer(("127.0.0.1", 0), _RedirectHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            host, port = server.server_address
+            url = f"http://{host}:{port}/redirect"
+            with pytest.raises(SSRFBlockedError):
+                GovernedClient.request(
+                    url, timeout=5, allow_loopback=True, max_redirects=3
+                )
+        finally:
+            server.shutdown()
+            server.server_close()
+
+    def test_outbound_secret_blocked_by_egress_dlp(self):
+        with pytest.raises(EgressDeniedError):
+            GovernedClient.request(
+                "http://example.com/api",
+                method="POST",
+                body='{"token": "ghp_fake1234567890abcdef"}',
+                timeout=2,
+            )
 
 
 # ═══════════════════════════════════════════════════════════════════
