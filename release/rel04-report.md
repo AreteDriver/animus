@@ -2,7 +2,7 @@
 
 **Repository:** `AreteDriver/animus`  
 **Date:** 2026-08-01  
-**Commit:** `a0b7670fdd12fb8e0ef0232726cc3436e05ade8f`  
+**Commit:** `712994deb4ddba359f0b0931fef131c0edeff25a`  
 **Scope:** Package metadata and documentation deployment workflow.
 
 ---
@@ -28,6 +28,8 @@
 - `packages/kernel/pyproject.toml`: `requires-python = ">=3.12"`, classifier updated to 3.12 only.
 - `packages/bootstrap/pyproject.toml`: `requires-python = ">=3.12"`, classifier updated to 3.12 only, author and URLs corrected to `AreteDriver/animus`.
 - `packages/quorum/pyproject.toml`: `requires-python = ">=3.12"`, classifier updated to 3.12 only, author and URLs corrected to `AreteDriver/animus`.
+- `packages/forge/pyproject.toml`: author and URLs corrected to `AreteDriver/animus`; removed untested Python 3.13 classifier.
+- `packages/types/pyproject.toml`: author corrected to `AreteDriver`.
 - `packages/core/pyproject.toml`: `requires-python = ">=3.12"`, classifier updated to 3.12 only.
 - `packages/forge/pyproject.toml`: already `>=3.12`, no change.
 - `.github/workflows/docs-deploy.yml`: `actions/checkout@v7` → `actions/checkout@v4`, `actions/setup-python@v7` → `actions/setup-python@v5`.

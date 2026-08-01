@@ -1,12 +1,12 @@
 # Animus release baseline — REL-00 through REL-04 package compatibility matrix
 # Generated: 2026-07-31
 # Last refreshed: 2026-08-01
-# Baseline git revision: a0b7670fdd12fb8e0ef0232726cc3436e05ade8f
+# Baseline git revision: 712994deb4ddba359f0b0931fef131c0edeff25a
 # Method: python -m build per package; wheel/sdist inspection; clean-room venv smoke tests
 
 baseline:
   date: "2026-08-01"
-  git_rev: "a0b7670"
+  git_rev: "712994d"
   plan_baseline: "6338784561efa6395fb83072318ff7771284842f"
   test_runner: "local x86_64, Python 3.12"
   artifact_dir: "/tmp/animus-rel00/wheelhouse"
