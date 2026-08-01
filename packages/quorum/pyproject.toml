@@ -8,9 +8,9 @@ version = "1.2.0"
 description = "Multi-agent coherence and coordination for AI systems"
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 authors = [
-    { name = "your-org" }
+    { name = "AreteDriver" }
 ]
 keywords = ["multi-agent", "ai", "orchestration", "convergence", "intent-graph"]
 classifiers = [
@@ -18,8 +18,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -41,9 +39,9 @@ llm = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/animus"
-Repository = "https://github.com/your-org/animus"
-Issues = "https://github.com/your-org/animus/issues"
+Homepage = "https://github.com/AreteDriver/animus"
+Repository = "https://github.com/AreteDriver/animus"
+Issues = "https://github.com/AreteDriver/animus/issues"
 
 [tool.maturin]
 manifest-path = "Cargo.toml"

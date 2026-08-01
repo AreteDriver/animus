@@ -8,15 +8,14 @@ version = "0.8.0"
 description = "Animus install daemon, onboarding wizard, and local dashboard"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 authors = [
-    {name = "your-org"},
+    {name = "AreteDriver"},
 ]
 keywords = ["ai", "personal-ai", "ollama", "self-improving", "local-first", "exocortex"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX :: Linux",
@@ -40,9 +39,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/Animus"
-Repository = "https://github.com/your-org/Animus"
-Issues = "https://github.com/your-org/Animus/issues"
+Homepage = "https://github.com/AreteDriver/animus"
+Repository = "https://github.com/AreteDriver/animus"
+Issues = "https://github.com/AreteDriver/animus/issues"
 
 [project.optional-dependencies]
 dev = [

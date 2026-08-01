@@ -7,7 +7,7 @@ name = "animus-types"
 version = "0.1.0"
 description = "Shared type definitions for the Animus monorepo — generated Pydantic models from JSON Schema contracts."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "ARETE", email = "hello@example.com" }]
 keywords = ["animus", "types", "shared"]
@@ -16,8 +16,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
 

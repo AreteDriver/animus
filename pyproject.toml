@@ -2,7 +2,7 @@
 name = "animus-workspace"
 version = "2.3.0"
 description = "Animus Monorepo — Personal AI exocortex with multi-agent orchestration"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = {text = "MIT"}
 
 [project.optional-dependencies]
