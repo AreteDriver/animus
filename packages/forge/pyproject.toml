@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.12"
 authors = [
-    {name = "your-org", email = "hello@example.com"}
+    {name = "AreteDriver"}
 ]
 keywords = ["multi-agent", "ai", "orchestration", "workflow"]
 classifiers = [
@@ -19,7 +19,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
@@ -86,8 +85,8 @@ dev = [
 animus-forge = "animus_forge.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/your-org/animus"
-Repository = "https://github.com/your-org/animus"
+Homepage = "https://github.com/AreteDriver/animus"
+Repository = "https://github.com/AreteDriver/animus"
 
 [tool.setuptools.packages.find]
 where = ["src"]
