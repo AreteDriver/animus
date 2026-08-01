@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import json
 import time
 
 # ---------------------------------------------------------------------------
@@ -113,19 +114,96 @@ def sample_task(sample_mission):
     )
 
 
+
+class FakeContainerProcess:
+    """Asyncio-compatible process stand-in for container tests."""
+
+    def __init__(self, sleep_seconds: float, result_payload: dict):
+        self._sleep = sleep_seconds
+        self._result = json.dumps(result_payload).encode()
+        self._killed = asyncio.Event()
+        self.returncode: int | None = None
+
+    async def communicate(self, input=None) -> tuple[bytes, bytes]:
+        try:
+            await asyncio.wait_for(self._killed.wait(), timeout=self._sleep)
+            self.returncode = -9
+            return b"", b"killed"
+        except TimeoutError:
+            self.returncode = 0
+            return self._result, b""
+
+    def kill(self) -> None:
+        self._killed.set()
+
+
+class FakeContainerTask:
+    """Handle returned by FakeContainerManager.run_task_async."""
+
+    def __init__(self, container_id: str, process: FakeContainerProcess):
+        self.container_id = container_id
+        self.process = process
+
+
 class FakeContainerManager(ContainerManager):
     """Container manager that sleeps long enough to test kill/shutdown races."""
 
     def __init__(self, sleep_seconds: float = 3.0):
+        self._runtime_cmd = "fake"
         self.sleep_seconds = sleep_seconds
         self.calls: list[dict] = []
         self.running: dict[str, bool] = {}
         self.completed: dict[str, bool] = {}
+        self.killed: set[str] = set()
+        self._tasks: dict[str, FakeContainerTask] = {}
+        self._counter = 0
 
     def is_available(self) -> bool:
         return True
 
+    async def run_task_async(self, *, task_id: str, **kwargs) -> FakeContainerTask:
+        self._counter += 1
+        self.calls.append({"task_id": task_id, **kwargs})
+        self.running[task_id] = True
+
+        result_payload = {
+            "status": "completed",
+            "summary": "mock container completed",
+            "changed_files": [],
+            "evidence": [],
+            "risks": [],
+            "confidence": 0.9,
+        }
+        process = FakeContainerProcess(self.sleep_seconds, result_payload)
+        container_id = f"fake-{self._counter}"
+        task = FakeContainerTask(container_id, process)
+        self._tasks[task_id] = task
+
+        # Simulate natural completion in the background.
+        async def _complete():
+            try:
+                await asyncio.wait_for(process._killed.wait(), timeout=self.sleep_seconds)
+            except TimeoutError:
+                pass
+            finally:
+                self.running[task_id] = False
+                if process.returncode == 0:
+                    self.completed[task_id] = True
+
+        asyncio.create_task(_complete())
+        return task
+
+    async def kill_container(self, container_id: str) -> bool:
+        for task_id, task in list(self._tasks.items()):
+            if task.container_id == container_id:
+                task.process.kill()
+                self.killed.add(task_id)
+                self.running[task_id] = False
+                return True
+        return False
+
     def run_task(self, **kwargs) -> dict:
+        """Synchronous fallback kept for compatibility."""
         task_id = kwargs.get("task_id", "unknown")
         self.calls.append(kwargs)
         self.running[task_id] = True
@@ -301,12 +379,8 @@ async def test_dispatch_atomicity_rollback_leaves_task_eligible(
 
 
 @pytest.mark.asyncio()
-async def test_kill_slot_does_not_terminate_container_task(slow_container_pool, lease_manager):
-    """Current defect: kill_slot clears bookkeeping but the underlying work continues.
-
-    This test documents the current behavior so it can be flipped to assert
-    termination once RUN-03 is implemented.
-    """
+async def test_kill_slot_terminates_container_task(slow_container_pool, lease_manager):
+    """RUN-03: kill_slot must terminate the container task and clean up the slot."""
     pool = slow_container_pool
     container = pool._test_container
     await pool.start()
@@ -329,16 +403,14 @@ async def test_kill_slot_does_not_terminate_container_task(slow_container_pool, 
     # Allow the container task to start.
     await asyncio.sleep(0.2)
 
-    killed = pool.kill_slot("0")
+    killed = await pool.kill_slot("0")
     assert killed is True
     assert pool.active_count() == 0
 
-    # Current behavior: the container work is still running after kill_slot returns.
-    assert not container.completed.get("t-kill", False), "kill_slot unexpectedly terminated the task"
-
-    # Wait for the natural completion to prove the task was not killed.
-    await asyncio.sleep(2.5)
-    assert container.completed.get("t-kill", False), "test setup did not run task long enough"
+    # RUN-03: the fake container must report it was killed.
+    await asyncio.sleep(0.2)
+    assert "t-kill" in container.killed, "kill_slot did not terminate the container task"
+    assert not container.running.get("t-kill", False), "container task still marked running after kill"
 
     await pool.stop()
 

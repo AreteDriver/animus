@@ -56,6 +56,10 @@ class PoolConfig:
     isolation_mode: str = "process"  # "process" or "container"
     shutdown_behavior: str = "cancel"  # "cancel" or "drain"
     drain_timeout_seconds: float = 10.0
+    # Test-only override for the subprocess command.  Leave ``None`` in
+    # production; tests use it to inject slow/hung scripts for timeout/kill
+    # coverage without touching real citizen code.
+    worker_command: list[str] | None = field(default=None, repr=False)
 
 
 class CitizenWorkerPool:
@@ -143,7 +147,7 @@ class CitizenWorkerPool:
         await self._cancel_active()
 
     async def _cancel_active(self) -> None:
-        """Terminate every active worker or container."""
+        """Terminate every active worker or container and reset its slot."""
         for slot in self._slots.values():
             if slot.task_id is None or slot.handled:
                 continue
@@ -152,6 +156,11 @@ class CitizenWorkerPool:
                 await slot.worker.terminate()
             elif slot.container_task is not None:
                 await self._kill_container_task(slot.container_task)
+
+            # Reset bookkeeping so the slot is free immediately.  The supervisor
+            # task may still be running, but ``handled`` prevents it from
+            # enqueueing a duplicate result.
+            self._finish_slot_reset_only(slot)
 
     async def _kill_container_task(self, container_task: ContainerTask) -> None:
         if self.container is None:
@@ -245,6 +254,7 @@ class CitizenWorkerPool:
                 description=context.task_description or "",
                 context_json=context.model_dump(mode="json"),
                 timeout_seconds=float(ttl_seconds or self.config.worker_timeout_seconds),
+                command=self.config.worker_command,
             )
             free_slot.worker = worker
             started = await worker.start()
@@ -501,7 +511,7 @@ class CitizenWorkerPool:
                 return slot.slot_id
         return None
 
-    def kill_slot(self, slot_id: str) -> bool:
+    async def kill_slot(self, slot_id: str) -> bool:
         """Hard-kill a worker slot and its process/container tree.
 
         Returns:
@@ -516,9 +526,9 @@ class CitizenWorkerPool:
             logger.warning("Force-killing slot %s task %s", slot_id, task_id)
 
         if slot.worker is not None:
-            asyncio.create_task(slot.worker.terminate())
+            await slot.worker.terminate()
         elif slot.container_task is not None:
-            asyncio.create_task(self._kill_container_task(slot.container_task))
+            await self._kill_container_task(slot.container_task)
 
         # Release lease so task becomes recoverable.
         if slot.lease_id:

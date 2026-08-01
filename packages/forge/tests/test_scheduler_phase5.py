@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
@@ -287,7 +288,7 @@ class TestCitizenWorkerPool:
         await worker_pool.submit("t1", "planner", ctx, mission_id="m", ttl_seconds=300)
         assert worker_pool.active_count() == 1
 
-        killed = worker_pool.kill_slot("0")
+        killed = await worker_pool.kill_slot("0")
         assert killed is True
         assert worker_pool.active_count() == 0
         await worker_pool.stop()
@@ -313,6 +314,29 @@ class TestCitizenWorkerPool:
     async def test_container_mode_dispatches_via_manager(self, lease_manager):
         """When isolation_mode='container', submit delegates to ContainerManager."""
 
+        class FakeContainerProcess:
+            def __init__(self):
+                self.returncode: int | None = None
+
+            async def communicate(self, input=None):
+                self.returncode = 0
+                return (
+                    json.dumps({
+                        "status": "success",
+                        "summary": "mock container",
+                        "changed_files": [],
+                        "evidence": [],
+                        "risks": [],
+                        "confidence": 0.9,
+                    }).encode(),
+                    b"",
+                )
+
+        class FakeContainerTask:
+            def __init__(self, container_id: str, process: FakeContainerProcess):
+                self.container_id = container_id
+                self.process = process
+
         class FakeContainerManager:
             def __init__(self):
                 self.calls = []
@@ -320,16 +344,12 @@ class TestCitizenWorkerPool:
             def is_available(self):
                 return True
 
-            def run_task(self, **kwargs):
+            async def run_task_async(self, **kwargs):
                 self.calls.append(kwargs)
-                return {
-                    "status": "success",
-                    "summary": "mock container",
-                    "changed_files": [],
-                    "evidence": [],
-                    "risks": [],
-                    "confidence": 0.9,
-                }
+                return FakeContainerTask("fake-cid-1", FakeContainerProcess())
+
+            async def kill_container(self, container_id: str) -> bool:
+                return True
 
         fake = FakeContainerManager()
         pool = CitizenWorkerPool(
@@ -605,7 +625,6 @@ class TestCheckpointPersistence:
             outputs={"files": ["src/a.py"]},
             artifacts=[{"name": "patch", "path": "/tmp/patch.diff", "sha256": "abc123"}],
         )
-
         checkpoints = ledger.list_checkpoints(sample_task.task_id)
         assert len(checkpoints) == 1
         assert checkpoints[0].artifacts[0].name == "patch"

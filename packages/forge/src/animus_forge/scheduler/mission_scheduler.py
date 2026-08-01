@@ -332,8 +332,15 @@ class MissionScheduler:
             )
             return
 
+        # Strip internal scheduler metadata before constructing CitizenOutput.
+        clean_dict = {
+            k: v
+            for k, v in result_dict.items()
+            if not k.startswith("_")
+        }
+
         try:
-            output = CitizenOutput(**result_dict)
+            output = CitizenOutput(**clean_dict)
         except Exception as exc:
             logger.error("Failed to parse CitizenOutput for task %s: %s", task_id_str, exc)
             output = CitizenOutput(

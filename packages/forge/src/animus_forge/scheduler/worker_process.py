@@ -15,6 +15,7 @@ import os
 import signal
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,9 @@ class WorkerProcess:
     description: str = ""
     timeout_seconds: float = 300.0
     grace_period_seconds: float = 5.0
+    # Optional test-only override for the subprocess command.  When unset the
+    # worker runs ``python -m animus_forge.scheduler.worker_main``.
+    command: list[str] | None = field(default=None, repr=False)
     process: asyncio.subprocess.Process | None = field(default=None, repr=False)
     pid: int | None = field(default=None)
     cancelled: bool = field(default=False)
@@ -67,11 +71,34 @@ class WorkerProcess:
             "context": self.context_json,
         }
 
-        cmd = [
-            sys.executable,
-            "-m",
-            "animus_forge.scheduler.worker_main",
-        ]
+        if self.command is not None:
+            cmd = self.command
+            # No JSON payload for custom commands; keep stdin closed.
+            stdin_arg = None
+        else:
+            cmd = [
+                sys.executable,
+                "-m",
+                "animus_forge.scheduler.worker_main",
+            ]
+            stdin_arg = asyncio.subprocess.PIPE
+
+        # Preserve the parent's Python path so the subprocess can import the
+        # animus_forge package in test/development layouts where src/ is on
+        # sys.path but not installed as a site package.
+        env = os.environ.copy()
+        existing_path = env.get("PYTHONPATH", "")
+        parent_path = os.pathsep.join(p for p in sys.path if p)
+        # Also inject the directory that contains the animus_forge package so
+        # subprocess workers find it even when the parent was launched from a
+        # monorepo src/ layout (e.g. pytest pythonpath).
+        package_parent = str(Path(__file__).resolve().parents[2])
+        parts = [package_parent]
+        if parent_path:
+            parts.append(parent_path)
+        if existing_path:
+            parts.append(existing_path)
+        env["PYTHONPATH"] = os.pathsep.join(parts)
 
         try:
             # Start in a new process group so we can kill the whole tree later.
@@ -79,20 +106,22 @@ class WorkerProcess:
             # semantics (no process group kill), so we gate the tree-kill logic.
             self.process = await asyncio.create_subprocess_exec(
                 *cmd,
-                stdin=asyncio.subprocess.PIPE,
+                stdin=stdin_arg,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 start_new_session=True,
+                env=env,
             )
             self.pid = self.process.pid
 
-            # Write the payload and close stdin so the worker can proceed.
-            stdin = self.process.stdin
-            assert stdin is not None
-            stdin.write(json.dumps(payload).encode())
-            await stdin.drain()
-            stdin.close()
-            await stdin.wait_closed()
+            if self.command is None:
+                # Write the payload and close stdin so the worker can proceed.
+                stdin = self.process.stdin
+                assert stdin is not None
+                stdin.write(json.dumps(payload).encode())
+                await stdin.drain()
+                stdin.close()
+                await stdin.wait_closed()
 
             logger.info("Worker started for task %s (pid=%s)", self.task_id, self.pid)
             return True

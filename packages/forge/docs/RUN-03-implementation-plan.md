@@ -235,14 +235,14 @@ No schema changes. RUN-02 already added `task_attempts`. We will store terminal 
 
 ## 8. Definition of done for RUN-03
 
-- [ ] `ProcessPoolExecutor` replaced with explicit subprocess / container management.
-- [ ] Each slot tracks PID and/or container ID.
-- [ ] `kill_slot()` terminates the entire process tree or container.
-- [ ] Per-task timeout terminates worker and enqueues timeout result.
-- [ ] Result callbacks cannot double-free slots or double-enqueue results.
-- [ ] Shutdown supports `cancel` and `drain` behaviors with no orphan children.
-- [ ] Isolation status is observable via `MissionScheduler.status()`.
-- [ ] `test_kill_slot_does_not_terminate_container_task` flipped to assert real termination.
-- [ ] New `test_scheduler_worker.py` passes.
-- [ ] Full scheduler suite still passes (75 passed / 7 xfail baseline maintained).
-- [ ] Ruff clean.
+- [x] `ProcessPoolExecutor` replaced with explicit subprocess / container management.
+- [x] Each slot tracks PID and/or container ID.
+- [x] `kill_slot()` terminates the entire process tree or container.
+- [x] Per-task timeout terminates worker and enqueues timeout result.
+- [x] Result callbacks cannot double-free slots or double-enqueue results.
+- [x] Shutdown supports `cancel` and `drain` behaviors with no orphan children.
+- [x] Isolation status is observable via `MissionScheduler.status()`.
+- [x] `test_kill_slot_does_not_terminate_container_task` flipped to assert real termination.
+- [x] New `test_scheduler_worker.py` passes.
+- [x] Full scheduler suite still passes (89 passed / 7 xfailed, including `test_scheduler_worker.py`).
+- [x] Ruff clean.
