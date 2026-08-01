@@ -478,4 +478,6 @@ class MissionScheduler:
             restart_count=self._supervisor.restart_count,
             metrics_summary=self.metrics.summary() if self.metrics else None,
         )
-        return snap.to_dict()
+        result = snap.to_dict()
+        result["isolation"] = self.pool.isolation_status()
+        return result
