@@ -312,4 +312,3 @@ Upon approval of this plan:
 1. Create branch `docs/audit-2026-06`
 2. Execute Phase 0 (validation + link audit)
 3. Proceed through Phase 1→4 sequentially
-

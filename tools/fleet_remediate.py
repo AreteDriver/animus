@@ -130,9 +130,12 @@ def attempt_fly_restart(fly_app: str) -> tuple[bool, str]:
         return False, f"Could not list machines or restart app: {output}"
 
     import json as _json
+
     try:
         machines = _json.loads(list_output)
-        machine_ids = [m["id"] for m in machines if m.get("state") in ("started", "stopped", "replacing")]
+        machine_ids = [
+            m["id"] for m in machines if m.get("state") in ("started", "stopped", "replacing")
+        ]
     except (ValueError, KeyError):
         machine_ids = []
 
@@ -186,6 +189,7 @@ def remediate_alert(alert: dict) -> dict:
     if not health_url:
         # Reconstruct from service config if missing
         from fleet_monitor_urls import SERVICE_URLS
+
         health_url = SERVICE_URLS.get(service, "")
 
     if health_url:
@@ -215,7 +219,9 @@ def remediate_alert(alert: dict) -> dict:
         logs = get_fly_logs(fly_app)
         result["actions"].append(f"Retrieved logs:\n{logs}")
         # Don't auto-restart on 500s — could be a code bug
-        result["actions"].append("500 error detected — needs manual investigation (possible code bug)")
+        result["actions"].append(
+            "500 error detected — needs manual investigation (possible code bug)"
+        )
 
     elif hint == "check_database":
         result["actions"].append("Database issue detected — checking if Fly Postgres is responsive")

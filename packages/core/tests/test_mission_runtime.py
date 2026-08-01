@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from animus.mission.order import MissionOrder
 from animus.mission.runtime import LocalRuntime, RuntimeCapabilities
 

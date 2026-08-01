@@ -2,10 +2,10 @@
 
 > ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
 
-**For:** Claude Code / Animus self-directed development  
-**Repo:** `AreteDriver/Animus` (private → alpha on Phase 1b completion)  
-**Architecture:** Three-layer cognitive system — Core / Forge / Quorum  
-**Philosophy:** Sovereign, local-first, self-improving AI exocortex  
+**For:** Claude Code / Animus self-directed development
+**Repo:** `your-org/Animus` (private → alpha on Phase 1b completion)
+**Architecture:** Three-layer cognitive system — Core / Forge / Quorum
+**Philosophy:** Sovereign, local-first, self-improving AI exocortex
 **Last updated:** 2026-03-04
 
 ---
@@ -270,7 +270,7 @@ def build_system_prompt(identity_dir: Path, memory_context: str) -> str:
 ## Who I'm Talking To
 {identity}
 
-## Current Context  
+## Current Context
 {context}
 
 ## Goals
@@ -560,7 +560,7 @@ Stability replaces pheromone concentration. It is the signal agents use to decid
 ```
 0.0  → speculative   Agent declared intent, no validation yet
 0.3  → acknowledged  At least one other agent has read this intent
-0.5  → validated     Another agent has built on or aligned with this intent  
+0.5  → validated     Another agent has built on or aligned with this intent
 0.8  → stable        Multiple consumers, evidence attached (tests, commits)
 1.0  → committed     Irreversible — code merged, external dependency formed
 
@@ -970,7 +970,7 @@ Create root pyproject.toml as a workspace referencing core/, forge/, quorum/ pac
 Create the full directory structure from the spec in CLAUDE.md.
 Create __init__.py files for all packages.
 Create .gitignore: Python standard + .env + *.toml.bak + .chroma/
-Create LICENSE: MIT, 2026, AreteDriver.
+Create LICENSE: MIT, 2026, your-org.
 Create .github/workflows/ci.yml: ruff + mypy + pytest on push to main.
 
 Do not implement any logic. Structure and config only.
@@ -1310,6 +1310,6 @@ Run all: `pytest` (requires Ollama)
 | arete-tools/autopsy | Standalone CLI wrapping tools/autopsy/core/ |
 | arete-tools/calibrate | Standalone CLI wrapping tools/calibrate/core/ |
 | arete-tools/provenance | Standalone CLI wrapping tools/provenance/core/ |
-| AreteDriver/BenchGoblins | Will use Forge workflows for analysis pipelines |
-| AreteDriver/DOSSIER | Document intelligence — potential Core integration |
+| your-org/BenchGoblins | Will use Forge workflows for analysis pipelines |
+| your-org/DOSSIER | Document intelligence — potential Core integration |
 | Gorgon Media Engine | Content pipelines run as Forge workflows |

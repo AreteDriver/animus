@@ -8,7 +8,6 @@ weighted by recency and similarity.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from animus.logging import get_logger
 from animus.routing.graph import ProviderNode, RoutingEdge, RoutingGraph, TaskSignature
@@ -104,9 +103,7 @@ class TrajectoryScorer:
         avg_latency = weighted_latency / total_weight
 
         # Capability match bonus
-        capability_bonus = (
-            1.0 if task_signature.task_type in provider.capabilities else 0.5
-        )
+        capability_bonus = 1.0 if task_signature.task_type in provider.capabilities else 0.5
 
         # Combine weighted components
         score = (

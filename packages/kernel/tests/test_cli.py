@@ -5,7 +5,6 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-import pytest
 from typer.testing import CliRunner
 
 from animus_kernel.cli import app
@@ -28,7 +27,9 @@ class TestCLIAnalyze:
 
             result = runner.invoke(app, ["analyze", "--path", tmpdir])
             assert result.exit_code == 0
-            assert "Missing docstring" in result.output or "Missing module docstring" in result.output
+            assert (
+                "Missing docstring" in result.output or "Missing module docstring" in result.output
+            )
 
     def test_analyze_unknown_category(self):
         with tempfile.TemporaryDirectory() as tmpdir:

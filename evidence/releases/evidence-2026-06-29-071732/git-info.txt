@@ -8,4 +8,3 @@ Last 5 commits:
 0bc0b5d fix: truth baseline detects command failures and version alignment
 f0d94b4 docs: rewrite roadmap to match actual build state
 4971015 docs: add MkDocs site with Material theme
-

@@ -13,9 +13,9 @@ Key design:
 
 from animus.discovery.mcp_scanner import MCPScanner, MCPToolSpec
 from animus.discovery.openapi_discovery import OpenAPIDiscovery, OpenAPIEndpoint
+from animus.discovery.orchestrator import DiscoveryConfig, DiscoveryOrchestrator
 from animus.discovery.script_discovery import ScriptDiscovery, ScriptSpec
 from animus.discovery.validator import SchemaValidator, ValidationResult
-from animus.discovery.orchestrator import DiscoveryOrchestrator, DiscoveryConfig
 
 __all__ = [
     "MCPScanner",

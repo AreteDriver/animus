@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Any
 
@@ -12,7 +11,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, constr
 
 class Validation(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     source_valid: bool
     scope_valid: bool
@@ -22,19 +21,19 @@ class Validation(BaseModel):
 
 
 class Status(Enum):
-    candidate = 'candidate'
-    approved = 'approved'
-    rejected = 'rejected'
-    committed = 'committed'
+    candidate = "candidate"
+    approved = "approved"
+    rejected = "rejected"
+    committed = "committed"
 
 
 class AnimusMemoryCandidate(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
-    candidate_id: constr(pattern=r'^mc-[a-z0-9_-]+$')
-    owner_id: constr(pattern=r'^owner-[a-z0-9_-]+$')
-    workspace_id: constr(pattern=r'^ws-[a-z0-9_-]+$')
+    candidate_id: constr(pattern=r"^mc-[a-z0-9_-]+$")
+    owner_id: constr(pattern=r"^owner-[a-z0-9_-]+$")
+    workspace_id: constr(pattern=r"^ws-[a-z0-9_-]+$")
     proposed_object: dict[str, Any]
     candidate_reason: constr(min_length=1)
     duplicate_refs: list[str]

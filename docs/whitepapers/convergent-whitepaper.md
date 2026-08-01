@@ -9,7 +9,7 @@
 
 **James C. Young**
 AI Enablement & Workflow Analyst
-[github.com/AreteDriver/convergent](https://github.com/AreteDriver/convergent)
+[github.com/your-org/convergent](https://github.com/your-org/convergent)
 
 *February 2026*
 
@@ -241,5 +241,5 @@ Convergent does not claim to solve all multi-agent coordination challenges. It i
 
 ---
 
-**Repository:** [github.com/AreteDriver/convergent](https://github.com/AreteDriver/convergent)
+**Repository:** [github.com/your-org/convergent](https://github.com/your-org/convergent)
 **License:** MIT

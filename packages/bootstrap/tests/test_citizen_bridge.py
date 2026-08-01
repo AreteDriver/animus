@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from animus_bootstrap.intelligence.citizen_bridge import (
     CitizenBridge,
     CitizenProposalView,

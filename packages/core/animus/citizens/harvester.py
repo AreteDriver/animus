@@ -30,7 +30,6 @@ from typing import TYPE_CHECKING, Any
 from animus.citizens.proposal import (
     EvidenceItem,
     ImprovementProposal,
-    ProposalConfidence,
     ProposalStatus,
     RiskAssessment,
 )
@@ -149,9 +148,14 @@ class HarvesterCitizen:
             logger.warning("Codebase path does not exist: %s", self.codebase_path)
             return findings
 
-        pattern = re.compile(r"#\s*(TODO|FIXME|HACK|XXX|NOTE|IDEA)\b.*?$", re.MULTILINE | re.IGNORECASE)
+        pattern = re.compile(
+            r"#\s*(TODO|FIXME|HACK|XXX|NOTE|IDEA)\b.*?$", re.MULTILINE | re.IGNORECASE
+        )
         for py_file in self.codebase_path.rglob("*.py"):
-            if any(part.startswith(".") or part in ("__pycache__", "node_modules", "venv", ".venv") for part in py_file.parts):
+            if any(
+                part.startswith(".") or part in ("__pycache__", "node_modules", "venv", ".venv")
+                for part in py_file.parts
+            ):
                 continue
             try:
                 text = py_file.read_text(encoding="utf-8", errors="ignore")
@@ -164,16 +168,18 @@ class HarvesterCitizen:
                 counts: dict[str, int] = {}
                 for m in matches:
                     counts[m.upper()] = counts.get(m.upper(), 0) + 1
-                findings.append({
-                    "source": "codebase",
-                    "description": f"{len(matches)} tech-debt marker(s) in {rel}: {dict(counts)}",
-                    "severity": "medium" if counts.get("HACK", 0) > 0 else "low",
-                    "context": {
-                        "file": rel,
-                        "counts": counts,
-                        "pattern_type": "tech_debt_comments",
-                    },
-                })
+                findings.append(
+                    {
+                        "source": "codebase",
+                        "description": f"{len(matches)} tech-debt marker(s) in {rel}: {dict(counts)}",
+                        "severity": "medium" if counts.get("HACK", 0) > 0 else "low",
+                        "context": {
+                            "file": rel,
+                            "counts": counts,
+                            "pattern_type": "tech_debt_comments",
+                        },
+                    }
+                )
 
         # Also surface any Markdown documents as potential sources
         for md_file in self.codebase_path.rglob("*.md"):
@@ -185,16 +191,18 @@ class HarvesterCitizen:
                 continue
             rel = str(md_file.relative_to(self.codebase_path))
             if len(text) > 200:
-                findings.append({
-                    "source": "codebase",
-                    "description": f"Document source: {rel} ({len(text)} chars)",
-                    "severity": "info",
-                    "context": {
-                        "file": rel,
-                        "word_count": len(text.split()),
-                        "pattern_type": "document_source",
-                    },
-                })
+                findings.append(
+                    {
+                        "source": "codebase",
+                        "description": f"Document source: {rel} ({len(text)} chars)",
+                        "severity": "info",
+                        "context": {
+                            "file": rel,
+                            "word_count": len(text.split()),
+                            "pattern_type": "document_source",
+                        },
+                    }
+                )
 
         logger.info("Harvester observe_codebase: %d findings", len(findings))
         return findings
@@ -220,13 +228,19 @@ class HarvesterCitizen:
                 limit=20,
             )
             for mem in results:
-                content = mem.get("content", "") if hasattr(mem, "get") else getattr(mem, "content", "")
-                meta = mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
+                content = (
+                    mem.get("content", "") if hasattr(mem, "get") else getattr(mem, "content", "")
+                )
+                meta = (
+                    mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
+                )
                 if content:
                     sources.append(
                         HarvestedSource(
                             source_type="memory",
-                            identifier=mem.get("id", "unknown") if hasattr(mem, "get") else getattr(mem, "id", "unknown"),
+                            identifier=mem.get("id", "unknown")
+                            if hasattr(mem, "get")
+                            else getattr(mem, "id", "unknown"),
                             title="Memory: " + content[:60],
                             content_snippet=content[:500],
                             tags=["memory", "intelligence"],
@@ -242,17 +256,23 @@ class HarvesterCitizen:
                 limit=20,
             )
             for mem in results:
-                content = mem.get("content", "") if hasattr(mem, "get") else getattr(mem, "content", "")
+                content = (
+                    mem.get("content", "") if hasattr(mem, "get") else getattr(mem, "content", "")
+                )
                 if content and not any(s.identifier == content[:80] for s in sources):
                     sources.append(
                         HarvestedSource(
                             source_type="memory",
-                            identifier=mem.get("id", "unknown") if hasattr(mem, "get") else getattr(mem, "id", "unknown"),
+                            identifier=mem.get("id", "unknown")
+                            if hasattr(mem, "get")
+                            else getattr(mem, "id", "unknown"),
                             title="Knowledge: " + content[:60],
                             content_snippet=content[:500],
                             tags=["memory", "knowledge"],
                             confidence=0.5,
-                            metadata=mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {}),
+                            metadata=mem.get("metadata", {})
+                            if hasattr(mem, "get")
+                            else getattr(mem, "metadata", {}),
                         )
                     )
 
@@ -339,7 +359,9 @@ class HarvesterCitizen:
 
         return report
 
-    def harvest_text(self, text: str, source_type: str = "text", identifier: str = "") -> HarvestedSource:
+    def harvest_text(
+        self, text: str, source_type: str = "text", identifier: str = ""
+    ) -> HarvestedSource:
         """Harvest raw text as a source.
 
         Args:
@@ -416,7 +438,9 @@ class HarvesterCitizen:
     # Proposal generation
     # ------------------------------------------------------------------
 
-    def generate_proposal(self, sources: list[HarvestedSource] | None = None) -> ImprovementProposal | None:
+    def generate_proposal(
+        self, sources: list[HarvestedSource] | None = None
+    ) -> ImprovementProposal | None:
         """Generate an improvement proposal from harvest findings.
 
         Args:
@@ -695,8 +719,12 @@ class HarvesterCitizen:
             return [
                 {
                     "id": r.get("id", "") if hasattr(r, "get") else getattr(r, "id", ""),
-                    "content": r.get("content", "") if hasattr(r, "get") else getattr(r, "content", ""),
-                    "metadata": r.get("metadata", {}) if hasattr(r, "get") else getattr(r, "metadata", {}),
+                    "content": r.get("content", "")
+                    if hasattr(r, "get")
+                    else getattr(r, "content", ""),
+                    "metadata": r.get("metadata", {})
+                    if hasattr(r, "get")
+                    else getattr(r, "metadata", {}),
                 }
                 for r in results
             ]

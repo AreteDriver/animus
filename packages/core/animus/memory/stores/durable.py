@@ -29,12 +29,13 @@ from animus.durability.postgres_store import (
     ConcurrencyError,
     DurableObjectStore,
     EpistemicStatus,
-    EventType,
     LedgerValidationError,
     LifecycleStatus,
     ObjectRecord,
     ObjectType,
     SecurityClass,
+)
+from animus.durability.postgres_store import (
     StorageTier as ObjectStorageTier,
 )
 from animus.logging import get_logger
@@ -219,9 +220,7 @@ class DurableMemoryStore(MemoryStore):
         record = _memory_to_record(memory)
         try:
             obj_id, event_id = self._backend.store(record)
-            logger.debug(
-                f"Stored memory {obj_id[:8]} with event {event_id[:8]}"
-            )
+            logger.debug(f"Stored memory {obj_id[:8]} with event {event_id[:8]}")
         except LedgerValidationError as e:
             logger.error(f"Memory failed schema validation: {e}")
             raise

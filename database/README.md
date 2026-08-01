@@ -6,12 +6,12 @@ Durable core — PostgreSQL schema, Alembic migrations, and bitemporal projectio
 
 1. Ensure PostgreSQL is running (see infra/docker-compose.yml).
 2. Copy infra/.env.example to infra/.env and fill in your credentials.
-3. Export connection string:  
+3. Export connection string:
    ```bash
    export ANIMUS_DATABASE_URL=<your-db-url>
    ```
    Replace `<your-db-url>` with your actual connection string.
-4. Run migrations:  
+4. Run migrations:
    ```bash
    cd database && alembic upgrade head
    ```
@@ -26,7 +26,7 @@ Durable core — PostgreSQL schema, Alembic migrations, and bitemporal projectio
 
 ## Bitemporal Fields
 
-- **valid_from / valid_to**: When the row was true in the real world (world time).  
+- **valid_from / valid_to**: When the row was true in the real world (world time).
 - **recorded_at / superseded_at**: When the row was written to the system (transaction time).
 
 ## Migrations
@@ -36,7 +36,7 @@ Managed by Alembic. Add new revisions with:
 alembic revision -m "description"
 ```
 
-**Note**: `alembic.ini` contains a default placeholder URL.  
+**Note**: `alembic.ini` contains a default placeholder URL.
 Do **not** commit real credentials. Set the connection string via environment variable:
 ```bash
 export DATABASE_URL="postgresql://..."

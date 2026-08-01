@@ -9,32 +9,32 @@ Key design: event-driven observer. The Head loop emits events;
 Meta-Thinker subscribes, detects patterns, emits signals back.
 """
 
-from animus.meta.thinker import (
-    MetaThinker,
-    MetaThinkerConfig,
-    ReplanStrategy,
+from animus.meta.anomalies import (
+    AnomalyDetector,
+    CircularToolUse,
+    GoalDrift,
+    RepeatedFailures,
+    Stagnation,
 )
 from animus.meta.events import (
     Event,
     IterationStarted,
-    ToolExecution,
-    ResponseReceived,
     LoopCompleted,
     MaxIterationsReached,
-)
-from animus.meta.anomalies import (
-    AnomalyDetector,
-    CircularToolUse,
-    RepeatedFailures,
-    GoalDrift,
-    Stagnation,
+    ResponseReceived,
+    ToolExecution,
 )
 from animus.meta.signals import (
-    Signal,
-    ReplanSignal,
-    InjectBriefSignal,
     EscalateSignal,
     HaltSignal,
+    InjectBriefSignal,
+    ReplanSignal,
+    Signal,
+)
+from animus.meta.thinker import (
+    MetaThinker,
+    MetaThinkerConfig,
+    ReplanStrategy,
 )
 
 __all__ = [

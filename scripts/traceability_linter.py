@@ -100,7 +100,11 @@ def main(argv: list[str] | None = None) -> int:
         "--tests",
         type=Path,
         nargs="+",
-        default=[Path("packages/core/tests"), Path("packages/forge/tests"), Path("packages/kernel/tests")],
+        default=[
+            Path("packages/core/tests"),
+            Path("packages/forge/tests"),
+            Path("packages/kernel/tests"),
+        ],
         help="Test directories to scan (default: packages/*/tests)",
     )
     parser.add_argument(

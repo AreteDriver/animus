@@ -1,7 +1,7 @@
 # Workflow Spec: `animus.workflows.ingest`
 
-> **Artifact**: Thin deterministic orchestration module composing Lugh → Ogma → Memory tagging into a single callable pipeline and CLI command.  
-> **For**: Animus users and daemon jobs who want one-shot content ingestion without manual stage chaining.  
+> **Artifact**: Thin deterministic orchestration module composing Lugh → Ogma → Memory tagging into a single callable pipeline and CLI command.
+> **For**: Animus users and daemon jobs who want one-shot content ingestion without manual stage chaining.
 > **Why now**: Every ingestion currently requires `yt-dlp` + manual `synthesize()` + manual memory tagging. The gap between fetch and knowledge capture is leakage.
 
 ---
@@ -160,8 +160,8 @@ No new packages or repos. Pure composition of existing `lugh`, `ogma`, `memory` 
 
 ---
 
-*Spec version: 1.0*  
-*Generated: 2026-06-29*  
+*Spec version: 1.0*
+*Generated: 2026-06-29*
 *Decision basis: ADL-20260621-001 (hybrid pre-build workflow), Ogma PR #83 (provider resolution), Lugh canonical corpus v1.0*
 
 ---

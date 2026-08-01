@@ -30,7 +30,7 @@ from animus.lugh.sources.base import SourceItem
 
 logger = logging.getLogger(__name__)
 
-USER_AGENT = "animus-lugh/1.0 (+https://github.com/AreteDriver/animus)"
+USER_AGENT = "animus-lugh/1.0 (+https://github.com/your-org/animus)"
 ZIP_URL = "https://web.ccpgamescdn.com/aws/community/EVEOnline_MER_{ym}.zip"
 NEWS_URL = "https://www.eveonline.com/news/view/monthly-economic-report-{month}-{year}"
 HTTP_TIMEOUT_SECONDS = 15

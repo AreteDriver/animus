@@ -158,7 +158,9 @@ class ProposalQueue:
     # Lifecycle transitions
     # ------------------------------------------------------------------
 
-    def approve(self, proposal_id: str, actor: str = "human", reason: str = "") -> QueuedProposal | None:
+    def approve(
+        self, proposal_id: str, actor: str = "human", reason: str = ""
+    ) -> QueuedProposal | None:
         """Approve a proposal for commissioning.
 
         Args:
@@ -197,6 +199,7 @@ class ProposalQueue:
         if __import__("os").environ.get("ANIMUS_AUTO_COMMISSION") == "1":
             try:
                 from animus.citizens.commissioner import ForgeCommissioner
+
                 commissioner = ForgeCommissioner()
                 result = commissioner.commission(qp.proposal)
                 if result.success:
@@ -217,7 +220,9 @@ class ProposalQueue:
 
         return qp
 
-    def reject(self, proposal_id: str, actor: str = "human", reason: str = "") -> QueuedProposal | None:
+    def reject(
+        self, proposal_id: str, actor: str = "human", reason: str = ""
+    ) -> QueuedProposal | None:
         """Reject a proposal.
 
         Args:
@@ -249,7 +254,9 @@ class ProposalQueue:
         self._persist()
         return qp
 
-    def commission(self, proposal_id: str, actor: str = "forge", reason: str = "") -> QueuedProposal | None:
+    def commission(
+        self, proposal_id: str, actor: str = "forge", reason: str = ""
+    ) -> QueuedProposal | None:
         """Mark a proposal as commissioned to Forge.
 
         Args:
@@ -282,7 +289,9 @@ class ProposalQueue:
         self._persist()
         return qp
 
-    def complete(self, proposal_id: str, actor: str = "forge", reason: str = "") -> QueuedProposal | None:
+    def complete(
+        self, proposal_id: str, actor: str = "forge", reason: str = ""
+    ) -> QueuedProposal | None:
         """Mark a proposal as complete.
 
         Args:
@@ -322,25 +331,36 @@ class ProposalQueue:
     def list_pending(self) -> list[QueuedProposal]:
         """List proposals awaiting review (SUBMITTED or PENDING_REVIEW)."""
         return [
-            qp for qp in self._proposals.values()
+            qp
+            for qp in self._proposals.values()
             if qp.current_status in (ProposalStatus.SUBMITTED, ProposalStatus.PENDING_REVIEW)
         ]
 
     def list_approved(self) -> list[QueuedProposal]:
         """List approved but not yet commissioned proposals."""
-        return [qp for qp in self._proposals.values() if qp.current_status == ProposalStatus.APPROVED]
+        return [
+            qp for qp in self._proposals.values() if qp.current_status == ProposalStatus.APPROVED
+        ]
 
     def list_commissioned(self) -> list[QueuedProposal]:
         """List commissioned but not yet complete proposals."""
-        return [qp for qp in self._proposals.values() if qp.current_status == ProposalStatus.COMMISSIONED]
+        return [
+            qp
+            for qp in self._proposals.values()
+            if qp.current_status == ProposalStatus.COMMISSIONED
+        ]
 
     def list_completed(self) -> list[QueuedProposal]:
         """List completed proposals."""
-        return [qp for qp in self._proposals.values() if qp.current_status == ProposalStatus.COMPLETE]
+        return [
+            qp for qp in self._proposals.values() if qp.current_status == ProposalStatus.COMPLETE
+        ]
 
     def list_rejected(self) -> list[QueuedProposal]:
         """List rejected proposals."""
-        return [qp for qp in self._proposals.values() if qp.current_status == ProposalStatus.REJECTED]
+        return [
+            qp for qp in self._proposals.values() if qp.current_status == ProposalStatus.REJECTED
+        ]
 
     def get(self, proposal_id: str) -> QueuedProposal | None:
         """Get a specific queued proposal by ID."""
@@ -349,7 +369,8 @@ class ProposalQueue:
     def get_backlog(self) -> list[QueuedProposal]:
         """Get all active (non-complete, non-rejected) proposals sorted by priority."""
         active = [
-            qp for qp in self._proposals.values()
+            qp
+            for qp in self._proposals.values()
             if qp.current_status not in (ProposalStatus.COMPLETE, ProposalStatus.REJECTED)
         ]
         return sorted(active, key=lambda qp: (qp.priority, qp.age_hours))
@@ -456,7 +477,7 @@ class ProposalQueue:
         path = self._resolve_storage_path()
         if path is not None and path.exists():
             try:
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, encoding="utf-8") as f:
                     data = json.load(f)
                 for p_data in data:
                     try:
@@ -477,6 +498,7 @@ class ProposalQueue:
         if self.memory is not None:
             try:
                 from animus.memory import MemoryType
+
                 results = self.memory.search(
                     query="proposal_queue state",
                     memory_type=MemoryType.PROCEDURAL,

@@ -47,6 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `pyproject.toml` optional dependency syntax corrected from Poetry-style `extra ==` to PEP 621 `[project.optional-dependencies]`.
 
-[Unreleased]: https://github.com/AreteDriver/animus/compare/kernel-v0.1.1...HEAD
-[0.1.1]: https://github.com/AreteDriver/animus/releases/tag/kernel-v0.1.1
-[0.1.0]: https://github.com/AreteDriver/animus/releases/tag/kernel-v0.1.0
+[Unreleased]: https://github.com/your-org/animus/compare/kernel-v0.1.1...HEAD
+[0.1.1]: https://github.com/your-org/animus/releases/tag/kernel-v0.1.1
+[0.1.0]: https://github.com/your-org/animus/releases/tag/kernel-v0.1.0

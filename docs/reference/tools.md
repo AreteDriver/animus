@@ -187,7 +187,7 @@ Make an HTTP request to a REST API. **Requires approval.**
 **Example:**
 
 ```bash
->>> /tool http_request url="https://api.github.com/repos/AreteDriver/animus"
+>>> /tool http_request url="https://api.github.com/repos/your-org/animus"
 >>> /tool http_request url="https://api.example.com/items" method=POST headers='{"Content-Type":"application/json"}' body='{"name":"foo"}'
 ```
 

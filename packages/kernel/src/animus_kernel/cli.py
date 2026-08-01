@@ -129,7 +129,11 @@ def self_improve(
 
     console.print(table)
 
-    if result.success and result.stage_reached == WorkflowStage.COMPLETE and config.allow_self_targeting:
+    if (
+        result.success
+        and result.stage_reached == WorkflowStage.COMPLETE
+        and config.allow_self_targeting
+    ):
         console.print(
             "[dim]Recursive self-targeting enabled — "
             f"run again with --recursive-depth={recursive_depth + 1} to continue.[/dim]"

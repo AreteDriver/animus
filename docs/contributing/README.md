@@ -42,9 +42,9 @@ Be direct. Be kind. Assume good intent. Disagree with the idea, not the person.
 
 ## Getting Help
 
-- Open a [GitHub Discussion](https://github.com/AreteDriver/animus/discussions) for questions
-- Open a [GitHub Issue](https://github.com/AreteDriver/animus/issues) for bugs
-- Tag `@AreteDriver` for architecture questions
+- Open a [GitHub Discussion](https://github.com/your-org/animus/discussions) for questions
+- Open a [GitHub Issue](https://github.com/your-org/animus/issues) for bugs
+- Tag `@your-org` for architecture questions
 
 ---
 

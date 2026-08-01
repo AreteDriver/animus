@@ -1,7 +1,7 @@
 # Content Accuracy Report (2026-06-27)
 
-**Scope**: Verify documentation claims against current codebase reality  
-**Method**: Automated cross-reference of pyproject.toml, test counts, file structures, and internal links  
+**Scope**: Verify documentation claims against current codebase reality
+**Method**: Automated cross-reference of pyproject.toml, test counts, file structures, and internal links
 **Status**: **6 issues found** — 2 critical, 2 major, 2 minor
 
 ---
@@ -24,8 +24,8 @@
 
 ### Issue 1: Root README Links to `docs/whitepaper.pdf` at Wrong Location
 
-**File**: `README.md:15`, `README.md:265`  
-**Claim**: Whitepaper PDF at `docs/whitepaper.pdf`  
+**File**: `README.md:15`, `README.md:265`
+**Claim**: Whitepaper PDF at `docs/whitepaper.pdf`
 **Reality**: File exists at `docs/whitepaper.pdf` (flat, not in `docs/reference/` as new tree expects)
 
 **Impact**: Low — file exists and link works, but inconsistent with new tree structure.
@@ -36,7 +36,7 @@
 
 ### Issue 2: Test Counts Understated in All Package Docs
 
-**File**: `docs/packages/README.md`, `docs/README.md`  
+**File**: `docs/packages/README.md`, `docs/README.md`
 **Claim**: Core 2,109 | Forge 9,720 | Bootstrap 1,841 | Quorum 926 | **Total 14,596+**
 
 **Reality** (verified by `grep -rE '^\s*(def test_|async def test_)'`):
@@ -59,7 +59,7 @@
 
 ### Issue 3: Architecture Overview Missing Key Packages
 
-**File**: `docs/architecture/overview.md`  
+**File**: `docs/architecture/overview.md`
 **Problem**: Describes a 4-layer conceptual architecture (Interface, Cognitive, Memory, Core) but **never mentions**:
 - Forge (workflow orchestration)
 - Quorum (coordination)
@@ -104,7 +104,7 @@ Still shows aspirational interfaces (Wearable Ring, Vehicle CarPlay) that are no
 
 ### Issue 5: Root README Shows Old `docs/` Structure in ASCII Tree
 
-**File**: `README.md` (around line 227)  
+**File**: `README.md` (around line 227)
 **Problem**: ASCII tree shows `docs/ # Architecture, roadmap, whitepapers` — accurate but could be more specific about the new tree.
 
 **Impact**: Low — not wrong, just vague.
@@ -115,8 +115,8 @@ Still shows aspirational interfaces (Wearable Ring, Vehicle CarPlay) that are no
 
 ### Issue 6: Package Versions Vary Widely, Only Core is 2.3.0
 
-**File**: `CLAUDE.md`, `docs/README.md`  
-**Claim**: "Version: 2.3.0" for the whole project  
+**File**: `CLAUDE.md`, `docs/README.md`
+**Claim**: "Version: 2.3.0" for the whole project
 **Reality**: Per-package versions are divergent:
 
 | Package | Version |

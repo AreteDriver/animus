@@ -43,7 +43,9 @@ logger = get_logger("citizens.test_oracle")
 class QualityRegression:
     """A detected regression in test or eval quality."""
 
-    regression_type: str  # "test_failure", "coverage_drop", "eval_drift", "flaky_test", "missing_coverage"
+    regression_type: (
+        str  # "test_failure", "coverage_drop", "eval_drift", "flaky_test", "missing_coverage"
+    )
     description: str
     severity: str = "low"
     metric_before: float | None = None
@@ -70,9 +72,7 @@ class TestOracleCitizen:
     ):
         self.codebase_path = Path(codebase_path).expanduser() if codebase_path else None
         self.memory = memory_layer
-        self.eval_results_dir = (
-            Path(eval_results_dir).expanduser() if eval_results_dir else None
-        )
+        self.eval_results_dir = Path(eval_results_dir).expanduser() if eval_results_dir else None
         self._regressions: list[QualityRegression] = []
 
     # ------------------------------------------------------------------
@@ -234,7 +234,11 @@ class TestOracleCitizen:
             if score is None:
                 continue
             try:
-                ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00")) if ts_str else datetime.now()
+                ts = (
+                    datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                    if ts_str
+                    else datetime.now()
+                )
             except ValueError:
                 ts = datetime.now()
             suite_scores.setdefault(suite, []).append((ts, float(score)))
@@ -397,7 +401,10 @@ class TestOracleCitizen:
             return None
 
         # Focus on highest-severity regression
-        top = max(regressions, key=lambda r: {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(r.severity, 0))
+        top = max(
+            regressions,
+            key=lambda r: {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(r.severity, 0),
+        )
 
         evidence = [
             EvidenceItem(
@@ -447,7 +454,11 @@ class TestOracleCitizen:
             affected_components=components,
             evaluation_plan="Re-run Test Oracle scan after fixes; verify failure count and coverage improved",
             rollback_plan="Revert test changes via git; restore previous eval baseline",
-            success_metrics=["Test failure count reduced to zero", "Coverage maintained or improved", "Eval drift eliminated"],
+            success_metrics=[
+                "Test failure count reduced to zero",
+                "Coverage maintained or improved",
+                "Eval drift eliminated",
+            ],
             status=ProposalStatus.DRAFT,
         )
 
@@ -523,6 +534,7 @@ class TestOracleCitizen:
         # Try Forge eval store first
         try:
             from animus.citizens.eval_evidence import query_eval_runs, read_eval_results_from_memory
+
             forge_results = query_eval_runs(limit=20)
             if forge_results:
                 results.extend(forge_results)
@@ -545,6 +557,7 @@ class TestOracleCitizen:
         if self.memory and not results:
             try:
                 from animus.citizens.eval_evidence import read_eval_results_from_memory
+
                 mem_results = read_eval_results_from_memory(self.memory, limit=50)
                 if mem_results:
                     results.extend(mem_results)

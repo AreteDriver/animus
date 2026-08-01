@@ -9,7 +9,6 @@ from animus.citizens.proposal import (
     ImprovementProposal,
     ProposalConfidence,
     ProposalStatus,
-    RiskAssessment,
 )
 from animus.citizens.proposal_queue import ProposalQueue, QueuedProposal, Transition
 
@@ -221,11 +220,15 @@ class TestProposalQueueBacklog:
 
     def test_backlog_sorted_by_priority(self, queue):
         p1 = ImprovementProposal(
-            id="P-01", title="High", problem="x",
+            id="P-01",
+            title="High",
+            problem="x",
             status=ProposalStatus.DRAFT,
         )
         p2 = ImprovementProposal(
-            id="P-02", title="Low", problem="y",
+            id="P-02",
+            title="Low",
+            problem="y",
             status=ProposalStatus.DRAFT,
         )
         queue.submit(p1, priority=1)
@@ -238,8 +241,12 @@ class TestProposalQueueBacklog:
 class TestProposalQueueStats:
     def test_stats(self, queue, sample_proposal):
         assert queue.stats() == {
-            "total": 0, "pending": 0, "approved": 0,
-            "commissioned": 0, "complete": 0, "rejected": 0,
+            "total": 0,
+            "pending": 0,
+            "approved": 0,
+            "commissioned": 0,
+            "complete": 0,
+            "rejected": 0,
         }
         queue.submit(sample_proposal)
         s = queue.stats()
@@ -266,6 +273,7 @@ class TestProposalQueueStats:
 class TestProposalQueuePersistence:
     def test_load_from_memory_without_memory(self, queue, monkeypatch):
         import animus.citizens.proposal_queue as pq_module
+
         monkeypatch.setattr(
             pq_module, "_DEFAULT_SQLITE_PATH", Path("/nonexistent/animus/proposal_queue.db")
         )

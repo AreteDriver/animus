@@ -6,8 +6,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from animus.citizens import (
     ImprovementProposal,
     KnowledgeCuratorCitizen,
@@ -236,10 +234,12 @@ class TestKnowledgeCuratorCitizen:
         curator = KnowledgeCuratorCitizen(codebase_path=codebase)
 
         # Patch observation methods to return empty
-        with patch.object(curator, "observe_stale_references", return_value=[]), \
-             patch.object(curator, "observe_contradictions", return_value=[]), \
-             patch.object(curator, "observe_outdated_claims", return_value=[]), \
-             patch.object(curator, "observe_orphan_topics", return_value=[]):
+        with (
+            patch.object(curator, "observe_stale_references", return_value=[]),
+            patch.object(curator, "observe_contradictions", return_value=[]),
+            patch.object(curator, "observe_outdated_claims", return_value=[]),
+            patch.object(curator, "observe_orphan_topics", return_value=[]),
+        ):
             drifts = curator.analyze()
 
         assert drifts == []
@@ -251,14 +251,34 @@ class TestKnowledgeCuratorCitizen:
         codebase.mkdir()
         curator = KnowledgeCuratorCitizen(codebase_path=codebase)
 
-        with patch.object(curator, "observe_stale_references", return_value=[
-            Observation(source="knowledge", description="Stale ref 1", severity="medium", context={"pattern_type": "stale_reference"}),
-        ]), \
-             patch.object(curator, "observe_contradictions", return_value=[
-            Observation(source="knowledge", description="Contradiction 1", severity="high", context={"pattern_type": "contradiction"}),
-        ]), \
-             patch.object(curator, "observe_outdated_claims", return_value=[]), \
-             patch.object(curator, "observe_orphan_topics", return_value=[]):
+        with (
+            patch.object(
+                curator,
+                "observe_stale_references",
+                return_value=[
+                    Observation(
+                        source="knowledge",
+                        description="Stale ref 1",
+                        severity="medium",
+                        context={"pattern_type": "stale_reference"},
+                    ),
+                ],
+            ),
+            patch.object(
+                curator,
+                "observe_contradictions",
+                return_value=[
+                    Observation(
+                        source="knowledge",
+                        description="Contradiction 1",
+                        severity="high",
+                        context={"pattern_type": "contradiction"},
+                    ),
+                ],
+            ),
+            patch.object(curator, "observe_outdated_claims", return_value=[]),
+            patch.object(curator, "observe_orphan_topics", return_value=[]),
+        ):
             drifts = curator.analyze()
 
         assert len(drifts) == 2

@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import asyncio
 import tempfile
 from pathlib import Path
 
 import pytest
 
 from animus_kernel.sandbox.sandbox import Sandbox, SandboxResult, SandboxStatus
-
 
 # ═══════════════════════════════════════════════════════════════════
 # Sandbox creation and lifecycle tests
@@ -133,9 +131,7 @@ class TestSandboxCommands:
             source.mkdir()
 
             with Sandbox(source) as sandbox:
-                result = await sandbox._run_command(
-                    [sys.executable, "-c", "print('hello')"]
-                )
+                result = await sandbox._run_command([sys.executable, "-c", "print('hello')"])
                 assert result.returncode == 0
                 assert "hello" in result.stdout
 
@@ -151,9 +147,7 @@ class TestSandboxCommands:
             sandbox.create()
 
             with pytest.raises(TimeoutError):
-                await sandbox._run_command(
-                    [sys.executable, "-c", "import time; time.sleep(10)"]
-                )
+                await sandbox._run_command([sys.executable, "-c", "import time; time.sleep(10)"])
 
             sandbox.cleanup()
 
@@ -186,9 +180,7 @@ class TestSandboxValidation:
         with tempfile.TemporaryDirectory() as tmpdir:
             source = Path(tmpdir) / "source"
             source.mkdir()
-            (source / "test_dummy.py").write_text(
-                "def test_ok():\n    assert 1 + 1 == 2\n"
-            )
+            (source / "test_dummy.py").write_text("def test_ok():\n    assert 1 + 1 == 2\n")
 
             with Sandbox(source) as sandbox:
                 result = await sandbox.run_tests()
@@ -201,9 +193,7 @@ class TestSandboxValidation:
         with tempfile.TemporaryDirectory() as tmpdir:
             source = Path(tmpdir) / "source"
             source.mkdir()
-            (source / "test_broken.py").write_text(
-                "def test_fail():\n    assert 1 + 1 == 3\n"
-            )
+            (source / "test_broken.py").write_text("def test_fail():\n    assert 1 + 1 == 3\n")
 
             with Sandbox(source) as sandbox:
                 result = await sandbox.run_tests()
@@ -228,9 +218,7 @@ class TestSandboxValidation:
             source = Path(tmpdir) / "source"
             source.mkdir()
             # Pre-existing broken test in source
-            (source / "test_broken.py").write_text(
-                "def test_fail():\n    assert 1 + 1 == 3\n"
-            )
+            (source / "test_broken.py").write_text("def test_fail():\n    assert 1 + 1 == 3\n")
 
             with Sandbox(source) as sandbox:
                 result = await sandbox.validate_changes()
@@ -304,9 +292,7 @@ class TestSandboxBenchmarks:
         with tempfile.TemporaryDirectory() as tmpdir:
             source = Path(tmpdir) / "source"
             source.mkdir()
-            (source / "test_dummy.py").write_text(
-                "def test_ok():\n    assert 1 + 1 == 2\n"
-            )
+            (source / "test_dummy.py").write_text("def test_ok():\n    assert 1 + 1 == 2\n")
 
             with Sandbox(source) as sandbox:
                 result = await sandbox.validate_changes()
@@ -317,14 +303,11 @@ class TestSandboxBenchmarks:
     @pytest.mark.asyncio
     async def test_validate_changes_detects_performance_regression(self):
         import subprocess
-        from unittest.mock import AsyncMock
 
         with tempfile.TemporaryDirectory() as tmpdir:
             source = Path(tmpdir) / "source"
             source.mkdir()
-            (source / "test_dummy.py").write_text(
-                "def test_ok():\n    assert 1 + 1 == 2\n"
-            )
+            (source / "test_dummy.py").write_text("def test_ok():\n    assert 1 + 1 == 2\n")
 
             with Sandbox(source) as sandbox:
                 # Mock _run_command to simulate benchmark data

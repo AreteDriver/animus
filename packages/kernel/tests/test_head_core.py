@@ -1289,7 +1289,9 @@ class TestModelSwap:
         # Seed a large conversation that exceeds the tiny model's 8192 default limit
         for i in range(200):
             mock_repl.context.add_message({"role": "user", "content": f"user turn {i} " * 500})
-            mock_repl.context.add_message({"role": "assistant", "content": f"assistant turn {i} " * 500})
+            mock_repl.context.add_message(
+                {"role": "assistant", "content": f"assistant turn {i} " * 500}
+            )
 
         # Tiny model has a tiny window
         assert mock_repl.context.max_tokens == 32768

@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Any
 
@@ -11,35 +10,35 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, constr
 
 
 class Status(Enum):
-    running = 'running'
-    succeeded = 'succeeded'
-    failed = 'failed'
-    cancelled = 'cancelled'
-    degraded = 'degraded'
+    running = "running"
+    succeeded = "succeeded"
+    failed = "failed"
+    cancelled = "cancelled"
+    degraded = "degraded"
 
 
 class Kind(Enum):
-    retrieval = 'retrieval'
-    model = 'model'
-    tool = 'tool'
-    policy = 'policy'
-    write = 'write'
-    queue = 'queue'
-    evaluation = 'evaluation'
-    view = 'view'
+    retrieval = "retrieval"
+    model = "model"
+    tool = "tool"
+    policy = "policy"
+    write = "write"
+    queue = "queue"
+    evaluation = "evaluation"
+    view = "view"
 
 
 class Status6(Enum):
-    running = 'running'
-    succeeded = 'succeeded'
-    failed = 'failed'
-    denied = 'denied'
-    cancelled = 'cancelled'
+    running = "running"
+    succeeded = "succeeded"
+    failed = "failed"
+    denied = "denied"
+    cancelled = "cancelled"
 
 
 class Span(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     span_id: str
     parent_span_id: str | None = None
@@ -53,15 +52,15 @@ class Span(BaseModel):
 
 
 class ReplayStatus(Enum):
-    not_tested = 'not_tested'
-    passed = 'passed'
-    failed = 'failed'
-    not_reproducible = 'not_reproducible'
+    not_tested = "not_tested"
+    passed = "passed"
+    failed = "failed"
+    not_reproducible = "not_reproducible"
 
 
 class Reproducibility(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     captured_inputs: bool
     captured_prompts: bool
@@ -72,18 +71,18 @@ class Reproducibility(BaseModel):
 
 class AnimusTraceBundle(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
-    trace_id: constr(pattern=r'^tr-[a-z0-9_-]+$')
-    owner_id: constr(pattern=r'^owner-[a-z0-9_-]+$')
-    workspace_id: constr(pattern=r'^ws-[a-z0-9_-]+$')
+    trace_id: constr(pattern=r"^tr-[a-z0-9_-]+$")
+    owner_id: constr(pattern=r"^owner-[a-z0-9_-]+$")
+    workspace_id: constr(pattern=r"^ws-[a-z0-9_-]+$")
     purpose: constr(min_length=1)
     started_at: AwareDatetime
     completed_at: AwareDatetime | None
     status: Status
     spans: list[Span]
-    input_hashes: list[constr(pattern=r'^[a-f0-9]{64}$')]
-    output_hashes: list[constr(pattern=r'^[a-f0-9]{64}$')]
+    input_hashes: list[constr(pattern=r"^[a-f0-9]{64}$")]
+    output_hashes: list[constr(pattern=r"^[a-f0-9]{64}$")]
     policy_versions: list[str]
     schema_versions: list[str]
     reproducibility: Reproducibility

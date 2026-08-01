@@ -102,7 +102,7 @@ def _cmd_architect(args: argparse.Namespace) -> int:
         if args.store and memory:
             stored = architect.store_proposal(proposal)
             if stored:
-                print(f"\n✅ Proposal stored in memory.")
+                print("\n✅ Proposal stored in memory.")
     else:
         print("\nNo actionable findings — no proposal generated.")
 
@@ -164,7 +164,7 @@ def _cmd_conversation_designer(args: argparse.Namespace) -> int:
         if args.store and memory:
             stored = designer.store_proposal(proposal)
             if stored:
-                print(f"\n✅ Proposal stored in memory.")
+                print("\n✅ Proposal stored in memory.")
     else:
         print("\nNo actionable conversation patterns — no proposal generated.")
 
@@ -232,7 +232,7 @@ def _cmd_knowledge_curator(args: argparse.Namespace) -> int:
         if args.store and memory:
             stored = curator.store_proposal(proposal)
             if stored:
-                print(f"\n✅ Proposal stored in memory.")
+                print("\n✅ Proposal stored in memory.")
     else:
         print("\nNo actionable knowledge drift — no proposal generated.")
 
@@ -294,7 +294,7 @@ def _cmd_test_oracle(args: argparse.Namespace) -> int:
         if args.store and memory:
             stored = oracle.store_proposal(proposal)
             if stored:
-                print(f"\n✅ Proposal stored in memory.")
+                print("\n✅ Proposal stored in memory.")
     else:
         print("\nNo actionable quality regressions — no proposal generated.")
 
@@ -317,6 +317,7 @@ def _cmd_daemon_start(args: argparse.Namespace) -> int:
             print("Existing daemon detected — stopping it first...", file=sys.stderr)
             # Find and kill the existing daemon
             import signal as _signal
+
             from animus.infrastructure import LockedPidFile
 
             pid_file = Path(config.persistence_dir).expanduser() / "daemon.pid"
@@ -436,10 +437,15 @@ def _cmd_session_steward(args: argparse.Namespace) -> int:
         return 1
 
     if not config.citizens.session_steward_enabled:
-        print("Session Steward is disabled. Set citizens.session_steward_enabled=true to use it.", file=sys.stderr)
+        print(
+            "Session Steward is disabled. Set citizens.session_steward_enabled=true to use it.",
+            file=sys.stderr,
+        )
         return 1
 
-    memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if not args.no_store else None
+    memory = (
+        MemoryLayer(config.data_dir, backend=config.memory.backend) if not args.no_store else None
+    )
 
     telemetry_data = None
     if args.telemetry_file:
@@ -450,10 +456,13 @@ def _cmd_session_steward(args: argparse.Namespace) -> int:
         if not os.path.exists(path):
             print(f"Telemetry file not found: {path}", file=sys.stderr)
             return 1
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             telemetry_data = fh.read()
     else:
-        print("No --telemetry-file provided. Session Steward requires telemetry data.", file=sys.stderr)
+        print(
+            "No --telemetry-file provided. Session Steward requires telemetry data.",
+            file=sys.stderr,
+        )
         return 1
 
     steward = SessionStewardCitizen(
@@ -503,7 +512,7 @@ def _cmd_session_steward(args: argparse.Namespace) -> int:
         print(f"**Title:** {proposal.title}")
         print(f"**Problem:** {proposal.problem}")
         print(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
-        print(f"**Recommendation:**")
+        print("**Recommendation:**")
         print(proposal.recommendation)
         if proposal.potential_risks:
             print("**Risks:**")
@@ -576,7 +585,9 @@ def _cmd_proposal_queue_list(args: argparse.Namespace) -> int:
         print(f"  Recommendation: {p.recommendation[:120]}...")
         if qp.transitions:
             last = qp.transitions[-1]
-            print(f"  Last action: {last.from_status.value} → {last.to_status.value} by {last.actor}")
+            print(
+                f"  Last action: {last.from_status.value} → {last.to_status.value} by {last.actor}"
+            )
         print()
 
     return 0
@@ -668,7 +679,9 @@ def _cmd_proposal_queue_show(args: argparse.Namespace) -> int:
     if qp.transitions:
         print("\nTransitions:")
         for t in qp.transitions:
-            print(f"  {t.from_status.value} → {t.to_status.value} by {t.actor} ({t.timestamp.isoformat()})")
+            print(
+                f"  {t.from_status.value} → {t.to_status.value} by {t.actor} ({t.timestamp.isoformat()})"
+            )
     if p.evidence:
         print(f"\nEvidence ({len(p.evidence)} items):")
         for i, ev in enumerate(p.evidence, 1):
@@ -802,7 +815,7 @@ def _cmd_harvester(args: argparse.Namespace) -> int:
         if source.tags:
             print(f"**Tags:** {', '.join(source.tags)}")
         if source.metadata:
-            print(f"**Metadata:**")
+            print("**Metadata:**")
             for k, v in source.metadata.items():
                 print(f"  - {k}: {v}")
         if store and memory:
@@ -813,7 +826,7 @@ def _cmd_harvester(args: argparse.Namespace) -> int:
 
     if sub == "watchlist":
         report = harvester.harvest_watchlist(interval_hours=args.interval_hours)
-        print(f"# Harvester Watchlist Report\n")
+        print("# Harvester Watchlist Report\n")
         print(f"**Sources collected:** {report.total_collected}")
         print(f"**Duplicates removed:** {report.duplicates_removed}")
         if report.errors:
@@ -857,7 +870,7 @@ def _cmd_harvester(args: argparse.Namespace) -> int:
         all_sources.extend(memory_sources)
         all_sources = harvester.deduplicate(all_sources)
 
-        print(f"# Harvester Observation Sweep\n")
+        print("# Harvester Observation Sweep\n")
         print(f"**Codebase findings:** {len(obs)}")
         print(f"**Memory sources:** {len(memory_sources)}")
         print(f"**Unique sources:** {len(all_sources)}\n")
@@ -878,7 +891,7 @@ def _cmd_harvester(args: argparse.Namespace) -> int:
             if store and memory:
                 stored = harvester.store_proposal(proposal)
                 if stored:
-                    print(f"\n✅ Proposal stored in memory.")
+                    print("\n✅ Proposal stored in memory.")
         else:
             print("## No Proposal Generated")
             print("No actionable findings from harvest sweep.")
@@ -994,7 +1007,9 @@ def _cmd_pattern(args: argparse.Namespace) -> int:
     memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
     pattern = PatternCitizen(
         memory_layer=memory,
-        codebase_path=getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(Path.cwd()),
+        codebase_path=getattr(args, "codebase_path", "")
+        or config.citizens.codebase_path
+        or str(Path.cwd()),
     )
 
     sub = args.pattern_command
@@ -1076,7 +1091,9 @@ def _cmd_first_principles(args: argparse.Namespace) -> int:
     memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
     fp = FirstPrinciplesCitizen(
         memory_layer=memory,
-        codebase_path=getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(Path.cwd()),
+        codebase_path=getattr(args, "codebase_path", "")
+        or config.citizens.codebase_path
+        or str(Path.cwd()),
     )
 
     sub = args.first_principles_command
@@ -1107,7 +1124,7 @@ def _cmd_first_principles(args: argparse.Namespace) -> int:
             if store and memory:
                 stored = fp.store_principle(pr)
                 if stored:
-                    print(f"✅ Stored principle")
+                    print("✅ Stored principle")
 
         # Generate proposal
         proposal = fp.generate_proposal(principles)
@@ -1158,7 +1175,9 @@ def _cmd_architecture_citizen(args: argparse.Namespace) -> int:
     memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
     arch = ArchitectureCitizen(
         memory_layer=memory,
-        codebase_path=getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(Path.cwd()),
+        codebase_path=getattr(args, "codebase_path", "")
+        or config.citizens.codebase_path
+        or str(Path.cwd()),
     )
 
     sub = args.architecture_citizen_command
@@ -1189,7 +1208,7 @@ def _cmd_architecture_citizen(args: argparse.Namespace) -> int:
             if store and memory:
                 stored = arch.store_gap(g)
                 if stored:
-                    print(f"✅ Stored gap")
+                    print("✅ Stored gap")
 
         # Generate proposal
         proposal = arch.generate_proposal(gaps)
@@ -1239,11 +1258,7 @@ def _cmd_research_guild(args: argparse.Namespace) -> int:
 
     store = getattr(args, "store", False)
     memory = MemoryLayer(config.data_dir, backend=config.memory.backend) if store else None
-    cb_path = (
-        getattr(args, "codebase_path", "")
-        or config.citizens.codebase_path
-        or str(Path.cwd())
-    )
+    cb_path = getattr(args, "codebase_path", "") or config.citizens.codebase_path or str(Path.cwd())
 
     orchestrator = ResearchGuildOrchestrator(
         memory_layer=memory,
@@ -1259,7 +1274,7 @@ def _cmd_research_guild(args: argparse.Namespace) -> int:
             skip_harvester=args.skip_harvester,
             store_outputs=store,
         )
-        print(f"\n# Research Guild Pipeline Report")
+        print("\n# Research Guild Pipeline Report")
         print(report.summary())
         if store and memory:
             print("\n✅ Pipeline outputs stored in memory.")
@@ -1288,7 +1303,9 @@ def _cmd_research_guild(args: argparse.Namespace) -> int:
             print(f"**Lineage:** {' → '.join(lineage)}")
             stages = meta.get("stages", [])
             for s in stages:
-                print(f"  - {s['citizen_name']}: {s['outputs_count']} outputs, {len(s['errors'])} errors, {s['duration_seconds']:.1f}s")
+                print(
+                    f"  - {s['citizen_name']}: {s['outputs_count']} outputs, {len(s['errors'])} errors, {s['duration_seconds']:.1f}s"
+                )
         return 0
 
     print(f"Unknown research-guild subcommand: {sub}", file=sys.stderr)
@@ -1350,7 +1367,9 @@ def _cmd_intelligence(args: argparse.Namespace) -> int:
 
         critical = [f for f in findings if f.severity == "critical"]
         high = [f for f in findings if f.severity == "high"]
-        print(f"# Secret Findings: {len(findings)} total ({len(critical)} critical, {len(high)} high)\n")
+        print(
+            f"# Secret Findings: {len(findings)} total ({len(critical)} critical, {len(high)} high)\n"
+        )
         for f in findings:
             loc = f" (line {f.line_number})" if f.line_number else ""
             print(f"[{f.severity.upper()}] {f.description}{loc}")
@@ -1544,7 +1563,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     abstraction_subparsers = abstraction_parser.add_subparsers(dest="abstraction_command")
 
-    abs_scan = abstraction_subparsers.add_parser("scan", help="Scan codebase and memory for mechanisms")
+    abs_scan = abstraction_subparsers.add_parser(
+        "scan", help="Scan codebase and memory for mechanisms"
+    )
     abs_scan.add_argument(
         "--codebase-path",
         default="",
@@ -1557,7 +1578,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     abs_scan.set_defaults(func=_cmd_abstraction)
 
-    abs_mechanisms = abstraction_subparsers.add_parser("mechanisms", help="List stored mechanism cards")
+    abs_mechanisms = abstraction_subparsers.add_parser(
+        "mechanisms", help="List stored mechanism cards"
+    )
     abs_mechanisms.add_argument("--limit", type=int, default=20, help="Max mechanisms to list")
     abs_mechanisms.set_defaults(func=_cmd_abstraction)
 
@@ -1571,7 +1594,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     pattern_subparsers = pattern_parser.add_subparsers(dest="pattern_command")
 
-    ptn_scan = pattern_subparsers.add_parser("scan", help="Scan memory for mechanisms and discover patterns")
+    ptn_scan = pattern_subparsers.add_parser(
+        "scan", help="Scan memory for mechanisms and discover patterns"
+    )
     ptn_scan.add_argument(
         "--codebase-path",
         default="",
@@ -1598,7 +1623,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     fp_subparsers = fp_parser.add_subparsers(dest="first_principles_command")
 
-    fp_scan = fp_subparsers.add_parser("scan", help="Scan memory for patterns and reduce to principles")
+    fp_scan = fp_subparsers.add_parser(
+        "scan", help="Scan memory for patterns and reduce to principles"
+    )
     fp_scan.add_argument(
         "--codebase-path",
         default="",
@@ -1625,7 +1652,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     arch_subparsers = arch_parser.add_subparsers(dest="architecture_citizen_command")
 
-    arch_scan = arch_subparsers.add_parser("scan", help="Scan memory for principles and identify gaps")
+    arch_scan = arch_subparsers.add_parser(
+        "scan", help="Scan memory for principles and identify gaps"
+    )
     arch_scan.add_argument(
         "--codebase-path",
         default="",
@@ -1654,7 +1683,9 @@ def main(argv: list[str] | None = None) -> int:
 
     hv_harvest = harvester_subparsers.add_parser("harvest", help="Harvest a GitHub repository")
     hv_harvest.add_argument("--target", required=True, help="GitHub repo URL or user/repo")
-    hv_harvest.add_argument("--depth", default="quick", choices=["quick", "deep"], help="Scan depth")
+    hv_harvest.add_argument(
+        "--depth", default="quick", choices=["quick", "deep"], help="Scan depth"
+    )
     hv_harvest.add_argument(
         "--store",
         action="store_true",
@@ -1662,7 +1693,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     hv_harvest.set_defaults(func=_cmd_harvester)
 
-    hv_watchlist = harvester_subparsers.add_parser("watchlist", help="Harvest all due watchlist repos")
+    hv_watchlist = harvester_subparsers.add_parser(
+        "watchlist", help="Harvest all due watchlist repos"
+    )
     hv_watchlist.add_argument(
         "--interval-hours",
         type=int,
@@ -1680,7 +1713,9 @@ def main(argv: list[str] | None = None) -> int:
     hv_sources.add_argument("--limit", type=int, default=20, help="Max sources to list")
     hv_sources.set_defaults(func=_cmd_harvester)
 
-    hv_analyze = harvester_subparsers.add_parser("analyze", help="Run observation sweep and generate proposal")
+    hv_analyze = harvester_subparsers.add_parser(
+        "analyze", help="Run observation sweep and generate proposal"
+    )
     hv_analyze.add_argument(
         "--codebase-path",
         default="",
@@ -1868,11 +1903,15 @@ def main(argv: list[str] | None = None) -> int:
     pq_stats = proposal_queue_subparsers.add_parser("stats", help="Show queue statistics")
     pq_stats.set_defaults(func=_cmd_proposal_queue_stats)
 
-    pq_show = proposal_queue_subparsers.add_parser("show", help="Show proposal details with evidence")
+    pq_show = proposal_queue_subparsers.add_parser(
+        "show", help="Show proposal details with evidence"
+    )
     pq_show.add_argument("proposal_id", help="ID of proposal to show")
     pq_show.set_defaults(func=_cmd_proposal_queue_show)
 
-    pq_clear = proposal_queue_subparsers.add_parser("clear-sources", help="Clear evidence from a proposal")
+    pq_clear = proposal_queue_subparsers.add_parser(
+        "clear-sources", help="Clear evidence from a proposal"
+    )
     pq_clear.add_argument("proposal_id", help="ID of proposal to clear")
     pq_clear.set_defaults(func=_cmd_proposal_queue_clear_sources)
 
@@ -1903,9 +1942,13 @@ def main(argv: list[str] | None = None) -> int:
     status_parser.add_argument("--json", action="store_true", help="Output as JSON")
     status_parser.set_defaults(func=_cmd_status)
 
-    cleanup_parser = subparsers.add_parser("cleanup", help="Remove dead/orphan processes from registry")
+    cleanup_parser = subparsers.add_parser(
+        "cleanup", help="Remove dead/orphan processes from registry"
+    )
     cleanup_parser.add_argument("--dry-run", action="store_true", help="Show what would be removed")
-    cleanup_parser.add_argument("--kill-orphans", action="store_true", help="Send SIGTERM to orphan processes")
+    cleanup_parser.add_argument(
+        "--kill-orphans", action="store_true", help="Send SIGTERM to orphan processes"
+    )
     cleanup_parser.set_defaults(func=_cmd_cleanup)
 
     args = parser.parse_args(argv)

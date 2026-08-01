@@ -6,8 +6,6 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from animus.citizens import (
     ConversationDesignerCitizen,
     ImprovementProposal,
@@ -264,9 +262,15 @@ class TestConversationDesignerCitizen:
         from animus.citizens.architect import Observation
 
         obs = Observation(source="a", description="d", severity="low")
-        assert "shortcut" in ConversationDesignerCitizen._suggest_for_pattern("repeated_prompt", obs)
-        assert "clarifying" in ConversationDesignerCitizen._suggest_for_pattern("vague_request", obs)
-        assert "confirmation" in ConversationDesignerCitizen._suggest_for_pattern("correction_loop", obs)
+        assert "shortcut" in ConversationDesignerCitizen._suggest_for_pattern(
+            "repeated_prompt", obs
+        )
+        assert "clarifying" in ConversationDesignerCitizen._suggest_for_pattern(
+            "vague_request", obs
+        )
+        assert "confirmation" in ConversationDesignerCitizen._suggest_for_pattern(
+            "correction_loop", obs
+        )
 
     def test_build_problem_recommendation(self):
         from animus.citizens.conversation_designer import ConversationPattern

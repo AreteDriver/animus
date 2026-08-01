@@ -71,7 +71,7 @@ class BrowserCache:
         if self.store is not None:
             try:
                 # ObjectType.SOURCE is closest semantic
-                from animus.durability.postgres_store import ObjectRecord, ObjectType
+                from animus.durability.postgres_store import ObjectRecord
 
                 record = ObjectRecord(
                     object_id=f"browser_cache:{key}",

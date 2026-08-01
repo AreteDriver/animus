@@ -32,7 +32,7 @@ steps:
       cat "${alert_file}"
       echo ""
       echo "=== Alert History ==="
-      ls -lt /home/arete/.animus/fleet_alerts/ 2>/dev/null | head -10
+      ls -lt ~/.animus/fleet_alerts/ 2>/dev/null | head -10
     timeout_seconds: 5
 
   - id: extended_logs
@@ -43,7 +43,7 @@ steps:
       operator: not_empty
     command: |
       echo "=== Last 100 log lines ==="
-      /home/arete/.fly/bin/flyctl logs -a "${fly_app}" --no-tail 2>/dev/null | tail -100
+      ~/.fly/bin/flyctl logs -a "${fly_app}" --no-tail 2>/dev/null | tail -100
     timeout_seconds: 20
     on_failure: skip
 
@@ -55,10 +55,10 @@ steps:
       operator: not_empty
     command: |
       echo "=== Recent Releases ==="
-      /home/arete/.fly/bin/flyctl releases -a "${fly_app}" 2>/dev/null | head -10
+      ~/.fly/bin/flyctl releases -a "${fly_app}" 2>/dev/null | head -10
       echo ""
       echo "=== Machine Events ==="
-      /home/arete/.fly/bin/flyctl machine list -a "${fly_app}" 2>&1
+      ~/.fly/bin/flyctl machine list -a "${fly_app}" 2>&1
     timeout_seconds: 15
     on_failure: skip
 
@@ -69,7 +69,7 @@ steps:
       field: fly_app
       operator: not_empty
     command: |
-      /home/arete/.fly/bin/flyctl status -a "${fly_app}" --json 2>/dev/null | \
+      ~/.fly/bin/flyctl status -a "${fly_app}" --json 2>/dev/null | \
         python3 -c "
       import sys, json
       try:
@@ -92,14 +92,14 @@ steps:
     command: |
       # Map service to repo directory
       case "${service_name}" in
-        benchgoblins_api) REPO="/home/arete/projects/BenchGoblins" ;;
-        gatekeeper_api) REPO="/home/arete/projects/EVE_Gatekeeper" ;;
-        monolith_api) REPO="/home/arete/projects/monolith" ;;
-        witness_api) REPO="/home/arete/projects/watchtower" ;;
-        frontier_tribe_os) REPO="/home/arete/projects/frontier-tribe-os" ;;
-        aicards_mint) REPO="/home/arete/projects/aicards-tcg" ;;
-        staycards_mint) REPO="/home/arete/projects/straykids-tcg" ;;
-        license_server) REPO="/home/arete/projects/anchormd" ;;
+        benchgoblins_api) REPO="~/projects/BenchGoblins" ;;
+        gatekeeper_api) REPO="~/projects/EVE_Gatekeeper" ;;
+        monolith_api) REPO="~/projects/monolith" ;;
+        witness_api) REPO="~/projects/watchtower" ;;
+        frontier_tribe_os) REPO="~/projects/frontier-tribe-os" ;;
+        aicards_mint) REPO="~/projects/aicards-tcg" ;;
+        staycards_mint) REPO="~/projects/straykids-tcg" ;;
+        license_server) REPO="~/projects/anchormd" ;;
         *) REPO="" ;;
       esac
 

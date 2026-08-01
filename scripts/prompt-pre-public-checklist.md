@@ -80,7 +80,7 @@
 2. **Prerequisites**: List Python 3.11+, Node 18+, Docker (optional, for PostgreSQL), Ollama (optional, for local LLM).
 3. **Quick start**:
    ```bash
-   git clone https://github.com/AreteDriver/Animus.git
+   git clone https://github.com/your-org/Animus.git
    cd Animus
    pip install -e packages/bootstrap/ -e packages/kernel/ -e packages/core/ -e packages/contracts/
    cd packages/pwa && npm install && npm run build && cd ../..

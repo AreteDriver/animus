@@ -256,7 +256,8 @@ class TestUniversalPatterns:
 class TestPersonalPatterns:
     """Personal PII — known emails, phones, sensitive paths."""
 
-    def test_personal_email_redacted_by_default(self):
+    def test_personal_email_redacted_by_default(self, monkeypatch):
+        monkeypatch.setenv("ANIMUS_REDACT_EMAILS", "aretedriver@gmail.com,jamesyng79@gmail.com")
         text = "Contact: aretedriver@gmail.com or jamesyng79@gmail.com"
         redacted, hits = redact(text)
         assert "aretedriver@gmail.com" not in redacted
@@ -270,20 +271,23 @@ class TestPersonalPatterns:
         assert "noreply@anthropic.com" in redacted
         assert all(h.type != "personal_email" for h in hits)
 
-    def test_personal_phone_redacted(self):
+    def test_personal_phone_redacted(self, monkeypatch):
+        monkeypatch.setenv("ANIMUS_REDACT_PHONES", "503-449-8300")
         text = "Call me at 503-449-8300 anytime"
         redacted, hits = redact(text)
         assert "503-449-8300" not in redacted
         assert any(h.type == "personal_phone" for h in hits)
 
-    def test_sensitive_path_redacted(self):
+    def test_sensitive_path_redacted(self, monkeypatch):
+        monkeypatch.setenv("ANIMUS_REDACT_PATHS", "/home/arete/Documents/WORK")
         text = "Drafted at /home/arete/Documents/WORK/drafts-2026-05-10/airtable.md"
         redacted, hits = redact(text)
         assert "/home/arete/Documents/WORK" not in redacted
         assert "airtable.md" not in redacted
         assert any(h.type == "sensitive_path" for h in hits)
 
-    def test_secrets_env_path_redacted(self):
+    def test_secrets_env_path_redacted(self, monkeypatch):
+        monkeypatch.setenv("ANIMUS_REDACT_PATHS", "/home/arete/.local/share/animus/secrets.env")
         text = "Source: /home/arete/.local/share/animus/secrets.env exists"
         redacted, hits = redact(text)
         assert "secrets.env" not in redacted
@@ -305,10 +309,12 @@ class TestPersonalPatterns:
         assert "aretedriver@gmail.com" in redacted
 
     def test_empty_env_falls_back_to_default(self, monkeypatch):
+        # Public distribution defaults are empty; verify that empty env
+        # falls back to those defaults (nothing redacted).
         monkeypatch.setenv("ANIMUS_REDACT_EMAILS", "")
         text = "aretedriver@gmail.com here"
         redacted, _ = redact(text)
-        assert "aretedriver@gmail.com" not in redacted
+        assert "aretedriver@gmail.com" in redacted
 
 
 class TestEdgeCases:
@@ -371,7 +377,8 @@ class TestHasSecrets:
     def test_returns_false_when_absent(self):
         assert has_secrets("just prose, nothing here") is False
 
-    def test_respects_include_personal_flag(self):
+    def test_respects_include_personal_flag(self, monkeypatch):
+        monkeypatch.setenv("ANIMUS_REDACT_EMAILS", "aretedriver@gmail.com")
         text = "aretedriver@gmail.com"
         assert has_secrets(text) is True
         assert has_secrets(text, include_personal=False) is False

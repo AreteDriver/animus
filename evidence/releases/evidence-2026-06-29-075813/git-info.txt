@@ -8,4 +8,3 @@ bd95ae4 feat(kernel, database): Phase 2 Durable Core — kernel wiring + traceab
 55e9dcd feat(database): Phase 2 Durable Core — initial migration + Docker Compose + tests
 ac32999 docs: add version compatibility matrix and document alignment policy
 f28ee74 fix: enable pytest to discover sibling packages across monorepo
-

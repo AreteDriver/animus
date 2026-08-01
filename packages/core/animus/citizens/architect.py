@@ -35,7 +35,6 @@ from typing import TYPE_CHECKING, Any
 from animus.citizens.proposal import (
     EvidenceItem,
     ImprovementProposal,
-    ProposalConfidence,
     ProposalStatus,
     RiskAssessment,
 )
@@ -44,7 +43,6 @@ from animus.memory.types import MemoryType
 
 if TYPE_CHECKING:
     from animus.memory import MemoryLayer
-    from animus_forge.self_improve.analyzer import CodebaseAnalyzer, ImprovementSuggestion  # boundary-ok: TYPE_CHECKING-only import
 
 logger = get_logger("citizens.architect")
 
@@ -105,9 +103,19 @@ class ArchitectCitizen:
         self.evidence_dir = Path(evidence_dir).expanduser() if evidence_dir else None
         self.focus_paths = focus_paths or []
 
-        self.coverage_threshold = coverage_threshold if coverage_threshold is not None else self.DEFAULT_COVERAGE_THRESHOLD
-        self.complexity_threshold = complexity_threshold if complexity_threshold is not None else self.DEFAULT_COMPLEXITY_THRESHOLD
-        self.recency_hours = recency_hours if recency_hours is not None else self.DEFAULT_RECENCY_HOURS
+        self.coverage_threshold = (
+            coverage_threshold
+            if coverage_threshold is not None
+            else self.DEFAULT_COVERAGE_THRESHOLD
+        )
+        self.complexity_threshold = (
+            complexity_threshold
+            if complexity_threshold is not None
+            else self.DEFAULT_COMPLEXITY_THRESHOLD
+        )
+        self.recency_hours = (
+            recency_hours if recency_hours is not None else self.DEFAULT_RECENCY_HOURS
+        )
 
         if self.evidence_dir:
             self.evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -124,7 +132,9 @@ class ArchitectCitizen:
             return self._analyzer
 
         try:
-            from animus_forge.self_improve.analyzer import CodebaseAnalyzer  # boundary-ok: citizen degrades gracefully without Forge
+            from animus_forge.self_improve.analyzer import (
+                CodebaseAnalyzer,  # boundary-ok: citizen degrades gracefully without Forge
+            )
 
             self._analyzer = CodebaseAnalyzer(codebase_path=self.codebase_path)
             logger.info("Forge CodebaseAnalyzer loaded for Architect")
@@ -259,6 +269,7 @@ class ArchitectCitizen:
         # Try Forge eval store first
         try:
             from animus.citizens.eval_evidence import query_eval_runs
+
             eval_runs = query_eval_runs(limit=20)
             for run in eval_runs:
                 score = run.get("score", 0)
@@ -302,7 +313,11 @@ class ArchitectCitizen:
             pass
 
         # Fall back to local evidence files
-        target_dir = Path(eval_dir) if eval_dir else (self.codebase_path / "evidence" if self.codebase_path else None)
+        target_dir = (
+            Path(eval_dir)
+            if eval_dir
+            else (self.codebase_path / "evidence" if self.codebase_path else None)
+        )
         if target_dir and target_dir.exists():
             for eval_file in sorted(target_dir.glob("eval_*.json"))[-10:]:
                 try:
@@ -364,11 +379,13 @@ class ArchitectCitizen:
                     elif in_decision_block and line.startswith("**"):
                         in_decision_block = False
                     elif in_decision_block and current_adl and line.strip():
-                        adl_constraints.append({
-                            "adl": current_adl,
-                            "constraint": line.strip(),
-                            "source_file": str(md_file.relative_to(self.codebase_path)),
-                        })
+                        adl_constraints.append(
+                            {
+                                "adl": current_adl,
+                                "constraint": line.strip(),
+                                "source_file": str(md_file.relative_to(self.codebase_path)),
+                            }
+                        )
             except Exception:
                 continue
 
@@ -411,8 +428,12 @@ class ArchitectCitizen:
 
         # Categorize observations
         structural_patterns = {
-            "circular_import", "tight_coupling", "god_class",
-            "singleton_abuse", "interface_leakage", "leaky_abstraction",
+            "circular_import",
+            "tight_coupling",
+            "god_class",
+            "singleton_abuse",
+            "interface_leakage",
+            "leaky_abstraction",
         }
         for obs in self._observations:
             ptype = obs.context.get("pattern_type", "")
@@ -469,7 +490,9 @@ class ArchitectCitizen:
         elif isinstance(report, list):
             report = AnalysisReport(
                 observations=report,
-                findings=[o.description for o in report if o.severity in ("medium", "high", "critical")],
+                findings=[
+                    o.description for o in report if o.severity in ("medium", "high", "critical")
+                ],
             )
 
         if not report.findings and not report.technical_debt_items and not report.friction_points:
@@ -529,8 +552,8 @@ class ArchitectCitizen:
         sorted_obs = sorted(
             all_obs,
             key=lambda o: (
-                -_structural_priority(o),   # Structural first
-                -int(_is_focused(o)),       # Focus path second
+                -_structural_priority(o),  # Structural first
+                -int(_is_focused(o)),  # Focus path second
                 -severity_order.get(o.severity, 0),  # Severity third
             ),
         )
@@ -559,14 +582,18 @@ class ArchitectCitizen:
                 problem = f"User friction: {top_obs.description}"
             else:
                 problem = f"User friction: {report.friction_points[0]}"
-            recommendation = "Reduce conversation friction via workflow shortcuts or context handling"
+            recommendation = (
+                "Reduce conversation friction via workflow shortcuts or context handling"
+            )
             affected = ["Mind", "Society"]
         else:
             if top_obs:
                 problem = top_obs.description
                 affected = list(top_obs.context.get("affected_files", ["Mind"]))
             else:
-                problem = report.findings[0] if report.findings else "General improvement opportunity"
+                problem = (
+                    report.findings[0] if report.findings else "General improvement opportunity"
+                )
                 affected = ["Mind"]
             if is_structural:
                 recommendation = (
@@ -578,9 +605,7 @@ class ArchitectCitizen:
 
         # --- Enrich with ADL constraints if available ---
         adl_contexts = [
-            o.context.get("constraints", [])
-            for o in all_obs
-            if o.source == "adl" and o.context
+            o.context.get("constraints", []) for o in all_obs if o.source == "adl" and o.context
         ]
         adl_constraints = []
         for ctx_list in adl_contexts:
@@ -629,7 +654,11 @@ class ArchitectCitizen:
             evidence=evidence,
             root_cause="Identified through systematic observation, dependency analysis, and trend tracking",
             recommendation=recommendation,
-            alternatives_considered=["Status quo (no change)", "Manual remediation (human-only)", "Defer to next maintenance window"],
+            alternatives_considered=[
+                "Status quo (no change)",
+                "Manual remediation (human-only)",
+                "Defer to next maintenance window",
+            ],
             expected_benefits="Reduced technical debt and/or improved user experience; lower long-term maintenance cost",
             potential_risks=risks,
             confidence_score=round(confidence, 2),
@@ -637,7 +666,12 @@ class ArchitectCitizen:
             affected_components=affected,
             evaluation_plan=f"Run full test suite ({impact['test_surface_estimate']} test files affected) + benchmark comparison + manual verification + constraint re-check",
             rollback_plan="Revert to previous commit via git revert; re-run evaluation suite post-revert",
-            success_metrics=["Tests pass", "Benchmarks stable or improved", "No new regressions", "Constraint check passes"],
+            success_metrics=[
+                "Tests pass",
+                "Benchmarks stable or improved",
+                "No new regressions",
+                "Constraint check passes",
+            ],
             status=ProposalStatus.DRAFT,
         )
 
@@ -651,7 +685,9 @@ class ArchitectCitizen:
             for v in violations:
                 logger.warning(v)
             # Downgrade confidence if constraints are violated
-            proposal.confidence_score = max(0.25, proposal.confidence_score - 0.15 * len(violations))
+            proposal.confidence_score = max(
+                0.25, proposal.confidence_score - 0.15 * len(violations)
+            )
             proposal.potential_risks.append(
                 RiskAssessment(
                     description=f"Architectural constraint warning: {'; '.join(violations)}",
@@ -661,7 +697,9 @@ class ArchitectCitizen:
                 )
             )
 
-        logger.info(f"Generated proposal {proposal.id}: {proposal.title} (confidence={proposal.confidence_score}, effort={proposal.estimated_effort_hours}h)")
+        logger.info(
+            f"Generated proposal {proposal.id}: {proposal.title} (confidence={proposal.confidence_score}, effort={proposal.estimated_effort_hours}h)"
+        )
         return proposal
 
     # ------------------------------------------------------------------
@@ -731,9 +769,7 @@ class ArchitectCitizen:
     # Heuristic analysis (fallback when Forge returns empty)
     # ------------------------------------------------------------------
 
-    def _observe_heuristics(
-        self, focus_paths: list[str] | None = None
-    ) -> list[Observation]:
+    def _observe_heuristics(self, focus_paths: list[str] | None = None) -> list[Observation]:
         """Run lightweight AST + text heuristics when Forge produces no suggestions.
 
         Checks:
@@ -762,7 +798,9 @@ class ArchitectCitizen:
                 continue
             seen.add(rid)
             rel = str(pf.relative_to(self.codebase_path))
-            if any(p in rel for p in ("tests/", "/tests/", "test_", ".venv/", "venv/", "node_modules/")):
+            if any(
+                p in rel for p in ("tests/", "/tests/", "test_", ".venv/", "venv/", "node_modules/")
+            ):
                 continue
             filtered.append(pf)
 
@@ -853,8 +891,18 @@ class ArchitectCitizen:
         for child in ast.walk(node):
             if child is node:
                 continue
-            if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler,
-                              ast.With, ast.Assert, ast.comprehension)):
+            if isinstance(
+                child,
+                (
+                    ast.If,
+                    ast.While,
+                    ast.For,
+                    ast.ExceptHandler,
+                    ast.With,
+                    ast.Assert,
+                    ast.comprehension,
+                ),
+            ):
                 count += 1
             elif isinstance(child, ast.BoolOp):
                 count += len(child.values) - 1
@@ -1001,7 +1049,9 @@ class ArchitectCitizen:
             kept.extend(bucket_sorted[:max_per_pattern])
             dropped = len(bucket) - max_per_pattern
             if dropped > 0:
-                logger.info(f"Dropped {dropped} '{ptype}' observations (kept top {max_per_pattern})")
+                logger.info(
+                    f"Dropped {dropped} '{ptype}' observations (kept top {max_per_pattern})"
+                )
 
         return kept
 
@@ -1009,9 +1059,7 @@ class ArchitectCitizen:
     # Senior skillsets — cross-module analysis, trends, constraints
     # ------------------------------------------------------------------
 
-    def _analyze_dependencies(
-        self, focus_paths: list[str] | None = None
-    ) -> list[Observation]:
+    def _analyze_dependencies(self, focus_paths: list[str] | None = None) -> list[Observation]:
         """Cross-module dependency analysis: circular imports and tight coupling.
 
         Builds a lightweight import graph from the codebase and flags:
@@ -1029,7 +1077,10 @@ class ArchitectCitizen:
         for root in roots:
             for pf in root.rglob("*.py"):
                 rel = str(pf.relative_to(self.codebase_path))
-                if any(p in rel for p in ("tests/", "/tests/", "test_", ".venv/", "venv/", "node_modules/")):
+                if any(
+                    p in rel
+                    for p in ("tests/", "/tests/", "test_", ".venv/", "venv/", "node_modules/")
+                ):
                     continue
                 try:
                     source = pf.read_text()
@@ -1103,7 +1154,8 @@ class ArchitectCitizen:
                         if any(imp.startswith(prefix) for imp in other_imports):
                             # This is a weak signal, only add once per internal module
                             already = any(
-                                o.context.get("module") == mod and o.context.get("pattern_type") == "interface_leakage"
+                                o.context.get("module") == mod
+                                and o.context.get("pattern_type") == "interface_leakage"
                                 for o in observations
                             )
                             if not already:
@@ -1136,7 +1188,10 @@ class ArchitectCitizen:
         for root in roots:
             for pf in root.rglob("*.py"):
                 rel = str(pf.relative_to(self.codebase_path))
-                if any(p in rel for p in ("tests/", "/tests/", "test_", ".venv/", "venv/", "node_modules/")):
+                if any(
+                    p in rel
+                    for p in ("tests/", "/tests/", "test_", ".venv/", "venv/", "node_modules/")
+                ):
                     continue
                 try:
                     source = pf.read_text()
@@ -1147,7 +1202,11 @@ class ArchitectCitizen:
                 # God class: class with >15 methods or >500 lines
                 for node in ast.walk(tree):
                     if isinstance(node, ast.ClassDef):
-                        methods = [n for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+                        methods = [
+                            n
+                            for n in node.body
+                            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                        ]
                         if len(methods) > 15:
                             observations.append(
                                 Observation(
@@ -1190,12 +1249,17 @@ class ArchitectCitizen:
                 for node in ast.walk(tree):
                     if isinstance(node, ast.ClassDef):
                         public_attrs = [
-                            n for n in node.body
-                            if isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name) and not n.target.id.startswith("_")
+                            n
+                            for n in node.body
+                            if isinstance(n, ast.AnnAssign)
+                            and isinstance(n.target, ast.Name)
+                            and not n.target.id.startswith("_")
                         ]
                         complex_methods = [
-                            n for n in node.body
-                            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and self._compute_complexity(n) > 10
+                            n
+                            for n in node.body
+                            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                            and self._compute_complexity(n) > 10
                         ]
                         if len(public_attrs) >= 3 and len(complex_methods) >= 2:
                             observations.append(
@@ -1246,7 +1310,9 @@ class ArchitectCitizen:
                     ptype = obs.get("data", {}).get("pattern_type", "")
                     if ptype:
                         pattern_counts[ptype] = pattern_counts.get(ptype, 0) + 1
-                        file_key = obs.get("data", {}).get("file", obs.get("data", {}).get("module", ""))
+                        file_key = obs.get("data", {}).get(
+                            "file", obs.get("data", {}).get("module", "")
+                        )
                         if file_key:
                             if ptype not in pattern_files:
                                 pattern_files[ptype] = set()
@@ -1276,9 +1342,7 @@ class ArchitectCitizen:
         logger.info(f"Trend analysis produced {len(observations)} observations")
         return observations
 
-    def _check_architectural_constraints(
-        self, proposal: ImprovementProposal
-    ) -> list[str]:
+    def _check_architectural_constraints(self, proposal: ImprovementProposal) -> list[str]:
         """Validate that a proposal does not violate Animus architectural constraints.
 
         Constraints (hard rules):
@@ -1291,10 +1355,19 @@ class ArchitectCitizen:
         violations: list[str] = []
         rec = proposal.recommendation.lower()
 
-        forbidden_verbs = ["modify directly", "edit directly", "write to file", "auto-merge", "auto-deploy", "bypass approval"]
+        forbidden_verbs = [
+            "modify directly",
+            "edit directly",
+            "write to file",
+            "auto-merge",
+            "auto-deploy",
+            "bypass approval",
+        ]
         for verb in forbidden_verbs:
             if verb in rec:
-                violations.append(f"Constraint violation: proposal suggests '{verb}' — citizens must not modify code directly")
+                violations.append(
+                    f"Constraint violation: proposal suggests '{verb}' — citizens must not modify code directly"
+                )
 
         if not proposal.evaluation_plan:
             violations.append("Constraint violation: proposal lacks evaluation plan")
@@ -1303,7 +1376,9 @@ class ArchitectCitizen:
             violations.append("Constraint violation: proposal lacks rollback plan")
 
         if len(proposal.affected_components) > 5:
-            violations.append("Constraint warning: blast radius >5 components — consider splitting into smaller proposals")
+            violations.append(
+                "Constraint warning: blast radius >5 components — consider splitting into smaller proposals"
+            )
 
         return violations
 
@@ -1374,9 +1449,7 @@ class ArchitectCitizen:
         score = 0.4 + (source_diversity * 0.3) + (quantitative_ratio * 0.2) + (recency_ratio * 0.1)
         return min(1.0, score)
 
-    def _build_trade_off_analysis(
-        self, proposal: ImprovementProposal
-    ) -> str:
+    def _build_trade_off_analysis(self, proposal: ImprovementProposal) -> str:
         """Build a structured trade-off paragraph for the proposal.
 
         A senior architect doesn't just say "do X" — they explain why X over Y,
@@ -1400,7 +1473,13 @@ class ArchitectCitizen:
         # Risk of inaction
         risks = proposal.potential_risks or []
         if risks:
-            highest = max(risks, key=lambda r: (r.probability * ({"critical": 4, "high": 3, "medium": 2, "low": 1}.get(r.severity, 2))))
+            highest = max(
+                risks,
+                key=lambda r: (
+                    r.probability
+                    * ({"critical": 4, "high": 3, "medium": 2, "low": 1}.get(r.severity, 2))
+                ),
+            )
             parts.append(
                 f"Risk of inaction: If unaddressed, '{highest.description}' has {int(highest.probability * 100)}% probability of causing debt accumulation."
             )
@@ -1566,12 +1645,14 @@ class ArchitectCitizen:
                     except (ValueError, TypeError):
                         continue
                     if score >= self.complexity_threshold:
-                        complex_funcs.append({
-                            "file": meta.get("source_path", meta.get("file_path", "")),
-                            "function": meta.get("name", "unknown"),
-                            "line": meta.get("start_line", 0),
-                            "complexity_score": score,
-                        })
+                        complex_funcs.append(
+                            {
+                                "file": meta.get("source_path", meta.get("file_path", "")),
+                                "function": meta.get("name", "unknown"),
+                                "line": meta.get("start_line", 0),
+                                "complexity_score": score,
+                            }
+                        )
 
         if complex_funcs:
             # Deduplicate by file+function
@@ -1655,9 +1736,7 @@ class ArchitectCitizen:
                 stale.append(rel_path)
         return sorted(stale)
 
-    def _get_indexed_code_chunks(
-        self, focus_paths: list[str] | None = None
-    ) -> list[Any]:
+    def _get_indexed_code_chunks(self, focus_paths: list[str] | None = None) -> list[Any]:
         """Query semantic memory for code chunks ingested via ``code_ingest``.
 
         Args:

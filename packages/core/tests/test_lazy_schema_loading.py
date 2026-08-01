@@ -119,9 +119,7 @@ class TestLazySchemaLoading:
     def test_lazy_returns_compact_for_low_relevance(self, registry):
         """Low-relevance tools get compact schemas."""
         intent = "search for python docs"
-        schemas = registry.get_schema(
-            intent=intent, lazy=True, max_full_schemas=1
-        )
+        schemas = registry.get_schema(intent=intent, lazy=True, max_full_schemas=1)
         # Top 1 should be web_search (full), others compact
         full_count = sum(1 for s in schemas if "parameters" in s)
         compact_count = sum(1 for s in schemas if "params" in s)
@@ -131,9 +129,7 @@ class TestLazySchemaLoading:
     def test_lazy_returns_full_for_top_n(self, registry):
         """Top-N tools get full schemas."""
         intent = "read a file from disk"
-        schemas = registry.get_schema(
-            intent=intent, lazy=True, max_full_schemas=2
-        )
+        schemas = registry.get_schema(intent=intent, lazy=True, max_full_schemas=2)
         full = [s for s in schemas if "parameters" in s]
         assert len(full) == 2
 
@@ -144,18 +140,14 @@ class TestLazySchemaLoading:
 
     def test_lazy_adds_iso_score(self, registry):
         """Lazy schemas include _iso_score metadata."""
-        schemas = registry.get_schema(
-            intent="read file", lazy=True, max_full_schemas=2
-        )
+        schemas = registry.get_schema(intent="read file", lazy=True, max_full_schemas=2)
         for s in schemas:
             assert "_iso_score" in s
             assert 0.0 <= s["_iso_score"] <= 1.0
 
     def test_lazy_text_format(self, registry):
         """get_schema_text supports lazy loading."""
-        text = registry.get_schema_text(
-            intent="read file", lazy=True, max_full_schemas=1
-        )
+        text = registry.get_schema_text(intent="read file", lazy=True, max_full_schemas=1)
         lines = text.split("\n")
         # Should include relevance scores
         assert any("relevance:" in line for line in lines)
@@ -167,9 +159,7 @@ class TestToolsToAnthropicFormat:
     def test_anthropic_format_includes_top_tools(self, registry):
         """Top tools get full input_schema."""
         intent = "read file contents"
-        result = tools_to_anthropic_format(
-            registry, intent=intent, lazy=True, max_full_schemas=2
-        )
+        result = tools_to_anthropic_format(registry, intent=intent, lazy=True, max_full_schemas=2)
         # Verify no _iso_score leaks into Anthropic format
         for item in result:
             assert "_iso_score" not in item
@@ -180,9 +170,7 @@ class TestToolsToAnthropicFormat:
     def test_anthropic_format_compact_params(self, registry):
         """Compact tools still have params in input_schema."""
         intent = "read file"
-        result = tools_to_anthropic_format(
-            registry, intent=intent, lazy=True, max_full_schemas=1
-        )
+        result = tools_to_anthropic_format(registry, intent=intent, lazy=True, max_full_schemas=1)
         # The top tool should have full schema
         top = result[0]
         assert isinstance(top["input_schema"], dict)
@@ -196,14 +184,10 @@ class TestIntentCache:
 
     def test_cache_stores_scores(self, registry):
         """Calling get_schema with same intent caches ISO scores."""
-        schemas1 = registry.get_schema(
-            intent="read file", lazy=True, max_full_schemas=1
-        )
+        schemas1 = registry.get_schema(intent="read file", lazy=True, max_full_schemas=1)
         # Cache should now contain the intent
         assert "read file" in registry._intent_cache
-        schemas2 = registry.get_schema(
-            intent="read file", lazy=True, max_full_schemas=1
-        )
+        schemas2 = registry.get_schema(intent="read file", lazy=True, max_full_schemas=1)
         # Results should be identical
         assert schemas1 == schemas2
 

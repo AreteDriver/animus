@@ -421,9 +421,7 @@ class CodeMemoryStore:
 
         for chunk in chunks:
             boost = " ".join(
-                v
-                for k, v in chunk.metadata.items()
-                if k in ("name", "class", "header", "key")
+                v for k, v in chunk.metadata.items() if k in ("name", "class", "header", "key")
             )
             emb_text = f"{boost}\n{boost}\n{chunk.content}" if boost else chunk.content
 
@@ -562,7 +560,5 @@ if __name__ == "__main__":
 
     print("\n--- Demo Query: 'authentication logic' ---")
     for hit in store.query("authentication logic", n_results=3):
-        print(
-            f"\n[{hit['chunk_type']}] {hit['source_path']}:{hit['start_line']}-{hit['end_line']}"
-        )
+        print(f"\n[{hit['chunk_type']}] {hit['source_path']}:{hit['start_line']}-{hit['end_line']}")
         print(hit["content"][:300] + "...")

@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.12"
 authors = [
-    {name = "AreteDriver"}
+    {name = "your-org"}
 ]
 keywords = ["validator", "staking", "rewards", "blockchain", "animus"]
 classifiers = [
@@ -42,8 +42,8 @@ dev = [
 animus-validator = "animus_validator.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/AreteDriver/animus"
-Repository = "https://github.com/AreteDriver/animus"
+Homepage = "https://github.com/your-org/animus"
+Repository = "https://github.com/your-org/animus"
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -194,12 +194,14 @@ class DiscoveryOrchestrator:
             try:
                 specs = self.mcp_scanner.scan_server(url)
                 for spec in specs:
-                    all_raw_tools.append({
-                        "name": spec.name,
-                        "description": spec.description,
-                        "parameters": spec.to_animus_schema(),
-                        "source": f"mcp:{spec.server_name}",
-                    })
+                    all_raw_tools.append(
+                        {
+                            "name": spec.name,
+                            "description": spec.description,
+                            "parameters": spec.to_animus_schema(),
+                            "source": f"mcp:{spec.server_name}",
+                        }
+                    )
                 run.sources_scanned += 1
             except Exception as e:
                 run.errors.append(f"MCP scan failed for {url}: {e}")
@@ -209,12 +211,14 @@ class DiscoveryOrchestrator:
             try:
                 specs = self.mcp_scanner.scan_stdio_server(command, name)
                 for spec in specs:
-                    all_raw_tools.append({
-                        "name": spec.name,
-                        "description": spec.description,
-                        "parameters": spec.to_animus_schema(),
-                        "source": f"mcp-stdio:{name}",
-                    })
+                    all_raw_tools.append(
+                        {
+                            "name": spec.name,
+                            "description": spec.description,
+                            "parameters": spec.to_animus_schema(),
+                            "source": f"mcp-stdio:{name}",
+                        }
+                    )
                 run.sources_scanned += 1
             except Exception as e:
                 run.errors.append(f"MCP stdio scan failed for {name}: {e}")
@@ -223,12 +227,14 @@ class DiscoveryOrchestrator:
         if self.config.scan_localhost_ports:
             specs = self.mcp_scanner.scan_local_servers(self.config.scan_localhost_ports)
             for spec in specs:
-                all_raw_tools.append({
-                    "name": spec.name,
-                    "description": spec.description,
-                    "parameters": spec.to_animus_schema(),
-                    "source": f"mcp-local:{spec.server_name}",
-                })
+                all_raw_tools.append(
+                    {
+                        "name": spec.name,
+                        "description": spec.description,
+                        "parameters": spec.to_animus_schema(),
+                        "source": f"mcp-local:{spec.server_name}",
+                    }
+                )
             run.sources_scanned += 1
 
         # 2. OpenAPI specs
@@ -236,12 +242,14 @@ class DiscoveryOrchestrator:
             try:
                 endpoints = self.openapi_discovery.load_from_url(url)
                 for ep in endpoints:
-                    all_raw_tools.append({
-                        "name": ep.tool_name,
-                        "description": ep.description or ep.summary,
-                        "parameters": ep.parameters,
-                        "source": f"openapi:{url}",
-                    })
+                    all_raw_tools.append(
+                        {
+                            "name": ep.tool_name,
+                            "description": ep.description or ep.summary,
+                            "parameters": ep.parameters,
+                            "source": f"openapi:{url}",
+                        }
+                    )
                 run.sources_scanned += 1
             except Exception as e:
                 run.errors.append(f"OpenAPI load failed for {url}: {e}")
@@ -250,12 +258,14 @@ class DiscoveryOrchestrator:
             try:
                 endpoints = self.openapi_discovery.scan_directory(directory)
                 for ep in endpoints:
-                    all_raw_tools.append({
-                        "name": ep.tool_name,
-                        "description": ep.description or ep.summary,
-                        "parameters": ep.parameters,
-                        "source": f"openapi-dir:{directory}",
-                    })
+                    all_raw_tools.append(
+                        {
+                            "name": ep.tool_name,
+                            "description": ep.description or ep.summary,
+                            "parameters": ep.parameters,
+                            "source": f"openapi-dir:{directory}",
+                        }
+                    )
                 run.sources_scanned += 1
             except Exception as e:
                 run.errors.append(f"OpenAPI scan failed for {directory}: {e}")
@@ -265,12 +275,14 @@ class DiscoveryOrchestrator:
             try:
                 specs = self.script_discovery.scan_directory(directory)
                 for spec in specs:
-                    all_raw_tools.append({
-                        "name": spec.name,
-                        "description": spec.description,
-                        "parameters": spec.parameters,
-                        "source": f"script:{spec.script_path}",
-                    })
+                    all_raw_tools.append(
+                        {
+                            "name": spec.name,
+                            "description": spec.description,
+                            "parameters": spec.parameters,
+                            "source": f"script:{spec.script_path}",
+                        }
+                    )
                 run.sources_scanned += 1
             except Exception as e:
                 run.errors.append(f"Script scan failed for {directory}: {e}")
@@ -338,15 +350,18 @@ class DiscoveryOrchestrator:
         Discovered tools need a real handler to be executable. This placeholder
         logs a warning and returns an error indicating the tool needs wiring.
         """
+
         def handler(params: dict) -> Any:
             from animus.tools import ToolResult
+
             return ToolResult(
                 tool_name=tool_name,
                 success=False,
                 output="",
                 error=f"Tool '{tool_name}' is discovered but not yet wired to a real implementation. "
-                      f"Register a proper handler via registry.get('{tool_name}').handler = your_function",
+                f"Register a proper handler via registry.get('{tool_name}').handler = your_function",
             )
+
         return handler
 
     # ── Daemon Integration ──────────────────────────────────────────
@@ -360,6 +375,7 @@ class DiscoveryOrchestrator:
         Returns:
             The scheduled task object.
         """
+
         def discovery_callback() -> None:
             logger.info("Running scheduled tool discovery")
             self.run_discovery()

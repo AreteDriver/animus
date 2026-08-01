@@ -7,10 +7,6 @@ for the monorepo contract between packages.
 
 import json
 from datetime import timedelta
-from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
 
 
 class TestKernelCoreBoundary:
@@ -20,7 +16,6 @@ class TestKernelCoreBoundary:
         """core.mcp_server and core.cli can import SessionController."""
         from animus_kernel.head.session_controller import (
             SessionController,
-            SessionLifecycleEvent,
             SessionPolicy,
         )
 
@@ -35,12 +30,13 @@ class TestKernelCoreBoundary:
 
     def test_session_steward_can_audit_kernel_controller(self):
         """SessionSteward (core) can observe telemetry from SessionController (kernel)."""
-        from animus.citizens.session_steward import SessionStewardCitizen
         from animus_kernel.head.session_controller import (
             SessionController,
             SessionLifecycleEvent,
             SessionPolicy,
         )
+
+        from animus.citizens.session_steward import SessionStewardCitizen
 
         policy = SessionPolicy(
             wrapup_threshold=0.96,

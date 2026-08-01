@@ -15,6 +15,7 @@ Exit codes:
     1 — Error during loop
     2 — Proposal generated and queued successfully
 """
+
 from __future__ import annotations
 
 import argparse
@@ -128,7 +129,11 @@ def main(argv: list[str] | None = None) -> int:
                         batch = getattr(citizen, name)()
                         if batch:
                             findings.extend(batch if isinstance(batch, list) else [batch])
-                            logger.info("%s returned %d items", name, len(batch) if isinstance(batch, list) else 1)
+                            logger.info(
+                                "%s returned %d items",
+                                name,
+                                len(batch) if isinstance(batch, list) else 1,
+                            )
                     except Exception as exc:
                         logger.warning("%s failed: %s", name, exc)
         elif obs_method:
@@ -141,9 +146,19 @@ def main(argv: list[str] | None = None) -> int:
         # Generate proposal (Architect accepts findings; others analyze internally)
         gen = citizen.generate_proposal
         import inspect
+
         try:
             sig = inspect.signature(gen)
-            takes_arg = len([p for p in sig.parameters.values() if p.default is inspect.Parameter.empty or p.default is not None]) > 1
+            takes_arg = (
+                len(
+                    [
+                        p
+                        for p in sig.parameters.values()
+                        if p.default is inspect.Parameter.empty or p.default is not None
+                    ]
+                )
+                > 1
+            )
         except Exception:
             takes_arg = False
         if takes_arg:

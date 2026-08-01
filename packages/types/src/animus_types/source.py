@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Literal
 
@@ -13,35 +12,35 @@ from .common import Common
 
 
 class SourceKind(Enum):
-    document = 'document'
-    web = 'web'
-    email = 'email'
-    message = 'message'
-    audio = 'audio'
-    video = 'video'
-    dataset = 'dataset'
-    sensor = 'sensor'
-    manual_entry = 'manual_entry'
-    system = 'system'
+    document = "document"
+    web = "web"
+    email = "email"
+    message = "message"
+    audio = "audio"
+    video = "video"
+    dataset = "dataset"
+    sensor = "sensor"
+    manual_entry = "manual_entry"
+    system = "system"
 
 
 class AuthorityStatus(Enum):
-    canonical = 'canonical'
-    supporting = 'supporting'
-    historical = 'historical'
-    superseded = 'superseded'
-    untrusted = 'untrusted'
+    canonical = "canonical"
+    supporting = "supporting"
+    historical = "historical"
+    superseded = "superseded"
+    untrusted = "untrusted"
 
 
 class Payload(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     title: constr(min_length=1)
     source_kind: SourceKind
     capture_uri: constr(min_length=1)
     captured_at: AwareDatetime
-    content_sha256: constr(pattern=r'^[a-f0-9]{64}$')
+    content_sha256: constr(pattern=r"^[a-f0-9]{64}$")
     authority_status: AuthorityStatus
     publisher: str | None = None
     published_at: AwareDatetime | None = None
@@ -49,6 +48,6 @@ class Payload(BaseModel):
 
 
 class AnimusSourceObject(Common):
-    artifact_type: Literal['source'] | None = None
-    schema_id: Literal['https://animus.local/schemas/source.schema.json'] | None = None
+    artifact_type: Literal["source"] | None = None
+    schema_id: Literal["https://animus.local/schemas/source.schema.json"] | None = None
     payload: Payload | None = None

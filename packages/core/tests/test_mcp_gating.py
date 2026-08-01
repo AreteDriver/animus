@@ -104,7 +104,10 @@ class TestMCPToolGater:
         assert len(schemas) == 1
         assert schemas[0].name == "animus_recall"
         assert not schemas[0].is_compact
-        assert schemas[0].input_schema == {"type": "object", "properties": {"query": {"type": "string"}}}
+        assert schemas[0].input_schema == {
+            "type": "object",
+            "properties": {"query": {"type": "string"}},
+        }
 
     def test_get_gated_schemas_with_intent(self):
         gater = MCPToolGater(max_full_schemas=1)

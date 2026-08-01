@@ -124,11 +124,23 @@ class TestFeedbackDashboardRouter:
         assert recent[0]["rating"] == -1
 
     def test_record_feedback_no_store(self):
+        from fastapi.templating import Jinja2Templates
+
         from animus_bootstrap.dashboard.routers.feedback import router
 
         app = FastAPI()
         app.include_router(router)
         app.state.runtime = None
+
+        template_dir = (
+            Path(__file__).resolve().parent.parent
+            / "src"
+            / "animus_bootstrap"
+            / "dashboard"
+            / "templates"
+        )
+        app.state.templates = Jinja2Templates(directory=str(template_dir))
+
         client = TestClient(app)
         resp = client.post("/api/feedback", data={"rating": 1})
         assert resp.status_code == 200

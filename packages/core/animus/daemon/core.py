@@ -12,7 +12,6 @@ import atexit
 import json
 import os
 import signal
-import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -23,23 +22,19 @@ from typing import Any
 from animus.infrastructure import AlreadyRunningError, LockedPidFile
 from animus.logging import get_logger
 
-from .resource_guard import ResourceGuard, ResourceLimits
+from .code_watch import CodeIndexReindexer
 from .events import (
     DaemonEvent,
     EventPriority,
     EventType,
-    FileWatchEvent,
     FileWatchHandler,
     MCPHandler,
     ScheduledEvent,
     SignalEvent,
-    TimerEvent,
     TimerHandler,
-    WebhookEvent,
     WebhookHandler,
 )
-from .code_watch import CodeIndexReindexer
-from .resource_guard import ResourceGuard
+from .resource_guard import ResourceGuard, ResourceLimits
 from .scheduler import ScheduledTask, TaskScheduler
 from .session_manager import SessionManager
 
@@ -451,15 +446,14 @@ class AnimusDaemon:
             logger.warning("Media pipeline task %s has no URL", task.task_id)
             return
 
-        logger.info(
-            "Daemon executing media pipeline: %s (%s)", url, source_type
-        )
+        logger.info("Daemon executing media pipeline: %s (%s)", url, source_type)
 
         try:
             queue = ProposalQueue(memory_layer=self.memory)
             orchestrator = MediaPipelineOrchestrator(
                 memory_layer=self.memory,
-                codebase_path=self.config.citizens.codebase_path or str(self.config.data_dir.parent),
+                codebase_path=self.config.citizens.codebase_path
+                or str(self.config.data_dir.parent),
                 proposal_queue=queue,
             )
             report = orchestrator.run(
@@ -520,9 +514,7 @@ class AnimusDaemon:
             priority=priority,
         )
 
-    def add_file_watch_callback(
-        self, callback: Any, patterns: list[str] | None = None
-    ) -> None:
+    def add_file_watch_callback(self, callback: Any, patterns: list[str] | None = None) -> None:
         """Add a callback for file watch events."""
         if patterns:
             self.file_handler.patterns = patterns
@@ -544,9 +536,7 @@ class AnimusDaemon:
             globs: Filename patterns to include (default: ``*.py``, ``*.md``).
             exclude: Patterns to skip.
         """
-        self.code_reindexer.add_codebase(
-            Path(path), tags=tags, globs=globs, exclude=exclude
-        )
+        self.code_reindexer.add_codebase(Path(path), tags=tags, globs=globs, exclude=exclude)
 
     def add_webhook_endpoint(self, endpoint: str, callback: Any) -> None:
         """Register a webhook endpoint handler."""

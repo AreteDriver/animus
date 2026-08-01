@@ -166,12 +166,8 @@ class EventLedger:
                 )
                 """
             )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_events_type ON events(type)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_events_time ON events(timestamp)"
-            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_events_type ON events(type)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_events_time ON events(timestamp)")
             conn.commit()
 
     def _persist_event(self, event: dict[str, Any]) -> None:

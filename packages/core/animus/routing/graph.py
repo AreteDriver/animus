@@ -9,11 +9,10 @@ Graph model:
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from animus.logging import get_logger
@@ -54,7 +53,7 @@ class TaskSignature:
     hash: str  # Content hash for exact matching
 
     @classmethod
-    def from_prompt(cls, prompt: str, task_type: str | None = None) -> "TaskSignature":
+    def from_prompt(cls, prompt: str, task_type: str | None = None) -> TaskSignature:
         """Extract signature from a user prompt."""
         # Normalize and extract keywords
         text = prompt.lower()
@@ -79,7 +78,10 @@ class TaskSignature:
         text = text.lower()
 
         # Code-related tasks
-        if any(kw in text for kw in ("code", "implement", "function", "class", "debug", "fix bug", "refactor")):
+        if any(
+            kw in text
+            for kw in ("code", "implement", "function", "class", "debug", "fix bug", "refactor")
+        ):
             return "code"
         # Reasoning/planning tasks
         if any(kw in text for kw in ("plan", "design", "architect", "strategy", "analyze")):
@@ -99,7 +101,7 @@ class TaskSignature:
 
         return "general"
 
-    def similarity(self, other: "TaskSignature") -> float:
+    def similarity(self, other: TaskSignature) -> float:
         """Compute Jaccard similarity between keyword sets."""
         set1 = set(self.keywords)
         set2 = set(other.keywords)
@@ -208,9 +210,7 @@ class RoutingGraph:
         if len(edge.outcomes) > 100:
             edge.outcomes = edge.outcomes[-100:]
 
-    def get_edge(
-        self, provider_name: str, task_signature: TaskSignature
-    ) -> RoutingEdge | None:
+    def get_edge(self, provider_name: str, task_signature: TaskSignature) -> RoutingEdge | None:
         """Get edge for exact provider-task match."""
         edge_key = f"{provider_name}:{task_signature.hash}"
         return self.edges.get(edge_key)
@@ -235,9 +235,7 @@ class RoutingGraph:
             return {"total_attempts": 0, "overall_success_rate": 0.5}
 
         total_attempts = sum(e.total_attempts for e in provider_edges)
-        total_successes = sum(
-            sum(1 for o in e.outcomes if o.success) for e in provider_edges
-        )
+        total_successes = sum(sum(1 for o in e.outcomes if o.success) for e in provider_edges)
         avg_latency = sum(e.avg_latency_ms for e in provider_edges) / len(provider_edges)
         avg_quality = sum(e.avg_quality for e in provider_edges) / len(provider_edges)
 
@@ -300,7 +298,7 @@ class RoutingGraph:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "RoutingGraph":
+    def from_dict(cls, data: dict) -> RoutingGraph:
         """Deserialize graph from dict."""
         graph = cls()
         for p_data in data.get("providers", {}).values():

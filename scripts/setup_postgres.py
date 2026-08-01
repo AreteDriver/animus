@@ -144,9 +144,9 @@ def main() -> int:
         with eng.connect() as conn:
             result = conn.execute(text("SELECT version()"))
             version = result.scalar()
-            result = conn.execute(text(
-                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"
-            ))
+            result = conn.execute(
+                text("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'")
+            )
             table_count = result.scalar()
         print(f"  ✓ Version: {version.split()[1] if version else 'unknown'}")
         print(f"  ✓ Public tables: {table_count}")

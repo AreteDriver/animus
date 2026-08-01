@@ -5,22 +5,22 @@ Validates P-20260706-004: Rubric-Based Evaluation Rewards.
 
 import pytest
 
-from animus.eval.rubric import (
-    Dimension,
-    Rubric,
-    Score,
-    ScoreLevel,
-    DimensionScore,
-)
 from animus.eval.judge import (
-    RubricJudge,
     JudgeConfig,
+    RubricJudge,
     _level_from_value,
     _normalize_score,
 )
 from animus.eval.rewards import (
     RewardAggregator,
     RewardConfig,
+)
+from animus.eval.rubric import (
+    Dimension,
+    DimensionScore,
+    Rubric,
+    Score,
+    ScoreLevel,
 )
 from animus.eval.rubrics.personal_quality import create_personal_quality_rubric
 
@@ -84,12 +84,8 @@ class TestRubric:
     def test_rubric_building(self):
         rubric = (
             Rubric(name="test", description="test rubric")
-            .add_dimension(
-                Dimension(name="dim1", description="first", weight=1.0)
-            )
-            .add_dimension(
-                Dimension(name="dim2", description="second", weight=2.0)
-            )
+            .add_dimension(Dimension(name="dim1", description="first", weight=1.0))
+            .add_dimension(Dimension(name="dim2", description="second", weight=2.0))
         )
         assert len(rubric.dimensions) == 2
         assert rubric.total_weight == 3.0
@@ -177,9 +173,8 @@ class TestRubricJudge:
 
     def test_mock_judge_scoring(self):
         judge = RubricJudge(JudgeConfig(provider="mock"))
-        rubric = (
-            Rubric(name="simple", description="test")
-            .add_dimension(Dimension(name="quality", description="how good"))
+        rubric = Rubric(name="simple", description="test").add_dimension(
+            Dimension(name="quality", description="how good")
         )
         score = judge.judge(rubric, "This is a test output")
         assert score.rubric_name == "simple"
@@ -189,9 +184,8 @@ class TestRubricJudge:
 
     def test_mock_judge_detects_failure(self):
         judge = RubricJudge(JudgeConfig(provider="mock"))
-        rubric = (
-            Rubric(name="simple", description="test")
-            .add_dimension(Dimension(name="quality", description="how good"))
+        rubric = Rubric(name="simple", description="test").add_dimension(
+            Dimension(name="quality", description="how good")
         )
         score = judge.judge(rubric, "This output contains an error and fails")
         # Mock detects "error"/"fail" and returns POOR (2)
@@ -296,9 +290,7 @@ class TestRewardAggregator:
         assert reward == 1.0
 
     def test_selective_reward(self):
-        agg = RewardAggregator(
-            RewardConfig(selective_reward=True, selective_threshold=0.6)
-        )
+        agg = RewardAggregator(RewardConfig(selective_reward=True, selective_threshold=0.6))
         score = Score(
             rubric_name="test",
             dimension_scores=[

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -70,7 +69,7 @@ class Rubric:
     def total_weight(self) -> float:
         return sum(d.weight for d in self.dimensions)
 
-    def add_dimension(self, dimension: Dimension) -> "Rubric":
+    def add_dimension(self, dimension: Dimension) -> Rubric:
         """Add a dimension and return self for chaining."""
         self.dimensions.append(dimension)
         return self
@@ -103,17 +102,14 @@ class Rubric:
                     "description": d.description,
                     "weight": d.weight,
                     "required": d.required,
-                    "criteria": {
-                        str(level.value): desc
-                        for level, desc in d.criteria.items()
-                    },
+                    "criteria": {str(level.value): desc for level, desc in d.criteria.items()},
                 }
                 for d in self.dimensions
             ],
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Rubric":
+    def from_dict(cls, data: dict) -> Rubric:
         """Deserialize from dict."""
         rubric = cls(
             name=data["name"],
@@ -123,8 +119,7 @@ class Rubric:
         )
         for dim_data in data.get("dimensions", []):
             criteria = {
-                ScoreLevel(int(level)): desc
-                for level, desc in dim_data.get("criteria", {}).items()
+                ScoreLevel(int(level)): desc for level, desc in dim_data.get("criteria", {}).items()
             }
             rubric.add_dimension(
                 Dimension(
@@ -190,9 +185,7 @@ class Score:
         """True if any required dimension scored CRITICAL."""
         for ds in self.dimension_scores:
             if ds.level == ScoreLevel.CRITICAL:
-                is_required = self.metadata.get("required_dims", set()).get(
-                    ds.dimension_name, True
-                )
+                is_required = self.metadata.get("required_dims", set()).get(ds.dimension_name, True)
                 if is_required:
                     return True
         return False
@@ -217,7 +210,13 @@ class Score:
         lines.append("")
         lines.append("Dimension breakdown:")
         for ds in self.dimension_scores:
-            marker = "✓" if ds.level >= ScoreLevel.GOOD else "⚠️" if ds.level == ScoreLevel.ACCEPTABLE else "✗"
+            marker = (
+                "✓"
+                if ds.level >= ScoreLevel.GOOD
+                else "⚠️"
+                if ds.level == ScoreLevel.ACCEPTABLE
+                else "✗"
+            )
             lines.append(
                 f"  {marker} {ds.dimension_name}: {ds.level.name} "
                 f"({ds.raw_score:.2f}) — {ds.justification[:60]}"

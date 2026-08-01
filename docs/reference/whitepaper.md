@@ -9,7 +9,7 @@
 # Animus: A Three-Layer Architecture for Personal AI Sovereignty
 
 **Whitepaper v2.0 — February 2026 — SUPERSEDED, see banner above**
-**Author: ARETE (AreteDriver)**
+**Author: ARETE (your-org)**
 
 ---
 
@@ -449,4 +449,4 @@ The name Animus comes from the Latin for "mind, spirit, courage." The project's 
 
 *For implementation details, see the CLAUDE.md files in each monorepo. For build instructions, see the Developer Tools Build Specs. For the Marketing Engine design, see Marketing-Engine-Design.md.*
 
-*Contact: github.com/AreteDriver*
+*Contact: github.com/your-org*

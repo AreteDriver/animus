@@ -28,13 +28,16 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
-from animus.logging import get_logger
 from animus_types import ValidationError as _ContractValidationError
+
+from animus.logging import get_logger
 
 logger = get_logger("durability.postgres_store")
 
 try:
-    from animus_contracts import validate as _validate_contract  # boundary-ok: optional contract validation
+    from animus_contracts import (
+        validate as _validate_contract,  # boundary-ok: optional contract validation
+    )
 
     _HAS_CONTRACTS = True
 except ImportError:  # pragma: no cover
@@ -42,10 +45,10 @@ except ImportError:  # pragma: no cover
 
 try:
     from sqlalchemy import (
+        JSON,
         Column,
         DateTime,
         Integer,
-        JSON,
         String,
         create_engine,
         func,
@@ -187,9 +190,7 @@ if _HAS_SQLALCHEMY:
         valid_to = Column(DateTime(timezone=True), nullable=True)
 
         # Bitemporal — transaction time (system record interval)
-        recorded_at = Column(
-            DateTime(timezone=True), nullable=False, server_default=func.now()
-        )
+        recorded_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
         superseded_at = Column(DateTime(timezone=True), nullable=True)
 
         created_by = Column(String(256), nullable=False)
@@ -315,15 +316,12 @@ class DurableObjectStore:
     ):
         if not _HAS_SQLALCHEMY:
             raise RuntimeError(
-                "DurableObjectStore requires sqlalchemy. "
-                "Install: pip install animus[postgres]"
+                "DurableObjectStore requires sqlalchemy. Install: pip install animus[postgres]"
             )
 
         self.database_url = database_url or os.getenv("ANIMUS_DATABASE_URL")
         if not self.database_url:
-            raise RuntimeError(
-                "DurableObjectStore requires database_url or ANIMUS_DATABASE_URL."
-            )
+            raise RuntimeError("DurableObjectStore requires database_url or ANIMUS_DATABASE_URL.")
 
         self.owner_id = owner_id
         self.workspace_id = workspace_id
@@ -369,13 +367,15 @@ class DurableObjectStore:
             "tags": record.tags,
         }
         now = _now_utc()
-        integrity = _sha256({
-            "event_id": event_id,
-            "event_type": event_type,
-            "object_id": record.object_id,
-            "version": record.version,
-            "payload": payload,
-        })
+        integrity = _sha256(
+            {
+                "event_id": event_id,
+                "event_type": event_type,
+                "object_id": record.object_id,
+                "version": record.version,
+                "payload": payload,
+            }
+        )
 
         row = _LedgerEventRow(
             event_id=event_id,
@@ -471,9 +471,7 @@ class DurableObjectStore:
             logger.debug(f"Stored object {record.object_id} with event {event_id}")
             return record.object_id, event_id
 
-    def update(
-        self, record: ObjectRecord, expected_version: int | None = None
-    ) -> tuple[bool, str]:
+    def update(self, record: ObjectRecord, expected_version: int | None = None) -> tuple[bool, str]:
         """Update an object with optimistic concurrency control.
 
         If *expected_version* is provided and does not match the current
@@ -543,7 +541,9 @@ class DurableObjectStore:
                 },
             )
             session.commit()
-            logger.debug(f"Updated object {record.object_id} v{record.version} with event {event_id}")
+            logger.debug(
+                f"Updated object {record.object_id} v{record.version} with event {event_id}"
+            )
             return True, event_id
 
     def _validate_object_version(
@@ -676,8 +676,7 @@ class DurableObjectStore:
                 select(_ObjectRegistryRow).where(
                     _ObjectRegistryRow.object_id == object_id,
                     _ObjectRegistryRow.valid_from <= vt,
-                    _ObjectRegistryRow.valid_to.is_(None)
-                    | (_ObjectRegistryRow.valid_to > vt),
+                    _ObjectRegistryRow.valid_to.is_(None) | (_ObjectRegistryRow.valid_to > vt),
                 )
             ).scalar_one_or_none()
 
@@ -708,11 +707,15 @@ class DurableObjectStore:
     def get_ledger_events(self, object_id: str) -> list[dict[str, Any]]:
         """Retrieve all ledger events for an object, ordered by tx_time."""
         with self._session_factory() as session:
-            rows = session.execute(
-                select(_LedgerEventRow)
-                .where(_LedgerEventRow.object_id == object_id)
-                .order_by(_LedgerEventRow.tx_time)
-            ).scalars().all()
+            rows = (
+                session.execute(
+                    select(_LedgerEventRow)
+                    .where(_LedgerEventRow.object_id == object_id)
+                    .order_by(_LedgerEventRow.tx_time)
+                )
+                .scalars()
+                .all()
+            )
 
             return [
                 {
@@ -740,13 +743,15 @@ class DurableObjectStore:
             if not row:
                 return False
 
-            expected = _sha256({
-                "event_id": row.event_id,
-                "event_type": row.event_type,
-                "object_id": row.object_id,
-                "version": row.object_version,
-                "payload": row.payload,
-            })
+            expected = _sha256(
+                {
+                    "event_id": row.event_id,
+                    "event_type": row.event_type,
+                    "object_id": row.object_id,
+                    "version": row.object_version,
+                    "payload": row.payload,
+                }
+            )
             return row.integrity_hash == expected
 
     # ------------------------------------------------------------------
@@ -756,25 +761,31 @@ class DurableObjectStore:
     def claim_outbox_entries(self, worker_id: str, limit: int = 10) -> list[dict[str, Any]]:
         """Claim unprocessed outbox entries for a worker."""
         with self._session_factory() as session:
-            rows = session.execute(
-                select(_OutboxEntryRow)
-                .where(_OutboxEntryRow.processed_at.is_(None))
-                .where(_OutboxEntryRow.claimed_at.is_(None))
-                .limit(limit)
-            ).scalars().all()
+            rows = (
+                session.execute(
+                    select(_OutboxEntryRow)
+                    .where(_OutboxEntryRow.processed_at.is_(None))
+                    .where(_OutboxEntryRow.claimed_at.is_(None))
+                    .limit(limit)
+                )
+                .scalars()
+                .all()
+            )
 
             now = _now_utc()
             entries = []
             for row in rows:
                 row.claimed_at = now
                 row.claimed_by = worker_id
-                entries.append({
-                    "entry_id": row.entry_id,
-                    "topic": row.topic,
-                    "payload": row.payload,
-                    "headers": row.headers,
-                    "created_at": row.created_at.isoformat() if row.created_at else None,
-                })
+                entries.append(
+                    {
+                        "entry_id": row.entry_id,
+                        "topic": row.topic,
+                        "payload": row.payload,
+                        "headers": row.headers,
+                        "created_at": row.created_at.isoformat() if row.created_at else None,
+                    }
+                )
             session.commit()
             return entries
 

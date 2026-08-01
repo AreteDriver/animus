@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from animus_forge.evaluation.base import EvalCase, EvalStatus
+from animus_forge.evaluation.base import EvalCase
 from animus_forge.evaluation.metrics import (
     JudgeError,
     RubricJudgeMetric,
@@ -57,7 +57,7 @@ class TestRubricJudgeMetric:
 
     def test_parse_with_markdown_fences(self):
         metric = RubricJudgeMetric()
-        text = "```json\n{\"criteria\": {}, \"overall\": 7.0}\n```"
+        text = '```json\n{"criteria": {}, "overall": 7.0}\n```'
         parsed = metric._parse_judge_response(text)
         assert parsed is not None
         assert parsed["overall"] == 7.0
@@ -71,9 +71,7 @@ class TestRubricJudgeMetric:
         assert metric._parse_judge_response('{"criteria": {}}') is None
 
     def test_weighted_average(self):
-        metric = RubricJudgeMetric(
-            weights={"correctness": 2.0, "completeness": 1.0}
-        )
+        metric = RubricJudgeMetric(weights={"correctness": 2.0, "completeness": 1.0})
         criteria = {
             "correctness": {"score": 10},
             "completeness": {"score": 4},
@@ -101,9 +99,7 @@ class TestRubricJudgeMetric:
             metric.score("output", None, case)
 
     def test_criteria_descriptions_used_in_prompt(self):
-        provider = MockProvider(
-            response_text='{"criteria": {"foo": {"score": 5}}, "overall": 5.0}'
-        )
+        provider = MockProvider(response_text='{"criteria": {"foo": {"score": 5}}, "overall": 5.0}')
         metric = RubricJudgeMetric(
             judge_provider=provider,
             criteria={"foo": "Bar baz"},
@@ -143,7 +139,5 @@ class TestRubricRegistry:
         assert "safety" in metric._criteria
 
     def test_create_metric_with_weights(self):
-        metric = RubricRegistry.create_metric(
-            "default", weights={"correctness": 2.0}
-        )
+        metric = RubricRegistry.create_metric("default", weights={"correctness": 2.0})
         assert metric._weights == {"correctness": 2.0}

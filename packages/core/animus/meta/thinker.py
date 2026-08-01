@@ -26,16 +26,15 @@ Integration:
                 ...
 """
 
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 from animus.logging import get_logger
 from animus.meta.anomalies import (
     AnomalyDetector,
     AnomalyReport,
     CircularToolUse,
-    RepeatedFailures,
     GoalDrift,
+    RepeatedFailures,
     Stagnation,
 )
 from animus.meta.events import Event
@@ -46,7 +45,6 @@ from animus.meta.signals import (
     ReplanSignal,
     ReplanStrategy,
     Signal,
-    SignalType,
 )
 
 logger = get_logger("meta-thinker")
@@ -108,7 +106,7 @@ class MetaThinker:
             return
         self._events.append(event)
         if len(self._events) > self._MAX_EVENTS:
-            self._events = self._events[-self._MAX_EVENTS:]
+            self._events = self._events[-self._MAX_EVENTS :]
         # Forward to detectors
         for detector in self._detectors:
             detector.observe(event)
@@ -242,6 +240,7 @@ class MetaThinker:
 
         # Mention repeated tools
         from collections import Counter
+
         tool_names = [e.tool_name for e in tool_execs]
         repeats = Counter(tool_names).most_common(1)
         if repeats and repeats[0][1] > 1:

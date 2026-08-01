@@ -66,6 +66,7 @@ class OpenAPIDiscovery:
         try:
             if path.suffix in (".yaml", ".yml"):
                 import yaml
+
                 spec = yaml.safe_load(path.read_text())
             else:
                 spec = json.loads(path.read_text())
@@ -95,6 +96,7 @@ class OpenAPIDiscovery:
             resp.raise_for_status()
             if url.endswith((".yaml", ".yml")):
                 import yaml
+
                 spec = yaml.safe_load(resp.text)
             else:
                 spec = resp.json()

@@ -12,7 +12,7 @@ inputs:
   output_file:
     type: string
     description: Where to write the report
-    default: "/home/arete/.animus/fleet_reports/daily.md"
+    default: "~/.animus/fleet_reports/daily.md"
 
 timeout_seconds: 120
 estimated_tokens: 1000
@@ -67,10 +67,10 @@ steps:
     type: shell
     description: Check for any unresolved alert tasks
     command: |
-      if [ -f /home/arete/.animus/fleet_alerts/active_alerts.json ]; then
-        ACTIVE=$(python3 -c "import json; d=json.load(open('/home/arete/.animus/fleet_alerts/active_alerts.json')); print(len(d))")
+      if [ -f ~/.animus/fleet_alerts/active_alerts.json ]; then
+        ACTIVE=$(python3 -c "import json; d=json.load(open('~/.animus/fleet_alerts/active_alerts.json')); print(len(d))")
         echo "Active alerts: $ACTIVE"
-        cat /home/arete/.animus/fleet_alerts/active_alerts.json
+        cat ~/.animus/fleet_alerts/active_alerts.json
       else
         echo "Active alerts: 0"
       fi
@@ -82,7 +82,7 @@ steps:
     description: Save the report to file
     depends_on: [check_all]
     command: |
-      mkdir -p /home/arete/.animus/fleet_reports
+      mkdir -p ~/.animus/fleet_reports
       cat << 'REPORT' > "${output_file}"
       ${check_all}
 

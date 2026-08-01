@@ -15,6 +15,7 @@ The ``.prof`` file can be visualised with snakeviz::
     pip install snakeviz
     snakeviz output/kernel-benchmark.prof
 """
+
 from __future__ import annotations
 
 import cProfile
@@ -39,9 +40,12 @@ def main() -> int:
     pr.enable()
     result = subprocess.run(
         [
-            sys.executable, "-m", "pytest",
+            sys.executable,
+            "-m",
+            "pytest",
             "packages/kernel/tests/test_benchmarks.py",
-            "--benchmark-only", "-q",
+            "--benchmark-only",
+            "-q",
         ],
         capture_output=True,
         text=True,
@@ -55,18 +59,18 @@ def main() -> int:
     stats.sort_stats(pstats.SortKey.CUMULATIVE)
 
     with open(hotspots_path, "w") as fh:
-        fh.write(f"Kernel Benchmark Hotspots (top 20 by cumulative time)\n")
+        fh.write("Kernel Benchmark Hotspots (top 20 by cumulative time)\n")
         fh.write("=" * 60 + "\n")
         stats.stream = fh
         stats.print_stats(20)
 
     with open(callers_path, "w") as fh:
-        fh.write(f"Kernel Benchmark Callers (top 20 by cumulative time)\n")
+        fh.write("Kernel Benchmark Callers (top 20 by cumulative time)\n")
         fh.write("=" * 60 + "\n")
         stats.stream = fh
         stats.print_callers(20)
 
-    print(f"Profiling complete:")
+    print("Profiling complete:")
     print(f"  Raw profile:    {prof_path}")
     print(f"  Hotspots:       {hotspots_path}")
     print(f"  Callers:        {callers_path}")

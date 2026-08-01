@@ -3,23 +3,21 @@
 
 from __future__ import annotations
 
-
-from enum import Enum
 from typing import Any
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, RootModel, conint, constr
+from pydantic import AwareDatetime, BaseModel, ConfigDict, conint, constr
 
 
 class ObjectVersion(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
-    object_id: constr(pattern=r'^[a-z][a-z0-9_-]{2,127}$')
+    object_id: constr(pattern=r"^[a-z][a-z0-9_-]{2,127}$")
     object_version: conint(ge=1)
     schema_id: constr(min_length=3)
-    schema_version: constr(pattern=r'^[0-9]+\.[0-9]+\.[0-9]+$')
-    owner_id: constr(pattern=r'^owner-[a-z0-9_-]+$')
-    workspace_id: constr(pattern=r'^ws-[a-z0-9_-]+$')
+    schema_version: constr(pattern=r"^[0-9]+\.[0-9]+\.[0-9]+$")
+    owner_id: constr(pattern=r"^owner-[a-z0-9_-]+$")
+    workspace_id: constr(pattern=r"^ws-[a-z0-9_-]+$")
     subject_domain: SubjectDomain
     artifact_type: ArtifactType
     cognitive_role: CognitiveRole
@@ -35,6 +33,6 @@ class ObjectVersion(BaseModel):
     superseded_at: AwareDatetime | None = None
     created_by: constr(min_length=3)
     trace_id: str | None = None
-    content_sha256: constr(pattern=r'^[a-f0-9]{64}$')
+    content_sha256: constr(pattern=r"^[a-f0-9]{64}$")
     payload: dict[str, Any]
     tags: list[Tag] | None = None

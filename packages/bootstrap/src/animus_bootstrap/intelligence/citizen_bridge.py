@@ -62,11 +62,31 @@ class CitizenBridge:
     """
 
     _CITIZEN_REGISTRY: list[dict[str, str]] = [
-        {"name": "architect", "display_name": "Architect", "description": "Observes codebase, conversations, and evaluations to produce evidence-backed improvement proposals."},
-        {"name": "conversation_designer", "display_name": "Conversation Designer", "description": "Detects correction loops, vague requests, and repeated prompts in conversation logs."},
-        {"name": "knowledge_curator", "display_name": "Knowledge Curator", "description": "Scans memory for stale references, contradictions, and orphan topics."},
-        {"name": "test_oracle", "display_name": "Test Oracle", "description": "Analyzes test suite health, coverage trends, and eval results."},
-        {"name": "session_steward", "display_name": "Session Steward", "description": "Audits session telemetry for policy inefficiencies and timer waste."},
+        {
+            "name": "architect",
+            "display_name": "Architect",
+            "description": "Observes codebase, conversations, and evaluations to produce evidence-backed improvement proposals.",
+        },
+        {
+            "name": "conversation_designer",
+            "display_name": "Conversation Designer",
+            "description": "Detects correction loops, vague requests, and repeated prompts in conversation logs.",
+        },
+        {
+            "name": "knowledge_curator",
+            "display_name": "Knowledge Curator",
+            "description": "Scans memory for stale references, contradictions, and orphan topics.",
+        },
+        {
+            "name": "test_oracle",
+            "display_name": "Test Oracle",
+            "description": "Analyzes test suite health, coverage trends, and eval results.",
+        },
+        {
+            "name": "session_steward",
+            "display_name": "Session Steward",
+            "description": "Audits session telemetry for policy inefficiencies and timer waste.",
+        },
     ]
 
     def __init__(self, runtime: Any | None = None) -> None:
@@ -87,6 +107,7 @@ class CitizenBridge:
             return self._core_available
         try:
             import animus.memory  # noqa: F401
+
             self._core_available = True
         except ImportError:
             self._core_available = False
@@ -328,7 +349,7 @@ class CitizenBridge:
         # Try to delegate to ForgeCommissioner
         try:
             from animus.citizens.commissioner import ForgeCommissioner
-            from animus.citizens.proposal import ImprovementProposal, ProposalStatus
+            from animus.citizens.proposal import ProposalStatus
 
             # Rebuild the full proposal from the view
             full_proposal = self._rebuild_proposal(proposal_id)
@@ -361,6 +382,7 @@ class CitizenBridge:
         """Resolve a string memory type to the core MemoryType enum."""
         try:
             from animus.memory.types import MemoryType
+
             return MemoryType(type_str.upper())
         except Exception:
             return None
@@ -401,6 +423,7 @@ class CitizenBridge:
                 meta = getattr(mem, "metadata", {}) or {}
                 if meta.get("id") == proposal_id:
                     from animus.citizens.proposal import ImprovementProposal
+
                     return ImprovementProposal.from_dict(meta)
         except Exception as e:
             logger.warning("Failed to rebuild proposal %s: %s", proposal_id, e)

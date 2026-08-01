@@ -12,8 +12,8 @@ import ast
 from pathlib import Path
 
 import pytest
-import sqlalchemy as sa
-from alembic import command, config as alembic_config
+from alembic import command
+from alembic import config as alembic_config
 from sqlalchemy import create_engine, inspect
 
 MIGRATION_DIR = Path(__file__).parent.parent / "migrations" / "versions"
@@ -48,7 +48,9 @@ class TestMigrationSyntax:
             and node.func.attr == "create_table"
         ]
         table_names = {
-            node.args[0].value for node in create_table_calls if isinstance(node.args[0], ast.Constant)
+            node.args[0].value
+            for node in create_table_calls
+            if isinstance(node.args[0], ast.Constant)
         }
         assert table_names == {"object_registry", "event_ledger", "traceability"}, (
             f"Expected exactly 3 tables, got {table_names}"
@@ -78,8 +80,10 @@ class TestMigrationExecution:
         """Provide a fresh SQLite file-backed engine for migration persistence."""
         # Use a temp file so tables survive across connections (Alembic env.py creates its own)
         import tempfile
+
         fd, path = tempfile.mkstemp(suffix=".db")
         import os
+
         os.close(fd)
         engine = create_engine(f"sqlite:///{path}")
         yield engine
@@ -115,20 +119,14 @@ class TestMigrationExecution:
         command.upgrade(alembic_cfg, "head")
         inspector = inspect(sqlite_engine)
         first_tables = set(inspector.get_table_names())
-        first_columns = {
-            t: {c["name"] for c in inspector.get_columns(t)}
-            for t in first_tables
-        }
+        first_columns = {t: {c["name"] for c in inspector.get_columns(t)} for t in first_tables}
 
         command.downgrade(alembic_cfg, "base")
         command.upgrade(alembic_cfg, "head")
 
         inspector = inspect(sqlite_engine)
         second_tables = set(inspector.get_table_names())
-        second_columns = {
-            t: {c["name"] for c in inspector.get_columns(t)}
-            for t in second_tables
-        }
+        second_columns = {t: {c["name"] for c in inspector.get_columns(t)} for t in second_tables}
 
         assert first_tables == second_tables
         assert first_columns == second_columns
@@ -167,7 +165,10 @@ class TestMigrationExecution:
     def test_object_registry_column_types(self, sqlite_engine, alembic_cfg):
         command.upgrade(alembic_cfg, "head")
         inspector = inspect(sqlite_engine)
-        columns = {c["name"]: c["type"].__class__.__name__ for c in inspector.get_columns("object_registry")}
+        columns = {
+            c["name"]: c["type"].__class__.__name__
+            for c in inspector.get_columns("object_registry")
+        }
         assert columns["id"] == "BIGINT"
         assert columns["object_id"] == "VARCHAR"
         assert columns["payload"] == "JSON"

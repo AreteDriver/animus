@@ -7,7 +7,7 @@ code" regression-test pattern.
 
 Environment:
     BENCHGOBLINS_PATH: Override for BG `src/api` location. Defaults to
-        `/home/arete/projects/BenchGoblins/src/api`.
+        `~/projects/BenchGoblins/src/api`.
     ANTHROPIC_API_KEY: Required. `make_decision` raises RuntimeError
         without it.
     EVAL_USE_CACHE: "1" to let BG's TTL cache serve responses (speeds up
@@ -29,7 +29,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-_DEFAULT_BG_PATH = Path(os.getenv("BENCHGOBLINS_PATH", "/home/arete/projects/BenchGoblins/src/api"))
+_DEFAULT_BG_PATH = Path(os.getenv("BENCHGOBLINS_PATH", "~/projects/BenchGoblins/src/api"))
 
 
 def _ensure_bg_importable() -> None:

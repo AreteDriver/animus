@@ -8,7 +8,6 @@ No cookies or state persist between requests.  Anti-detection escalation
 from __future__ import annotations
 
 import asyncio
-import logging
 import os
 import shutil
 import subprocess
@@ -16,7 +15,6 @@ import tempfile
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
@@ -106,8 +104,7 @@ class BrowserBridge:
     def __init__(self, config: BrowserConfig | None = None) -> None:
         if not _HAS_NODRIVER:
             raise RuntimeError(
-                "BrowserBridge requires 'nodriver'. "
-                "Install with: pip install nodriver"
+                "BrowserBridge requires 'nodriver'. Install with: pip install nodriver"
             )
         self.config = config or BrowserConfig()
         self._emulation = None  # lazy import to avoid heavy dep at init
@@ -174,7 +171,9 @@ class BrowserBridge:
 
             status_code = 200  # nodriver doesn't expose HTTP status cleanly
             try:
-                resp = await tab.evaluate("window.performance.getEntriesByType('navigation')[0].responseStatus")
+                resp = await tab.evaluate(
+                    "window.performance.getEntriesByType('navigation')[0].responseStatus"
+                )
                 if isinstance(resp, int):
                     status_code = resp
             except Exception:

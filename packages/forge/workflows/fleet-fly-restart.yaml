@@ -26,10 +26,10 @@ steps:
     description: Check current machine state before restart
     command: |
       echo "=== Machine Status ==="
-      /home/arete/.fly/bin/flyctl status -a "${fly_app}" 2>&1 | head -20
+      ~/.fly/bin/flyctl status -a "${fly_app}" 2>&1 | head -20
       echo ""
       echo "=== Machine List ==="
-      /home/arete/.fly/bin/flyctl machine list -a "${fly_app}" 2>&1
+      ~/.fly/bin/flyctl machine list -a "${fly_app}" 2>&1
     timeout_seconds: 15
     on_failure: skip
 
@@ -37,7 +37,7 @@ steps:
     type: shell
     description: Restart all machines
     command: |
-      /home/arete/.fly/bin/flyctl apps restart "${fly_app}" 2>&1
+      ~/.fly/bin/flyctl apps restart "${fly_app}" 2>&1
     timeout_seconds: 60
 
   - id: wait_healthy
@@ -69,7 +69,7 @@ steps:
     description: Final machine status after restart
     depends_on: [wait_healthy]
     command: |
-      /home/arete/.fly/bin/flyctl status -a "${fly_app}" 2>&1 | head -20
+      ~/.fly/bin/flyctl status -a "${fly_app}" 2>&1 | head -20
     timeout_seconds: 15
     on_failure: skip
 

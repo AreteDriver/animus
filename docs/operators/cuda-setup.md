@@ -1,8 +1,8 @@
 # CUDA Setup Guide for Animus AI Box
 
-**Target:** Ubuntu 24.04 LTS · NVIDIA GeForce RTX 30/40-series or Tesla · 24+ GB VRAM  
-**Goal:** Local LLM inference for Ollama · Speed: 40–120 tokens/sec for 30B models  
-**Scope:** Driver → CUDA → Docker GPU passthrough → Ollama → Animus wiring  
+**Target:** Ubuntu 24.04 LTS · NVIDIA GeForce RTX 30/40-series or Tesla · 24+ GB VRAM
+**Goal:** Local LLM inference for Ollama · Speed: 40–120 tokens/sec for 30B models
+**Scope:** Driver → CUDA → Docker GPU passthrough → Ollama → Animus wiring
 **Author:** ARETE · Canonical: update this doc when driver/CUDA major versions change
 
 ---

@@ -27,7 +27,7 @@ from animus.lugh.sources.rss import FeedEntry, fetch_feed
 
 logger = logging.getLogger(__name__)
 
-USER_AGENT = "animus-lugh/1.0 (+https://github.com/AreteDriver/animus)"
+USER_AGENT = "animus-lugh/1.0 (+https://github.com/your-org/animus)"
 HTTP_TIMEOUT_SECONDS = 15
 TRANSCRIPT_MAX_BYTES = 2_000_000  # 2 MB ceiling on transcript fetches
 

@@ -44,11 +44,7 @@ def get_mcp_intent() -> str | None:
 
 def _tokenize(text: str) -> set[str]:
     """Normalize and tokenize text for ISO scoring."""
-    return set(
-        re.sub(r"[^a-z0-9]", "", w.lower())
-        for w in text.split()
-        if len(w) > 2
-    )
+    return set(re.sub(r"[^a-z0-9]", "", w.lower()) for w in text.split() if len(w) > 2)
 
 
 @dataclass
@@ -199,9 +195,7 @@ class MCPToolGater:
             meta = self._tools[name]
             is_compact = i >= max_full and not meta.always_expose
             schema = (
-                _make_compact_schema(self._schemas[name])
-                if is_compact
-                else self._schemas[name]
+                _make_compact_schema(self._schemas[name]) if is_compact else self._schemas[name]
             )
             results.append(
                 GatedSchema(

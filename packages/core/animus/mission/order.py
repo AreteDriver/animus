@@ -110,8 +110,12 @@ class MissionOrder:
     mission_type: str  # e.g., "code_review", "threat_scan", "data_analysis"
     objectives: dict[str, Any] = field(default_factory=dict)
     constraints: list[MissionConstraint] = field(default_factory=list)
-    authority_limits: list[str] = field(default_factory=list)  # e.g., ["read", "analysis"], NOT ["write", "deploy"]
-    return_conditions: list[str] = field(default_factory=list)  # e.g., ["on_complete", "on_timeout", "on_error"]
+    authority_limits: list[str] = field(
+        default_factory=list
+    )  # e.g., ["read", "analysis"], NOT ["write", "deploy"]
+    return_conditions: list[str] = field(
+        default_factory=list
+    )  # e.g., ["on_complete", "on_timeout", "on_error"]
     timeout: timedelta = field(default_factory=lambda: timedelta(minutes=30))
     priority: int = 5  # 1=highest, 10=lowest
     tags: list[str] = field(default_factory=list)
@@ -178,9 +182,7 @@ class MissionOrder:
             citizen_id=data["citizen_id"],
             mission_type=data["mission_type"],
             objectives=data.get("objectives", {}),
-            constraints=[
-                MissionConstraint.from_dict(c) for c in data.get("constraints", [])
-            ],
+            constraints=[MissionConstraint.from_dict(c) for c in data.get("constraints", [])],
             authority_limits=data.get("authority_limits", []),
             return_conditions=data.get("return_conditions", []),
             timeout=timedelta(seconds=data.get("timeout_seconds", 1800)),
@@ -189,8 +191,12 @@ class MissionOrder:
             preferred_runtime=data.get("preferred_runtime", "local"),
             status=MissionStatus[data.get("status", "DRAFT")],
             issued_at=datetime.fromisoformat(data["issued_at"]) if data.get("issued_at") else None,
-            started_at=datetime.fromisoformat(data["started_at"]) if data.get("started_at") else None,
-            completed_at=datetime.fromisoformat(data["completed_at"]) if data.get("completed_at") else None,
+            started_at=datetime.fromisoformat(data["started_at"])
+            if data.get("started_at")
+            else None,
+            completed_at=datetime.fromisoformat(data["completed_at"])
+            if data.get("completed_at")
+            else None,
         )
         if data.get("result"):
             order.result = MissionResult.from_dict(data["result"])

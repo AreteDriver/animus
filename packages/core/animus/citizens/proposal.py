@@ -34,10 +34,10 @@ class ProposalConfidence(str, Enum):
     """Confidence levels for proposals."""
 
     VERY_HIGH = "very_high"  # ≥ 0.9
-    HIGH = "high"            # ≥ 0.75
-    MEDIUM = "medium"        # ≥ 0.5
-    LOW = "low"              # ≥ 0.25
-    VERY_LOW = "very_low"    # < 0.25
+    HIGH = "high"  # ≥ 0.75
+    MEDIUM = "medium"  # ≥ 0.5
+    LOW = "low"  # ≥ 0.25
+    VERY_LOW = "very_low"  # < 0.25
 
 
 @dataclass

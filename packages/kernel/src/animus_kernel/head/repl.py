@@ -22,7 +22,11 @@ from animus_kernel.head.intent_parser import HeadIntentParser, IntentType
 from animus_kernel.head.planner import HeadPlanner
 from animus_kernel.head.quality_gate import HeadQualityGate
 from animus_kernel.head.session_bootstrap import SessionBootstrap
-from animus_kernel.head.session_controller import SessionController, SessionLifecycleEvent, SessionPolicy
+from animus_kernel.head.session_controller import (
+    SessionController,
+    SessionLifecycleEvent,
+    SessionPolicy,
+)
 from animus_kernel.head.synthesizer import HeadSynthesizer
 from animus_kernel.head.tool_orchestrator import HeadToolOrchestrator
 from animus_kernel.head.tool_validator import RetryableToolExecutor
@@ -689,7 +693,7 @@ class HeadREPL:
             )
 
         print(f"   🧠 New session started: {self.session_id}")
-        print(f"   📥 Restored context from previous session.\n")
+        print("   📥 Restored context from previous session.\n")
 
     # ------------------------------------------------------------------
     # Model call
@@ -755,7 +759,7 @@ class HeadREPL:
         if pin:
             print(f"   🔒 Pinned: {pin}")
         else:
-            print(f"   🔓 Not pinned")
+            print("   🔓 Not pinned")
 
         # List installed models
         try:
@@ -788,7 +792,7 @@ class HeadREPL:
         from animus_kernel.providers.hardware import detect_hardware
 
         hw = detect_hardware()
-        print(f"\n   Hardware profile:")
+        print("\n   Hardware profile:")
         print(f"   • Platform: {hw.platform_id}")
         print(f"   • GPU: {hw.gpu_name or 'None detected'}")
         if hw.gpu_vram_gb:
@@ -845,7 +849,7 @@ class HeadREPL:
         for i, c in enumerate(candidates[:3], 1):
             marker = "  ← already running" if c == self.model else ""
             print(f"   {i}. {c}{marker}")
-        print(f"\n   Use /model <name> to swap.")
+        print("\n   Use /model <name> to swap.")
         print()
 
     def _show_model_stats(self) -> None:
@@ -855,9 +859,7 @@ class HeadREPL:
             return
 
         print("\n   Model performance this session:")
-        print(
-            f"   {'Model':<25} {'Calls':>6} {'Avg ms':>10} {'Tokens/sec':>12} {'Fallbacks':>10}"
-        )
+        print(f"   {'Model':<25} {'Calls':>6} {'Avg ms':>10} {'Tokens/sec':>12} {'Fallbacks':>10}")
         print(f"   {'-' * 25} {'-' * 6} {'-' * 10} {'-' * 12} {'-' * 10}")
         for model, data in sorted(
             self._model_telemetry.items(),
@@ -867,14 +869,10 @@ class HeadREPL:
             avg_lat = data["latency_ms"] / calls
             tokens = data["tokens"]
             tps = (
-                round((tokens / (data["latency_ms"] / 1000)), 1)
-                if data["latency_ms"] > 0
-                else 0.0
+                round((tokens / (data["latency_ms"] / 1000)), 1) if data["latency_ms"] > 0 else 0.0
             )
             fallbacks = data.get("fallbacks", 0)
-            print(
-                f"   {model:<25} {calls:>6} {avg_lat:>10.1f} {tps:>12} {fallbacks:>10}"
-            )
+            print(f"   {model:<25} {calls:>6} {avg_lat:>10.1f} {tps:>12} {fallbacks:>10}")
         print()
 
     def _pin_model(self, model: str) -> None:

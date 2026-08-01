@@ -30,7 +30,6 @@ from typing import TYPE_CHECKING, Any
 from animus.citizens.proposal import (
     EvidenceItem,
     ImprovementProposal,
-    ProposalConfidence,
     ProposalStatus,
     RiskAssessment,
 )
@@ -121,12 +120,47 @@ class ArchitectureReport:
 
 # Category → (keywords to search, subsystem areas)
 _GAP_KEYWORDS: dict[str, list[str]] = {
-    "architecture": ["separation", "modular", "boundary", "layer", "interface", "abstraction", "coupling"],
-    "reliability": ["resilien", "fault", "retry", "circuit", "backoff", "graceful", "timeout", "recovery"],
-    "operations": ["observ", "metric", "trace", "log", "monitor", "telemetry", "alert", "dashboard"],
+    "architecture": [
+        "separation",
+        "modular",
+        "boundary",
+        "layer",
+        "interface",
+        "abstraction",
+        "coupling",
+    ],
+    "reliability": [
+        "resilien",
+        "fault",
+        "retry",
+        "circuit",
+        "backoff",
+        "graceful",
+        "timeout",
+        "recovery",
+    ],
+    "operations": [
+        "observ",
+        "metric",
+        "trace",
+        "log",
+        "monitor",
+        "telemetry",
+        "alert",
+        "dashboard",
+    ],
     "security": ["auth", "encrypt", "tls", "permission", "identity", "rbac", "vault", "secret"],
     "quality": ["test", "mock", "fixture", "coverage", "contract", "validation", "assert"],
-    "performance": ["cache", "memoiz", "paginat", "batch", "stream", "throttl", "limit", "optimize"],
+    "performance": [
+        "cache",
+        "memoiz",
+        "paginat",
+        "batch",
+        "stream",
+        "throttl",
+        "limit",
+        "optimize",
+    ],
     "deployment": ["feature flag", "canary", "rollout", "toggle", "blue.green"],
 }
 
@@ -136,11 +170,34 @@ def _extract_keywords(text: str) -> list[str]:
     words = re.findall(r"\b[a-z]{4,}\b", text.lower())
     # Filter to meaningful terms
     meaningful = {
-        "separate", "separation", "state", "computation", "survive", "resilience",
-        "fault", "tolerant", "graceful", "decouple", "async", "scale", "observ",
-        "security", "design", "testability", "architectural", "abstraction",
-        "performance", "correctness", "determinism", "complexity", "boundary",
-        "modular", "maintainable", "reliable", "identity", "verify",
+        "separate",
+        "separation",
+        "state",
+        "computation",
+        "survive",
+        "resilience",
+        "fault",
+        "tolerant",
+        "graceful",
+        "decouple",
+        "async",
+        "scale",
+        "observ",
+        "security",
+        "design",
+        "testability",
+        "architectural",
+        "abstraction",
+        "performance",
+        "correctness",
+        "determinism",
+        "complexity",
+        "boundary",
+        "modular",
+        "maintainable",
+        "reliable",
+        "identity",
+        "verify",
     }
     return [w for w in words if w in meaningful or len(w) > 5]
 
@@ -214,8 +271,12 @@ class ArchitectureCitizen:
                 limit=50,
             )
             for mem in results:
-                content = mem.get("content", "") if hasattr(mem, "get") else getattr(mem, "content", "")
-                meta = mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
+                content = (
+                    mem.get("content", "") if hasattr(mem, "get") else getattr(mem, "content", "")
+                )
+                meta = (
+                    mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
+                )
                 if not isinstance(meta, dict):
                     meta = {}
 
@@ -226,19 +287,21 @@ class ArchitectureCitizen:
                 source_provenance = meta.get("source_provenance", [])
 
                 if statement:
-                    findings.append({
-                        "source": "memory",
-                        "description": f"Principle: {statement[:80]}",
-                        "severity": "info",
-                        "context": {
-                            "principle_statement": statement,
-                            "category": category,
-                            "supporting_patterns": supporting,
-                            "tags": tags,
-                            "source_provenance": source_provenance,
-                            "pattern_type": "principle_card",
-                        },
-                    })
+                    findings.append(
+                        {
+                            "source": "memory",
+                            "description": f"Principle: {statement[:80]}",
+                            "severity": "info",
+                            "context": {
+                                "principle_statement": statement,
+                                "category": category,
+                                "supporting_patterns": supporting,
+                                "tags": tags,
+                                "source_provenance": source_provenance,
+                                "pattern_type": "principle_card",
+                            },
+                        }
+                    )
 
         except Exception as e:
             logger.warning("observe_principles failed: %s", e)
@@ -348,7 +411,9 @@ class ArchitectureCitizen:
                 keyword_total=len(keywords),
                 coverage_ratio=coverage,
                 confidence=0.5 + (coverage * 0.3),
-                recommendation=self._draft_recommendation(statement, category, severity, affected_files),
+                recommendation=self._draft_recommendation(
+                    statement, category, severity, affected_files
+                ),
                 estimated_effort_hours=self._estimate_effort(severity, len(affected_files)),
             )
             gaps.append(gap)
@@ -357,7 +422,11 @@ class ArchitectureCitizen:
         severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
         gaps.sort(key=lambda g: severity_order.get(g.severity, 4))
 
-        logger.info("ArchitectureCitizen analyze_gaps: %d gap(s) from %d principle(s)", len(gaps), len(principles))
+        logger.info(
+            "ArchitectureCitizen analyze_gaps: %d gap(s) from %d principle(s)",
+            len(gaps),
+            len(principles),
+        )
         return gaps
 
     def _analyze_media_gap(self, principle: dict[str, Any]) -> GapAnalysis | None:
@@ -406,12 +475,16 @@ class ArchitectureCitizen:
             keyword_total=1,
             coverage_ratio=1.0 if affected_files else 0.0,
             confidence=0.6,
-            recommendation=self._draft_recommendation(statement, category, severity, affected_files),
+            recommendation=self._draft_recommendation(
+                statement, category, severity, affected_files
+            ),
             estimated_effort_hours=self._estimate_effort(severity, len(affected_files)),
         )
         return gap
 
-    def _draft_recommendation(self, statement: str, category: str, severity: str, affected_files: list[str]) -> str:
+    def _draft_recommendation(
+        self, statement: str, category: str, severity: str, affected_files: list[str]
+    ) -> str:
         """Draft a concrete recommendation for closing a gap."""
         rec = f"Consider applying the principle: '{statement[:100]}'"
         if affected_files:
@@ -434,7 +507,9 @@ class ArchitectureCitizen:
     # Proposal generation
     # ------------------------------------------------------------------
 
-    def generate_proposal(self, gaps: list[GapAnalysis] | None = None) -> ImprovementProposal | None:
+    def generate_proposal(
+        self, gaps: list[GapAnalysis] | None = None
+    ) -> ImprovementProposal | None:
         """Generate an improvement proposal from identified gaps.
 
         Args:
@@ -478,8 +553,12 @@ class ArchitectureCitizen:
         if critical_count:
             recommendation_parts.append(f"Prioritize {critical_count} critical gap(s) immediately.")
         if high_count:
-            recommendation_parts.append(f"Schedule {high_count} high-severity gap(s) for next sprint.")
-        recommendation_parts.append("Feed selected gaps into Forge for feasibility analysis and safe implementation.")
+            recommendation_parts.append(
+                f"Schedule {high_count} high-severity gap(s) for next sprint."
+            )
+        recommendation_parts.append(
+            "Feed selected gaps into Forge for feasibility analysis and safe implementation."
+        )
 
         proposal = ImprovementProposal(
             id=f"ARCH-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6]}",
@@ -546,7 +625,14 @@ class ArchitectureCitizen:
             self.memory.remember(
                 content=f"[{gap.severity.upper()}] {gap.principle_statement[:80]}: {gap.gap_description}",
                 memory_type=MemoryType.SEMANTIC,
-                tags=["architecture_citizen", "research_guild", "gap", gap.principle_category, gap.severity] + gap.affected_files,
+                tags=[
+                    "architecture_citizen",
+                    "research_guild",
+                    "gap",
+                    gap.principle_category,
+                    gap.severity,
+                ]
+                + gap.affected_files,
                 metadata=gap.to_dict(),
             )
             logger.info("Gap stored in memory: %s...", gap.principle_statement[:60])
@@ -644,8 +730,12 @@ class ArchitectureCitizen:
             return [
                 {
                     "id": r.get("id", "") if hasattr(r, "get") else getattr(r, "id", ""),
-                    "content": r.get("content", "") if hasattr(r, "get") else getattr(r, "content", ""),
-                    "metadata": r.get("metadata", {}) if hasattr(r, "get") else getattr(r, "metadata", {}),
+                    "content": r.get("content", "")
+                    if hasattr(r, "get")
+                    else getattr(r, "content", ""),
+                    "metadata": r.get("metadata", {})
+                    if hasattr(r, "get")
+                    else getattr(r, "metadata", {}),
                 }
                 for r in results
             ]

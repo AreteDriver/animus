@@ -122,6 +122,7 @@ class CitizenCouncil:
         count = 0
         try:
             from animus.memory import MemoryType
+
             for name in names:
                 try:
                     results = self.memory.search(
@@ -132,7 +133,11 @@ class CitizenCouncil:
                 except Exception:
                     continue
                 for mem in results:
-                    meta = mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
+                    meta = (
+                        mem.get("metadata", {})
+                        if hasattr(mem, "get")
+                        else getattr(mem, "metadata", {})
+                    )
                     if not meta or not meta.get("id"):
                         continue
                     try:
@@ -223,7 +228,12 @@ class CitizenCouncil:
                 structural_bonus = max(structural_bonus, structural_patterns[ptype])
 
         # Score formula: severity * confidence / effort_factor
-        score = (max_sev * confidence / (1 + effort / 8)) + component_bonus + specificity_bonus + structural_bonus
+        score = (
+            (max_sev * confidence / (1 + effort / 8))
+            + component_bonus
+            + specificity_bonus
+            + structural_bonus
+        )
         return round(score, 3)
 
     # ------------------------------------------------------------------
@@ -310,23 +320,18 @@ class CitizenCouncil:
     def filter_by_component(self, component: str) -> list[RankedProposal]:
         """Return proposals affecting a specific component."""
         return [
-            rp for rp in self._proposals.values()
-            if component in rp.proposal.affected_components
+            rp for rp in self._proposals.values() if component in rp.proposal.affected_components
         ]
 
     def filter_by_confidence(self, min_confidence: float = 0.5) -> list[RankedProposal]:
         """Return proposals with confidence_score >= threshold."""
         return [
-            rp for rp in self._proposals.values()
-            if rp.proposal.confidence_score >= min_confidence
+            rp for rp in self._proposals.values() if rp.proposal.confidence_score >= min_confidence
         ]
 
     def filter_by_status(self, status: ProposalStatus) -> list[RankedProposal]:
         """Return proposals matching a specific status."""
-        return [
-            rp for rp in self._proposals.values()
-            if rp.proposal.status == status
-        ]
+        return [rp for rp in self._proposals.values() if rp.proposal.status == status]
 
     # ------------------------------------------------------------------
     # Summary

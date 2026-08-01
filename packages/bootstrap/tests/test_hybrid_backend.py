@@ -130,12 +130,12 @@ class TestAgenticAndUrlRouting:
         assert "extract" in reason
 
     def test_bare_url_routes_to_anthropic(self) -> None:
-        # Sample 3: "https://github.com/AreteDriver/ai-skills"
+        # Sample 3: "https://github.com/your-org/ai-skills"
         anthropic = MagicMock()
         ollama = MagicMock()
         hybrid = HybridBackend(anthropic, ollama)
         backend, reason = hybrid._classify_query(
-            _make_messages("https://github.com/AreteDriver/ai-skills")
+            _make_messages("https://github.com/your-org/ai-skills")
         )
         assert backend is anthropic
         assert "url" in reason

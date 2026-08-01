@@ -128,8 +128,9 @@ class TestMcpServerCreation:
         # + 2 test_oracle + 4 proposal_queue + 2 citizen_council
         # + 2 session_steward + 1 list_citizens
         # + 4 intelligence + 3 harvester + 2 abstraction + 2 pattern + 2 first_principles + 2 architecture_citizen
-        # + 2 research_guild + 1 intent_gating = 56
-        assert len(tools) == 56
+        # + 2 research_guild + 1 intent_gating
+        # + 2 browser (fetch, fetch_batch) + 1 media_pipeline = 59
+        assert len(tools) == 59
 
     def test_intelligence_tools_exist(self, server):
         tools = server._tool_manager.list_tools()
@@ -825,9 +826,7 @@ class TestArchitectTools:
 
     def test_architect_scan_disabled(self, server, mock_config):
         mock_config.citizens.enabled = False
-        result = _run(
-            server.call_tool("animus_architect_scan", {})
-        )
+        result = _run(server.call_tool("animus_architect_scan", {}))
         assert "Citizens are disabled" in result[0][0].text
 
     def test_architect_scan_codebase(self, server, mock_config, tmp_path):
@@ -869,9 +868,7 @@ class TestArchitectTools:
             mock_architect.generate_proposal.return_value = proposal
             mock_architect.store_proposal.return_value = True
 
-            result = _run(
-                server.call_tool("animus_architect_scan", {"focus": "codebase"})
-            )
+            result = _run(server.call_tool("animus_architect_scan", {"focus": "codebase"}))
             text = result[0][0].text
             assert "Architect Citizen Scan Report" in text
             assert "Refactor complex module" in text
@@ -897,18 +894,14 @@ class TestArchitectTools:
             mock_architect.analyze.return_value = report
             mock_architect.generate_proposal.return_value = None
 
-            result = _run(
-                server.call_tool("animus_architect_scan", {"focus": "all"})
-            )
+            result = _run(server.call_tool("animus_architect_scan", {"focus": "all"}))
             text = result[0][0].text
             assert "No Proposal Generated" in text
             assert "No actionable findings" in text
 
     def test_architect_scan_auth_blocked(self, server, tmp_path):
         with patch("animus.mcp_server._MCP_API_KEY", "secret"):
-            result = _run(
-                server.call_tool("animus_architect_scan", {})
-            )
+            result = _run(server.call_tool("animus_architect_scan", {}))
             assert "Authentication required" in result[0][0].text
 
     def test_architect_list_proposals_empty(self, server, mock_config, mock_memory):
@@ -984,9 +977,7 @@ class TestConversationDesignerTools:
             mock_designer.generate_proposal.return_value = proposal
             mock_designer.store_proposal.return_value = True
 
-            result = _run(
-                server.call_tool("animus_conversation_designer_scan", {})
-            )
+            result = _run(server.call_tool("animus_conversation_designer_scan", {}))
             text = result[0][0].text
             assert "Conversation Designer Scan Report" in text
             assert "Add reusable prompt templates" in text
@@ -1005,9 +996,7 @@ class TestConversationDesignerTools:
             mock_designer.observe_correction_loops.return_value = []
             mock_designer.generate_proposal.return_value = None
 
-            result = _run(
-                server.call_tool("animus_conversation_designer_scan", {})
-            )
+            result = _run(server.call_tool("animus_conversation_designer_scan", {}))
             text = result[0][0].text
             assert "No actionable conversation patterns found" in text
 
@@ -1020,7 +1009,9 @@ class TestConversationDesignerTools:
             mock_cls.return_value = mock_designer
 
             result = _run(
-                server.call_tool("animus_conversation_designer_list_proposals", {"status": "pending"})
+                server.call_tool(
+                    "animus_conversation_designer_list_proposals", {"status": "pending"}
+                )
             )
             assert "No pending proposals found" in result[0][0].text
 
@@ -1059,9 +1050,7 @@ class TestKnowledgeCuratorTools:
             mock_curator.generate_proposal.return_value = proposal
             mock_curator.store_proposal.return_value = True
 
-            result = _run(
-                server.call_tool("animus_knowledge_curator_scan", {})
-            )
+            result = _run(server.call_tool("animus_knowledge_curator_scan", {}))
             text = result[0][0].text
             assert "Knowledge Curator Scan Report" in text
             assert "Update API references" in text
@@ -1082,9 +1071,7 @@ class TestKnowledgeCuratorTools:
             mock_curator.observe_orphan_topics.return_value = []
             mock_curator.generate_proposal.return_value = None
 
-            result = _run(
-                server.call_tool("animus_knowledge_curator_scan", {})
-            )
+            result = _run(server.call_tool("animus_knowledge_curator_scan", {}))
             text = result[0][0].text
             assert "No actionable knowledge drift found" in text
 
@@ -1143,9 +1130,7 @@ class TestTestOracleTools:
             mock_oracle.generate_proposal.return_value = proposal
             mock_oracle.store_proposal.return_value = True
 
-            result = _run(
-                server.call_tool("animus_test_oracle_scan", {})
-            )
+            result = _run(server.call_tool("animus_test_oracle_scan", {}))
             text = result[0][0].text
             assert "Test Oracle Scan Report" in text
             assert "Improve test reliability" in text
@@ -1166,9 +1151,7 @@ class TestTestOracleTools:
             mock_oracle.observe_eval_drift.return_value = []
             mock_oracle.generate_proposal.return_value = None
 
-            result = _run(
-                server.call_tool("animus_test_oracle_scan", {})
-            )
+            result = _run(server.call_tool("animus_test_oracle_scan", {}))
             text = result[0][0].text
             assert "No actionable quality regressions found" in text
 
@@ -1210,7 +1193,11 @@ class TestProposalQueueTools:
         mock_qp.proposal.problem = "Tests fail randomly"
         mock_qp.proposal.recommendation = "Add retries and isolation"
         mock_qp.transitions = [
-            MagicMock(from_status=MagicMock(value="submitted"), to_status=MagicMock(value="pending"), actor="citizen")
+            MagicMock(
+                from_status=MagicMock(value="submitted"),
+                to_status=MagicMock(value="pending"),
+                actor="citizen",
+            )
         ]
 
         with patch("animus.citizens.ProposalQueue") as mock_cls:
@@ -1218,9 +1205,7 @@ class TestProposalQueueTools:
             mock_cls.return_value = mock_queue
             mock_queue.list_pending.return_value = [mock_qp]
 
-            result = _run(
-                server.call_tool("animus_proposal_queue_list", {"status": "pending"})
-            )
+            result = _run(server.call_tool("animus_proposal_queue_list", {"status": "pending"}))
             text = result[0][0].text
             assert "Proposal Queue (pending)" in text
             assert "PROP-001" in text
@@ -1233,9 +1218,7 @@ class TestProposalQueueTools:
             mock_cls.return_value = mock_queue
             mock_queue.list_pending.return_value = []
 
-            result = _run(
-                server.call_tool("animus_proposal_queue_list", {"status": "pending"})
-            )
+            result = _run(server.call_tool("animus_proposal_queue_list", {"status": "pending"}))
             assert "No proposals with status 'pending' found" in result[0][0].text
 
     def test_proposal_queue_approve(self, server, mock_memory):
@@ -1248,7 +1231,9 @@ class TestProposalQueueTools:
             mock_queue.approve.return_value = mock_qp
 
             result = _run(
-                server.call_tool("animus_proposal_queue_approve", {"proposal_id": "PROP-001", "reason": "LGTM"})
+                server.call_tool(
+                    "animus_proposal_queue_approve", {"proposal_id": "PROP-001", "reason": "LGTM"}
+                )
             )
             text = result[0][0].text
             assert "PROP-001 approved" in text
@@ -1264,23 +1249,31 @@ class TestProposalQueueTools:
             mock_queue.reject.return_value = mock_qp
 
             result = _run(
-                server.call_tool("animus_proposal_queue_reject", {"proposal_id": "PROP-001", "reason": "Not feasible"})
+                server.call_tool(
+                    "animus_proposal_queue_reject",
+                    {"proposal_id": "PROP-001", "reason": "Not feasible"},
+                )
             )
             text = result[0][0].text
             assert "PROP-001 rejected" in text
             assert "rejected" in text
 
     def test_proposal_queue_stats(self, server, mock_memory):
-        stats = {"total": 5, "pending": 2, "approved": 1, "commissioned": 1, "complete": 1, "rejected": 0}
+        stats = {
+            "total": 5,
+            "pending": 2,
+            "approved": 1,
+            "commissioned": 1,
+            "complete": 1,
+            "rejected": 0,
+        }
 
         with patch("animus.citizens.ProposalQueue") as mock_cls:
             mock_queue = MagicMock()
             mock_cls.return_value = mock_queue
             mock_queue.stats.return_value = stats
 
-            result = _run(
-                server.call_tool("animus_proposal_queue_stats", {})
-            )
+            result = _run(server.call_tool("animus_proposal_queue_stats", {}))
             data = json.loads(result[0][0].text)
             assert data["total"] == 5
             assert data["pending"] == 2
@@ -1320,9 +1313,7 @@ class TestCitizenCouncilTools:
             mock_council.rank_backlog.return_value = [mock_rp]
             mock_council.summary.return_value = {"unique_components": 1}
 
-            result = _run(
-                server.call_tool("animus_citizen_council_backlog", {})
-            )
+            result = _run(server.call_tool("animus_citizen_council_backlog", {}))
             text = result[0][0].text
             assert "Citizen Council — Unified Ranked Backlog" in text
             assert "Unified backlog item" in text
@@ -1344,9 +1335,7 @@ class TestCitizenCouncilTools:
             mock_council.collect_from_memory.return_value = 3
             mock_council.summary.return_value = summary
 
-            result = _run(
-                server.call_tool("animus_citizen_council_summary", {})
-            )
+            result = _run(server.call_tool("animus_citizen_council_summary", {}))
             data = json.loads(result[0][0].text)
             assert data["total_proposals"] == 3
             assert data["unique_components"] == 2
@@ -1370,9 +1359,7 @@ class TestIntelligenceTools:
         assert "Ipv4 Addresses" in text
 
     def test_intelligence_extract_empty(self, server):
-        result = _run(
-            server.call_tool("animus_intelligence_extract", {"text": ""})
-        )
+        result = _run(server.call_tool("animus_intelligence_extract", {"text": ""}))
         text = result[0][0].text
         assert "Total entities found" in text
         assert "0" in text
@@ -1389,9 +1376,7 @@ class TestIntelligenceTools:
         assert "CRITICAL" in text
 
     def test_intelligence_secrets_empty(self, server):
-        result = _run(
-            server.call_tool("animus_intelligence_secrets", {"text": "safe text"})
-        )
+        result = _run(server.call_tool("animus_intelligence_secrets", {"text": "safe text"}))
         text = result[0][0].text
         assert "No secrets detected" in text
 
@@ -1458,10 +1443,11 @@ class TestMainEntrypoint:
         from animus.mcp_server import main
 
         with patch("animus.mcp_server.create_mcp_server") as mock_create:
-            mock_server = MagicMock()
-            mock_create.return_value = mock_server
-            main()
-            mock_server.run.assert_called_once()
+            with patch("animus.mcp_server.LockedPidFile") as mock_lock:
+                mock_server = MagicMock()
+                mock_create.return_value = mock_server
+                main()
+                mock_server.run.assert_called_once()
 
 
 class TestToolGating:

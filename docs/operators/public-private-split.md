@@ -1,7 +1,7 @@
 # Public / Private Repository Split
 
-**Status**: Planned — awaiting repo publicization or private repo creation  
-**Owner**: AreteDriver  
+**Status**: Planned — awaiting repo publicization or private repo creation
+**Owner**: your-org
 **Last updated**: 2026-06-29
 
 ---
@@ -25,7 +25,7 @@ The split solves this by isolating owner-private data into a separate repo while
 
 ## Two-Repo Model
 
-### Public Repo (`github.com/AreteDriver/animus`)
+### Public Repo (`github.com/your-org/animus`)
 
 **What stays here**:
 
@@ -48,7 +48,7 @@ The split solves this by isolating owner-private data into a separate repo while
 | Eval results with PII | Local eval dumps | Move to private repo |
 | Private worktrees | `.claude/worktrees/` | Already `.gitignore`d |
 
-### Private Repo (`github.com/AreteDriver/animus-private`)
+### Private Repo (`github.com/your-org/animus-private`)
 
 **What goes here**:
 
@@ -83,7 +83,7 @@ All fixtures in the public repo must be:
 
 ### Rule 3: Config templates in public, values in private
 
-Public repo contains `.env.example`, `config/default.yaml`.  
+Public repo contains `.env.example`, `config/default.yaml`.
 Private repo contains `.env` (real values) and `config/local.yaml`.
 
 ### Rule 4: Evidence bundles are public

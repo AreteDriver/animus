@@ -13,9 +13,7 @@ from __future__ import annotations
 import os
 from unittest.mock import patch
 
-import pytest
-
-from animus_kernel.memory.redaction import has_secrets, redact, RedactionHit
+from animus_kernel.memory.redaction import RedactionHit, has_secrets, redact
 
 
 class TestRedactUniversal:
@@ -71,7 +69,7 @@ class TestRedactUniversal:
         result, hits = redact(text)
         hit = hits[0]
         # Spans refer to original text positions
-        assert text[hit.start:hit.end] == key
+        assert text[hit.start : hit.end] == key
 
     def test_overlapping_patterns_merged(self):
         # sk-ant- prefix might match both openai (negative lookahead prevents) and anthropic

@@ -6,7 +6,7 @@
 - Supports episodic queries ("What did I change in auth last Tuesday?")
 - Runs locally with zero external dependencies beyond Chroma
 
-**Source:** Ported from the [memboot](https://github.com/AreteDriver/memboot) experiment into [Animus](https://github.com/AreteDriver/animus). This recipe distills the approach into a standalone, reusable pattern.
+**Source:** Ported from the [memboot](https://github.com/your-org/memboot) experiment into [Animus](https://github.com/your-org/animus). This recipe distills the approach into a standalone, reusable pattern.
 
 ---
 
@@ -691,6 +691,6 @@ Before production use:
 
 ## See Also
 
-- **Animus** — The full system this recipe was extracted from: [github.com/AreteDriver/animus](https://github.com/AreteDriver/animus)
+- **Animus** — The full system this recipe was extracted from: [github.com/your-org/animus](https://github.com/your-org/animus)
 - **Chroma Docs** — [docs.trychroma.com](https://docs.trychroma.com)
-- **memboot** — The original experiment (archived): [github.com/AreteDriver/memboot](https://github.com/AreteDriver/memboot)
+- **memboot** — The original experiment (archived): [github.com/your-org/memboot](https://github.com/your-org/memboot)

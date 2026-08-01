@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Any, Literal
 
@@ -13,16 +12,16 @@ from .common import Common
 
 
 class ObservationMethod(Enum):
-    direct = 'direct'
-    document_extraction = 'document_extraction'
-    measurement = 'measurement'
-    reported = 'reported'
-    computed = 'computed'
+    direct = "direct"
+    document_extraction = "document_extraction"
+    measurement = "measurement"
+    reported = "reported"
+    computed = "computed"
 
 
 class SourceAnchor(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     source_id: str
     locator: str
@@ -30,7 +29,7 @@ class SourceAnchor(BaseModel):
 
 class Payload(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     description: constr(min_length=1)
     observed_at: AwareDatetime
@@ -40,8 +39,6 @@ class Payload(BaseModel):
 
 
 class AnimusObservationObject(Common):
-    artifact_type: Literal['observation'] | None = None
-    schema_id: (
-        Literal['https://animus.local/schemas/observation.schema.json'] | None
-    ) = None
+    artifact_type: Literal["observation"] | None = None
+    schema_id: Literal["https://animus.local/schemas/observation.schema.json"] | None = None
     payload: Payload | None = None

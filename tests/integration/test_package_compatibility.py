@@ -47,8 +47,8 @@ def test_package_imports(pkg_name: str):
 
 def test_cross_package_type_consistency():
     """animus_types.Sensitivity must be the same object animus_kernel re-exports."""
-    import animus_types
     import animus_kernel.memory.types as memory_types
+    import animus_types
 
     assert memory_types.Sensitivity is animus_types.Sensitivity
 

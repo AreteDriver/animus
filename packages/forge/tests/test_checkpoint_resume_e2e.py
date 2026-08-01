@@ -185,9 +185,9 @@ class TestCheckpointResumeE2E:
 
     @pytest.mark.xfail(
         reason="Automatic crash recovery not yet wired end-to-end: "
-               "WorkflowExecutor.execute() creates a new workflow record on every call "
-               "and does not reconstruct prior step outputs from persisted checkpoints. "
-               "ADL-20260724-002 tracks completion.",
+        "WorkflowExecutor.execute() creates a new workflow record on every call "
+        "and does not reconstruct prior step outputs from persisted checkpoints. "
+        "ADL-20260724-002 tracks completion.",
         strict=True,
     )
     def test_crash_recovery_reconstructs_context_and_continues(self, checkpoint_manager, temp_db):
@@ -241,7 +241,7 @@ class TestCheckpointResumeE2E:
 
         assert result1.status == "failed"
         assert result1.steps[0].status == StepStatus.SUCCESS  # step1 succeeded
-        assert result1.steps[1].status == StepStatus.FAILED   # step2 failed
+        assert result1.steps[1].status == StepStatus.FAILED  # step2 failed
 
         # Capture the original workflow ID
         workflows = checkpoint_manager.persistence.list_workflows()

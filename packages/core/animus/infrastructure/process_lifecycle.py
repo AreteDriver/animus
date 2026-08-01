@@ -18,7 +18,6 @@ import signal
 import sqlite3
 import sys
 import threading
-import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
@@ -117,7 +116,7 @@ class LockedPidFile:
         if _HAS_FCNTL:
             try:
                 fcntl.lockf(self._fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except (OSError, IOError):
+            except OSError:
                 # Lock held by another process
                 return False
         else:
@@ -185,7 +184,7 @@ class LockedPidFile:
         os.write(self._fd, str(os.getpid()).encode())
         os.fsync(self._fd)
 
-    def acquire(self) -> "LockedPidFile":
+    def acquire(self) -> LockedPidFile:
         """Acquire the lock. Raises AlreadyRunningError if another instance lives."""
         if self._acquired:
             return self
@@ -242,7 +241,7 @@ class LockedPidFile:
                 if _HAS_FCNTL:
                     try:
                         fcntl.lockf(self._fd, fcntl.LOCK_UN)
-                    except (OSError, IOError):
+                    except OSError:
                         pass
                 os.close(self._fd)
                 self._fd = None
@@ -250,7 +249,7 @@ class LockedPidFile:
         except OSError:
             pass
 
-    def __enter__(self) -> "LockedPidFile":
+    def __enter__(self) -> LockedPidFile:
         return self.acquire()
 
     def __exit__(self, *args: Any) -> None:
@@ -273,9 +272,9 @@ class ProcessState(Enum):
     """Lifecycle states for a registered OS process."""
 
     RUNNING = "running"
-    SUSPECT = "suspect"      # heartbeat missing
-    ORPHAN = "orphan"        # reparented to init (ppid == 1 or parent dead)
-    STOPPED = "stopped"      # known dead, pending sweep
+    SUSPECT = "suspect"  # heartbeat missing
+    ORPHAN = "orphan"  # reparented to init (ppid == 1 or parent dead)
+    STOPPED = "stopped"  # known dead, pending sweep
 
 
 @dataclass
@@ -283,7 +282,7 @@ class RegisteredProcess:
     """Row in the system process registry."""
 
     process_id: str
-    component: str           # e.g. "daemon", "mcp_server", "tray"
+    component: str  # e.g. "daemon", "mcp_server", "tray"
     pid: int
     ppid: int
     command_line: str
@@ -422,9 +421,7 @@ class SystemProcessRegistry:
     def unregister(self, process_id: str) -> bool:
         """Remove a process from the registry."""
         with self._connection() as conn:
-            cur = conn.execute(
-                "DELETE FROM processes WHERE process_id = ?", (process_id,)
-            )
+            cur = conn.execute("DELETE FROM processes WHERE process_id = ?", (process_id,))
             return cur.rowcount > 0
 
     def list_active(
@@ -518,9 +515,7 @@ class SystemProcessRegistry:
                 proc = self._row_to_process(row)
                 alive = self._is_process_alive(proc.pid, proc.command_line)
                 if not alive:
-                    conn.execute(
-                        "DELETE FROM processes WHERE process_id = ?", (proc.process_id,)
-                    )
+                    conn.execute("DELETE FROM processes WHERE process_id = ?", (proc.process_id,))
                     removed.append(proc)
                     continue
 
@@ -551,7 +546,9 @@ class SystemProcessRegistry:
             len(marked_orphan),
             len(marked_suspect),
         )
-        return SweepResult(removed=removed, marked_orphan=marked_orphan, marked_suspect=marked_suspect)
+        return SweepResult(
+            removed=removed, marked_orphan=marked_orphan, marked_suspect=marked_suspect
+        )
 
     def summary(self) -> dict[str, Any]:
         """Return aggregate counts by component and state."""
@@ -623,7 +620,7 @@ class ProcessGuard:
         self._stop_heartbeat = threading.Event()
         self._pid_lock: LockedPidFile | None = None
 
-    def guard(self) -> "ProcessGuardContext":
+    def guard(self) -> ProcessGuardContext:
         """Return a context manager that enforces singleton + registry + heartbeat."""
         return ProcessGuardContext(self)
 
@@ -640,7 +637,9 @@ class ProcessGuard:
                         # Re-register if row was lost (e.g., manual DB wipe)
                         self._do_register()
 
-        self._heartbeat_thread = threading.Thread(target=_beat, daemon=True, name=f"{self._component}-heartbeat")
+        self._heartbeat_thread = threading.Thread(
+            target=_beat, daemon=True, name=f"{self._component}-heartbeat"
+        )
         self._heartbeat_thread.start()
 
     def _do_register(self) -> None:
@@ -789,7 +788,7 @@ def _human_duration(seconds: float) -> str:
     if seconds < 60:
         return f"{seconds:.0f}s"
     if seconds < 3600:
-        return f"{seconds/60:.0f}m"
+        return f"{seconds / 60:.0f}m"
     if seconds < 86400:
-        return f"{seconds/3600:.1f}h"
-    return f"{seconds/86400:.1f}d"
+        return f"{seconds / 3600:.1f}h"
+    return f"{seconds / 86400:.1f}d"

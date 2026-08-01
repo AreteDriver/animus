@@ -6,7 +6,6 @@ All SQLAlchemy operations are generic enough to work across backends.
 
 from __future__ import annotations
 
-import os
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -14,14 +13,10 @@ import pytest
 from animus.durability.postgres_store import (
     ConcurrencyError,
     DurableObjectStore,
-    EpistemicStatus,
     EventType,
-    LedgerValidationError,
     LifecycleStatus,
     ObjectRecord,
     ObjectType,
-    SecurityClass,
-    StorageTier,
 )
 
 # Guard: skip entire module if sqlalchemy is unavailable

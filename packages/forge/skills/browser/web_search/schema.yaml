@@ -5,8 +5,8 @@ author: Gorgon Project
 license: MIT
 
 description: |
-  Search the web for information using search engines. Retrieve, parse, 
-  and synthesize search results. Supports multiple search engines and 
+  Search the web for information using search engines. Retrieve, parse,
+  and synthesize search results. Supports multiple search engines and
   result filtering.
 
 dependencies:

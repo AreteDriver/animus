@@ -13,7 +13,7 @@
 ## Clone
 
 ```bash
-git clone https://github.com/AreteDriver/animus.git
+git clone https://github.com/your-org/animus.git
 cd animus
 ```
 

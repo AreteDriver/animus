@@ -143,11 +143,16 @@ class SyncState:
 
     def save(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({
-            "last_sync": self.last_sync,
-            "synced": self.synced,
-            "version": self.version,
-        }, indent=2))
+        path.write_text(
+            json.dumps(
+                {
+                    "last_sync": self.last_sync,
+                    "synced": self.synced,
+                    "version": self.version,
+                },
+                indent=2,
+            )
+        )
 
 
 def parse_frontmatter(text: str) -> tuple[dict, str]:
@@ -160,7 +165,7 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
         return {}, text
 
     frontmatter_text = text[3:end].strip()
-    body = text[end + 3:].strip()
+    body = text[end + 3 :].strip()
 
     metadata = {}
     for line in frontmatter_text.splitlines():
@@ -173,7 +178,7 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
 
 def chunk_by_headers(text: str, max_size: int = MAX_CHUNK_SIZE) -> list[str]:
     """Split markdown text by ## headers, respecting max_size."""
-    sections = re.split(r'\n(?=## )', text)
+    sections = re.split(r"\n(?=## )", text)
     chunks = []
 
     for section in sections:
@@ -240,22 +245,26 @@ def parse_cc_memory_files() -> list[SyncMemory]:
         if len(body) > MAX_CHUNK_SIZE:
             chunks = chunk_by_headers(body)
             for i, chunk in enumerate(chunks):
-                memories.append(SyncMemory(
-                    content=f"[{name}] {chunk}",
-                    memory_type=memory_type,
-                    tags=tags.copy(),
-                    source_file=str(md_file),
-                    chunk_index=i,
-                    subtype=cc_type,
-                ))
+                memories.append(
+                    SyncMemory(
+                        content=f"[{name}] {chunk}",
+                        memory_type=memory_type,
+                        tags=tags.copy(),
+                        source_file=str(md_file),
+                        chunk_index=i,
+                        subtype=cc_type,
+                    )
+                )
         else:
-            memories.append(SyncMemory(
-                content=f"[{name}] {body}" if body else f"[{name}] {text}",
-                memory_type=memory_type,
-                tags=tags,
-                source_file=str(md_file),
-                subtype=cc_type,
-            ))
+            memories.append(
+                SyncMemory(
+                    content=f"[{name}] {body}" if body else f"[{name}] {text}",
+                    memory_type=memory_type,
+                    tags=tags,
+                    source_file=str(md_file),
+                    subtype=cc_type,
+                )
+            )
 
     return memories
 
@@ -268,7 +277,7 @@ def parse_memory_md_sections() -> list[SyncMemory]:
         return memories
 
     text = memory_md.read_text()
-    sections = re.split(r'\n(?=## )', text)
+    sections = re.split(r"\n(?=## )", text)
 
     for section in sections:
         section = section.strip()
@@ -276,7 +285,7 @@ def parse_memory_md_sections() -> list[SyncMemory]:
             continue
 
         # Extract section title
-        title_match = re.match(r'^## (.+)', section)
+        title_match = re.match(r"^## (.+)", section)
         if not title_match:
             continue
         title = title_match.group(1).strip()
@@ -288,47 +297,57 @@ def parse_memory_md_sections() -> list[SyncMemory]:
             for i, pattern in enumerate(patterns):
                 if len(pattern) < 20:
                     continue
-                memories.append(SyncMemory(
-                    content=pattern,
-                    memory_type=MemoryType.PROCEDURAL,
-                    tags=["claude-code", "pattern", "gotcha"],
-                    source_file=str(memory_md),
-                    chunk_index=i,
-                    subtype="pattern",
-                ))
+                memories.append(
+                    SyncMemory(
+                        content=pattern,
+                        memory_type=MemoryType.PROCEDURAL,
+                        tags=["claude-code", "pattern", "gotcha"],
+                        source_file=str(memory_md),
+                        chunk_index=i,
+                        subtype="pattern",
+                    )
+                )
         elif "Project" in title and "Index" in title:
             # Project table — one memory for the whole fleet
-            memories.append(SyncMemory(
-                content=f"[Project Fleet Status] {section}",
-                memory_type=MemoryType.SEMANTIC,
-                tags=["claude-code", "fleet", "project-index"],
-                source_file=str(memory_md),
-                subtype="fleet",
-            ))
+            memories.append(
+                SyncMemory(
+                    content=f"[Project Fleet Status] {section}",
+                    memory_type=MemoryType.SEMANTIC,
+                    tags=["claude-code", "fleet", "project-index"],
+                    source_file=str(memory_md),
+                    subtype="fleet",
+                )
+            )
         elif "Monetization" in title:
-            memories.append(SyncMemory(
-                content=f"[Monetization] {section}",
-                memory_type=MemoryType.SEMANTIC,
-                tags=["claude-code", "monetization", "infrastructure"],
-                source_file=str(memory_md),
-                subtype="business",
-            ))
+            memories.append(
+                SyncMemory(
+                    content=f"[Monetization] {section}",
+                    memory_type=MemoryType.SEMANTIC,
+                    tags=["claude-code", "monetization", "infrastructure"],
+                    source_file=str(memory_md),
+                    subtype="business",
+                )
+            )
         elif "User Profile" in title:
-            memories.append(SyncMemory(
-                content=f"[User Profile] {section}",
-                memory_type=MemoryType.SEMANTIC,
-                tags=["claude-code", "user-profile", "arete"],
-                source_file=str(memory_md),
-                subtype="profile",
-            ))
+            memories.append(
+                SyncMemory(
+                    content=f"[User Profile] {section}",
+                    memory_type=MemoryType.SEMANTIC,
+                    tags=["claude-code", "user-profile", "arete"],
+                    source_file=str(memory_md),
+                    subtype="profile",
+                )
+            )
         elif "Frontier" in title or "EVE" in title or "Hackathon" in title:
-            memories.append(SyncMemory(
-                content=section,
-                memory_type=MemoryType.SEMANTIC,
-                tags=["claude-code", "eve-frontier"],
-                source_file=str(memory_md),
-                subtype="project",
-            ))
+            memories.append(
+                SyncMemory(
+                    content=section,
+                    memory_type=MemoryType.SEMANTIC,
+                    tags=["claude-code", "eve-frontier"],
+                    source_file=str(memory_md),
+                    subtype="project",
+                )
+            )
         elif "TODO" in title:
             # Skip ephemeral TODOs
             continue
@@ -336,22 +355,26 @@ def parse_memory_md_sections() -> list[SyncMemory]:
             # Skip — just an index of file references
             continue
         elif "Feedback" in title:
-            memories.append(SyncMemory(
-                content=section,
-                memory_type=MemoryType.PROCEDURAL,
-                tags=["claude-code", "feedback"],
-                source_file=str(memory_md),
-                subtype="feedback",
-            ))
+            memories.append(
+                SyncMemory(
+                    content=section,
+                    memory_type=MemoryType.PROCEDURAL,
+                    tags=["claude-code", "feedback"],
+                    source_file=str(memory_md),
+                    subtype="feedback",
+                )
+            )
         else:
             # Catch-all for other sections
             if len(section) > 50:
-                memories.append(SyncMemory(
-                    content=section,
-                    memory_type=MemoryType.SEMANTIC,
-                    tags=["claude-code", "context"],
-                    source_file=str(memory_md),
-                ))
+                memories.append(
+                    SyncMemory(
+                        content=section,
+                        memory_type=MemoryType.SEMANTIC,
+                        tags=["claude-code", "context"],
+                        source_file=str(memory_md),
+                    )
+                )
 
     return memories
 
@@ -409,20 +432,24 @@ def parse_notes_repo() -> list[SyncMemory]:
             for i, chunk in enumerate(chunks):
                 if len(chunk) < 30:
                     continue
-                memories.append(SyncMemory(
-                    content=f"[notes/{rel_path}] {chunk}",
-                    memory_type=memory_type,
-                    tags=tags.copy(),
-                    source_file=str(md_file),
-                    chunk_index=i,
-                ))
+                memories.append(
+                    SyncMemory(
+                        content=f"[notes/{rel_path}] {chunk}",
+                        memory_type=memory_type,
+                        tags=tags.copy(),
+                        source_file=str(md_file),
+                        chunk_index=i,
+                    )
+                )
         else:
-            memories.append(SyncMemory(
-                content=f"[notes/{rel_path}] {text}",
-                memory_type=memory_type,
-                tags=tags,
-                source_file=str(md_file),
-            ))
+            memories.append(
+                SyncMemory(
+                    content=f"[notes/{rel_path}] {text}",
+                    memory_type=memory_type,
+                    tags=tags,
+                    source_file=str(md_file),
+                )
+            )
 
     return memories
 

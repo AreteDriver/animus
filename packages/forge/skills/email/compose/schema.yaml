@@ -5,8 +5,8 @@ author: Gorgon Project
 license: MIT
 
 description: |
-  Compose and send emails via SMTP. Support for plain text, HTML, 
-  attachments, templates, and mail merge. Includes draft review 
+  Compose and send emails via SMTP. Support for plain text, HTML,
+  attachments, templates, and mail merge. Includes draft review
   before sending.
 
 dependencies:

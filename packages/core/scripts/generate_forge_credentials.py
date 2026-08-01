@@ -41,12 +41,12 @@ def main():
             sys.exit(1)
 
     hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
-    print(f"\nAdd this to your Forge .env file or environment:")
+    print("\nAdd this to your Forge .env file or environment:")
     print(f"  API_CREDENTIALS='{username}:{hashed}'")
-    print(f"\nCommissioner environment variables:")
+    print("\nCommissioner environment variables:")
     print(f"  FORGE_API_USER='{username}'")
     print(f"  FORGE_API_PASS='{pw}'")
-    print(f"\nOr export directly before starting Forge:")
+    print("\nOr export directly before starting Forge:")
     print(f"  export API_CREDENTIALS='{username}:{hashed}'")
 
 

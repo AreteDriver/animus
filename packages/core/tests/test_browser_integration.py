@@ -17,6 +17,7 @@ auto-skipped.
 from __future__ import annotations
 
 import os
+
 import pytest
 
 from animus.browser.bridge import BrowserBridge, BrowserConfig, ExtractionFormat
@@ -26,7 +27,10 @@ from animus.browser.bridge import BrowserBridge, BrowserConfig, ExtractionFormat
 # ------------------------------------------------------------------
 
 _INTEGRATION_ENABLED = os.environ.get("ANIMUS_BROWSER_INTEGRATION", "").strip().lower() in {
-    "1", "true", "yes", "on",
+    "1",
+    "true",
+    "yes",
+    "on",
 }
 
 pytestmark = pytest.mark.skipif(
@@ -38,6 +42,7 @@ pytestmark = pytest.mark.skipif(
 # ------------------------------------------------------------------
 # Fixtures
 # ------------------------------------------------------------------
+
 
 @pytest.fixture(autouse=True)
 def _relax_memory_limit():
@@ -64,6 +69,7 @@ async def bridge():
 # ------------------------------------------------------------------
 # Tests
 # ------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_fetch_text_simple():

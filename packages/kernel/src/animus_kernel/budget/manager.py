@@ -427,7 +427,9 @@ class BudgetManager:
         with self._lock:
             return self._can_allocate_unlocked(tokens, agent_id, effective)
 
-    def allocate(self, tokens: int, agent_id: str | None = None, effective: float | None = None) -> bool:
+    def allocate(
+        self, tokens: int, agent_id: str | None = None, effective: float | None = None
+    ) -> bool:
         """Atomically check and RESERVE tokens.
 
         Unlike a bare ``can_allocate`` followed by work, this reserves the
@@ -452,7 +454,9 @@ class BudgetManager:
                 self._pending_by_agent[agent_id] = self._pending_by_agent.get(agent_id, 0) + tokens
             return True
 
-    def release(self, tokens: int, agent_id: str | None = None, effective: float | None = None) -> None:
+    def release(
+        self, tokens: int, agent_id: str | None = None, effective: float | None = None
+    ) -> None:
         """Release a prior :meth:`allocate` reservation (clamped at zero).
 
         Pass the same ``effective`` value used at :meth:`allocate` so the ET

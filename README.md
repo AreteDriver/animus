@@ -2,12 +2,12 @@
 
 **Multi-agent orchestration framework with budget controls, quality gates, and stage persistence.**
 
-![CI](https://github.com/AreteDriver/animus/workflows/CI/badge.svg)
-![First-Run](https://github.com/AreteDriver/animus/workflows/First-Run%20Verification/badge.svg)
-![CodeQL](https://github.com/AreteDriver/animus/workflows/CodeQL%20Security%20Scan/badge.svg)
-![Security](https://github.com/AreteDriver/animus/workflows/Security/badge.svg)
+![CI](https://github.com/your-org/animus/workflows/CI/badge.svg)
+![First-Run](https://github.com/your-org/animus/workflows/First-Run%20Verification/badge.svg)
+![CodeQL](https://github.com/your-org/animus/workflows/CodeQL%20Security%20Scan/badge.svg)
+![Security](https://github.com/your-org/animus/workflows/Security/badge.svg)
 [![PyPI - convergentAI](https://img.shields.io/pypi/v/convergentAI?label=convergentAI&color=blue)](https://pypi.org/project/convergentAI/)
-![License](https://img.shields.io/github/license/AreteDriver/animus)
+![License](https://img.shields.io/github/license/your-org/animus)
 
 Running AI agents in production creates three predictable failures: **costs spiral** because no one tracks token spend, **pipelines break halfway through** and restart from scratch wasting compute, and **multi-agent systems bottleneck** on a single supervisor that burns tokens just watching. Animus fixes this with manufacturing-line discipline — every agent gets a token budget, every workflow persists stage inputs and outputs to SQLite for manual restart on failure, and agent coordination uses shared intent graphs instead of a central supervisor.
 
@@ -17,7 +17,7 @@ Before software I spent 17 years in manufacturing and logistics (IBM, Toyota Pro
 
 Eight packages (four installable via PyPI). Test corpus: ~13,500 unit/integration tests across packages, plus ~1,800 internal coverage-ratchet tests. Proactive engine with 6 self-healing checks and an autonomous improvement loop verified end-to-end against local inference.
 
-> **Development method:** Built with Claude Code (human-reviewed, human-verified). See [profile](https://github.com/AreteDriver) for the full transparency note.
+> **Development method:** Built with Claude Code (human-reviewed, human-verified). See [profile](https://github.com/your-org) for the full transparency note.
 
 **[Architecture](docs/architecture/overview.md)** | **[Roadmap](docs/roadmap/current.md)** | **[Whitepaper](docs/whitepaper.pdf)** | **[Tools Reference](docs/reference/tools.md)**
 
@@ -125,9 +125,9 @@ flowchart TB
 
 The philosophy behind Animus is documented in essays, not just code:
 
-- **[From 700 Pints to 4,800 Per Hour](https://aretedriver.substack.com)** — How manufacturing discipline (Toyota Production System, Kaizen, error-proofing) maps to AI operations. This is the origin story of checkpoint/resume, token budgets, and quality gates.
-- **[The Eval Is the Product](https://aretedriver.substack.com)** — Why Animus treats evaluation infrastructure as a first-class subsystem (Forge + arete-evals) rather than an afterthought.
-- **[The Human Stack](https://github.com/AreteDriver/the-human-stack)** — The full methodology reference: evidence grading (E0–E5), ADL governance, failure taxonomy, and benchmark standards.
+- **[From 700 Pints to 4,800 Per Hour](https://your-org.substack.com)** — How manufacturing discipline (Toyota Production System, Kaizen, error-proofing) maps to AI operations. This is the origin story of checkpoint/resume, token budgets, and quality gates.
+- **[The Eval Is the Product](https://your-org.substack.com)** — Why Animus treats evaluation infrastructure as a first-class subsystem (Forge + arete-evals) rather than an afterthought.
+- **[The Human Stack](https://github.com/your-org/the-human-stack)** — The full methodology reference: evidence grading (E0–E5), ADL governance, failure taxonomy, and benchmark standards.
 
 ---
 
@@ -185,7 +185,7 @@ These are visible in the code, not aspirational:
 The fastest way to verify Animus works on your machine:
 
 ```bash
-git clone https://github.com/AreteDriver/animus && cd animus
+git clone https://github.com/your-org/animus && cd animus
 pip install -e packages/types/ -e "packages/core/[dev]" -e packages/kernel/ -e packages/contracts/
 python -c "import animus; print('OK — version', animus.__version__)"
 export ANIMUS_CITIZENS_CODEBASE_PATH="$(pwd)"
@@ -199,7 +199,7 @@ You should see a scan of the repository and a generated improvement proposal wit
 ### Full Stack (dashboard + PWA)
 
 ```bash
-git clone https://github.com/AreteDriver/animus && cd animus
+git clone https://github.com/your-org/animus && cd animus
 pip install -e packages/bootstrap/ -e packages/kernel/ -e packages/core/ -e packages/contracts/
 cd packages/pwa && npm install && npm run build && cd ../..
 animus-bootstrap serve
@@ -450,9 +450,9 @@ Active development. Architecture stable. v2.3.0 (migrating to v2.1 baseline) rel
 
 These tools are built to work together as the Arete Stack:
 
-- **[mcp-manager](https://github.com/AreteDriver/mcp-manager)** — Manage MCP servers across your IDEs (`pip install arete-mcp`)
-- **[ai-spend](https://github.com/AreteDriver/ai-spend)** — Cross-provider AI cost aggregation with provider retry and config encryption (`pip install ai-spend`)
-- **[the-human-stack](https://github.com/AreteDriver/the-human-stack)** — The methodology reference behind the evidence framework and maturity model
+- **[mcp-manager](https://github.com/your-org/mcp-manager)** — Manage MCP servers across your IDEs (`pip install arete-mcp`)
+- **[ai-spend](https://github.com/your-org/ai-spend)** — Cross-provider AI cost aggregation with provider retry and config encryption (`pip install ai-spend`)
+- **[the-human-stack](https://github.com/your-org/the-human-stack)** — The methodology reference behind the evidence framework and maturity model
 
 ## License
 

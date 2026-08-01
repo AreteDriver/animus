@@ -16,7 +16,6 @@ Pipeline: Observe telemetry → Analyze patterns → Produce Proposal → Human 
 from __future__ import annotations
 
 import json
-import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -37,6 +36,7 @@ logger = get_logger("citizens.session_steward")
 
 # ── Protocols for loose coupling ───────────────────────────────────
 
+
 class TelemetryEvent(Protocol):
     """Protocol for telemetry events from any session controller."""
 
@@ -52,11 +52,9 @@ class TelemetryEvent(Protocol):
 class TelemetryProvider(Protocol):
     """Protocol for objects that provide session telemetry."""
 
-    def get_telemetry(self, session_id: str | None = None) -> list[TelemetryEvent]:
-        ...
+    def get_telemetry(self, session_id: str | None = None) -> list[TelemetryEvent]: ...
 
-    def get_summary_stats(self) -> dict[str, float | int | str]:
-        ...
+    def get_summary_stats(self) -> dict[str, float | int | str]: ...
 
 
 # ── Data structures ────────────────────────────────────────────────
@@ -96,9 +94,7 @@ class SessionAuditReport:
 
     @property
     def has_actionable_findings(self) -> bool:
-        return any(
-            p.severity in ("critical", "high", "medium") for p in self.patterns
-        )
+        return any(p.severity in ("critical", "high", "medium") for p in self.patterns)
 
 
 class SessionStewardCitizen:
@@ -191,12 +187,11 @@ class SessionStewardCitizen:
 
         # Filter to analysis window (use UTC-aware cutoff to match kernel timestamps)
         cutoff = datetime.now(timezone.utc) - timedelta(hours=self.analysis_window_hours)
-        recent = [t for t in telemetry if getattr(t, "timestamp", datetime.now(timezone.utc)) > cutoff]
-
-        wrapup_events = [
-            t for t in recent
-            if getattr(t, "event_name", "") == "WRAPPING_UP"
+        recent = [
+            t for t in telemetry if getattr(t, "timestamp", datetime.now(timezone.utc)) > cutoff
         ]
+
+        wrapup_events = [t for t in recent if getattr(t, "event_name", "") == "WRAPPING_UP"]
         if len(wrapup_events) < self.min_sessions:
             logger.info(
                 "Only %d wrapup events in window (min %d). Skipping analysis.",
@@ -243,15 +238,14 @@ class SessionStewardCitizen:
         patterns: list[EfficiencyPattern] = []
 
         timer_wrapups = [
-            e for e in wrapup_events
-            if "timer expired" in (getattr(e, "message", "") or "")
+            e for e in wrapup_events if "timer expired" in (getattr(e, "message", "") or "")
         ]
         if not timer_wrapups:
             return patterns
 
-        avg_util = sum(
-            getattr(e, "utilization_percent", 0.0) for e in timer_wrapups
-        ) / len(timer_wrapups)
+        avg_util = sum(getattr(e, "utilization_percent", 0.0) for e in timer_wrapups) / len(
+            timer_wrapups
+        )
         if avg_util < 70.0:
             suggested_timer = self._suggest_timer(timer_wrapups)
             patterns.append(
@@ -284,15 +278,14 @@ class SessionStewardCitizen:
         patterns: list[EfficiencyPattern] = []
 
         threshold_wrapups = [
-            e for e in wrapup_events
-            if "token utilization" in (getattr(e, "message", "") or "")
+            e for e in wrapup_events if "token utilization" in (getattr(e, "message", "") or "")
         ]
         if not threshold_wrapups:
             return patterns
 
-        avg_util = sum(
-            getattr(e, "utilization_percent", 0.0) for e in threshold_wrapups
-        ) / len(threshold_wrapups)
+        avg_util = sum(getattr(e, "utilization_percent", 0.0) for e in threshold_wrapups) / len(
+            threshold_wrapups
+        )
         if avg_util > 98.0:
             patterns.append(
                 EfficiencyPattern(
@@ -339,7 +332,11 @@ class SessionStewardCitizen:
         for e in restart_events:
             if not current:
                 current = [e]
-            elif getattr(e, "timestamp", datetime.min) - getattr(current[0], "timestamp", datetime.min) <= window:
+            elif (
+                getattr(e, "timestamp", datetime.min)
+                - getattr(current[0], "timestamp", datetime.min)
+                <= window
+            ):
                 current.append(e)
             else:
                 if len(current) >= 3:
@@ -413,12 +410,12 @@ class SessionStewardCitizen:
             first_half = events[:mid]
             second_half = events[mid:]
 
-            avg_first = sum(
-                getattr(e, "utilization_percent", 0.0) for e in first_half
-            ) / len(first_half)
-            avg_second = sum(
-                getattr(e, "utilization_percent", 0.0) for e in second_half
-            ) / len(second_half)
+            avg_first = sum(getattr(e, "utilization_percent", 0.0) for e in first_half) / len(
+                first_half
+            )
+            avg_second = sum(getattr(e, "utilization_percent", 0.0) for e in second_half) / len(
+                second_half
+            )
 
             if avg_first == 0:
                 continue
@@ -976,6 +973,7 @@ class SessionStewardCitizen:
         Returns:
             The scheduled task object.
         """
+
         def audit_callback() -> None:
             logger.info("Running scheduled Session Steward audit")
             report = self.audit(controller)
@@ -1001,9 +999,9 @@ class SessionStewardCitizen:
     @staticmethod
     def _suggest_timer(timer_wrapups: list[TelemetryEvent]) -> str:
         """Suggest a longer timer based on observed patterns."""
-        avg_elapsed = sum(
-            getattr(e, "elapsed_seconds", 0.0) for e in timer_wrapups
-        ) / max(len(timer_wrapups), 1)
+        avg_elapsed = sum(getattr(e, "elapsed_seconds", 0.0) for e in timer_wrapups) / max(
+            len(timer_wrapups), 1
+        )
         suggestion = max(avg_elapsed * 1.5, 1800)  # At least 30m
         minutes = int(suggestion / 60)
         return f"{minutes}m"

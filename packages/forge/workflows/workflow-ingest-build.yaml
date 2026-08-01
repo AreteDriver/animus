@@ -9,17 +9,17 @@ inputs:
   spec_path:
     type: string
     required: true
-    default: "/home/arete/projects/animus/docs/specs/workflow-ingest-lugh-ogma.md"
+    default: "~/projects/animus/docs/specs/workflow-ingest-lugh-ogma.md"
     description: Path to the specification document
   codebase_path:
     type: string
     required: true
-    default: "/home/arete/projects/animus"
+    default: "~/projects/animus"
     description: Path to the Animus monorepo
   test_command:
     type: string
     required: false
-    default: "cd /home/arete/projects/animus/packages/core && python -m pytest"
+    default: "cd ~/projects/animus/packages/core && python -m pytest"
     description: Command to run tests
 
 outputs:

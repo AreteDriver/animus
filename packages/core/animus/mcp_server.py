@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import sys
 from datetime import datetime
 
 from animus.audit import EgressAuditLog
@@ -18,10 +19,10 @@ from animus.citizens import ImprovementProposal
 from animus.config import AnimusConfig
 from animus.infrastructure import AlreadyRunningError, LockedPidFile
 from animus.logging import get_logger
+from animus.mcp_gating import MCPToolGater, get_mcp_intent, set_mcp_intent
 from animus.memory import MemoryLayer, MemoryType
 from animus.memory.redaction import redact
 from animus.memory.types import Sensitivity
-from animus.mcp_gating import MCPToolGater, get_mcp_intent, set_mcp_intent
 from animus.tasks import TaskTracker
 
 logger = get_logger("mcp_server")
@@ -36,15 +37,17 @@ except ImportError:
 
 # Tools that should always be returned with full schemas regardless of intent.
 # These are the "core" tools that every session likely needs.
-_ALWAYS_EXPOSE = frozenset({
-    "animus_remember",
-    "animus_recall",
-    "animus_search_tags",
-    "animus_list_tasks",
-    "animus_create_task",
-    "animus_complete_task",
-    "animus_set_intent",
-})
+_ALWAYS_EXPOSE = frozenset(
+    {
+        "animus_remember",
+        "animus_recall",
+        "animus_search_tags",
+        "animus_list_tasks",
+        "animus_create_task",
+        "animus_complete_task",
+        "animus_set_intent",
+    }
+)
 
 # Optional API key for MCP server authentication
 _MCP_API_KEY = os.environ.get("ANIMUS_MCP_API_KEY")
@@ -146,33 +149,31 @@ if FastMCP is not None:
                 )
             self._gater_initialized = True
 
-    async def list_tools(self) -> list:
-        """Override to return gated schemas based on session intent."""
-        from mcp.types import Tool as MCPTool
+        async def list_tools(self) -> list:
+            """Override to return gated schemas based on session intent."""
+            from mcp.types import Tool as MCPTool
 
-        self._ensure_gater()
-        intent = get_mcp_intent()
-        if not intent:
-            # No intent set — backward compatible, return all full schemas
-            return await super().list_tools()
+            self._ensure_gater()
+            intent = get_mcp_intent()
+            if not intent:
+                # No intent set — backward compatible, return all full schemas
+                return await super().list_tools()
 
-        gated = self._tool_gater.get_gated_schemas(intent=intent)
-        return [
-            MCPTool(
-                name=g.name,
-                description=g.description,
-                inputSchema=g.input_schema,
-            )
-            for g in gated
-        ]
+            gated = self._tool_gater.get_gated_schemas(intent=intent)
+            return [
+                MCPTool(
+                    name=g.name,
+                    description=g.description,
+                    inputSchema=g.input_schema,
+                )
+                for g in gated
+            ]
 
 
 def create_mcp_server():
     """Create and configure the Animus MCP server."""
     if FastMCP is None:
-        raise ImportError(
-            "MCP server requires the mcp SDK. Install with: pip install 'mcp>=1.0.0'"
-        )
+        raise ImportError("MCP server requires the mcp SDK. Install with: pip install 'mcp>=1.0.0'")
 
     config = AnimusConfig.load()
     config.ensure_dirs()
@@ -881,8 +882,12 @@ def create_mcp_server():
             return f"Path not found: {codebase_path}"
 
         try:
-            from animus_forge.agents.provider_wrapper import create_agent_provider  # boundary-ok: MCP tool handler composes Forge
-            from animus_forge.self_improve.orchestrator import SelfImproveOrchestrator  # boundary-ok: MCP tool handler composes Forge
+            from animus_forge.agents.provider_wrapper import (
+                create_agent_provider,  # boundary-ok: MCP tool handler composes Forge
+            )
+            from animus_forge.self_improve.orchestrator import (
+                SelfImproveOrchestrator,  # boundary-ok: MCP tool handler composes Forge
+            )
         except ImportError:
             return (
                 "Forge not installed. Install with: pip install animus-forge\n"
@@ -1022,7 +1027,9 @@ def create_mcp_server():
             lines.append(f"**ID:** `{proposal.id}`")
             lines.append(f"**Title:** {proposal.title}")
             lines.append(f"**Problem:** {proposal.problem}")
-            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(
+                f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})"
+            )
             lines.append(f"**Effort estimate:** {proposal.estimated_effort_hours}h")
             lines.append(f"**Affected components:** {', '.join(proposal.affected_components)}")
             lines.append(f"**Recommendation:** {proposal.recommendation}")
@@ -1035,7 +1042,7 @@ def create_mcp_server():
             if store_proposal:
                 stored = architect.store_proposal(proposal)
                 if stored:
-                    lines.append(f"✅ Proposal stored in memory for review.")
+                    lines.append("✅ Proposal stored in memory for review.")
                 else:
                     lines.append("⚠️ Memory layer unavailable — proposal not persisted.")
         else:
@@ -1070,6 +1077,7 @@ def create_mcp_server():
             # Fall back to searching memory directly
             try:
                 from animus.memory import MemoryType
+
                 results = memory.search(
                     query="architect proposal",
                     memory_type=MemoryType.PROCEDURAL,
@@ -1173,7 +1181,9 @@ def create_mcp_server():
         if proposal:
             lines.append(f"- Generated proposal: `{proposal.id}`")
             lines.append(f"- Title: {proposal.title}")
-            lines.append(f"- Confidence: {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(
+                f"- Confidence: {proposal.confidence.value} ({proposal.confidence_score:.0%})"
+            )
             lines.append("")
 
             if store_proposal:
@@ -1214,6 +1224,7 @@ def create_mcp_server():
         if status == "pending":
             try:
                 from animus.memory import MemoryType
+
                 results = memory.search(
                     query="conversation_designer proposal",
                     memory_type=MemoryType.PROCEDURAL,
@@ -1275,7 +1286,9 @@ def create_mcp_server():
 
         from animus.citizens import KnowledgeCuratorCitizen
 
-        resolved_path = codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        resolved_path = (
+            codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        )
 
         curator = KnowledgeCuratorCitizen(
             codebase_path=resolved_path,
@@ -1328,7 +1341,9 @@ def create_mcp_server():
         if proposal:
             lines.append(f"- Generated proposal: `{proposal.id}`")
             lines.append(f"- Title: {proposal.title}")
-            lines.append(f"- Confidence: {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(
+                f"- Confidence: {proposal.confidence.value} ({proposal.confidence_score:.0%})"
+            )
             lines.append("")
 
             if store_proposal:
@@ -1368,6 +1383,7 @@ def create_mcp_server():
         if status == "pending":
             try:
                 from animus.memory import MemoryType
+
                 results = memory.search(
                     query="knowledge_curator proposal",
                     memory_type=MemoryType.PROCEDURAL,
@@ -1468,7 +1484,9 @@ def create_mcp_server():
         if proposal:
             lines.append(f"- Generated proposal: `{proposal.id}`")
             lines.append(f"- Title: {proposal.title}")
-            lines.append(f"- Confidence: {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(
+                f"- Confidence: {proposal.confidence.value} ({proposal.confidence_score:.0%})"
+            )
             lines.append("")
 
             if store_proposal:
@@ -1505,6 +1523,7 @@ def create_mcp_server():
         if status == "pending":
             try:
                 from animus.memory import MemoryType
+
                 results = memory.search(
                     query="test_oracle proposal",
                     memory_type=MemoryType.PROCEDURAL,
@@ -1598,12 +1617,20 @@ def create_mcp_server():
             lines.append(f"**Transitions:** {len(qp.transitions)}")
             if qp.transitions:
                 last = qp.transitions[-1]
-                lines.append(f"**Last action:** {last.from_status.value} → {last.to_status.value} by {last.actor}")
+                lines.append(
+                    f"**Last action:** {last.from_status.value} → {last.to_status.value} by {last.actor}"
+                )
             lines.append("")
 
         lines.append(_PI_DEFENSE_FOOTER)
         response, redaction_count = _scrub_egress("\n".join(lines))
-        audit_log.record("animus_proposal_queue_list", {Sensitivity.PUBLIC}, len(items), redaction_count, len(response))
+        audit_log.record(
+            "animus_proposal_queue_list",
+            {Sensitivity.PUBLIC},
+            len(items),
+            redaction_count,
+            len(response),
+        )
         return response
 
     @mcp.tool()
@@ -1754,7 +1781,9 @@ def create_mcp_server():
             lines.append("")
 
         response = "\n".join(lines)
-        audit_log.record("animus_list_citizens", {Sensitivity.PUBLIC}, len(citizens), 0, len(response))
+        audit_log.record(
+            "animus_list_citizens", {Sensitivity.PUBLIC}, len(citizens), 0, len(response)
+        )
         return response
 
     # -----------------------------------------------------------------------
@@ -1820,7 +1849,13 @@ def create_mcp_server():
 
         lines.append(_PI_DEFENSE_FOOTER)
         response, redaction_count = _scrub_egress("\n".join(lines))
-        audit_log.record("animus_citizen_council_backlog", {Sensitivity.PUBLIC}, len(ranked), redaction_count, len(response))
+        audit_log.record(
+            "animus_citizen_council_backlog",
+            {Sensitivity.PUBLIC},
+            len(ranked),
+            redaction_count,
+            len(response),
+        )
         return response
 
     @mcp.tool()
@@ -1875,7 +1910,9 @@ def create_mcp_server():
             return "Citizens are disabled in configuration."
 
         if not config.citizens.session_steward_enabled:
-            return "Session Steward is disabled. Set citizens.session_steward_enabled=true to use it."
+            return (
+                "Session Steward is disabled. Set citizens.session_steward_enabled=true to use it."
+            )
 
         from animus.citizens import SessionStewardCitizen
 
@@ -1928,8 +1965,10 @@ def create_mcp_server():
             lines.append(f"**ID:** `{proposal.id}`")
             lines.append(f"**Title:** {proposal.title}")
             lines.append(f"**Problem:** {proposal.problem}")
-            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
-            lines.append(f"**Recommendation:**")
+            lines.append(
+                f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})"
+            )
+            lines.append("**Recommendation:**")
             lines.append(proposal.recommendation)
             if proposal.potential_risks:
                 lines.append("**Risks:**")
@@ -2056,14 +2095,14 @@ def create_mcp_server():
         medium = [f for f in findings if f.severity == "medium"]
         low = [f for f in findings if f.severity == "low"]
 
-        lines.append(f"**Critical:** {len(critical)} | **High:** {len(high)} | **Medium:** {len(medium)} | **Low:** {len(low)}")
+        lines.append(
+            f"**Critical:** {len(critical)} | **High:** {len(high)} | **Medium:** {len(medium)} | **Low:** {len(low)}"
+        )
         lines.append("")
 
         for finding in findings:
             loc = f" (line {finding.line_number})" if finding.line_number else ""
-            lines.append(
-                f"- **[{finding.severity.upper()}]** {finding.description}{loc}"
-            )
+            lines.append(f"- **[{finding.severity.upper()}]** {finding.description}{loc}")
             lines.append(f"  Pattern: `{finding.pattern_name}` | Match: `{finding.matched_text}`")
 
         return "\n".join(lines)
@@ -2196,7 +2235,9 @@ def create_mcp_server():
             lines.append(f"**ID:** `{proposal.id}`")
             lines.append(f"**Title:** {proposal.title}")
             lines.append(f"**Problem:** {proposal.problem}")
-            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(
+                f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})"
+            )
             lines.append(f"**Effort:** {proposal.estimated_effort_hours}h")
             lines.append("")
             if store_report:
@@ -2241,7 +2282,9 @@ def create_mcp_server():
 
         from animus.citizens import AbstractionCitizen
 
-        resolved_path = codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        resolved_path = (
+            codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        )
         abstraction = AbstractionCitizen(
             memory_layer=memory if store_mechanisms else None,
             codebase_path=resolved_path,
@@ -2299,7 +2342,9 @@ def create_mcp_server():
             lines.append(f"**ID:** `{proposal.id}`")
             lines.append(f"**Title:** {proposal.title}")
             lines.append(f"**Problem:** {proposal.problem}")
-            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(
+                f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})"
+            )
             lines.append(f"**Recommendation:** {proposal.recommendation}")
             lines.append(f"**Effort:** {proposal.estimated_effort_hours}h")
             if proposal.potential_risks:
@@ -2384,7 +2429,9 @@ def create_mcp_server():
 
         from animus.citizens import PatternCitizen
 
-        resolved_path = codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        resolved_path = (
+            codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        )
         pattern = PatternCitizen(
             memory_layer=memory if store_patterns else None,
             codebase_path=resolved_path,
@@ -2422,7 +2469,9 @@ def create_mcp_server():
             lines.append("")
         else:
             lines.append("## No Patterns Discovered")
-            lines.append("Not enough related mechanisms to form a pattern (need ≥3 in category or ≥2 with shared tags).")
+            lines.append(
+                "Not enough related mechanisms to form a pattern (need ≥3 in category or ≥2 with shared tags)."
+            )
             lines.append("")
 
         # Proposal
@@ -2432,7 +2481,9 @@ def create_mcp_server():
             lines.append(f"**ID:** `{proposal.id}`")
             lines.append(f"**Title:** {proposal.title}")
             lines.append(f"**Problem:** {proposal.problem}")
-            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(
+                f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})"
+            )
             lines.append(f"**Recommendation:** {proposal.recommendation}")
             lines.append(f"**Effort:** {proposal.estimated_effort_hours}h")
             if proposal.potential_risks:
@@ -2519,7 +2570,9 @@ def create_mcp_server():
 
         from animus.citizens import FirstPrinciplesCitizen
 
-        resolved_path = codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        resolved_path = (
+            codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        )
         fp = FirstPrinciplesCitizen(
             memory_layer=memory if store_principles else None,
             codebase_path=resolved_path,
@@ -2570,7 +2623,9 @@ def create_mcp_server():
             lines.append(f"**ID:** `{proposal.id}`")
             lines.append(f"**Title:** {proposal.title}")
             lines.append(f"**Problem:** {proposal.problem}")
-            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(
+                f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})"
+            )
             lines.append(f"**Recommendation:** {proposal.recommendation}")
             lines.append(f"**Effort:** {proposal.estimated_effort_hours}h")
             if proposal.potential_risks:
@@ -2651,7 +2706,9 @@ def create_mcp_server():
 
         from animus.citizens import ArchitectureCitizen
 
-        resolved_path = codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        resolved_path = (
+            codebase_path or config.citizens.codebase_path or str(config.data_dir.parent)
+        )
         arch = ArchitectureCitizen(
             memory_layer=memory if store_gaps else None,
             codebase_path=resolved_path,
@@ -2700,7 +2757,9 @@ def create_mcp_server():
             lines.append(f"**ID:** `{proposal.id}`")
             lines.append(f"**Title:** {proposal.title}")
             lines.append(f"**Problem:** {proposal.problem}")
-            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(
+                f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})"
+            )
             lines.append(f"**Recommendation:** {proposal.recommendation}")
             lines.append(f"**Effort:** {proposal.estimated_effort_hours}h")
             if proposal.potential_risks:
@@ -2841,7 +2900,9 @@ def create_mcp_server():
 
         source = harvester.harvest_repository(target=target, depth=depth)
         if source is None:
-            return f"Harvest failed for '{target}'. Check that the repo exists and Lugh is installed."
+            return (
+                f"Harvest failed for '{target}'. Check that the repo exists and Lugh is installed."
+            )
 
         lines = ["# Harvester Scan Result", ""]
         lines.append(f"**Source:** {source.title}")
@@ -3060,7 +3121,9 @@ def create_mcp_server():
             lines.append("## Final Proposal")
             lines.append(f"**ID:** `{report.final_proposal.id}`")
             lines.append(f"**Title:** {report.final_proposal.title}")
-            lines.append(f"**Confidence:** {report.final_proposal.confidence.value} ({report.final_proposal.confidence_score:.0%})")
+            lines.append(
+                f"**Confidence:** {report.final_proposal.confidence.value} ({report.final_proposal.confidence_score:.0%})"
+            )
             lines.append(f"**Effort:** {report.final_proposal.estimated_effort_hours}h")
             lines.append(f"**Recommendation:** {report.final_proposal.recommendation}")
             lines.append("")
@@ -3133,7 +3196,9 @@ def create_mcp_server():
             lines.append("## Final Proposal")
             lines.append(f"**ID:** `{report.final_proposal.id}`")
             lines.append(f"**Title:** {report.final_proposal.title}")
-            lines.append(f"**Confidence:** {report.final_proposal.confidence.value} ({report.final_proposal.confidence_score:.0%})")
+            lines.append(
+                f"**Confidence:** {report.final_proposal.confidence.value} ({report.final_proposal.confidence_score:.0%})"
+            )
             lines.append(f"**Effort:** {report.final_proposal.estimated_effort_hours}h")
             lines.append(f"**Recommendation:** {report.final_proposal.recommendation}")
             lines.append("")
@@ -3161,6 +3226,7 @@ def create_mcp_server():
 
         try:
             from animus.memory import MemoryType
+
             results = memory.search(
                 query="Research Guild Pipeline Report",
                 memory_type=MemoryType.PROCEDURAL,

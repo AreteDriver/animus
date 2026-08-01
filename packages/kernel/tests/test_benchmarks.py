@@ -5,7 +5,6 @@ Run: pytest tests/test_benchmarks.py --benchmark-only
 
 from __future__ import annotations
 
-import tempfile
 from datetime import datetime, timedelta
 
 import pytest
@@ -19,7 +18,6 @@ from animus_kernel.head.session_controller import (
     SessionLifecycleEvent,
     SessionPolicy,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════
 # Session Lifecycle Benchmarks
@@ -95,10 +93,7 @@ class TestCheckpointBenchmark:
         """Benchmark: Save a checkpoint with realistic context."""
         store = HeadCheckpointStore(db_path=tmp_path / "checkpoints" / "head.db")
 
-        messages = [
-            {"role": "user", "content": f"Message {i}"}
-            for i in range(100)
-        ]
+        messages = [{"role": "user", "content": f"Message {i}"} for i in range(100)]
         checkpoint = self._make_checkpoint("bench-session", messages)
 
         def save():
@@ -110,10 +105,7 @@ class TestCheckpointBenchmark:
         """Benchmark: Load a recently saved checkpoint."""
         store = HeadCheckpointStore(db_path=tmp_path / "checkpoints" / "head.db")
 
-        messages = [
-            {"role": "user", "content": f"Message {i}"}
-            for i in range(100)
-        ]
+        messages = [{"role": "user", "content": f"Message {i}"} for i in range(100)]
         checkpoint = self._make_checkpoint("bench-session", messages)
         store.save(checkpoint)
 

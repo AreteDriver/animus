@@ -14,7 +14,6 @@ Supports:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from animus.eval.rubric import Score, ScoreLevel
 from animus.logging import get_logger
@@ -45,8 +44,8 @@ class RewardConfig:
 class RewardAggregator:
     """Aggregate rubric scores into scalar rewards for RFT.
 
-    Unlike raw weighted_score, this applies shaping and thresholds
-to produce training-suitable reward signals.
+        Unlike raw weighted_score, this applies shaping and thresholds
+    to produce training-suitable reward signals.
     """
 
     def __init__(self, config: RewardConfig | None = None):
@@ -110,8 +109,7 @@ to produce training-suitable reward signals.
         # Selective reward: only reward if all dimensions above threshold
         if self.config.selective_reward:
             all_above = all(
-                ds.raw_score >= self.config.selective_threshold
-                for ds in score.dimension_scores
+                ds.raw_score >= self.config.selective_threshold for ds in score.dimension_scores
             )
             if not all_above:
                 return 0.0
@@ -150,12 +148,8 @@ to produce training-suitable reward signals.
 
         for ds in failures:
             if ds.level == ScoreLevel.CRITICAL:
-                suggestions.append(
-                    f"CRITICAL: {ds.dimension_name} — {ds.justification}"
-                )
+                suggestions.append(f"CRITICAL: {ds.dimension_name} — {ds.justification}")
             else:
-                suggestions.append(
-                    f"POOR: {ds.dimension_name} — {ds.justification}"
-                )
+                suggestions.append(f"POOR: {ds.dimension_name} — {ds.justification}")
 
         return suggestions

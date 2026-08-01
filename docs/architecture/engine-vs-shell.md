@@ -1,6 +1,6 @@
 # Strategic Assessment: Animus as Engine vs. Shell
 
-**Date:** 2026-06-14 · **Auditor:** ARETE  
+**Date:** 2026-06-14 · **Auditor:** ARETE
 **Thesis:** The current Animus trajectory produces a *shell* (personal dashboard + chat) wrapped around a powerful *engine* (budget, sandbox, orchestrator, providers). For the OpenClaw-class vision — autonomous multi-project building with recursive self-improvement — we must invert this: make the engine primary, the shell disposable, and the portfolio the runtime surface.
 
 ---

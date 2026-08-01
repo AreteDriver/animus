@@ -190,7 +190,7 @@ Forge appears as a status card in the dashboard now. Full integration in Phase 2
 ## Development
 
 ```bash
-git clone git@github.com:AreteDriver/Animus.git
+git clone git@github.com:your-org/Animus.git
 cd Animus/packages/bootstrap
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
@@ -208,4 +208,4 @@ ruff check src/ tests/ && ruff format --check src/ tests/
 
 ## License
 
-MIT - 2026, AreteDriver
+MIT - 2026, your-org

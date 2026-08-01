@@ -3,30 +3,25 @@
 Validates P-20260706-002: Meta-Thinker anomaly detection and signal generation.
 """
 
-import pytest
-
 from animus.meta.anomalies import (
-    AnomalyDetector,
     CircularToolUse,
-    RepeatedFailures,
     GoalDrift,
+    RepeatedFailures,
     Stagnation,
 )
 from animus.meta.events import (
-    Event,
     IterationStarted,
-    ToolExecution,
-    ResponseReceived,
-    LoopCompleted,
     MaxIterationsReached,
+    ResponseReceived,
+    ToolExecution,
 )
 from animus.meta.signals import (
-    SignalType,
-    ReplanSignal,
-    InjectBriefSignal,
     EscalateSignal,
     HaltSignal,
+    InjectBriefSignal,
+    ReplanSignal,
     ReplanStrategy,
+    SignalType,
 )
 from animus.meta.thinker import MetaThinker, MetaThinkerConfig
 
@@ -90,21 +85,9 @@ class TestAnomalyDetectors:
 
     def test_repeated_failures_reset_on_success(self):
         detector = RepeatedFailures(threshold=0.5, min_consecutive=2)
-        detector.observe(
-            ToolExecution(
-                iteration=1, tool_name="cmd", params={}, success=False
-            )
-        )
-        detector.observe(
-            ToolExecution(
-                iteration=2, tool_name="cmd", params={}, success=True
-            )
-        )
-        detector.observe(
-            ToolExecution(
-                iteration=3, tool_name="cmd", params={}, success=False
-            )
-        )
+        detector.observe(ToolExecution(iteration=1, tool_name="cmd", params={}, success=False))
+        detector.observe(ToolExecution(iteration=2, tool_name="cmd", params={}, success=True))
+        detector.observe(ToolExecution(iteration=3, tool_name="cmd", params={}, success=False))
         report = detector.check()
         assert report is None
 
@@ -113,9 +96,7 @@ class TestAnomalyDetectors:
         detector.set_original_prompt("read the file and summarize it")
         # First response is aligned (mentions file, summarize)
         detector.observe(
-            ResponseReceived(
-                iteration=1, text="Here is the file content. I will summarize it now."
-            )
+            ResponseReceived(iteration=1, text="Here is the file content. I will summarize it now.")
         )
         # Subsequent responses drift completely (weather, sports, unrelated)
         for i in range(2, 5):
@@ -159,9 +140,7 @@ class TestMetaThinkerSignals:
         thinker = MetaThinker(MetaThinkerConfig(enabled=True, circular_tool_threshold=0.5))
         thinker.set_original_prompt("read and summarize")
         for i in range(4):
-            thinker.observe(
-                IterationStarted(iteration=i + 1, max_iterations=5)
-            )
+            thinker.observe(IterationStarted(iteration=i + 1, max_iterations=5))
             thinker.observe(
                 ResponseReceived(iteration=i + 1, text="calling read_file", tool_calls=[])
             )
@@ -178,9 +157,7 @@ class TestMetaThinkerSignals:
         assert any(s.signal_type == SignalType.REPLAN for s in signals)
 
     def test_repeated_failures_produces_escalate(self):
-        config = MetaThinkerConfig(
-            enabled=True, escalate_on_repeated_failures=True
-        )
+        config = MetaThinkerConfig(enabled=True, escalate_on_repeated_failures=True)
         thinker = MetaThinker(config)
         thinker.set_original_prompt("run a command")
         for i in range(2):
@@ -202,9 +179,7 @@ class TestMetaThinkerSignals:
         thinker = MetaThinker(config)
         thinker.set_original_prompt("do something")
         thinker.observe(
-            MaxIterationsReached(
-                iteration=5, final_response="partial result", total_iterations=5
-            )
+            MaxIterationsReached(iteration=5, final_response="partial result", total_iterations=5)
         )
 
         signals = thinker.check()
@@ -212,20 +187,14 @@ class TestMetaThinkerSignals:
 
     def test_disabled_thinker_returns_empty(self):
         thinker = MetaThinker(MetaThinkerConfig(enabled=False))
-        thinker.observe(
-            ToolExecution(iteration=1, tool_name="cmd", params={}, success=False)
-        )
+        thinker.observe(ToolExecution(iteration=1, tool_name="cmd", params={}, success=False))
         assert thinker.check() == []
 
     def test_get_brief_returns_summary(self):
         thinker = MetaThinker(MetaThinkerConfig(enabled=True))
+        thinker.observe(ToolExecution(iteration=1, tool_name="read_file", params={}, success=True))
         thinker.observe(
-            ToolExecution(iteration=1, tool_name="read_file", params={}, success=True)
-        )
-        thinker.observe(
-            ToolExecution(
-                iteration=2, tool_name="web_search", params={}, success=False
-            )
+            ToolExecution(iteration=2, tool_name="web_search", params={}, success=False)
         )
         brief = thinker.get_brief(iteration=2)
         assert brief is not None
@@ -236,9 +205,7 @@ class TestMetaThinkerSignals:
     def test_reset_clears_state(self):
         thinker = MetaThinker(MetaThinkerConfig(enabled=True))
         thinker.set_original_prompt("test")
-        thinker.observe(
-            ToolExecution(iteration=1, tool_name="cmd", params={}, success=True)
-        )
+        thinker.observe(ToolExecution(iteration=1, tool_name="cmd", params={}, success=True))
         thinker.reset()
         assert thinker._events == []
         assert thinker._original_prompt == ""
@@ -280,9 +247,7 @@ class TestSignalTypes:
         assert signal.priority == "high"
 
     def test_escalate_signal_fields(self):
-        signal = EscalateSignal(
-            confidence=0.9, reason="repeated failures", target_mode="deep"
-        )
+        signal = EscalateSignal(confidence=0.9, reason="repeated failures", target_mode="deep")
         assert signal.signal_type == SignalType.ESCALATE
         assert signal.target_mode == "deep"
         assert signal.preserve_context is True

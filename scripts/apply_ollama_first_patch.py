@@ -4,11 +4,10 @@ Applies changes to make Ollama the enforced default provider.
 Cloud providers (Anthropic, OpenAI) are opt-in only via explicit env var.
 
 Usage:
-    cd /home/arete/projects/animus
+    cd ~/projects/animus
     git apply scripts/ollama_first_config.patch
 """
 
-import re
 from pathlib import Path
 
 
@@ -22,7 +21,7 @@ def patch_main_py():
     content = path.read_text()
 
     # Remove the auto-swap block (lines 526-539 in original)
-    old_block = '''    # Dual-model routing: if primary is Ollama and ANTHROPIC_API_KEY is set,
+    old_block = """    # Dual-model routing: if primary is Ollama and ANTHROPIC_API_KEY is set,
     # use Claude as primary brain and Ollama as local hands (or vice versa).
     fallback_config: ModelConfig | None = None
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
@@ -36,9 +35,9 @@ def patch_main_py():
         ollama_model = os.environ.get("OLLAMA_MODEL", "deepseek-coder-v2")
         fallback_config = ModelConfig.ollama(ollama_model)
         fallback_config.base_url = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-'''
+"""
 
-    new_block = '''    # Ollama-first: cloud providers are opt-in only.
+    new_block = """    # Ollama-first: cloud providers are opt-in only.
     # Set ANIMUS_CLOUD_PROVIDER=anthropic|openai to enable cloud.
     fallback_config: ModelConfig | None = None
     cloud_provider = os.environ.get("ANIMUS_CLOUD_PROVIDER", "").lower()
@@ -57,7 +56,7 @@ def patch_main_py():
         model_config = ModelConfig.openai("gpt-4o")
         model_config.api_key = openai_key
     # Default: Ollama remains primary, no fallback
-'''
+"""
 
     if old_block not in content:
         print(f"SKIP: {path} already patched or block not found")
@@ -77,14 +76,14 @@ def patch_config_py():
 
     content = path.read_text()
 
-    old_doc = '''    Supports three providers:
+    old_doc = """    Supports three providers:
       - "ollama"    — local models via Ollama (default)
       - "anthropic" — Claude models via Anthropic API
       - "openai"    — OpenAI models, or any OpenAI-compatible endpoint
                       (LM Studio, vLLM, Together, Groq, etc.) via openai_base_url
-    '''
+    """
 
-    new_doc = '''    OLLAMA-FIRST DEFAULT:
+    new_doc = """    OLLAMA-FIRST DEFAULT:
       - Ollama is the primary provider. No API keys required.
       - Cloud providers are OPT-IN via ANIMUS_CLOUD_PROVIDER env var.
 
@@ -93,7 +92,7 @@ def patch_config_py():
       - "anthropic" — Claude models via Anthropic API (opt-in)
       - "openai"    — OpenAI models, or any OpenAI-compatible endpoint
                       (LM Studio, vLLM, Together, Groq, etc.) via openai_base_url
-    '''
+    """
 
     if old_doc not in content:
         print(f"SKIP: {path} doc block not found")
@@ -124,7 +123,7 @@ def patch_readme():
         print("SKIP: No install section found in README.md")
         return
 
-    ollama_block = '''
+    ollama_block = """
 ### Prerequisites (Ollama — local, zero cost)
 
 1. Install Ollama: https://ollama.com/download
@@ -136,7 +135,7 @@ def patch_readme():
 Set `ANIMUS_CLOUD_PROVIDER=anthropic` and `ANTHROPIC_API_KEY=sk-...`
 for fallback to Claude when local model is unavailable.
 
-'''
+"""
 
     if "Ollama — local" in content:
         print("SKIP: README.md already mentions Ollama-first")
@@ -156,7 +155,9 @@ def main():
     patch_readme()
     print("=" * 50)
     print("Done. Review changes with: git diff")
-    print("Commit with: git add -A && git commit -m 'feat(config): Ollama-first default, cloud opt-in'")
+    print(
+        "Commit with: git add -A && git commit -m 'feat(config): Ollama-first default, cloud opt-in'"
+    )
 
 
 if __name__ == "__main__":

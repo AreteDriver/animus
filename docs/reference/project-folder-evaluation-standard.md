@@ -1,12 +1,12 @@
 # Project Folder Setup Evaluation Standard
 
-**Document type:** Audit and readiness standard  
-**Recommended filename:** `PROJECT_FOLDER_SETUP_EVALUATION_STANDARD.md`  
-**Companion standard:** `PROJECT_ORGANIZATION_GUIDELINES.md`  
-**Applies to:** ChatGPT project workspaces, local project folders, GitHub repositories, and AI-agent source packages  
-**Owner:** AreteDriver  
-**Version:** 1.0  
-**Last updated:** 2026-06-18  
+**Document type:** Audit and readiness standard
+**Recommended filename:** `PROJECT_FOLDER_SETUP_EVALUATION_STANDARD.md`
+**Companion standard:** `PROJECT_ORGANIZATION_GUIDELINES.md`
+**Applies to:** ChatGPT project workspaces, local project folders, GitHub repositories, and AI-agent source packages
+**Owner:** your-org
+**Version:** 1.0
+**Last updated:** 2026-06-18
 
 ---
 
@@ -62,7 +62,7 @@ Evaluate whether the repository contains:
 - Release and deployment information
 - Truth-baseline controls
 
-A strong workspace cannot compensate for a disorganized repository.  
+A strong workspace cannot compensate for a disorganized repository.
 A strong repository cannot compensate for a workspace filled with stale or conflicting sources.
 
 Both layers must be evaluated.
@@ -1121,34 +1121,34 @@ Any unchecked item should become either:
 
 ## 17. Best-Practice Principles
 
-1. **Evaluate against the declared maturity level.**  
+1. **Evaluate against the declared maturity level.**
    A prototype does not need flagship bureaucracy, but a flagship cannot operate on prototype documentation.
 
-2. **Repository reality outranks prose.**  
+2. **Repository reality outranks prose.**
    Documentation must match what can be verified.
 
-3. **Separate present, future, and history.**  
+3. **Separate present, future, and history.**
    Current state, roadmap, and archive material must never blur together.
 
-4. **One fact should have one canonical owner.**  
+4. **One fact should have one canonical owner.**
    Reference shared facts instead of manually duplicating them.
 
-5. **Make authority visible.**  
+5. **Make authority visible.**
    Every source should reveal its status, version, owner, and canonical location.
 
-6. **Test with fresh eyes.**  
+6. **Test with fresh eyes.**
    A folder understood only by its creator is not properly documented.
 
-7. **Use automation for facts and judgment for meaning.**  
+7. **Use automation for facts and judgment for meaning.**
    Scripts should count and compare; humans should evaluate purpose, boundaries, and tradeoffs.
 
-8. **Treat contradictions as defects.**  
+8. **Treat contradictions as defects.**
    Conflicting source documents are an engineering risk, not a cosmetic problem.
 
-9. **Do not reward document volume.**  
+9. **Do not reward document volume.**
    Ten accurate, purposeful files are better than fifty generated files nobody maintains.
 
-10. **Reorganize before scaling.**  
+10. **Reorganize before scaling.**
     Structural confusion compounds as more agents, features, and contributors are added.
 
 ---

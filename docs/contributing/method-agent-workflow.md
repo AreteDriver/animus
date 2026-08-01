@@ -1,6 +1,6 @@
 # METHOD-AGENT-WORKFLOW: Multi-Agent Build Loop
 
-**Status:** Canonical methodology · Created 2026-06-14 · Owner: ARETE  
+**Status:** Canonical methodology · Created 2026-06-14 · Owner: ARETE
 **Scope:** Reusable orchestration pattern for decomposing strategic goals into scoped tasks, delegating to parallel agents, evaluating outputs against rubrics, and repairing failures in a loop.
 
 ---

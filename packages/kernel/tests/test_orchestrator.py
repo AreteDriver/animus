@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -10,15 +9,12 @@ from typing import Any
 import pytest
 
 from animus_kernel.sandbox.analyzer import ImprovementCategory, ImprovementSuggestion
-from animus_kernel.sandbox.approval import ApprovalGate, ApprovalStage, ApprovalStatus
 from animus_kernel.sandbox.orchestrator import (
-    ImprovementPlan,
     ImprovementResult,
     SelfImproveOrchestrator,
     WorkflowStage,
 )
 from animus_kernel.sandbox.safety import SafetyConfig
-
 
 # ═══════════════════════════════════════════════════════════════════
 # Mock provider for testing
@@ -96,7 +92,9 @@ class TestOrchestratorWorkflow:
     async def test_run_detects_long_function(self, monkeypatch):
         monkeypatch.setenv("ANIMUS_FORGE_ALLOW_AUTO_APPROVE", "1")
         # Add trailing short function so analyzer detects long_one
-        code = '\n'.join(["def very_long():"] + ["    x = 1"] * 60 + ["", "def short():", "    pass"])
+        code = "\n".join(
+            ["def very_long():"] + ["    x = 1"] * 60 + ["", "def short():", "    pass"]
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
@@ -110,11 +108,29 @@ class TestOrchestratorWorkflow:
 
             # Need a git repo for branch creation
             import subprocess
+
             subprocess.run(["git", "init"], cwd=str(tmpdir_path), capture_output=True, check=True)
-            subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=str(tmpdir_path), capture_output=True, check=True)
-            subprocess.run(["git", "config", "user.name", "Test"], cwd=str(tmpdir_path), capture_output=True, check=True)
-            subprocess.run(["git", "add", "."], cwd=str(tmpdir_path), capture_output=True, check=True)
-            subprocess.run(["git", "commit", "-m", "init"], cwd=str(tmpdir_path), capture_output=True, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "t@t.com"],
+                cwd=str(tmpdir_path),
+                capture_output=True,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Test"],
+                cwd=str(tmpdir_path),
+                capture_output=True,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "add", "."], cwd=str(tmpdir_path), capture_output=True, check=True
+            )
+            subprocess.run(
+                ["git", "commit", "-m", "init"],
+                cwd=str(tmpdir_path),
+                capture_output=True,
+                check=True,
+            )
 
             # The orchestrator expects FILE: markers + code blocks for function refactoring
             mock_response = """FILE: src/module.py

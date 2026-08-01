@@ -631,7 +631,7 @@ This gives you four layers:
 Add to each repo's README:
 
 ```markdown
-[![CodeQL](https://github.com/AreteDriver/REPO_NAME/actions/workflows/codeql.yml/badge.svg)](https://github.com/AreteDriver/REPO_NAME/actions/workflows/codeql.yml)
+[![CodeQL](https://github.com/your-org/REPO_NAME/actions/workflows/codeql.yml/badge.svg)](https://github.com/your-org/REPO_NAME/actions/workflows/codeql.yml)
 ```
 
 Shows recruiters and users that you take security seriously. Especially relevant for Palantir/Scale AI applications.

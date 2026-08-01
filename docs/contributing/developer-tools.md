@@ -339,7 +339,7 @@ memboot init
 # Scanning project...
 # Found: README.md, CLAUDE.md, 12 Python files, 3 config files
 # Indexed 847 chunks into ~/.memboot/myproject.db
-# Memory ready. 
+# Memory ready.
 
 # Query memory from CLI (for testing)
 memboot query "What's the database schema?"
@@ -395,7 +395,7 @@ memboot/
 ### Key Technical Decisions
 
 - **SQLite + numpy for vector search** — No ChromaDB, no Pinecone, no external deps. Just sqlite3 (stdlib) and numpy for cosine similarity. This is the "zero infrastructure" promise.
-- **Embedding options:** 
+- **Embedding options:**
   - Local: sentence-transformers (if installed) — fully offline
   - API: OpenAI embeddings or Anthropic (if key available)
   - Fallback: TF-IDF with sklearn — works with zero API keys
@@ -448,7 +448,7 @@ Include tests with a sample project fixture.
 ```
 Add episodic memory and context export:
 
-- memory.py: 
+- memory.py:
   - remember(text): Store a decision/conversation in the memory table with timestamp
   - recall(query, n=5): Search episodic memories by similarity
 - context.py:

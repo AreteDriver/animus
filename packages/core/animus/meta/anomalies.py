@@ -10,9 +10,8 @@ Each detector implements a specific pattern from the COMPASS taxonomy:
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any
 
-from animus.meta.events import Event, ToolExecution, ResponseReceived, MaxIterationsReached
+from animus.meta.events import Event, ResponseReceived, ToolExecution
 
 
 @dataclass
@@ -72,14 +71,12 @@ class CircularToolUse(AnomalyDetector):
         return overlap / union if union > 0 else 0.0
 
     def check(self) -> AnomalyReport | None:
-        tool_execs = [
-            e for e in self._events[-self.window_size :]
-            if isinstance(e, ToolExecution)
-        ]
+        tool_execs = [e for e in self._events[-self.window_size :] if isinstance(e, ToolExecution)]
         if len(tool_execs) < self.min_repetitions:
             return None
 
         from collections import Counter
+
         counts = Counter(e.tool_name for e in tool_execs)
         for tool_name, count in counts.items():
             if count < self.min_repetitions:
@@ -99,7 +96,7 @@ class CircularToolUse(AnomalyDetector):
                         detector="CircularToolUse",
                         confidence=confidence,
                         description=f"Tool '{tool_name}' called {count} times with similar params (avg similarity: {avg_sim:.2f})",
-                        evidence=[f"Call {i+1}: {e.params}" for i, e in enumerate(tool_events)],
+                        evidence=[f"Call {i + 1}: {e.params}" for i, e in enumerate(tool_events)],
                         affected_iterations=iterations,
                     )
         return None
@@ -117,15 +114,13 @@ class RepeatedFailures(AnomalyDetector):
         self.window_size = window_size
 
     def check(self) -> AnomalyReport | None:
-        tool_execs = [
-            e for e in self._events[-self.window_size :]
-            if isinstance(e, ToolExecution)
-        ]
+        tool_execs = [e for e in self._events[-self.window_size :] if isinstance(e, ToolExecution)]
         if not tool_execs:
             return None
 
         # Find consecutive failures per tool
         from collections import defaultdict
+
         failures_by_tool: dict[str, list[ToolExecution]] = defaultdict(list)
         for e in tool_execs:
             if not e.success:
@@ -182,8 +177,7 @@ class GoalDrift(AnomalyDetector):
 
     def check(self) -> AnomalyReport | None:
         responses = [
-            e for e in self._events[-self.window_size :]
-            if isinstance(e, ResponseReceived)
+            e for e in self._events[-self.window_size :] if isinstance(e, ResponseReceived)
         ]
         drift_scores = []
         for r in responses:
@@ -217,10 +211,7 @@ class Stagnation(AnomalyDetector):
         self.min_repeats = min_repeats
 
     def check(self) -> AnomalyReport | None:
-        tool_execs = [
-            e for e in self._events[-self.window_size :]
-            if isinstance(e, ToolExecution)
-        ]
+        tool_execs = [e for e in self._events[-self.window_size :] if isinstance(e, ToolExecution)]
         if len(tool_execs) < self.min_repeats:
             return None
 
@@ -233,6 +224,7 @@ class Stagnation(AnomalyDetector):
                 sequences.append(tuple(current[-3:]))
 
         from collections import Counter
+
         counts = Counter(sequences)
         for seq, count in counts.items():
             if count >= 2:  # Same 3-tool pattern repeated

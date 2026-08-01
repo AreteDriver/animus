@@ -136,14 +136,10 @@ class ResourceGuard:
             self._consecutive_failures += 1
             if self._consecutive_failures >= self.limits.max_consecutive_failures:
                 logger.warning(
-                    f"Failure cooldown triggered: {self._consecutive_failures} "
-                    f"consecutive failures"
+                    f"Failure cooldown triggered: {self._consecutive_failures} consecutive failures"
                 )
 
-        logger.debug(
-            f"Task slot released: {task_id}, tokens={tokens_used}, "
-            f"success={success}"
-        )
+        logger.debug(f"Task slot released: {task_id}, tokens={tokens_used}, success={success}")
 
     def report_tokens(self, tokens: int) -> bool:
         """Report token usage outside of task lifecycle.

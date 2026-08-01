@@ -5,8 +5,8 @@ author: Gorgon Project
 license: MIT
 
 description: |
-  Fetch and extract content from web pages. Parse HTML, extract text, 
-  tables, and structured data. Handle JavaScript-rendered content with 
+  Fetch and extract content from web pages. Parse HTML, extract text,
+  tables, and structured data. Handle JavaScript-rendered content with
   headless browser.
 
 dependencies:

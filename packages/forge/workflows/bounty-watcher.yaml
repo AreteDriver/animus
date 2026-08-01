@@ -22,7 +22,7 @@ inputs:
   state_dir:
     type: string
     description: Directory for state + output files
-    default: "/home/arete/.animus/bounty_intel"
+    default: "~/.animus/bounty_intel"
 
 timeout_seconds: 180
 estimated_tokens: 1500

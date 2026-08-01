@@ -17,7 +17,7 @@ from fastapi.templating import Jinja2Templates
 import animus_bootstrap
 from animus_bootstrap.config import ConfigManager
 from animus_bootstrap.dashboard.auth import auth_required_for, verify_ws_token
-from animus_bootstrap.dashboard.csrf import CsrfMiddleware, get_csrf_token, set_csrf_cookie
+from animus_bootstrap.dashboard.csrf import CsrfMiddleware, get_csrf_token
 from animus_bootstrap.dashboard.middleware_http import AuthMiddleware
 from animus_bootstrap.dashboard.routers import (
     activity,

@@ -30,7 +30,6 @@ from typing import TYPE_CHECKING, Any
 from animus.citizens.proposal import (
     EvidenceItem,
     ImprovementProposal,
-    ProposalConfidence,
     ProposalStatus,
     RiskAssessment,
 )
@@ -99,7 +98,9 @@ class FirstPrinciplesReport:
             f"{self.total_reduced} principle(s) reduced from {self.patterns_processed} pattern(s)",
         ]
         if self.contradictions_found:
-            parts.append(f"{self.contradictions_found} contradiction(s) flagged for human adjudication")
+            parts.append(
+                f"{self.contradictions_found} contradiction(s) flagged for human adjudication"
+            )
         if self.errors:
             parts.append(f"{len(self.errors)} error(s)")
         return "; ".join(parts)
@@ -112,55 +113,77 @@ class FirstPrinciplesReport:
 # Mapping of pattern keywords → (principle_statement, category, tags)
 _PRINCIPLE_RULES: list[tuple[re.Pattern, str, str, list[str]]] = [
     # State externalization
-    (re.compile(r"\b(state|externaliz|checkpoint|immutable|source of truth)\b", re.IGNORECASE),
-     "Systems that separate state from computation survive longer than systems that conflate them.",
-     "architecture",
-     ["state", "resilience", "portability"]),
+    (
+        re.compile(r"\b(state|externaliz|checkpoint|immutable|source of truth)\b", re.IGNORECASE),
+        "Systems that separate state from computation survive longer than systems that conflate them.",
+        "architecture",
+        ["state", "resilience", "portability"],
+    ),
     # Resilience / Fault tolerance
-    (re.compile(r"\b(resilien|fault toleran|graceful|recovery|fail.*safe)\b", re.IGNORECASE),
-     "Resilience is not a feature you add; it is a property you design for from the beginning.",
-     "reliability",
-     ["resilience", "design", "systems-thinking"]),
+    (
+        re.compile(r"\b(resilien|fault toleran|graceful|recovery|fail.*safe)\b", re.IGNORECASE),
+        "Resilience is not a feature you add; it is a property you design for from the beginning.",
+        "reliability",
+        ["resilience", "design", "systems-thinking"],
+    ),
     # Async / Decoupling
-    (re.compile(r"\b(async|decoupl|loose coupl|message|queue|event)\b", re.IGNORECASE),
-     "Decoupling producers from consumers is the single most effective way to scale systems under uncertainty.",
-     "architecture",
-     ["decoupling", "scalability", "async"]),
+    (
+        re.compile(r"\b(async|decoupl|loose coupl|message|queue|event)\b", re.IGNORECASE),
+        "Decoupling producers from consumers is the single most effective way to scale systems under uncertainty.",
+        "architecture",
+        ["decoupling", "scalability", "async"],
+    ),
     # Observability
-    (re.compile(r"\b(observ|telemetry|trace|metric|monitor|dashboard)\b", re.IGNORECASE),
-     "You cannot operate what you cannot observe. Observability is a prerequisite for reliability at scale.",
-     "operations",
-     ["observability", "telemetry", "operations"]),
+    (
+        re.compile(r"\b(observ|telemetry|trace|metric|monitor|dashboard)\b", re.IGNORECASE),
+        "You cannot operate what you cannot observe. Observability is a prerequisite for reliability at scale.",
+        "operations",
+        ["observability", "telemetry", "operations"],
+    ),
     # Security / Identity
-    (re.compile(r"\b(secur|identity|auth|encrypt|permission|trust)\b", re.IGNORECASE),
-     "Security is a property of the system, not a layer you bolt on afterward.",
-     "security",
-     ["security", "trust", "design"]),
+    (
+        re.compile(r"\b(secur|identity|auth|encrypt|permission|trust)\b", re.IGNORECASE),
+        "Security is a property of the system, not a layer you bolt on afterward.",
+        "security",
+        ["security", "trust", "design"],
+    ),
     # Testing / Quality
-    (re.compile(r"\b(test|quality|verif|correct|contract|invariant)\b", re.IGNORECASE),
-     "Testability is an architectural concern. If you cannot test it, you do not understand it.",
-     "quality",
-     ["testing", "quality", "understanding"]),
+    (
+        re.compile(r"\b(test|quality|verif|correct|contract|invariant)\b", re.IGNORECASE),
+        "Testability is an architectural concern. If you cannot test it, you do not understand it.",
+        "quality",
+        ["testing", "quality", "understanding"],
+    ),
     # Abstraction / Inversion
-    (re.compile(r"\b(abstract|inversion|coupling|interface|contract)\b", re.IGNORECASE),
-     "Depend on abstractions, not concretions. This is the foundation of maintainable software.",
-     "architecture",
-     ["abstraction", "coupling", "maintainability"]),
+    (
+        re.compile(r"\b(abstract|inversion|coupling|interface|contract)\b", re.IGNORECASE),
+        "Depend on abstractions, not concretions. This is the foundation of maintainable software.",
+        "architecture",
+        ["abstraction", "coupling", "maintainability"],
+    ),
     # Performance / Optimization
-    (re.compile(r"\b(perform|optim|scal|throughput|latenc|bottleneck)\b", re.IGNORECASE),
-     "Performance is a function of design, not tuning. Choose the right structure before optimizing the details.",
-     "performance",
-     ["performance", "design", "optimization"]),
+    (
+        re.compile(r"\b(perform|optim|scal|throughput|latenc|bottleneck)\b", re.IGNORECASE),
+        "Performance is a function of design, not tuning. Choose the right structure before optimizing the details.",
+        "performance",
+        ["performance", "design", "optimization"],
+    ),
     # Idempotency / Correctness
-    (re.compile(r"\b(idempot|exactly once|correct|determin|repeatable)\b", re.IGNORECASE),
-     "Correctness requires determinism. The same input must produce the same outcome, regardless of how many times the operation runs.",
-     "reliability",
-     ["correctness", "determinism", "idempotency"]),
+    (
+        re.compile(r"\b(idempot|exactly once|correct|determin|repeatable)\b", re.IGNORECASE),
+        "Correctness requires determinism. The same input must produce the same outcome, regardless of how many times the operation runs.",
+        "reliability",
+        ["correctness", "determinism", "idempotency"],
+    ),
     # Bounded context / Modularity
-    (re.compile(r"\b(bounded|modular|domain|context|separation of concerns|cohesion)\b", re.IGNORECASE),
-     "Complexity is managed by boundaries. Systems with clear boundaries outlast systems with vague ones.",
-     "architecture",
-     ["complexity", "boundaries", "modularity"]),
+    (
+        re.compile(
+            r"\b(bounded|modular|domain|context|separation of concerns|cohesion)\b", re.IGNORECASE
+        ),
+        "Complexity is managed by boundaries. Systems with clear boundaries outlast systems with vague ones.",
+        "architecture",
+        ["complexity", "boundaries", "modularity"],
+    ),
 ]
 
 # Contradiction pairs: (keyword_a, keyword_b, description)
@@ -223,8 +246,12 @@ class FirstPrinciplesCitizen:
                 limit=50,
             )
             for mem in results:
-                content = mem.get("content", "") if hasattr(mem, "get") else getattr(mem, "content", "")
-                meta = mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
+                content = (
+                    mem.get("content", "") if hasattr(mem, "get") else getattr(mem, "content", "")
+                )
+                meta = (
+                    mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
+                )
                 if not isinstance(meta, dict):
                     meta = {}
 
@@ -236,20 +263,22 @@ class FirstPrinciplesCitizen:
                 source_provenance = meta.get("source_provenance", [])
 
                 if name or description:
-                    findings.append({
-                        "source": "memory",
-                        "description": f"Pattern: {name or description[:60]}",
-                        "severity": "info",
-                        "context": {
-                            "name": name,
-                            "category": category,
-                            "description": description,
-                            "constituent_mechanisms": constituent_mechanisms,
-                            "tags": tags,
-                            "source_provenance": source_provenance,
-                            "pattern_type": "pattern_card",
-                        },
-                    })
+                    findings.append(
+                        {
+                            "source": "memory",
+                            "description": f"Pattern: {name or description[:60]}",
+                            "severity": "info",
+                            "context": {
+                                "name": name,
+                                "category": category,
+                                "description": description,
+                                "constituent_mechanisms": constituent_mechanisms,
+                                "tags": tags,
+                                "source_provenance": source_provenance,
+                                "pattern_type": "pattern_card",
+                            },
+                        }
+                    )
 
         except Exception as e:
             logger.warning("observe_patterns failed: %s", e)
@@ -261,7 +290,9 @@ class FirstPrinciplesCitizen:
     # Principle reduction
     # ------------------------------------------------------------------
 
-    def reduce_to_principles(self, patterns: list[dict[str, Any]] | None = None) -> list[PrincipleCard]:
+    def reduce_to_principles(
+        self, patterns: list[dict[str, Any]] | None = None
+    ) -> list[PrincipleCard]:
         """Reduce patterns to fundamental engineering principles.
 
         Uses keyword matching against _PRINCIPLE_RULES to map patterns
@@ -372,14 +403,20 @@ class FirstPrinciplesCitizen:
                 if keyword_a in text and keyword_b in text:
                     card.contradictions.append(description)
 
-        logger.info("FirstPrinciples reduce_to_principles: %d principle(s) from %d pattern(s)", len(principle_list), len(patterns))
+        logger.info(
+            "FirstPrinciples reduce_to_principles: %d principle(s) from %d pattern(s)",
+            len(principle_list),
+            len(patterns),
+        )
         return principle_list
 
     # ------------------------------------------------------------------
     # Proposal generation
     # ------------------------------------------------------------------
 
-    def generate_proposal(self, principles: list[PrincipleCard] | None = None) -> ImprovementProposal | None:
+    def generate_proposal(
+        self, principles: list[PrincipleCard] | None = None
+    ) -> ImprovementProposal | None:
         """Generate an improvement proposal from reduced principles.
 
         Args:
@@ -575,8 +612,12 @@ class FirstPrinciplesCitizen:
             return [
                 {
                     "id": r.get("id", "") if hasattr(r, "get") else getattr(r, "id", ""),
-                    "content": r.get("content", "") if hasattr(r, "get") else getattr(r, "content", ""),
-                    "metadata": r.get("metadata", {}) if hasattr(r, "get") else getattr(r, "metadata", {}),
+                    "content": r.get("content", "")
+                    if hasattr(r, "get")
+                    else getattr(r, "content", ""),
+                    "metadata": r.get("metadata", {})
+                    if hasattr(r, "get")
+                    else getattr(r, "metadata", {}),
                 }
                 for r in results
             ]

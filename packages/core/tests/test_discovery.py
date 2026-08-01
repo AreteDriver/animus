@@ -8,18 +8,14 @@ from __future__ import annotations
 
 import json
 import tempfile
-from dataclasses import dataclass
 from pathlib import Path
-
-import pytest
 
 from animus.discovery.mcp_scanner import MCPScanner, MCPToolSpec
 from animus.discovery.openapi_discovery import OpenAPIDiscovery, OpenAPIEndpoint
 from animus.discovery.orchestrator import DiscoveryConfig, DiscoveryOrchestrator, DiscoveryRun
-from animus.discovery.script_discovery import ScriptDiscovery, ScriptSpec
-from animus.discovery.validator import SchemaValidator, ValidationResult
+from animus.discovery.script_discovery import ScriptDiscovery
+from animus.discovery.validator import SchemaValidator
 from animus.tools import ToolRegistry
-
 
 # ── MCP Scanner Tests ─────────────────────────────────────────────
 
@@ -157,17 +153,21 @@ class TestOpenAPIDiscovery:
     def test_scan_directory(self):
         with tempfile.TemporaryDirectory() as td:
             spec_file = Path(td) / "test-spec.json"
-            spec_file.write_text(json.dumps({
-                "openapi": "3.0.0",
-                "paths": {
-                    "/items": {
-                        "get": {
-                            "operationId": "listItems",
-                            "summary": "List items",
-                        }
+            spec_file.write_text(
+                json.dumps(
+                    {
+                        "openapi": "3.0.0",
+                        "paths": {
+                            "/items": {
+                                "get": {
+                                    "operationId": "listItems",
+                                    "summary": "List items",
+                                }
+                            }
+                        },
                     }
-                },
-            }))
+                )
+            )
             discovery = OpenAPIDiscovery()
             endpoints = discovery.scan_directory(td)
             assert len(endpoints) == 1
@@ -242,12 +242,12 @@ def main():
     def test_parse_bash_script(self):
         with tempfile.TemporaryDirectory() as td:
             script = Path(td) / "test.sh"
-            script.write_text('''#!/bin/bash
+            script.write_text("""#!/bin/bash
 # Animus Tool: bash-test
 # Description of the bash tool
 
 echo "hello"
-''')
+""")
             discovery = ScriptDiscovery()
             spec = discovery._parse_script(script)
             assert spec is not None
@@ -353,7 +353,11 @@ class TestSchemaValidator:
     def test_batch_validation(self):
         validator = SchemaValidator()
         schemas = [
-            {"name": "good", "description": "A valid tool", "parameters": {"type": "object", "properties": {}}},
+            {
+                "name": "good",
+                "description": "A valid tool",
+                "parameters": {"type": "object", "properties": {}},
+            },
             {"name": "bad", "description": "", "parameters": {"type": "object", "properties": {}}},
         ]
         passed, failed = validator.validate_batch(schemas)
@@ -586,17 +590,21 @@ def main():
 ''')
             # Create an OpenAPI spec
             spec = Path(td) / "api.json"
-            spec.write_text(json.dumps({
-                "openapi": "3.0.0",
-                "paths": {
-                    "/items": {
-                        "get": {
-                            "operationId": "listItems",
-                            "summary": "List items",
-                        }
+            spec.write_text(
+                json.dumps(
+                    {
+                        "openapi": "3.0.0",
+                        "paths": {
+                            "/items": {
+                                "get": {
+                                    "operationId": "listItems",
+                                    "summary": "List items",
+                                }
+                            }
+                        },
                     }
-                },
-            }))
+                )
+            )
 
             config = DiscoveryConfig(
                 script_dirs=[td],

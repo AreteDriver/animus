@@ -77,7 +77,7 @@ Not ready to code? Ideas are valuable too. Open a discussion.
 
 ```bash
 # Clone the repo
-git clone https://github.com/AreteDriver/animus.git
+git clone https://github.com/your-org/animus.git
 cd animus
 
 # Install all packages in development mode

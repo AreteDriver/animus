@@ -170,7 +170,7 @@ class ScriptDiscovery:
         # Fallback: regex-based extraction for any script type
         if not name:
             match = re.search(
-                r'Animus\s+Tool[:\s]+([\w-]+)\s*\n(.*?)(?:\n(?:Args|Parameters):|$)',
+                r"Animus\s+Tool[:\s]+([\w-]+)\s*\n(.*?)(?:\n(?:Args|Parameters):|$)",
                 content,
                 re.IGNORECASE | re.DOTALL,
             )
@@ -180,8 +180,8 @@ class ScriptDiscovery:
 
                 # Extract args section if present
                 args_match = re.search(
-                    r'(?:Args|Parameters):\s*(.*?)(?:\n\n|$)',
-                    content[match.end():],
+                    r"(?:Args|Parameters):\s*(.*?)(?:\n\n|$)",
+                    content[match.end() :],
                     re.DOTALL,
                 )
                 if args_match:
@@ -205,7 +205,7 @@ class ScriptDiscovery:
         # First non-empty line might be the tool name
         first_line = lines[0].strip()
         if "Animus Tool" in first_line:
-            match = re.search(r'Animus\s+Tool[:\s]+([\w-]+)', first_line, re.IGNORECASE)
+            match = re.search(r"Animus\s+Tool[:\s]+([\w-]+)", first_line, re.IGNORECASE)
             if match:
                 result["name"] = match.group(1)
             # Description is remaining text until Args
@@ -219,7 +219,9 @@ class ScriptDiscovery:
             result["description"] = docstring.strip()
 
         # Parse Args section
-        args_match = re.search(r'(?:Args|Parameters):\s*(.*?)$', docstring, re.DOTALL | re.IGNORECASE)
+        args_match = re.search(
+            r"(?:Args|Parameters):\s*(.*?)$", docstring, re.DOTALL | re.IGNORECASE
+        )
         if args_match:
             result["parameters"] = self._parse_args_block(args_match.group(1))
 
@@ -238,7 +240,7 @@ class ScriptDiscovery:
             #   param_name: description (type: str, required)
             #   param_name (type: int): description
             match = re.match(
-                r'(\w+)[\s:]*(.+?)(?:\s*\(([^)]+)\))?$',
+                r"(\w+)[\s:]*(.+?)(?:\s*\(([^)]+)\))?$",
                 line,
             )
             if match:
@@ -252,11 +254,11 @@ class ScriptDiscovery:
                 combined = f"{pdesc} {parens}"
 
                 # Parse type annotation
-                type_match = re.search(r'type[:\s]+(\w+)', combined, re.IGNORECASE)
+                type_match = re.search(r"type[:\s]+(\w+)", combined, re.IGNORECASE)
                 if type_match:
                     ptype = self._map_type(type_match.group(1))
-                    pdesc = re.sub(r'\s*type[:\s]+\w+', '', pdesc, flags=re.IGNORECASE).strip()
-                    parens = re.sub(r'\s*type[:\s]+\w+', '', parens, flags=re.IGNORECASE).strip()
+                    pdesc = re.sub(r"\s*type[:\s]+\w+", "", pdesc, flags=re.IGNORECASE).strip()
+                    parens = re.sub(r"\s*type[:\s]+\w+", "", parens, flags=re.IGNORECASE).strip()
 
                 if "required" in combined.lower():
                     required = True

@@ -32,7 +32,7 @@ def _extract_version_spec(dep: str) -> tuple[str, str]:
     """
     # Strip extras
     if "[" in dep:
-        dep = dep[:dep.index("[")]
+        dep = dep[: dep.index("[")]
     # Find first comparison operator
     for op in ("==", "!=", "<=", ">=", "<", ">", "~="):
         if op in dep:
@@ -105,9 +105,7 @@ def main() -> int:
             try:
                 spec = SpecifierSet(spec_str)
             except Exception as exc:
-                violations.append(
-                    f"{name}: invalid specifier '{spec_str}' for '{dep_name}': {exc}"
-                )
+                violations.append(f"{name}: invalid specifier '{spec_str}' for '{dep_name}': {exc}")
                 continue
 
             if not spec.contains(sibling_version):
@@ -137,10 +135,7 @@ def main() -> int:
         )
         return 1
 
-    print(
-        f"OK — {len(local_packages)} packages aligned. "
-        f"({len(warnings_)} warnings)"
-    )
+    print(f"OK — {len(local_packages)} packages aligned. ({len(warnings_)} warnings)")
     return 0
 
 

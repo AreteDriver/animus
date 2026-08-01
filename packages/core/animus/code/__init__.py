@@ -15,9 +15,9 @@ Example:
 from __future__ import annotations
 
 from animus.code.chunking import (
+    ChunkingConfig,
     ChunkType,
     CodeChunk,
-    ChunkingConfig,
     chunk_codebase,
     chunk_file,
 )

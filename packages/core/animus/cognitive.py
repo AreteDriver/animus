@@ -1065,9 +1065,15 @@ When you have gathered enough information, provide your final answer."""
 
         Uses structured tool_use content blocks instead of markdown parsing.
         """
-        from animus.tools import tools_to_anthropic_format
-        from animus.meta.events import IterationStarted, ResponseReceived, ToolExecution, LoopCompleted, MaxIterationsReached
+        from animus.meta.events import (
+            IterationStarted,
+            LoopCompleted,
+            MaxIterationsReached,
+            ResponseReceived,
+            ToolExecution,
+        )
         from animus.meta.signals import SignalType
+        from animus.tools import tools_to_anthropic_format
 
         # Initialize Meta-Thinker for this session
         if self.meta_thinker:
@@ -1244,7 +1250,13 @@ When you have gathered enough information, provide your final answer."""
         approval_callback: Callable | None = None,
     ) -> str:
         """Agentic loop using markdown ```tool blocks (Ollama/Mock/OpenAI)."""
-        from animus.meta.events import IterationStarted, ResponseReceived, ToolExecution, LoopCompleted, MaxIterationsReached
+        from animus.meta.events import (
+            IterationStarted,
+            LoopCompleted,
+            MaxIterationsReached,
+            ResponseReceived,
+            ToolExecution,
+        )
         from animus.meta.signals import SignalType
 
         # Initialize Meta-Thinker for this session

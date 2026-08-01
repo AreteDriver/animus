@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from animus.browser.emulation.mouse import MouseEmulator
 from animus.browser.emulation.scroll import ScrollEmulator
 from animus.browser.emulation.timing import TimingEmulator
-from animus.browser.emulation.mouse import MouseEmulator
 
 __all__ = ["EmulationLayer", "ScrollEmulator", "TimingEmulator", "MouseEmulator"]
 

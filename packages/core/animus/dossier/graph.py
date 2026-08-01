@@ -8,9 +8,8 @@ Requires: networkx >= 3.0
 
 from __future__ import annotations
 
-import sqlite3
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import networkx as nx
@@ -121,9 +120,7 @@ class GraphAnalyzer:
         self._nodes[entity_id] = {"name": name, "type": entity_type, **attrs}
         self._graph.add_node(entity_id, name=name, type=entity_type, **attrs)
 
-    def add_edge(
-        self, source_id: str, target_id: str, weight: float = 1.0, **attrs
-    ) -> None:
+    def add_edge(self, source_id: str, target_id: str, weight: float = 1.0, **attrs) -> None:
         """Add a weighted co-occurrence edge between entities.
 
         Duplicate edges have their weights summed.
@@ -155,7 +152,7 @@ class GraphAnalyzer:
     def get_centrality(
         self,
         metric: str = "degree",
-        entity_type: Optional[str] = None,
+        entity_type: str | None = None,
         limit: int = 50,
     ) -> list[NodeMetrics]:
         """Top entities by centrality metric.
@@ -172,8 +169,7 @@ class GraphAnalyzer:
         """
         if metric not in VALID_METRICS:
             raise ValueError(
-                f"Invalid metric '{metric}'. "
-                f"Must be one of: {', '.join(sorted(VALID_METRICS))}"
+                f"Invalid metric '{metric}'. Must be one of: {', '.join(sorted(VALID_METRICS))}"
             )
 
         G = self._get_subgraph(entity_type)
@@ -189,9 +185,7 @@ class GraphAnalyzer:
             scores = self.nx.closeness_centrality(G, distance="weight")
         else:  # eigenvector
             try:
-                scores = self.nx.eigenvector_centrality(
-                    G, weight="weight", max_iter=1000
-                )
+                scores = self.nx.eigenvector_centrality(G, weight="weight", max_iter=1000)
             except self.nx.PowerIterationFailedConvergence:
                 scores = {n: 0.0 for n in G.nodes()}
 
@@ -226,9 +220,7 @@ class GraphAnalyzer:
         if G.number_of_nodes() == 0:
             return []
 
-        communities = self.nx.community.louvain_communities(
-            G, weight="weight", seed=42
-        )
+        communities = self.nx.community.louvain_communities(G, weight="weight", seed=42)
 
         results = []
         for idx, members in enumerate(communities):
@@ -241,23 +233,27 @@ class GraphAnalyzer:
             member_list = []
             for nid in sorted(members):
                 attrs = G.nodes[nid]
-                member_list.append({
-                    "entity_id": nid,
-                    "name": attrs.get("name", ""),
-                    "type": attrs.get("type", ""),
-                })
+                member_list.append(
+                    {
+                        "entity_id": nid,
+                        "name": attrs.get("name", ""),
+                        "type": attrs.get("type", ""),
+                    }
+                )
 
-            results.append(Community(
-                id=idx,
-                members=member_list,
-                size=len(members),
-                density=density,
-            ))
+            results.append(
+                Community(
+                    id=idx,
+                    members=member_list,
+                    size=len(members),
+                    density=density,
+                )
+            )
 
         results.sort(key=lambda c: c.size, reverse=True)
         return results
 
-    def find_shortest_path(self, source_id: str, target_id: str) -> Optional[PathResult]:
+    def find_shortest_path(self, source_id: str, target_id: str) -> PathResult | None:
         """Shortest path between two entities (Dijkstra, weight=1/co-occurrence).
 
         Returns:
@@ -273,9 +269,7 @@ class GraphAnalyzer:
             data["distance"] = 1.0 / max(data["weight"], 0.001)
 
         try:
-            path_nodes = self.nx.shortest_path(
-                G_inv, source_id, target_id, weight="distance"
-            )
+            path_nodes = self.nx.shortest_path(G_inv, source_id, target_id, weight="distance")
         except self.nx.NetworkXNoPath:
             return None
 
@@ -285,11 +279,13 @@ class GraphAnalyzer:
 
         for nid in path_nodes:
             attrs = G.nodes[nid]
-            nodes.append({
-                "entity_id": nid,
-                "name": attrs.get("name", ""),
-                "type": attrs.get("type", ""),
-            })
+            nodes.append(
+                {
+                    "entity_id": nid,
+                    "name": attrs.get("name", ""),
+                    "type": attrs.get("type", ""),
+                }
+            )
 
         for i in range(len(path_nodes) - 1):
             u, v = path_nodes[i], path_nodes[i + 1]
@@ -337,13 +333,15 @@ class GraphAnalyzer:
                     weight = G[node][neighbor]["weight"]
                     if weight >= min_weight:
                         attrs = G.nodes[neighbor]
-                        results.append({
-                            "entity_id": neighbor,
-                            "name": attrs.get("name", ""),
-                            "type": attrs.get("type", ""),
-                            "weight": weight,
-                            "hop": hop + 1,
-                        })
+                        results.append(
+                            {
+                                "entity_id": neighbor,
+                                "name": attrs.get("name", ""),
+                                "type": attrs.get("type", ""),
+                                "weight": weight,
+                                "hop": hop + 1,
+                            }
+                        )
                         next_frontier.add(neighbor)
                     visited.add(neighbor)
             frontier = next_frontier
@@ -371,11 +369,13 @@ class GraphAnalyzer:
         nodes = []
         for nid in sub.nodes():
             attrs = sub.nodes[nid]
-            nodes.append({
-                "entity_id": nid,
-                "name": attrs.get("name", ""),
-                "type": attrs.get("type", ""),
-            })
+            nodes.append(
+                {
+                    "entity_id": nid,
+                    "name": attrs.get("name", ""),
+                    "type": attrs.get("type", ""),
+                }
+            )
 
         edges = []
         for u, v, data in sub.edges(data=True):
@@ -383,32 +383,27 @@ class GraphAnalyzer:
 
         return {"nodes": nodes, "edges": edges}
 
-    def _get_subgraph(self, entity_type: Optional[str] = None) -> "nx.Graph":
+    def _get_subgraph(self, entity_type: str | None = None) -> nx.Graph:
         """Get full graph or type-filtered subgraph."""
         if entity_type is None:
             return self._graph
 
         nodes_of_type = [
-            nid for nid, attrs in self._graph.nodes(data=True)
-            if attrs.get("type") == entity_type
+            nid for nid, attrs in self._graph.nodes(data=True) if attrs.get("type") == entity_type
         ]
         return self._graph.subgraph(nodes_of_type)
 
     def to_dict(self) -> dict:
         """Serialize graph to dictionary format."""
         return {
-            "nodes": [
-                {"id": nid, **attrs}
-                for nid, attrs in self._graph.nodes(data=True)
-            ],
+            "nodes": [{"id": nid, **attrs} for nid, attrs in self._graph.nodes(data=True)],
             "edges": [
-                {"source": u, "target": v, **data}
-                for u, v, data in self._graph.edges(data=True)
+                {"source": u, "target": v, **data} for u, v, data in self._graph.edges(data=True)
             ],
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "GraphAnalyzer":
+    def from_dict(cls, data: dict) -> GraphAnalyzer:
         """Deserialize from dictionary."""
         analyzer = cls()
         for node in data.get("nodes", []):

@@ -172,14 +172,19 @@ def get_arete_hooks() -> AreteHooks | None:
     memory_layer = None
 
     try:
-        from animus_quorum.scoring import PhiScorer, ScoreStore  # boundary-ok: optional Quorum integration
+        from animus_quorum.scoring import (  # boundary-ok: optional Quorum integration
+            PhiScorer,
+            ScoreStore,
+        )
 
         phi_scorer = PhiScorer(store=ScoreStore())
     except Exception:
         logger.debug("PhiScorer not available for Arete hooks")
 
     try:
-        from animus_quorum.stigmergy import StigmergyField  # boundary-ok: optional Quorum integration
+        from animus_quorum.stigmergy import (
+            StigmergyField,  # boundary-ok: optional Quorum integration
+        )
 
         stigmergy_field = StigmergyField()
     except Exception:

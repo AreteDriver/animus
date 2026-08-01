@@ -5,12 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from animus.memory import MemoryLayer
 from animus.workflows.code_ingest import (
-    CodeIngestResult,
-    IngestError,
     _hash_file,
     ingest_codebase,
 )
@@ -65,9 +61,7 @@ class TestIngestCodebase:
         memory = MemoryLayer(tmp_path / "data", backend="local")
 
         result = ingest_codebase(tmp_path, memory=memory, exclude=["test_*"])
-        assert "test_utils.py" not in {
-            err.path.split(":")[0] for err in result.errors
-        }
+        assert "test_utils.py" not in {err.path.split(":")[0] for err in result.errors}
         # Should still have main.py chunks
         assert result.stored_count >= 1
 

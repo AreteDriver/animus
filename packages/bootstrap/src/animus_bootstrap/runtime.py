@@ -112,7 +112,9 @@ class AnimusRuntime:
         from animus_bootstrap.intelligence.event_ledger import EventLedger
 
         self.event_ledger = EventLedger(db_path=data_dir / "events.db")
-        self.event_ledger.record("session_started", "runtime", {"version": __import__("animus_bootstrap").__version__})
+        self.event_ledger.record(
+            "session_started", "runtime", {"version": __import__("animus_bootstrap").__version__}
+        )
 
         # 0b. Alert manager — threshold monitoring
         from animus_bootstrap.intelligence.alert_manager import AlertManager
@@ -507,7 +509,7 @@ class AnimusRuntime:
             self._message_logger = None
             logger.info("Gateway message logger closed")
 
-        if self.event_ledger is not None:
+        if getattr(self, "event_ledger", None) is not None:
             self.event_ledger.record("session_ended", "runtime")
 
         self._started = False

@@ -22,7 +22,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-USER_AGENT = "animus-lugh/1.0 (+https://github.com/AreteDriver/animus)"
+USER_AGENT = "animus-lugh/1.0 (+https://github.com/your-org/animus)"
 HTTP_TIMEOUT_SECONDS = 15
 
 # Namespaces we encounter in the wild.

@@ -402,10 +402,11 @@ class WebhookManager:
                 if not yaml_path.exists():
                     raise ValueError(f"Workflow {webhook.workflow_id} not found")
 
+                from animus_kernel.executor.loader import load_workflow
+
                 from animus_forge.orchestrator.workflow_engine_adapter import (
                     convert_execution_result,
                 )
-                from animus_kernel.executor.loader import load_workflow
 
                 config = load_workflow(yaml_path, validate_path=False)
                 variables = self._map_payload_to_variables(webhook, payload)

@@ -21,12 +21,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from animus.code.chunking import ChunkType, CodeChunk, ChunkingConfig, chunk_codebase
+from animus.code.chunking import ChunkingConfig, CodeChunk, chunk_codebase
 from animus.logging import get_logger
 from animus.memory import MemoryLayer
 from animus.memory.types import MemoryType, Sensitivity
@@ -59,9 +58,7 @@ class CodeIngestResult:
     @property
     def success(self) -> bool:
         """True if at least one chunk was stored and no fatal errors occurred."""
-        return self.stored_count > 0 and not any(
-            e.stage == "fatal" for e in self.errors
-        )
+        return self.stored_count > 0 and not any(e.stage == "fatal" for e in self.errors)
 
 
 # ---------------------------------------------------------------------------
@@ -107,9 +104,7 @@ def ingest_codebase(
     """
     root = Path(root).expanduser().resolve()
     if not root.is_dir():
-        return CodeIngestResult(
-            errors=[IngestError("fatal", str(root), "Not a directory")]
-        )
+        return CodeIngestResult(errors=[IngestError("fatal", str(root), "Not a directory")])
 
     if memory is None:
         from animus.config import AnimusConfig
@@ -141,9 +136,7 @@ def ingest_codebase(
         )
     except Exception as exc:
         logger.exception("Chunking failed for %s", root)
-        return CodeIngestResult(
-            errors=[IngestError("fatal", str(root), f"chunking failed: {exc}")]
-        )
+        return CodeIngestResult(errors=[IngestError("fatal", str(root), f"chunking failed: {exc}")])
 
     stored = 0
     skipped = 0
@@ -170,9 +163,7 @@ def ingest_codebase(
                 stored += 1
             except Exception as exc:
                 logger.warning("Store failed for %s:%s: %s", rel_path, chunk.start_line, exc)
-                errors.append(
-                    IngestError("store", f"{rel_path}:{chunk.start_line}", str(exc))
-                )
+                errors.append(IngestError("store", f"{rel_path}:{chunk.start_line}", str(exc)))
 
         mtime = file_path.stat().st_mtime if file_path.exists() else 0.0
         manifest_entries[rel_path] = {
@@ -191,7 +182,9 @@ def ingest_codebase(
             "ingested_at": datetime.now(timezone.utc).isoformat(),
             "summary": {
                 "total_scanned_files": len(by_path),
-                "total_chunked_files": len([e for e in manifest_entries.values() if e["chunk_count"] > 0]),
+                "total_chunked_files": len(
+                    [e for e in manifest_entries.values() if e["chunk_count"] > 0]
+                ),
                 "total_chunks": total_chunks,
             },
             "files": manifest_entries,

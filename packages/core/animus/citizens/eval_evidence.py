@@ -9,7 +9,6 @@ Gracefully degrades when Forge is not installed or eval store is unavailable.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +23,10 @@ _eval_db_available: bool | None = None
 def _try_import_eval_store() -> Any | None:
     """Attempt to import Forge EvalStore."""
     try:
-        from animus_forge.evaluation.store import EvalStore  # boundary-ok: citizen degrades gracefully without Forge
+        from animus_forge.evaluation.store import (
+            EvalStore,  # boundary-ok: citizen degrades gracefully without Forge
+        )
+
         return EvalStore
     except ImportError:
         return None
@@ -33,7 +35,10 @@ def _try_import_eval_store() -> Any | None:
 def _try_create_backend(db_path: str = "") -> Any | None:
     """Create a Forge database backend for EvalStore."""
     try:
-        from animus_forge.state.backends import create_backend  # boundary-ok: citizen degrades gracefully without Forge
+        from animus_forge.state.backends import (
+            create_backend,  # boundary-ok: citizen degrades gracefully without Forge
+        )
+
         if db_path:
             return create_backend(db_path=db_path)
         return create_backend()
@@ -44,7 +49,10 @@ def _try_create_backend(db_path: str = "") -> Any | None:
 def _try_import_suite_result() -> Any | None:
     """Attempt to import Forge SuiteResult."""
     try:
-        from animus_forge.evaluation.base import EvalResult  # boundary-ok: citizen degrades gracefully without Forge
+        from animus_forge.evaluation.base import (
+            EvalResult,  # boundary-ok: citizen degrades gracefully without Forge
+        )
+
         return EvalResult
     except ImportError:
         return None
@@ -208,6 +216,7 @@ def read_eval_results_from_memory(memory_layer: Any, limit: int = 50) -> list[di
     results = []
     try:
         from animus.memory import MemoryType
+
         memories = memory_layer.search(
             query="eval suite result score pass_rate",
             memory_type=MemoryType.PROCEDURAL,

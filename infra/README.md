@@ -10,7 +10,7 @@ cp .env.example .env      # edit with your credentials
 docker compose up -d
 ```
 
-This starts PostgreSQL.  
+This starts PostgreSQL.
 To run migrations:
 ```bash
 cd database && alembic upgrade head

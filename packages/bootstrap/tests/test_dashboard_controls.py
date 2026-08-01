@@ -117,7 +117,6 @@ def test_memory_clear_fallback_search_delete(client: TestClient) -> None:
 
 def test_tool_rerun_executes_and_records_event(client: TestClient) -> None:
     """POST /tools/{name}/rerun executes the tool and records an event."""
-    import asyncio
 
     runtime = MagicMock()
     executor = MagicMock()
@@ -125,9 +124,11 @@ def test_tool_rerun_executes_and_records_event(client: TestClient) -> None:
     result.success = True
     result.output = "ok"
     result.duration_ms = 42.0
+
     # Make execute a coroutine mock
     async def _execute(*args, **kwargs):
         return result
+
     executor.execute = _execute
     runtime.tool_executor = executor
     app.state.runtime = runtime

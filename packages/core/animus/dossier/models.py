@@ -193,5 +193,7 @@ class Dossier:
 
     def compute_hash(self) -> str:
         """Compute a stable hash of dossier contents for integrity checking."""
-        content = f"{self.entity_id}:{self.name}:{self.summary}:{len(self.evidence)}:{len(self.notes)}"
+        content = (
+            f"{self.entity_id}:{self.name}:{self.summary}:{len(self.evidence)}:{len(self.notes)}"
+        )
         return hashlib.sha256(content.encode()).hexdigest()[:16]

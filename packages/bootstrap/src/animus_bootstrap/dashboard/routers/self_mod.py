@@ -73,8 +73,9 @@ async def improvement_detail(proposal_id: int, request: Request) -> object:
     matching = [p for p in get_improvement_log() if p["id"] == proposal_id]
     if not matching:
         return _get_templates(request).TemplateResponse(
-            request, "fragments/improvement_detail.html",
-            {"area": "", "description": "Proposal not found.", "analysis": "", "patch": ""}
+            request,
+            "fragments/improvement_detail.html",
+            {"area": "", "description": "Proposal not found.", "analysis": "", "patch": ""},
         )
 
     p = matching[0]

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 from animus.citizens.eval_evidence import (
@@ -22,6 +21,7 @@ class TestQueryEvalRuns:
     def test_queries_forge_store(self):
         # Reset the module-level cache so this test isn't affected by prior runs.
         import animus.citizens.eval_evidence as ev_mod
+
         ev_mod._eval_db_available = None
 
         mock_store_cls = MagicMock()
@@ -32,7 +32,9 @@ class TestQueryEvalRuns:
         mock_store_cls.return_value = mock_store
 
         with (
-            patch("animus.citizens.eval_evidence._try_import_eval_store", return_value=mock_store_cls),
+            patch(
+                "animus.citizens.eval_evidence._try_import_eval_store", return_value=mock_store_cls
+            ),
             patch("animus.citizens.eval_evidence._try_create_backend", return_value=MagicMock()),
         ):
             results = query_eval_runs(suite_name="personal-quality")

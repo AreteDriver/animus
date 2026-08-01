@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 
 from pydantic import (
@@ -23,20 +22,20 @@ class ScopeItem(RootModel[constr(min_length=1)]):
 
 
 class ActionEnum(Enum):
-    create = 'create'
-    read = 'read'
-    update = 'update'
-    delete = 'delete'
-    execute = 'execute'
-    approve = 'approve'
-    delegate = 'delegate'
-    export = 'export'
-    import_ = 'import'
+    create = "create"
+    read = "read"
+    update = "update"
+    delete = "delete"
+    execute = "execute"
+    approve = "approve"
+    delegate = "delegate"
+    export = "export"
+    import_ = "import"
 
 
 class Budget(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     max_calls: conint(ge=1) | None = None
     max_tokens: conint(ge=1) | None = None
@@ -45,15 +44,15 @@ class Budget(BaseModel):
 
 
 class RequireApprovalAboveRisk(Enum):
-    low = 'low'
-    medium = 'medium'
-    high = 'high'
-    critical = 'critical'
+    low = "low"
+    medium = "medium"
+    high = "high"
+    critical = "critical"
 
 
 class Conditions(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     require_approval_above_risk: RequireApprovalAboveRisk | None = None
     allowed_workspaces: list[str] | None = None
@@ -62,18 +61,18 @@ class Conditions(BaseModel):
 
 class CapabilityGrant(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
-    grant_id: constr(pattern=r'^grant-[a-z0-9_-]+$')
+    grant_id: constr(pattern=r"^grant-[a-z0-9_-]+$")
     principal: constr(min_length=3)
     scope: list[ScopeItem] = Field(
         ...,
-        description='Permission scopes granted (e.g., read, write, delete, admin)',
+        description="Permission scopes granted (e.g., read, write, delete, admin)",
         min_length=1,
     )
     resource: constr(min_length=1) = Field(
         ...,
-        description='Resource pattern this grant applies to (e.g., workspace, object_id glob)',
+        description="Resource pattern this grant applies to (e.g., workspace, object_id glob)",
     )
     action: list[ActionEnum] = Field(..., min_length=1)
     granted_by: constr(min_length=3)

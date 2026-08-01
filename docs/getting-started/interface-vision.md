@@ -1,6 +1,6 @@
 # Animus — Bootstrap, Interface & UX Vision
 
-**Status:** Canonical assessment · Created 2026-06-14 · Owner: ARETE  
+**Status:** Canonical assessment · Created 2026-06-14 · Owner: ARETE
 **Scope:** Bootstrap mechanism, every user-facing surface, honest UX audit, and the roadmap to make Animus feel like a true exocortex.
 
 ---
@@ -231,7 +231,7 @@ Scored 1–10. A 10 means "best in class, rivals commercial products." A 5 means
 | **Performance & Reliability** | 7 | Fast boot, WebSocket reconnect with backoff, offline queuing in PWA. But no skeleton screens, no optimistic UI, no perceptible instant states. Dashboard HTMX swaps can feel sluggish without loading indicators. |
 | **Personalization** | 6 | Persona engine is robust (profiles, voice tones, domains, channel routing). But no UI for the user to *tune* personality on the fly (sliders for formality, verbosity, initiative). No visual themes beyond dark mode. |
 
-**Aggregate UX Score: ~5/10.**  
+**Aggregate UX Score: ~5/10.**
 Functional, multi-surface, architecturally sound — but not cohesive, not ambient, and not emotionally resonant. It still feels like a *tool collection*, not a *cognitive layer*.
 
 ---

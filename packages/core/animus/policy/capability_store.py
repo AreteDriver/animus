@@ -9,17 +9,20 @@ Kernel-native policy layer (v2.3, 2026-07-06).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from animus.logging import get_logger
 from animus_types import ValidationError as _ContractValidationError
+
+from animus.logging import get_logger
 
 logger = get_logger("policy.capability_store")
 
 try:
-    from animus_contracts import validate as _validate_contract  # boundary-ok: optional contract validation
+    from animus_contracts import (
+        validate as _validate_contract,  # boundary-ok: optional contract validation
+    )
 
     _HAS_CONTRACTS = True
 except ImportError:  # pragma: no cover
@@ -83,12 +86,14 @@ class CapabilityGrantStore:
     def find_grants(self, principal: str, workspace_id: str) -> list[CapabilityGrant]:
         """Return all grants for a principal in a workspace."""
         return [
-            g for g in self._grants.values()
+            g
+            for g in self._grants.values()
             if g.principal == principal
             and (
                 workspace_id in g.resource
                 or g.resource == "*"
-                or workspace_id in (g.conditions.get("allowed_workspaces", []) if g.conditions else [])
+                or workspace_id
+                in (g.conditions.get("allowed_workspaces", []) if g.conditions else [])
             )
         ]
 

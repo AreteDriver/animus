@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -18,11 +17,10 @@ from animus.citizens.media import (
     MediaPipelineReport,
     MediaSynthesizer,
 )
-from animus.citizens.proposal import ImprovementProposal
 from animus.citizens.pattern import PatternCard, PatternCitizen
+from animus.citizens.proposal import ImprovementProposal
 from animus.lugh.sources.base import SourceItem
 from animus.ogma.models import OgmaOutput
-
 
 # ---------------------------------------------------------------------------
 # MediaHarvester tests
@@ -217,8 +215,11 @@ class TestMediaPipelineOrchestrator:
         orchestrator = MediaPipelineOrchestrator(memory_layer=None, codebase_path=".")
         items = [
             SourceItem(
-                source_id="yt:PLabc", item_id="vid1", title="V1",
-                url="https://youtube.com/watch?v=vid1", published=datetime.now(),
+                source_id="yt:PLabc",
+                item_id="vid1",
+                title="V1",
+                url="https://youtube.com/watch?v=vid1",
+                published=datetime.now(),
                 raw_text="text",
             )
         ]
@@ -260,8 +261,11 @@ class TestMediaPipelineOrchestrator:
         orchestrator = MediaPipelineOrchestrator(memory_layer=None, codebase_path=".")
         items = [
             SourceItem(
-                source_id="yt:PLabc", item_id="vid1", title="V1",
-                url="https://youtube.com/watch?v=vid1", published=datetime.now(),
+                source_id="yt:PLabc",
+                item_id="vid1",
+                title="V1",
+                url="https://youtube.com/watch?v=vid1",
+                published=datetime.now(),
                 raw_text="text",
             )
         ]
@@ -271,7 +275,9 @@ class TestMediaPipelineOrchestrator:
                 source_type="youtube_playlist",
             )
         assert report.gap_status == "PARTIAL"
-        assert len(report.patterns) >= 0  # PatternCitizen may or may not find patterns with 1 mechanism
+        assert (
+            len(report.patterns) >= 0
+        )  # PatternCitizen may or may not find patterns with 1 mechanism
         assert report.principles == []
         assert report.gaps == []
         assert report.final_proposal is None
@@ -301,8 +307,11 @@ class TestMediaPipelineOrchestrator:
         orchestrator = MediaPipelineOrchestrator(memory_layer=None, codebase_path=".")
         items = [
             SourceItem(
-                source_id="yt:PLabc", item_id="vid1", title="V1",
-                url="https://youtube.com/watch?v=vid1", published=datetime.now(),
+                source_id="yt:PLabc",
+                item_id="vid1",
+                title="V1",
+                url="https://youtube.com/watch?v=vid1",
+                published=datetime.now(),
                 raw_text="text about retry and observability",
             )
         ]
@@ -342,8 +351,11 @@ class TestMediaPipelineOrchestrator:
         orchestrator = MediaPipelineOrchestrator(memory_layer=None, codebase_path=".")
         items = [
             SourceItem(
-                source_id="yt:PLabc", item_id="vid1", title="V1",
-                url="https://youtube.com/watch?v=vid1", published=datetime.now(),
+                source_id="yt:PLabc",
+                item_id="vid1",
+                title="V1",
+                url="https://youtube.com/watch?v=vid1",
+                published=datetime.now(),
                 raw_text="text about retry logic",
             )
         ]
@@ -574,16 +586,19 @@ class TestArchitectureGapProxy:
 class TestYouTubePlaylistSupport:
     def test_source_id_with_playlist_url(self):
         from animus.lugh.sources.youtube import YouTubeSource
+
         src = YouTubeSource(playlist_url="https://www.youtube.com/playlist?list=PLabc123")
         assert src.source_id == "youtube:playlist:PLabc123"
 
     def test_source_id_with_channel(self):
         from animus.lugh.sources.youtube import YouTubeSource
+
         src = YouTubeSource(channel="@TestChannel")
         assert src.source_id == "youtube:@TestChannel"
 
     def test_list_url_prefers_playlist(self):
         from animus.lugh.sources.youtube import YouTubeSource
+
         src = YouTubeSource(
             channel="@TestChannel",
             playlist_url="https://www.youtube.com/playlist?list=PLabc",
@@ -592,12 +607,14 @@ class TestYouTubePlaylistSupport:
 
     def test_playlist_to_source_items_returns_list(self):
         from animus.lugh.sources.youtube import playlist_to_source_items
+
         with patch("animus.lugh.sources.youtube.YouTubeSource.fetch", return_value=iter([])):
             items = playlist_to_source_items("https://www.youtube.com/playlist?list=PLabc")
             assert isinstance(items, list)
 
     def test_probe_playlist_invalid_url(self):
         from animus.lugh.sources.youtube import probe_playlist
+
         result = probe_playlist("not-a-url")
         assert result["ok"] is False
         assert "not a valid playlist URL" in result["error"]
@@ -630,8 +647,6 @@ class TestProposalQueueWiring:
     def test_full_gap_submits_to_queue(self, mock_synthesize):
         """When gap=FULL, the final proposal should be submitted to ProposalQueue."""
         from animus.citizens.pattern import PatternCard
-        from animus.citizens.first_principles import PrincipleCard
-        from animus.citizens.architecture_citizen import GapAnalysis
 
         mock_queue = MagicMock()
         ogma = OgmaOutput(
@@ -659,13 +674,19 @@ class TestProposalQueueWiring:
         )
         items = [
             SourceItem(
-                source_id="yt:PLabc", item_id="vid1", title="V1",
-                url="https://youtube.com/watch?v=vid1", published=datetime.now(),
+                source_id="yt:PLabc",
+                item_id="vid1",
+                title="V1",
+                url="https://youtube.com/watch?v=vid1",
+                published=datetime.now(),
                 raw_text="text about retry and observability",
             ),
             SourceItem(
-                source_id="yt:PLabc", item_id="vid2", title="V2",
-                url="https://youtube.com/watch?v=vid2", published=datetime.now(),
+                source_id="yt:PLabc",
+                item_id="vid2",
+                title="V2",
+                url="https://youtube.com/watch?v=vid2",
+                published=datetime.now(),
                 raw_text="text about state externalization",
             ),
         ]
@@ -763,8 +784,11 @@ class TestProposalQueueWiring:
         )
         items = [
             SourceItem(
-                source_id="yt:PLabc", item_id="vid1", title="V1",
-                url="https://youtube.com/watch?v=vid1", published=datetime.now(),
+                source_id="yt:PLabc",
+                item_id="vid1",
+                title="V1",
+                url="https://youtube.com/watch?v=vid1",
+                published=datetime.now(),
                 raw_text="career advice text",
             )
         ]

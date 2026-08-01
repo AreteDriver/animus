@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"
 authors = [
-    {name = "AreteDriver"},
+    {name = "your-org"},
 ]
 keywords = ["ai", "personal-ai", "ollama", "self-improving", "local-first", "exocortex"]
 classifiers = [
@@ -40,9 +40,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/AreteDriver/Animus"
-Repository = "https://github.com/AreteDriver/Animus"
-Issues = "https://github.com/AreteDriver/Animus/issues"
+Homepage = "https://github.com/your-org/Animus"
+Repository = "https://github.com/your-org/Animus"
+Issues = "https://github.com/your-org/Animus/issues"
 
 [project.optional-dependencies]
 dev = [

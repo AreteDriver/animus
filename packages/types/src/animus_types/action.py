@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Any, Literal
 
@@ -13,26 +12,26 @@ from .common import Common
 
 
 class RiskClass(Enum):
-    R0 = 'R0'
-    R1 = 'R1'
-    R2 = 'R2'
-    R3 = 'R3'
-    R4 = 'R4'
+    R0 = "R0"
+    R1 = "R1"
+    R2 = "R2"
+    R3 = "R3"
+    R4 = "R4"
 
 
 class Status(Enum):
-    proposed = 'proposed'
-    authorized = 'authorized'
-    executing = 'executing'
-    succeeded = 'succeeded'
-    failed = 'failed'
-    compensated = 'compensated'
-    denied = 'denied'
+    proposed = "proposed"
+    authorized = "authorized"
+    executing = "executing"
+    succeeded = "succeeded"
+    failed = "failed"
+    compensated = "compensated"
+    denied = "denied"
 
 
 class Payload(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
     action_kind: constr(min_length=1)
     risk_class: RiskClass
@@ -46,6 +45,6 @@ class Payload(BaseModel):
 
 
 class AnimusActionObject(Common):
-    artifact_type: Literal['action'] | None = None
-    schema_id: Literal['https://animus.local/schemas/action.schema.json'] | None = None
+    artifact_type: Literal["action"] | None = None
+    schema_id: Literal["https://animus.local/schemas/action.schema.json"] | None = None
     payload: Payload | None = None

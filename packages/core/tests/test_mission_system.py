@@ -6,9 +6,7 @@ cancel, debrief, queries, persistence, stats, and adversarial cases.
 
 from __future__ import annotations
 
-import json
 import tempfile
-from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -38,7 +36,9 @@ class TestIssue:
 
     def test_issue_max_concurrent(self):
         with tempfile.TemporaryDirectory() as td:
-            system = MissionSystem(config=MissionConfig(max_concurrent_missions=2, persistence_dir=Path(td)))
+            system = MissionSystem(
+                config=MissionConfig(max_concurrent_missions=2, persistence_dir=Path(td))
+            )
             system.issue(MissionOrder(citizen_id="c1", mission_type="scan"))
             system.issue(MissionOrder(citizen_id="c2", mission_type="scan"))
             with pytest.raises(RuntimeError, match="Max concurrent"):
@@ -46,7 +46,9 @@ class TestIssue:
 
     def test_issue_runtime_capability_rejection(self):
         with tempfile.TemporaryDirectory() as td:
-            system = MissionSystem(config=MissionConfig(enforce_runtime_caps=True, persistence_dir=Path(td)))
+            system = MissionSystem(
+                config=MissionConfig(enforce_runtime_caps=True, persistence_dir=Path(td))
+            )
             order = MissionOrder(
                 citizen_id="c1",
                 mission_type="scan",
@@ -81,7 +83,9 @@ class TestLifecycle:
 
     def test_report_result_success(self):
         with tempfile.TemporaryDirectory() as td:
-            system = MissionSystem(config=MissionConfig(auto_debrief=False, persistence_dir=Path(td)))
+            system = MissionSystem(
+                config=MissionConfig(auto_debrief=False, persistence_dir=Path(td))
+            )
             order = MissionOrder(citizen_id="c1", mission_type="scan")
             system.issue(order)
             result = MissionResult(success=True, outputs={"found": 3})
@@ -91,7 +95,9 @@ class TestLifecycle:
 
     def test_report_result_failure(self):
         with tempfile.TemporaryDirectory() as td:
-            system = MissionSystem(config=MissionConfig(auto_debrief=False, persistence_dir=Path(td)))
+            system = MissionSystem(
+                config=MissionConfig(auto_debrief=False, persistence_dir=Path(td))
+            )
             order = MissionOrder(citizen_id="c1", mission_type="scan")
             system.issue(order)
             result = MissionResult(success=False, errors=["crash"])
@@ -122,7 +128,9 @@ class TestLifecycle:
 class TestDebrief:
     def test_debrief_completed(self):
         with tempfile.TemporaryDirectory() as td:
-            system = MissionSystem(config=MissionConfig(auto_debrief=False, persistence_dir=Path(td)))
+            system = MissionSystem(
+                config=MissionConfig(auto_debrief=False, persistence_dir=Path(td))
+            )
             order = MissionOrder(citizen_id="c1", mission_type="scan")
             system.issue(order)
             result = MissionResult(success=True, outputs={"found": 3})
@@ -134,7 +142,9 @@ class TestDebrief:
 
     def test_debrief_failed(self):
         with tempfile.TemporaryDirectory() as td:
-            system = MissionSystem(config=MissionConfig(auto_debrief=False, persistence_dir=Path(td)))
+            system = MissionSystem(
+                config=MissionConfig(auto_debrief=False, persistence_dir=Path(td))
+            )
             order = MissionOrder(citizen_id="c1", mission_type="scan")
             system.issue(order)
             result = MissionResult(success=False, errors=["crash"])
@@ -153,7 +163,9 @@ class TestDebrief:
 
     def test_auto_debrief(self):
         with tempfile.TemporaryDirectory() as td:
-            system = MissionSystem(config=MissionConfig(auto_debrief=True, persistence_dir=Path(td)))
+            system = MissionSystem(
+                config=MissionConfig(auto_debrief=True, persistence_dir=Path(td))
+            )
             order = MissionOrder(citizen_id="c1", mission_type="scan")
             system.issue(order)
             result = MissionResult(success=True)
@@ -176,7 +188,9 @@ class TestQueries:
 
     def test_list_completed(self):
         with tempfile.TemporaryDirectory() as td:
-            system = MissionSystem(config=MissionConfig(auto_debrief=False, persistence_dir=Path(td)))
+            system = MissionSystem(
+                config=MissionConfig(auto_debrief=False, persistence_dir=Path(td))
+            )
             order = MissionOrder(citizen_id="c1", mission_type="scan")
             system.issue(order)
             system.report_result(order.id, MissionResult(success=True))
@@ -185,7 +199,9 @@ class TestQueries:
 
     def test_list_failed(self):
         with tempfile.TemporaryDirectory() as td:
-            system = MissionSystem(config=MissionConfig(auto_debrief=False, persistence_dir=Path(td)))
+            system = MissionSystem(
+                config=MissionConfig(auto_debrief=False, persistence_dir=Path(td))
+            )
             order = MissionOrder(citizen_id="c1", mission_type="scan")
             system.issue(order)
             system.report_result(order.id, MissionResult(success=False, errors=["e"]))
@@ -194,7 +210,9 @@ class TestQueries:
 
     def test_history(self):
         with tempfile.TemporaryDirectory() as td:
-            system = MissionSystem(config=MissionConfig(auto_debrief=False, persistence_dir=Path(td)))
+            system = MissionSystem(
+                config=MissionConfig(auto_debrief=False, persistence_dir=Path(td))
+            )
             order = MissionOrder(citizen_id="c1", mission_type="scan")
             system.issue(order)
             system.report_result(order.id, MissionResult(success=True))
@@ -205,7 +223,9 @@ class TestQueries:
 
     def test_stats(self):
         with tempfile.TemporaryDirectory() as td:
-            system = MissionSystem(config=MissionConfig(auto_debrief=False, persistence_dir=Path(td)))
+            system = MissionSystem(
+                config=MissionConfig(auto_debrief=False, persistence_dir=Path(td))
+            )
             o1 = MissionOrder(citizen_id="c1", mission_type="scan")
             o2 = MissionOrder(citizen_id="c2", mission_type="scan")
             system.issue(o1)
@@ -289,7 +309,9 @@ class TestAdversarial:
 
     def test_report_result_on_debriefed(self):
         with tempfile.TemporaryDirectory() as td:
-            system = MissionSystem(config=MissionConfig(auto_debrief=True, persistence_dir=Path(td)))
+            system = MissionSystem(
+                config=MissionConfig(auto_debrief=True, persistence_dir=Path(td))
+            )
             order = MissionOrder(citizen_id="c1", mission_type="scan")
             system.issue(order)
             system.report_result(order.id, MissionResult(success=True))

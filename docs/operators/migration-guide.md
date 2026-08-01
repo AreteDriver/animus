@@ -1,7 +1,7 @@
 # Migration Guide: Monolith → Public/Private Split
 
-**Status**: Draft — execute when ready to publicize  
-**Owner**: AreteDriver  
+**Status**: Draft — execute when ready to publicize
+**Owner**: your-org
 **Last updated**: 2026-06-29
 
 ---
@@ -9,8 +9,8 @@
 ## Overview
 
 This guide walks through splitting the `animus` monorepo into:
-- **Public**: `github.com/AreteDriver/animus` — code, tests, docs, schemas
-- **Private**: `github.com/AreteDriver/animus-private` — owner data, secrets, PII
+- **Public**: `github.com/your-org/animus` — code, tests, docs, schemas
+- **Private**: `github.com/your-org/animus-private` — owner data, secrets, PII
 
 **Estimated time**: 2–4 hours (mostly waiting on GitHub/Git filter-repo)
 
@@ -20,7 +20,7 @@ This guide walks through splitting the `animus` monorepo into:
 
 - `git-filter-repo` installed (`pip install git-filter-repo`)
 - GitHub CLI (`gh`) authenticated
-- Admin access to the `AreteDriver/animus` repo
+- Admin access to the `your-org/animus` repo
 - All pending work committed and pushed
 
 ---
@@ -105,13 +105,13 @@ git gc --prune=now --aggressive
 
 ```bash
 # Create new private repo on GitHub
-gh repo create AreteDriver/animus-private --private --description "Animus private data and owner-specific configuration"
+gh repo create your-org/animus-private --private --description "Animus private data and owner-specific configuration"
 
 # Clone it
 mkdir -p ~/projects/animus-private
 cd ~/projects/animus-private
 git init
-git remote add origin git@github.com:AreteDriver/animus-private.git
+git remote add origin git@github.com:your-org/animus-private.git
 
 # Add a README
 cat > README.md << 'EOF'
@@ -131,7 +131,7 @@ This repo is **never** to be made public.
 ## Link to public repo
 
 The public code lives at:
-https://github.com/AreteDriver/animus
+https://github.com/your-org/animus
 EOF
 
 git add README.md
@@ -197,14 +197,14 @@ mkdocs build
 git push origin main
 ```
 
-Check `https://aretedriver.github.io/animus/` after 2–5 minutes.
+Check `https://your-org.github.io/animus/` after 2–5 minutes.
 
 ### Verify no private data leaked
 
 ```bash
 # Clone fresh copy to neutral location
 cd /tmp
-git clone --depth 1 https://github.com/AreteDriver/animus.git animus-public-check
+git clone --depth 1 https://github.com/your-org/animus.git animus-public-check
 cd animus-public-check
 
 # Run audit
@@ -236,14 +236,14 @@ If publicization causes issues:
 
 | Task | Frequency | Responsible |
 |---|---|---|
-| Rotate API keys | Quarterly | AreteDriver |
+| Rotate API keys | Quarterly | your-org |
 | Audit public repo for accidental private data | Monthly | Automated via CI (gitleaks) |
-| Sync private data backups | Weekly | AreteDriver |
-| Review external PRs | As needed | AreteDriver |
+| Sync private data backups | Weekly | your-org |
+| Review external PRs | As needed | your-org |
 
 ---
 
 ## See Also
 
 - [Public/Private Split Specification](public-private-split.md)
-- [ADR-006: Public/Private Repository Split](https://github.com/AreteDriver/animus/blob/main/adrs/ADR-006.md)
+- [ADR-006: Public/Private Repository Split](https://github.com/your-org/animus/blob/main/adrs/ADR-006.md)

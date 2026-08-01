@@ -17,14 +17,14 @@ skills:
   # ═══════════════════════════════════════════════════════════════════════════
   # SYSTEM AGENT SKILLS
   # ═══════════════════════════════════════════════════════════════════════════
-  
+
   - name: file_operations
     path: system/file_operations
     agent: system
     version: 1.0.0
     status: active
     description: |
-      Safe file system operations including create, read, update, delete, 
+      Safe file system operations including create, read, update, delete,
       move, copy, search, and permission management.
     capabilities:
       - read_file
@@ -71,7 +71,7 @@ skills:
     version: 1.0.0
     status: active
     description: |
-      Search the web for information using search engines. Retrieve, parse, 
+      Search the web for information using search engines. Retrieve, parse,
       and synthesize search results.
     capabilities:
       - web_search
@@ -89,7 +89,7 @@ skills:
     version: 1.0.0
     status: active
     description: |
-      Fetch and extract content from web pages. Parse HTML, extract text, 
+      Fetch and extract content from web pages. Parse HTML, extract text,
       tables, and structured data.
     capabilities:
       - fetch_page
@@ -114,7 +114,7 @@ skills:
     version: 1.0.0
     status: active
     description: |
-      Compose and send emails via SMTP. Support for plain text, HTML, 
+      Compose and send emails via SMTP. Support for plain text, HTML,
       attachments, templates, and mail merge.
     capabilities:
       - create_draft
@@ -145,7 +145,7 @@ skills:
     version: 1.0.0
     status: active
     description: |
-      Interact with GitHub repositories. Clone, pull, push, create issues, 
+      Interact with GitHub repositories. Clone, pull, push, create issues,
       manage PRs, and automate repository workflows.
     capabilities:
       - clone_repo
@@ -268,15 +268,15 @@ consensus_levels:
   any:
     description: "Any single Zorya can approve"
     use_case: "Low-risk, read-only operations"
-    
+
   majority:
     description: "2 of 3 Zorya must agree"
     use_case: "Medium-risk operations with recoverable consequences"
-    
+
   unanimous:
     description: "All 3 Zorya must agree"
     use_case: "High-risk operations, especially irreversible ones"
-    
+
   unanimous_plus_user:
     description: "Unanimous + explicit user confirmation"
     use_case: "Critical operations like sending email, deleting data"

@@ -18,15 +18,15 @@ Every citizen operates under the Constitution layer:
 
 from __future__ import annotations
 
+from animus.citizens.abstraction import AbstractionCitizen
 from animus.citizens.architect import ArchitectCitizen
 from animus.citizens.architecture_citizen import ArchitectureCitizen
-from animus.citizens.commissioner import ForgeCommissioner
 from animus.citizens.citizen_council import CitizenCouncil, RankedProposal
+from animus.citizens.commissioner import ForgeCommissioner
 from animus.citizens.conversation_designer import ConversationDesignerCitizen
-from animus.citizens.abstraction import AbstractionCitizen
+from animus.citizens.first_principles import FirstPrinciplesCitizen
 from animus.citizens.harvester import HarvesterCitizen
 from animus.citizens.intelligence import IntelligenceCitizen
-from animus.citizens.first_principles import FirstPrinciplesCitizen
 from animus.citizens.knowledge_curator import KnowledgeCuratorCitizen
 from animus.citizens.pattern import PatternCitizen
 from animus.citizens.proposal import (

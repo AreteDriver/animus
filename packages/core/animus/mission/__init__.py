@@ -21,21 +21,21 @@ Usage:
     result = mission.debrief(order.id)
 """
 
+from animus.mission.citizen_mixin import CitizenMissionMixin
 from animus.mission.order import (
-    MissionOrder,
-    MissionStatus,
-    MissionResult,
     MissionConstraint,
+    MissionOrder,
+    MissionResult,
+    MissionStatus,
 )
 from animus.mission.runtime import (
     AgentRuntime,
     LocalRuntime,
     RuntimeCapabilities,
 )
-from animus.mission.citizen_mixin import CitizenMissionMixin
 from animus.mission.system import (
-    MissionSystem,
     MissionConfig,
+    MissionSystem,
 )
 
 __all__ = [

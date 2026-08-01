@@ -3,6 +3,7 @@
 import os
 import sys
 import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -18,6 +19,9 @@ from animus_forge.workflow import (
     validate_workflow,
 )
 from animus_forge.workflow.executor import StepStatus
+
+# Resolve workflow paths relative to Forge package root so tests are CWD-agnostic
+FORGE_ROOT = Path(__file__).parent.parent
 
 
 class TestConditionConfig:
@@ -195,7 +199,10 @@ class TestLoadWorkflow:
     def test_load_existing_workflow(self):
         """Can load an existing YAML workflow."""
         # Use one of the example workflows - disable path validation for test
-        config = load_workflow("workflows/feature-build.yaml", validate_path=False)
+        config = load_workflow(
+            FORGE_ROOT / "workflows" / "feature-build.yaml",
+            validate_path=False,
+        )
         assert config.name == "Feature Build"
         assert len(config.steps) > 0
 
@@ -221,7 +228,7 @@ class TestListWorkflows:
 
     def test_list_workflows(self):
         """Can list workflows in directory."""
-        workflows = list_workflows("workflows")
+        workflows = list_workflows(FORGE_ROOT / "workflows")
         assert len(workflows) >= 3  # feature-build, bug-fix, refactor
         names = [w["name"] for w in workflows]
         assert "Feature Build" in names

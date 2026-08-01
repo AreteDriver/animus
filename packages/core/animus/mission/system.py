@@ -15,14 +15,13 @@ Governance rules:
 from __future__ import annotations
 
 import json
-import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from animus.logging import get_logger
-from animus.mission.order import MissionConstraint, MissionOrder, MissionResult, MissionStatus
+from animus.mission.order import MissionOrder, MissionResult, MissionStatus
 from animus.mission.runtime import AgentRuntime, LocalRuntime
 
 logger = get_logger("mission.system")

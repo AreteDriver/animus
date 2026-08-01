@@ -8,7 +8,6 @@ short output.
 from __future__ import annotations
 
 import html
-import logging
 import re
 from typing import Any
 
@@ -45,7 +44,9 @@ class ExtractionPipeline:
             try:
                 doc = Document(raw_html)
                 summary = doc.summary()
-                content = self._html_to_text(summary) if self.config.format.value == "text" else summary
+                content = (
+                    self._html_to_text(summary) if self.config.format.value == "text" else summary
+                )
                 # Quality gate: reject cookie/consent noise or very short output
                 if self._is_low_quality(content):
                     logger.debug("Readability output rejected as low quality; falling back")

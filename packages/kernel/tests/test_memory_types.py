@@ -14,8 +14,6 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
-import pytest
-
 from animus_kernel.memory.types import (
     Conversation,
     Memory,
@@ -108,14 +106,16 @@ class TestMemory:
 
     def test_from_dict_defaults(self):
         now = datetime.now().isoformat()
-        mem = Memory.from_dict({
-            "id": "123",
-            "content": "minimal",
-            "memory_type": "semantic",
-            "created_at": now,
-            "updated_at": now,
-            "metadata": {},
-        })
+        mem = Memory.from_dict(
+            {
+                "id": "123",
+                "content": "minimal",
+                "memory_type": "semantic",
+                "created_at": now,
+                "updated_at": now,
+                "metadata": {},
+            }
+        )
         assert mem.tags == []
         assert mem.source == "stated"
         assert mem.confidence == 1.0

@@ -15,6 +15,7 @@ Exit codes:
     0 — All checks passed
     1 — One or more checks failed
 """
+
 from __future__ import annotations
 
 import re

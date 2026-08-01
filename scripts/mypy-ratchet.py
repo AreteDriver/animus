@@ -11,6 +11,7 @@ Usage::
 Each package needs a ``.mypy-baseline.json`` file in the repo root with a
 mapping ``{package: {allowed: N, directory: "path/to/code"}}``.
 """
+
 from __future__ import annotations
 
 import json
@@ -23,6 +24,7 @@ BASELINE_FILE = Path(__file__).with_name(".mypy-baseline.json")
 
 def count_errors(directory: str) -> int:
     import shutil
+
     mypy = shutil.which("mypy") or "mypy"
     result = subprocess.run(
         [mypy, directory, "--ignore-missing-imports", "--no-error-summary"],
@@ -68,10 +70,7 @@ def main(argv: list[str]) -> int:
             )
             failed = True
         else:
-            print(
-                f"[PASS] {pkg}: {actual} errors (allowed {allowed}, "
-                f"{delta or 'at limit'})"
-            )
+            print(f"[PASS] {pkg}: {actual} errors (allowed {allowed}, {delta or 'at limit'})")
 
     return 1 if failed else 0
 

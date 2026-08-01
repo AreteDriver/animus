@@ -20,7 +20,7 @@
       - If file is .env or secrets.env: ADD to .gitignore, git rm --cached, VERIFY not in history
       - If snippet is hardcoded key: REPLACE with env var reference or placeholder
    c. If category == "owner":
-      - REPLACE "AreteDriver" with generic "your-org" or parameterize
+      - REPLACE "your-org" with generic "your-org" or parameterize
    d. If category == "path":
       - REPLACE absolute path with Path.home() or env var
    e. WRITE the fix back to the file

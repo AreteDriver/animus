@@ -22,12 +22,12 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from animus.citizens.architect import ArchitectCitizen, Observation
+from animus.citizens.architect import Observation
 from animus.citizens.proposal import (
     EvidenceItem,
     ImprovementProposal,
@@ -74,9 +74,30 @@ class ConversationDesignerCitizen:
 
     # Common intentional single-word commands that should not be flagged as vague.
     INTENTIONAL_SHORT_COMMANDS = {
-        "help", "restart", "status", "exit", "clear", "commit", "push", "pull",
-        "deploy", "test", "build", "run", "stop", "logs", "yes", "no", "ok",
-        "cancel", "abort", "resume", "pause", "list", "show", "info",
+        "help",
+        "restart",
+        "status",
+        "exit",
+        "clear",
+        "commit",
+        "push",
+        "pull",
+        "deploy",
+        "test",
+        "build",
+        "run",
+        "stop",
+        "logs",
+        "yes",
+        "no",
+        "ok",
+        "cancel",
+        "abort",
+        "resume",
+        "pause",
+        "list",
+        "show",
+        "info",
     }
 
     @staticmethod
@@ -231,8 +252,21 @@ class ConversationDesignerCitizen:
                         continue
                     # Flag short vague prompts OR longer prompts that are purely vague
                     is_short_vague = len(prompt) < 25 and vague_pattern.search(prompt)
-                    is_long_vague = len(prompt) < 60 and vague_pattern.search(prompt) and not any(
-                        kw in prompt.lower() for kw in ("file", "path", "function", "method", "class", "module", "package")
+                    is_long_vague = (
+                        len(prompt) < 60
+                        and vague_pattern.search(prompt)
+                        and not any(
+                            kw in prompt.lower()
+                            for kw in (
+                                "file",
+                                "path",
+                                "function",
+                                "method",
+                                "class",
+                                "module",
+                                "package",
+                            )
+                        )
                     )
                     if is_short_vague or is_long_vague:
                         normalized = prompt.lower().strip()
@@ -277,9 +311,21 @@ class ConversationDesignerCitizen:
             return observations
 
         correction_keywords = [
-            "no,", "not quite", "that's not", "wrong", "incorrect",
-            "i meant", "actually,", "wait,", "no —", "nope", "not what i",
-            "rephrase", "clarify", "you misunderstood", "try again",
+            "no,",
+            "not quite",
+            "that's not",
+            "wrong",
+            "incorrect",
+            "i meant",
+            "actually,",
+            "wait,",
+            "no —",
+            "nope",
+            "not what i",
+            "rephrase",
+            "clarify",
+            "you misunderstood",
+            "try again",
         ]
 
         for log_file in sorted(self.conversation_log_dir.glob("*.jsonl"))[-limit:]:
@@ -378,9 +424,7 @@ class ConversationDesignerCitizen:
     # Proposal generation
     # ------------------------------------------------------------------
 
-    def generate_proposal(
-        self, focus_pattern: str | None = None
-    ) -> ImprovementProposal | None:
+    def generate_proposal(self, focus_pattern: str | None = None) -> ImprovementProposal | None:
         """Generate an improvement proposal from conversation analysis.
 
         Args:
@@ -416,9 +460,7 @@ class ConversationDesignerCitizen:
             # Focus on highest-severity pattern
             top = max(
                 patterns,
-                key=lambda p: {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(
-                    p.severity, 0
-                ),
+                key=lambda p: {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(p.severity, 0),
             )
 
         evidence = [
@@ -468,7 +510,11 @@ class ConversationDesignerCitizen:
             affected_components=components,
             evaluation_plan="Measure repeat-prompt frequency before/after + user satisfaction",
             rollback_plan="Remove new prompts/templates via single config change",
-            success_metrics=["Repeat-prompt frequency reduced", "Correction loops reduced", "User turn count stable or lower"],
+            success_metrics=[
+                "Repeat-prompt frequency reduced",
+                "Correction loops reduced",
+                "User turn count stable or lower",
+            ],
             status=ProposalStatus.DRAFT,
         )
 

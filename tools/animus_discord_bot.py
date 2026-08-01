@@ -38,13 +38,13 @@ if os.path.isdir(_CORE_DIR) and _CORE_DIR not in sys.path:
     sys.path.insert(0, os.path.realpath(_CORE_DIR))
 
 import discord
-from discord import app_commands
-from discord.ext import tasks
-
+from animus.cognitive import CognitiveLayer, ModelProvider
+from animus.cognitive import ModelConfig as CogModelConfig
 from animus.config import AnimusConfig
-from animus.cognitive import CognitiveLayer, ModelConfig as CogModelConfig, ModelProvider
 from animus.infrastructure import AlreadyRunningError, LockedPidFile
 from animus.memory import MemoryLayer, MemoryType
+from discord import app_commands
+from discord.ext import tasks
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -128,7 +128,9 @@ def _get_cognitive() -> CognitiveLayer:
             provider=provider,
             model_name=cfg.model.name,
             api_key=cfg.model.anthropic_api_key or cfg.model.openai_api_key,
-            base_url=cfg.model.ollama_url if provider == ModelProvider.OLLAMA else cfg.model.openai_base_url,
+            base_url=cfg.model.ollama_url
+            if provider == ModelProvider.OLLAMA
+            else cfg.model.openai_base_url,
         )
         _cognitive = CognitiveLayer(primary_config=primary)
     return _cognitive
@@ -141,7 +143,7 @@ def _get_cognitive() -> CognitiveLayer:
 _user_cooldowns: dict[int, float] = defaultdict(float)
 CHAT_COOLDOWN = int(os.environ.get("ANIMUS_CHAT_COOLDOWN", "10"))
 
-CHAT_SYSTEM = """You are Animus, an AI exocortex built by ARETE (AreteDriver). You are helpful, \
+CHAT_SYSTEM = """You are Animus, an AI exocortex built by ARETE (your-org). You are helpful, \
 direct, and knowledgeable about software engineering, AI tools, and the projects in your memory.
 
 Keep responses concise (under 2000 chars for Discord). Be conversational but substantive. \
@@ -243,7 +245,10 @@ class AnimusBot(discord.Client):
         if self.chat_channel_id is not None:
             if message.channel.id == self.chat_channel_id:
                 is_chat_channel = True
-            elif hasattr(message.channel, "parent_id") and message.channel.parent_id == self.chat_channel_id:
+            elif (
+                hasattr(message.channel, "parent_id")
+                and message.channel.parent_id == self.chat_channel_id
+            ):
                 is_chat_channel = True
 
         if not is_mention and not is_chat_channel:
@@ -264,9 +269,9 @@ class AnimusBot(discord.Client):
         # Strip the bot mention from the message text
         content = message.content
         if self.user is not None:
-            content = content.replace(f"<@{self.user.id}>", "").replace(
-                f"<@!{self.user.id}>", ""
-            ).strip()
+            content = (
+                content.replace(f"<@{self.user.id}>", "").replace(f"<@!{self.user.id}>", "").strip()
+            )
 
         if not content:
             await message.reply(
@@ -290,8 +295,7 @@ class AnimusBot(discord.Client):
                 # Build prompt with context
                 if context:
                     full_prompt = (
-                        f"Relevant context from memory:\n{context}\n\n"
-                        f"User message: {content}"
+                        f"Relevant context from memory:\n{context}\n\nUser message: {content}"
                     )
                 else:
                     full_prompt = content
@@ -475,9 +479,7 @@ class AnimusBot(discord.Client):
         # /recall <query>
         @tree.command(name="recall", description="Search Animus memory")
         @app_commands.describe(query="What to search for", limit="Max results (default 5)")
-        async def recall_cmd(
-            interaction: discord.Interaction, query: str, limit: int = 5
-        ) -> None:
+        async def recall_cmd(interaction: discord.Interaction, query: str, limit: int = 5) -> None:
             memory = _get_memory()
             results = memory.recall(query=query, limit=limit)
 
@@ -702,7 +704,7 @@ async def _build_brief_embed() -> discord.Embed:
 
     # Recent harvest state
     try:
-        from animus.lugh.watchlist import get_watchlist, get_due_repos
+        from animus.lugh.watchlist import get_due_repos, get_watchlist
 
         watchlist = get_watchlist()
         due = get_due_repos()
@@ -719,9 +721,7 @@ async def _build_brief_embed() -> discord.Embed:
             reverse=True,
         )
         if scored:
-            top = "\n".join(
-                f"- {r['target']}: {r['last_score']}/100" for r in scored[:5]
-            )
+            top = "\n".join(f"- {r['target']}: {r['last_score']}/100" for r in scored[:5])
             embed.add_field(name="Top Tracked Repos", value=_trunc(top), inline=False)
     except Exception as e:
         embed.add_field(name="Harvest", value=f"Error: {e}", inline=False)

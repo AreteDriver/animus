@@ -8,9 +8,8 @@ historical performance, not just prompt keywords.
 from __future__ import annotations
 
 import random
-import time
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from animus.logging import get_logger
 from animus.routing.graph import (
@@ -113,8 +112,7 @@ class ProviderRouter:
 
         # Get candidate providers
         available = [
-            name for name in self.graph.providers.keys()
-            if not excluded or name not in excluded
+            name for name in self.graph.providers.keys() if not excluded or name not in excluded
         ]
 
         # Rank providers
@@ -143,16 +141,10 @@ class ProviderRouter:
                 )
                 selected = (None, selected[1])
             else:
-                reason = (
-                    f"Selected {selected[0].name} based on trajectory score={selected[1]:.3f}"
-                )
+                reason = f"Selected {selected[0].name} based on trajectory score={selected[1]:.3f}"
 
-        provider_name = (
-            selected[0].name if selected[0] else self.config.default_provider
-        )
-        alternatives = [
-            (name, score) for name, score in ranked[:3] if name != provider_name
-        ]
+        provider_name = selected[0].name if selected[0] else self.config.default_provider
+        alternatives = [(name, score) for name, score in ranked[:3] if name != provider_name]
 
         decision = RoutingDecision(
             provider_name=provider_name,
@@ -163,7 +155,7 @@ class ProviderRouter:
         )
         self._decision_history.append(decision)
         if len(self._decision_history) > self._MAX_DECISION_HISTORY:
-            self._decision_history = self._decision_history[-self._MAX_DECISION_HISTORY:]
+            self._decision_history = self._decision_history[-self._MAX_DECISION_HISTORY :]
         logger.info(f"Router: {decision.reason}")
         return decision
 

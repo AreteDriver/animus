@@ -835,7 +835,9 @@ class TestBootstrapLoopProposalQueue:
             status=ProposalStatus.SUBMITTED,
         )
         loop.proposal_queue.submit(proposal, priority=1, tags=["pipeline_test"])
-        loop.proposal_queue.approve("PROP-FULL-001", actor="human", reason="Approved for pipeline test")
+        loop.proposal_queue.approve(
+            "PROP-FULL-001", actor="human", reason="Approved for pipeline test"
+        )
 
         # Pre-condition
         pre = loop.proposal_queue.get("PROP-FULL-001")

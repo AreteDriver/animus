@@ -8,12 +8,9 @@ from animus.dossier import NEREngine
 from animus.dossier.models import (
     Dossier,
     Entity,
-    EntityRelationship,
     EntityType,
     EvidenceItem,
 )
-from animus.dossier.ner import ExtractionResult
-
 
 # ---------------------------------------------------------------------------
 # Model tests

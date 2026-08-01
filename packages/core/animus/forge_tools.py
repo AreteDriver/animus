@@ -8,7 +8,6 @@ from __future__ import annotations
 import json
 import os
 import urllib.request
-from dataclasses import dataclass
 from typing import Any
 
 from animus.tools import Tool, ToolResult
@@ -16,7 +15,9 @@ from animus.tools import Tool, ToolResult
 FORGE_BASE = "http://localhost:8000/v1"
 
 
-def _forge_request(path: str, method: str = "GET", body: bytes | None = None, timeout: int = 10, token: str = "") -> dict[str, Any]:
+def _forge_request(
+    path: str, method: str = "GET", body: bytes | None = None, timeout: int = 10, token: str = ""
+) -> dict[str, Any]:
     """Make a request to Forge and return parsed JSON."""
     effective_token = token or os.environ.get("FORGE_TOKEN", "")
     req = urllib.request.Request(f"{FORGE_BASE}{path}", data=body, method=method)
@@ -83,7 +84,9 @@ def _tool_forge_run_workflow(params: dict) -> ToolResult:
         )
     try:
         body = json.dumps({"workflow_id": workflow_id}).encode()
-        data = _forge_request("/workflows/execute", method="POST", body=body, timeout=300, token=token)
+        data = _forge_request(
+            "/workflows/execute", method="POST", body=body, timeout=300, token=token
+        )
         status = data.get("status", "unknown")
         return ToolResult(
             tool_name="forge_run_workflow",
@@ -160,7 +163,7 @@ FORGE_TOOLS: list[Tool] = [
                 "token": {
                     "type": "string",
                     "description": "Bearer token for Forge authentication (optional)",
-                }
+                },
             },
             "required": ["workflow_id"],
         },

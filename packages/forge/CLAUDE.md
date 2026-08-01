@@ -89,19 +89,19 @@ animus_forge.cli:app
 
 ### Core
 - openai
-- 
+-
 - anthropic
-- 
+-
 - fastapi
-- 
+-
 - uvicorn
-- 
+-
 - streamlit
-- 
+-
 - google-auth
-- 
+-
 - google-auth-oauthlib
-- 
+-
 - google-auth-httplib2
 
 ### Dev

@@ -9,15 +9,14 @@ Supports four event types:
 
 from __future__ import annotations
 
-import asyncio
 import fnmatch
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
-from enum import Enum, auto
+from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from animus.logging import get_logger
 

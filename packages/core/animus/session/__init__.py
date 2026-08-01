@@ -38,11 +38,16 @@ def create_session_controller(
     auto_restart: bool = True,
 ):
     """Build a ``SessionController`` from telemetry-style parameters."""
-    from animus_kernel.head.session_controller import SessionController, SessionPolicy  # boundary-ok: façade delegates to Kernel
+    from animus_kernel.head.session_controller import (  # boundary-ok: façade delegates to Kernel
+        SessionController,
+        SessionPolicy,
+    )
 
     policy = SessionPolicy(
         wrapup_threshold=wrapup_threshold,
-        session_timer=__import__("datetime", fromlist=["timedelta"]).timedelta(minutes=session_timer_minutes),
+        session_timer=__import__("datetime", fromlist=["timedelta"]).timedelta(
+            minutes=session_timer_minutes
+        ),
         auto_restart=auto_restart,
     )
     return SessionController(policy=policy)
@@ -60,7 +65,10 @@ class _SessionLifecycleEventProxy:
 
     def _load(self) -> Any:
         if self._real is None:
-            from animus_kernel.head.session_controller import SessionLifecycleEvent as _Real  # boundary-ok: façade delegates to Kernel
+            from animus_kernel.head.session_controller import (
+                SessionLifecycleEvent as _Real,  # boundary-ok: façade delegates to Kernel
+            )
+
             self._real = _Real
         return self._real
 

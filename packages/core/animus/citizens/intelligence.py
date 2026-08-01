@@ -22,7 +22,6 @@ Instead:
 
 from __future__ import annotations
 
-import hashlib
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -33,7 +32,6 @@ from typing import TYPE_CHECKING, Any
 from animus.citizens.proposal import (
     EvidenceItem,
     ImprovementProposal,
-    ProposalConfidence,
     ProposalStatus,
     RiskAssessment,
 )
@@ -68,20 +66,23 @@ class ExtractedEntities:
     aws_keys: set[str] = field(default_factory=set)
 
     def to_dict(self) -> dict[str, list[str]]:
-        return {k: sorted(v) for k, v in {
-            "emails": self.emails,
-            "domains": self.domains,
-            "urls": self.urls,
-            "ipv4_addresses": self.ipv4_addresses,
-            "ipv6_addresses": self.ipv6_addresses,
-            "phone_numbers": self.phone_numbers,
-            "md5_hashes": self.md5_hashes,
-            "sha1_hashes": self.sha1_hashes,
-            "sha256_hashes": self.sha256_hashes,
-            "social_handles": self.social_handles,
-            "credit_cards": self.credit_cards,
-            "aws_keys": self.aws_keys,
-        }.items()}
+        return {
+            k: sorted(v)
+            for k, v in {
+                "emails": self.emails,
+                "domains": self.domains,
+                "urls": self.urls,
+                "ipv4_addresses": self.ipv4_addresses,
+                "ipv6_addresses": self.ipv6_addresses,
+                "phone_numbers": self.phone_numbers,
+                "md5_hashes": self.md5_hashes,
+                "sha1_hashes": self.sha1_hashes,
+                "sha256_hashes": self.sha256_hashes,
+                "social_handles": self.social_handles,
+                "credit_cards": self.credit_cards,
+                "aws_keys": self.aws_keys,
+            }.items()
+        }
 
     def merge(self, other: ExtractedEntities) -> None:
         self.emails.update(other.emails)
@@ -149,9 +150,7 @@ class IntelligenceReport:
 # ═══════════════════════════════════════════════════════════════════
 
 _ENTITY_PATTERNS = {
-    "email": re.compile(
-        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", re.IGNORECASE
-    ),
+    "email": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", re.IGNORECASE),
     "url": re.compile(r"https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*", re.IGNORECASE),
     "domain": re.compile(
         r"\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+"
@@ -201,16 +200,12 @@ _SECRET_PATTERNS = {
         "severity": "critical",
     },
     "generic_api_key": {
-        "pattern": re.compile(
-            r"(?:api[_-]?key|apikey)\s*[=:]\s*['\"]?([A-Za-z0-9_\-]{20,})['\"]?"
-        ),
+        "pattern": re.compile(r"(?:api[_-]?key|apikey)\s*[=:]\s*['\"]?([A-Za-z0-9_\-]{20,})['\"]?"),
         "description": "Generic API Key",
         "severity": "high",
     },
     "generic_secret": {
-        "pattern": re.compile(
-            r"(?:secret|password|passwd|pwd)\s*[=:]\s*['\"]([^'\"]{8,})['\"]"
-        ),
+        "pattern": re.compile(r"(?:secret|password|passwd|pwd)\s*[=:]\s*['\"]([^'\"]{8,})['\"]"),
         "description": "Generic Secret/Password",
         "severity": "high",
     },
@@ -220,9 +215,7 @@ _SECRET_PATTERNS = {
         "severity": "critical",
     },
     "slack_token": {
-        "pattern": re.compile(
-            r"xox[baprs]-[0-9]{10,13}-[0-9]{10,13}-[a-zA-Z0-9]{24,}"
-        ),
+        "pattern": re.compile(r"xox[baprs]-[0-9]{10,13}-[0-9]{10,13}-[a-zA-Z0-9]{24,}"),
         "description": "Slack Token",
         "severity": "high",
     },
@@ -310,14 +303,40 @@ _PLATFORMS: dict[str, dict[str, Any]] = {
 }
 
 _SKIP_EXTENSIONS = {
-    ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".webp",
-    ".mp3", ".mp4", ".wav", ".avi", ".mov", ".pdf",
-    ".zip", ".tar", ".gz", ".rar", ".7z", ".exe", ".pyc", ".pyo",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".ico",
+    ".svg",
+    ".webp",
+    ".mp3",
+    ".mp4",
+    ".wav",
+    ".avi",
+    ".mov",
+    ".pdf",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".rar",
+    ".7z",
+    ".exe",
+    ".pyc",
+    ".pyo",
 }
 
 _SKIP_DIRS = {
-    ".git", "__pycache__", "node_modules", "venv", ".venv",
-    "dist", "build", "target", ".idea", ".vscode",
+    ".git",
+    "__pycache__",
+    "node_modules",
+    "venv",
+    ".venv",
+    "dist",
+    "build",
+    "target",
+    ".idea",
+    ".vscode",
 }
 
 
@@ -363,29 +382,33 @@ class IntelligenceCitizen:
 
         secrets = self.scan_directory_secrets(self.codebase_path)
         for s in secrets:
-            findings.append({
-                "source": "codebase",
-                "description": f"{s.description}: {s.matched_text}",
-                "severity": s.severity,
-                "context": {
-                    "pattern": s.pattern_name,
-                    "file": s.file_path,
-                    "line": s.line_number,
-                },
-            })
+            findings.append(
+                {
+                    "source": "codebase",
+                    "description": f"{s.description}: {s.matched_text}",
+                    "severity": s.severity,
+                    "context": {
+                        "pattern": s.pattern_name,
+                        "file": s.file_path,
+                        "line": s.line_number,
+                    },
+                }
+            )
 
         entities = self.extract_from_directory(self.codebase_path)
         for file_path, extracted in entities.items():
             if extracted.total_count() > 0:
-                findings.append({
-                    "source": "codebase",
-                    "description": f"Extracted {extracted.total_count()} entities from {file_path}",
-                    "severity": "info",
-                    "context": {
-                        "file": file_path,
-                        "entities": extracted.to_dict(),
-                    },
-                })
+                findings.append(
+                    {
+                        "source": "codebase",
+                        "description": f"Extracted {extracted.total_count()} entities from {file_path}",
+                        "severity": "info",
+                        "context": {
+                            "file": file_path,
+                            "entities": extracted.to_dict(),
+                        },
+                    }
+                )
 
         logger.info("Intelligence observe_codebase: %d findings", len(findings))
         return findings
@@ -678,12 +701,14 @@ class IntelligenceCitizen:
             entities = []
             for category in ("people", "places", "orgs"):
                 for item in getattr(result, category, []):
-                    entities.append({
-                        "name": item.get("name", ""),
-                        "type": category,
-                        "confidence": 0.7,
-                        "canonical": item.get("name", "").lower().strip(),
-                    })
+                    entities.append(
+                        {
+                            "name": item.get("name", ""),
+                            "type": category,
+                            "confidence": 0.7,
+                            "canonical": item.get("name", "").lower().strip(),
+                        }
+                    )
             return entities
         except ImportError:
             logger.warning("NEREngine not available — install with 'animus[dossier]'")
@@ -693,7 +718,9 @@ class IntelligenceCitizen:
     # Report Generation
     # ------------------------------------------------------------------
 
-    def analyze(self, text: str | None = None, file_path: Path | str | None = None) -> IntelligenceReport:
+    def analyze(
+        self, text: str | None = None, file_path: Path | str | None = None
+    ) -> IntelligenceReport:
         """Analyze text or file and produce an intelligence report.
 
         Args:
@@ -708,7 +735,9 @@ class IntelligenceCitizen:
             report.entities = self.extract_named_entities(text)
         elif file_path:
             path = Path(file_path)
-            text_content = path.read_text(encoding="utf-8", errors="ignore") if path.exists() else ""
+            text_content = (
+                path.read_text(encoding="utf-8", errors="ignore") if path.exists() else ""
+            )
             report = self.generate_osint_report(text_content)
             report.entities = self.extract_named_entities(text_content)
             report.source = f"file:{path}"
@@ -722,7 +751,9 @@ class IntelligenceCitizen:
     # Proposal Generation (follows Architect pattern)
     # ------------------------------------------------------------------
 
-    def generate_proposal(self, report: IntelligenceReport | None = None) -> ImprovementProposal | None:
+    def generate_proposal(
+        self, report: IntelligenceReport | None = None
+    ) -> ImprovementProposal | None:
         """Generate an improvement proposal from intelligence findings.
 
         Args:
@@ -776,8 +807,12 @@ class IntelligenceCitizen:
             )
             severity = "high"
         elif report.extracted.credit_cards:
-            problem = f"{len(report.extracted.credit_cards)} credit card number(s) in {report.source}"
-            recommendation = "Remove payment card data from source immediately. PCI compliance violation risk."
+            problem = (
+                f"{len(report.extracted.credit_cards)} credit card number(s) in {report.source}"
+            )
+            recommendation = (
+                "Remove payment card data from source immediately. PCI compliance violation risk."
+            )
             severity = "critical"
         elif report.extracted.aws_keys:
             problem = f"{len(report.extracted.aws_keys)} AWS key(s) in {report.source}"

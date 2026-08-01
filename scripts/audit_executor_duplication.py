@@ -7,6 +7,7 @@ paths), which differ, and what the remaining migration surface is.
 Usage:
     python scripts/audit_executor_duplication.py
 """
+
 from __future__ import annotations
 
 import json
@@ -80,12 +81,14 @@ def main() -> int:
             if diff["identical_modulo_imports"]:
                 identical_count += 1
         else:
-            results.append({
-                "kernel_path": str(kmod.relative_to(REPO_ROOT)),
-                "forge_path": None,
-                "identical_modulo_imports": False,
-                "note": "missing in Forge",
-            })
+            results.append(
+                {
+                    "kernel_path": str(kmod.relative_to(REPO_ROOT)),
+                    "forge_path": None,
+                    "identical_modulo_imports": False,
+                    "note": "missing in Forge",
+                }
+            )
 
     report = {
         "summary": {
@@ -93,7 +96,9 @@ def main() -> int:
             "forge_has_module": sum(1 for r in results if r.get("forge_path")),
             "identical_modulo_imports": identical_count,
             "total_duplicated_bytes": total_size,
-            "percent_identical": round(identical_count / len(kernel_modules) * 100, 1) if kernel_modules else 0,
+            "percent_identical": round(identical_count / len(kernel_modules) * 100, 1)
+            if kernel_modules
+            else 0,
         },
         "modules": results,
         "recommendation": (

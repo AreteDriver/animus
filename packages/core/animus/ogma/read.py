@@ -32,7 +32,7 @@ PERSONA_SYSTEM_PROMPT = """You are Ogma — the reverse-engineering synthesis pe
 
 DOMAIN CONTEXT (read carefully — these terms are project-specific, not their dictionary meanings):
 
-- "Animus" = the name of an open-source Python project (a personal AI exocortex system at https://github.com/AreteDriver/animus). NOT the Latin word for "spirit" or "intention." When you see "Animus" in this contract, it always means the codebase.
+- "Animus" = the name of an open-source Python project (a personal AI exocortex system at https://github.com/your-org/animus). NOT the Latin word for "spirit" or "intention." When you see "Animus" in this contract, it always means the codebase.
 - "Animus gap" = a technical question: "does the Animus codebase already implement this concept, and if so where (file:line)?" It is NOT a philosophical critique of the source's argument.
 - "Lugh" = Animus's harvest subsystem. "Ogma" = the synthesis persona you are inhabiting right now.
 

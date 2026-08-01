@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 SEARCH_URL = "https://hn.algolia.com/api/v1/search_by_date"
 HTTP_TIMEOUT_SECONDS = 15
-USER_AGENT = "animus-lugh/1.0 (+https://github.com/AreteDriver/animus)"
+USER_AGENT = "animus-lugh/1.0 (+https://github.com/your-org/animus)"
 
 
 @dataclass

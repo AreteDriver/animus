@@ -23,7 +23,9 @@ def local_store(tmp_path: Path) -> LocalMemoryStore:
     return LocalMemoryStore(data_dir=tmp_path)
 
 
-def _make_memory(content: str = "hello", memory_type: MemoryType = MemoryType.SEMANTIC, **kwargs) -> Memory:
+def _make_memory(
+    content: str = "hello", memory_type: MemoryType = MemoryType.SEMANTIC, **kwargs
+) -> Memory:
     return Memory.create(content=content, memory_type=memory_type, **kwargs)
 
 

@@ -8,7 +8,6 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
-import threading
 import time
 from pathlib import Path
 
@@ -19,15 +18,13 @@ from animus.infrastructure import (
     LockedPidFile,
     ProcessGuard,
     ProcessState,
-    RegisteredProcess,
     SystemProcessRegistry,
 )
 from animus.infrastructure.process_lifecycle import (
+    _human_duration,
     print_status_table,
     run_cleanup,
-    _human_duration,
 )
-
 
 # ---------------------------------------------------------------------------
 # LockedPidFile
@@ -141,7 +138,9 @@ class TestSystemProcessRegistry:
     def test_register_and_list(self, tmp_path: Path) -> None:
         db = tmp_path / "registry.db"
         reg = SystemProcessRegistry(db)
-        proc = reg.register(component="daemon", pid=os.getpid(), command_line="python -m animus.daemon")
+        proc = reg.register(
+            component="daemon", pid=os.getpid(), command_line="python -m animus.daemon"
+        )
         assert proc.component == "daemon"
         assert proc.pid == os.getpid()
         active = reg.list_active()
@@ -151,7 +150,9 @@ class TestSystemProcessRegistry:
     def test_heartbeat_updates(self, tmp_path: Path) -> None:
         db = tmp_path / "registry.db"
         reg = SystemProcessRegistry(db)
-        proc = reg.register(component="mcp_server", pid=os.getpid(), command_line="python -m animus.mcp_server")
+        proc = reg.register(
+            component="mcp_server", pid=os.getpid(), command_line="python -m animus.mcp_server"
+        )
         assert reg.heartbeat(proc.process_id) is True
         # Unregister
         assert reg.unregister(proc.process_id) is True
@@ -161,7 +162,9 @@ class TestSystemProcessRegistry:
         db = tmp_path / "registry.db"
         reg = SystemProcessRegistry(db)
         fake_pid = 999999
-        proc = reg.register(component="daemon", pid=fake_pid, command_line="python -m animus.daemon")
+        proc = reg.register(
+            component="daemon", pid=fake_pid, command_line="python -m animus.daemon"
+        )
         result = reg.sweep()
         assert len(result.removed) == 1
         assert result.removed[0].process_id == proc.process_id
@@ -176,7 +179,16 @@ class TestSystemProcessRegistry:
             conn.execute(
                 "INSERT INTO processes (process_id, component, pid, ppid, command_line, start_time, last_heartbeat, state)"
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("test-1", "tray", os.getpid(), fake_ppid, "animus-tray", "2024-01-01T00:00:00+00:00", "2024-01-01T00:00:00+00:00", "running"),
+                (
+                    "test-1",
+                    "tray",
+                    os.getpid(),
+                    fake_ppid,
+                    "animus-tray",
+                    "2024-01-01T00:00:00+00:00",
+                    "2024-01-01T00:00:00+00:00",
+                    "running",
+                ),
             )
         result = reg.sweep()
         assert len(result.marked_orphan) == 1
@@ -192,7 +204,16 @@ class TestSystemProcessRegistry:
             conn.execute(
                 "INSERT INTO processes (process_id, component, pid, ppid, command_line, start_time, last_heartbeat, state)"
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("test-1", "daemon", os.getpid(), os.getppid(), "animus-daemon", old_time, old_time, "running"),
+                (
+                    "test-1",
+                    "daemon",
+                    os.getpid(),
+                    os.getppid(),
+                    "animus-daemon",
+                    old_time,
+                    old_time,
+                    "running",
+                ),
             )
         result = reg.sweep(suspect_threshold_seconds=1.0)
         assert len(result.marked_suspect) == 1
@@ -260,7 +281,9 @@ time.sleep(10)
 
         class MyDaemon(ProcessGuard):
             def __init__(self) -> None:
-                super().__init__(component="my_daemon", pid_file=pid_file, registry=reg, heartbeat_interval=0.5)
+                super().__init__(
+                    component="my_daemon", pid_file=pid_file, registry=reg, heartbeat_interval=0.5
+                )
 
         d = MyDaemon()
         with d.guard():

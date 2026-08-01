@@ -6,9 +6,9 @@
 | Last verified | 2026-07-19 |
 | Installable? | Yes — see [Quickstart](README.md#quickstart) |
 | Tested? | 3566/3566 regression + contracts + integration + database + PWA tests green |
-| Documented? | Yes — [MkDocs site](https://aretedriver.github.io/animus/) |
-| CI | [![CI](https://github.com/AreteDriver/animus/workflows/CI/badge.svg)](https://github.com/AreteDriver/animus/actions/workflows/ci.yml) |
-| First-Run | [![First-Run](https://github.com/AreteDriver/animus/workflows/First-Run%20Verification/badge.svg)](https://github.com/AreteDriver/animus/actions/workflows/first-run.yml) |
+| Documented? | Yes — [MkDocs site](https://your-org.github.io/animus/) |
+| CI | [![CI](https://github.com/your-org/animus/workflows/CI/badge.svg)](https://github.com/your-org/animus/actions/workflows/ci.yml) |
+| First-Run | [![First-Run](https://github.com/your-org/animus/workflows/First-Run%20Verification/badge.svg)](https://github.com/your-org/animus/actions/workflows/first-run.yml) |
 
 ## What Works
 
@@ -29,7 +29,7 @@
 
 ## What Doesn't Work Yet
 
-- External adoption evidence thin — no verified installs by users outside build loop (see [#115](https://github.com/AreteDriver/animus/issues/115))
+- External adoption evidence thin — no verified installs by users outside build loop (see [#115](https://github.com/your-org/animus/issues/115))
 - macOS support on roadmap; Windows out of scope
 - PyPI package not yet published for `animus-core` (install from source only)
 - Mypy error count >0 (baselined and ratcheted, but not zero)
@@ -37,7 +37,7 @@
 ## Install
 
 ```bash
-git clone https://github.com/AreteDriver/animus.git && cd animus
+git clone https://github.com/your-org/animus.git && cd animus
 pip install -e packages/types/ -e "packages/core/[dev]" -e packages/kernel/ -e packages/contracts/
 python -m animus.cli architect --focus codebase
 ```

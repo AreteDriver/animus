@@ -1,9 +1,9 @@
 site_name: Animus Documentation
-site_url: https://aretedriver.github.io/animus/
-site_author: AreteDriver
-copyright: Copyright &copy; 2026 AreteDriver
-repo_url: https://github.com/AreteDriver/animus
-repo_name: AreteDriver/animus
+site_url: https://your-org.github.io/animus/
+site_author: your-org
+copyright: Copyright &copy; 2026 your-org
+repo_url: https://github.com/your-org/animus
+repo_name: your-org/animus
 edit_uri: blob/main/docs/
 docs_dir: docs
 site_dir: site
@@ -121,7 +121,7 @@ plugins:
 extra:
   social:
   - icon: fontawesome/brands/github
-    link: https://github.com/AreteDriver/animus
+    link: https://github.com/your-org/animus
   - icon: fontawesome/brands/discord
     link: https://discord.gg/fdzQkrt8
 markdown_extensions:

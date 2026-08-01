@@ -14,8 +14,8 @@ This extension adds support for Server Sent Events to htmx.  See /www/extensions
 
 		/**
 		 * Init saves the provided reference to the internal HTMX API.
-		 * 
-		 * @param {import("../htmx").HtmxInternalApi} api 
+		 *
+		 * @param {import("../htmx").HtmxInternalApi} api
 		 * @returns void
 		 */
 		init: function(apiRef) {
@@ -30,9 +30,9 @@ This extension adds support for Server Sent Events to htmx.  See /www/extensions
 
 		/**
 		 * onEvent handles all events passed to this extension.
-		 * 
-		 * @param {string} name 
-		 * @param {Event} evt 
+		 *
+		 * @param {string} name
+		 * @param {Event} evt
 		 * @returns void
 		 */
 		onEvent: function(name, evt) {
@@ -64,8 +64,8 @@ This extension adds support for Server Sent Events to htmx.  See /www/extensions
 	/**
 	 * createEventSource is the default method for creating new EventSource objects.
 	 * it is hoisted into htmx.config.createEventSource to be overridden by the user, if needed.
-	 * 
-	 * @param {string} url 
+	 *
+	 * @param {string} url
 	 * @returns EventSource
 	 */
 	function createEventSource(url) {
@@ -105,7 +105,7 @@ This extension adds support for Server Sent Events to htmx.  See /www/extensions
 	}
 
 	/**
-	 * registerSSE looks for attributes that can contain sse events, right 
+	 * registerSSE looks for attributes that can contain sse events, right
 	 * now hx-trigger and sse-swap and adds listeners based on these attributes too
 	 * the closest event source
 	 *
@@ -170,7 +170,7 @@ This extension adds support for Server Sent Events to htmx.  See /www/extensions
 			if (sseEventName.slice(0, 4) != "sse:") {
 				return;
 			}
-			
+
 			// remove the sse: prefix from here on out
 			sseEventName = sseEventName.substr(4);
 
@@ -255,8 +255,8 @@ This extension adds support for Server Sent Events to htmx.  See /www/extensions
 	/**
 	 * maybeCloseSSESource confirms that the parent element still exists.
 	 * If not, then any associated SSE source is closed and the function returns true.
-	 * 
-	 * @param {HTMLElement} elt 
+	 *
+	 * @param {HTMLElement} elt
 	 * @returns boolean
 	 */
 	function maybeCloseSSESource(elt) {
@@ -273,9 +273,9 @@ This extension adds support for Server Sent Events to htmx.  See /www/extensions
 
 	/**
 	 * queryAttributeOnThisOrChildren returns all nodes that contain the requested attributeName, INCLUDING THE PROVIDED ROOT ELEMENT.
-	 * 
-	 * @param {HTMLElement} elt 
-	 * @param {string} attributeName 
+	 *
+	 * @param {HTMLElement} elt
+	 * @param {string} attributeName
 	 */
 	function queryAttributeOnThisOrChildren(elt, attributeName) {
 
@@ -296,7 +296,7 @@ This extension adds support for Server Sent Events to htmx.  See /www/extensions
 
 	/**
 	 * @param {HTMLElement} elt
-	 * @param {string} content 
+	 * @param {string} content
 	 */
 	function swap(elt, content) {
 
@@ -326,10 +326,10 @@ This extension adds support for Server Sent Events to htmx.  See /www/extensions
 	}
 
 	/**
-	 * doSettle mirrors much of the functionality in htmx that 
+	 * doSettle mirrors much of the functionality in htmx that
 	 * settles elements after their content has been swapped.
 	 * TODO: this should be published by htmx, and not duplicated here
-	 * @param {import("../htmx").HtmxSettleInfo} settleInfo 
+	 * @param {import("../htmx").HtmxSettleInfo} settleInfo
 	 * @returns () => void
 	 */
 	function doSettle(settleInfo) {

@@ -81,15 +81,11 @@ def render(md_path: Path, pdf_path: Path) -> None:
         f"<!doctype html><html><head><meta charset='utf-8'>"
         f"<style>{CSS}</style></head><body>{html_body}</body></html>"
     )
-    with tempfile.NamedTemporaryFile(
-        "w", suffix=".html", delete=False, encoding="utf-8"
-    ) as f:
+    with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as f:
         f.write(html)
         tmp_html = f.name
     try:
-        subprocess.run(
-            ["weasyprint", tmp_html, str(pdf_path)], check=True
-        )
+        subprocess.run(["weasyprint", tmp_html, str(pdf_path)], check=True)
     finally:
         Path(tmp_html).unlink(missing_ok=True)
     print(f"Wrote {pdf_path} ({pdf_path.stat().st_size // 1024} KB)")

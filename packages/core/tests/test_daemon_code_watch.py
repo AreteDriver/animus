@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import tempfile
 import time
 from pathlib import Path
 
 import pytest
 
-from animus.daemon.code_watch import CodeIndexReindexer, _DEBOUNCE_SECONDS
-from animus.daemon.events import FileWatchEvent, EventType
+from animus.daemon.code_watch import _DEBOUNCE_SECONDS, CodeIndexReindexer
+from animus.daemon.events import EventType, FileWatchEvent
 from animus.memory import MemoryLayer
 
 

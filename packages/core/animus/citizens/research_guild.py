@@ -77,7 +77,9 @@ class GuildPipelineReport:
             f"Research Guild Pipeline: {self.total_stages} stage(s), {self.total_outputs} output(s)",
         ]
         for s in self.stages:
-            parts.append(f"  - {s.citizen_name}: {s.outputs_count} output(s), {s.stored_count} stored, {len(s.errors)} error(s), {s.duration_seconds:.1f}s")
+            parts.append(
+                f"  - {s.citizen_name}: {s.outputs_count} output(s), {s.stored_count} stored, {len(s.errors)} error(s), {s.duration_seconds:.1f}s"
+            )
         if self.final_proposal:
             parts.append(f"Final proposal: {self.final_proposal.title} ({self.final_proposal.id})")
         if self.total_errors:
@@ -160,7 +162,9 @@ class ResearchGuildOrchestrator:
 
         try:
             # ── Stage 1: Harvester ──────────────────────────────────────
-            stage1 = self._run_harvester(target=target, skip=skip_harvester, memory=effective_memory)
+            stage1 = self._run_harvester(
+                target=target, skip=skip_harvester, memory=effective_memory
+            )
             report.stages.append(stage1)
             if stage1.outputs_count > 0:
                 lineage.append(f"harvester:{stage1.outputs_count}")
@@ -207,7 +211,11 @@ class ResearchGuildOrchestrator:
             report.errors.append(f"Pipeline fatal error: {e}")
 
         report.duration_seconds = time.time() - pipeline_start
-        logger.info("Research Guild pipeline completed in %.1fs: %s", report.duration_seconds, report.summary())
+        logger.info(
+            "Research Guild pipeline completed in %.1fs: %s",
+            report.duration_seconds,
+            report.summary(),
+        )
         return report
 
     # ------------------------------------------------------------------

@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 _ENV_BASE_URL = "ANIMUS_SEARCH_URL"
 HTTP_TIMEOUT_SECONDS = 20
-USER_AGENT = "animus-lugh/1.0 (+https://github.com/AreteDriver/animus)"
+USER_AGENT = "animus-lugh/1.0 (+https://github.com/your-org/animus)"
 
 
 def _resolve_base_url() -> str | None:

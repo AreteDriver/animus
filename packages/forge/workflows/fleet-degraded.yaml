@@ -48,7 +48,7 @@ steps:
       field: fly_app
       operator: not_empty
     command: |
-      /home/arete/.fly/bin/flyctl logs -a "${fly_app}" --no-tail 2>/dev/null | grep -i "error\|warn\|fail\|exception" | tail -15
+      ~/.fly/bin/flyctl logs -a "${fly_app}" --no-tail 2>/dev/null | grep -i "error\|warn\|fail\|exception" | tail -15
     timeout_seconds: 15
     on_failure: skip
 

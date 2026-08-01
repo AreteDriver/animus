@@ -3,20 +3,16 @@
 Validates P-20260706-003: History-Aware Provider Routing.
 """
 
-import json
 import tempfile
-
-import pytest
 
 from animus.routing.graph import (
     ProviderNode,
-    RoutingEdge,
     RoutingGraph,
     RoutingOutcome,
     TaskSignature,
 )
-from animus.routing.scorer import ScoreWeights, TrajectoryScorer
-from animus.routing.router import ProviderRouter, RouterConfig, RoutingDecision
+from animus.routing.router import ProviderRouter, RouterConfig
+from animus.routing.scorer import TrajectoryScorer
 
 
 class TestTaskSignature:
@@ -78,8 +74,16 @@ class TestRoutingGraph:
         sig1 = TaskSignature(task_type="general", keywords=("read", "file"), hash="h1")
         sig2 = TaskSignature(task_type="general", keywords=("read", "file", "content"), hash="h2")
 
-        graph.record_outcome("p1", sig1, RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.8))
-        graph.record_outcome("p1", sig2, RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.8))
+        graph.record_outcome(
+            "p1",
+            sig1,
+            RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.8),
+        )
+        graph.record_outcome(
+            "p1",
+            sig2,
+            RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.8),
+        )
 
         similar = graph.get_similar_edges("p1", sig1, min_similarity=0.3)
         assert len(similar) >= 1
@@ -92,8 +96,9 @@ class TestRoutingGraph:
         for i in range(5):
             sig = TaskSignature(task_type="code", keywords=("test",), hash=f"h{i}")
             graph.record_outcome(
-                "p1", sig,
-                RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.8)
+                "p1",
+                sig,
+                RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.8),
             )
 
         stats = graph.get_provider_stats("p1")
@@ -108,8 +113,9 @@ class TestRoutingGraph:
 
         for i in range(105):
             graph.record_outcome(
-                "p1", sig,
-                RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.8)
+                "p1",
+                sig,
+                RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.8),
             )
 
         edge = graph.get_edge("p1", sig)
@@ -120,7 +126,11 @@ class TestRoutingGraph:
         provider = ProviderNode(name="p1", provider_type="mock", capabilities={"code"})
         graph.register_provider(provider)
         sig = TaskSignature(task_type="code", keywords=("test",), hash="h1")
-        graph.record_outcome("p1", sig, RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.8))
+        graph.record_outcome(
+            "p1",
+            sig,
+            RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.8),
+        )
 
         data = graph.to_dict()
         restored = RoutingGraph.from_dict(data)
@@ -139,8 +149,9 @@ class TestTrajectoryScorer:
         sig = TaskSignature(task_type="code", keywords=("test",), hash="h1")
         for _ in range(5):
             graph.record_outcome(
-                "p1", sig,
-                RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.9)
+                "p1",
+                sig,
+                RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.9),
             )
 
         scorer = TrajectoryScorer(graph)
@@ -169,7 +180,9 @@ class TestTrajectoryScorer:
 
     def test_score_provider_cannot_handle(self):
         graph = RoutingGraph()
-        provider = ProviderNode(name="p1", provider_type="mock", capabilities={"general"}, max_tokens=100)
+        provider = ProviderNode(
+            name="p1", provider_type="mock", capabilities={"general"}, max_tokens=100
+        )
         graph.register_provider(provider)
 
         sig = TaskSignature(task_type="general", keywords=("test",), hash="h1")
@@ -186,8 +199,16 @@ class TestTrajectoryScorer:
 
         sig = TaskSignature(task_type="code", keywords=("test",), hash="h1")
         for _ in range(5):
-            graph.record_outcome("good", sig, RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.9))
-            graph.record_outcome("bad", sig, RoutingOutcome(success=False, latency_ms=5000, tokens_used=50, quality_score=0.2))
+            graph.record_outcome(
+                "good",
+                sig,
+                RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.9),
+            )
+            graph.record_outcome(
+                "bad",
+                sig,
+                RoutingOutcome(success=False, latency_ms=5000, tokens_used=50, quality_score=0.2),
+            )
 
         scorer = TrajectoryScorer(graph)
         ranked = scorer.rank_providers(sig)
@@ -200,7 +221,11 @@ class TestTrajectoryScorer:
         graph.register_provider(p1)
 
         sig = TaskSignature(task_type="code", keywords=("test",), hash="h1")
-        graph.record_outcome("best", sig, RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.9))
+        graph.record_outcome(
+            "best",
+            sig,
+            RoutingOutcome(success=True, latency_ms=100, tokens_used=50, quality_score=0.9),
+        )
 
         scorer = TrajectoryScorer(graph)
         provider, score = scorer.get_best_provider(sig, min_score=0.5)
@@ -225,7 +250,9 @@ class TestProviderRouter:
         config = RouterConfig(
             enabled=True,
             providers=[
-                ProviderNode(name="primary", provider_type="anthropic", capabilities={"code", "reasoning"}),
+                ProviderNode(
+                    name="primary", provider_type="anthropic", capabilities={"code", "reasoning"}
+                ),
                 ProviderNode(name="local", provider_type="ollama", capabilities={"general"}),
             ],
             exploration_rate=0.0,
@@ -234,8 +261,20 @@ class TestProviderRouter:
 
         # Seed with history
         for _ in range(5):
-            router.record_success("primary", "implement a function", latency_ms=500, quality_score=0.9, task_type="code")
-            router.record_failure("local", "implement a function", latency_ms=100, error_type="bad_response", task_type="code")
+            router.record_success(
+                "primary",
+                "implement a function",
+                latency_ms=500,
+                quality_score=0.9,
+                task_type="code",
+            )
+            router.record_failure(
+                "local",
+                "implement a function",
+                latency_ms=100,
+                error_type="bad_response",
+                task_type="code",
+            )
 
         decision = router.select("implement a function to sort a list")
         assert decision.provider_name == "primary"
@@ -320,6 +359,7 @@ class TestProviderRouter:
             assert len(new_router.graph.edges) == 1
         finally:
             import os
+
             os.unlink(path)
 
     def test_select_excludes_providers(self):

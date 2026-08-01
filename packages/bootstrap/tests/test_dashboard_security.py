@@ -42,7 +42,9 @@ class TestNoCdnDependencies:
     CDN_PATTERNS = ("cdnjs", "unpkg", "jsdelivr", "tailwindcss.com", "https://cdn.")
 
     def _template_files(self) -> list[Path]:
-        tmpl_dir = Path(__file__).parent.parent / "src" / "animus_bootstrap" / "dashboard" / "templates"
+        tmpl_dir = (
+            Path(__file__).parent.parent / "src" / "animus_bootstrap" / "dashboard" / "templates"
+        )
         return list(tmpl_dir.rglob("*.html"))
 
     def test_no_cdn_urls_in_templates(self) -> None:
@@ -104,7 +106,9 @@ class TestNoSecretsInDom:
     """Verify API keys are never emitted in the rendered page."""
 
     @patch("animus_bootstrap.dashboard.routers.config.ConfigManager")
-    def test_config_page_masks_anthropic_key(self, mock_cm_cls: MagicMock, client: TestClient) -> None:
+    def test_config_page_masks_anthropic_key(
+        self, mock_cm_cls: MagicMock, client: TestClient
+    ) -> None:
         """The full Anthropic key must not appear in the response body."""
         cfg = AnimusConfig()
         cfg.api.anthropic_key = "sk-ant-test-secret-key-12345678"
@@ -152,7 +156,9 @@ class TestCsrfProtection:
     """Verify the custom CsrfMiddleware rejects unsafe requests."""
 
     @patch("animus_bootstrap.dashboard.routers.config.ConfigManager")
-    def test_post_without_csrf_token_rejected(self, mock_cm_cls: MagicMock, client: TestClient) -> None:
+    def test_post_without_csrf_token_rejected(
+        self, mock_cm_cls: MagicMock, client: TestClient
+    ) -> None:
         """A POST without the X-CSRF-Token header must be rejected."""
         mgr = MagicMock()
         mgr.load.return_value = AnimusConfig()
@@ -163,7 +169,9 @@ class TestCsrfProtection:
         assert "CSRF" in resp.text
 
     @patch("animus_bootstrap.dashboard.routers.config.ConfigManager")
-    def test_post_with_valid_csrf_token_accepted(self, mock_cm_cls: MagicMock, client: TestClient) -> None:
+    def test_post_with_valid_csrf_token_accepted(
+        self, mock_cm_cls: MagicMock, client: TestClient
+    ) -> None:
         """A POST with the correct X-CSRF-Token header must succeed."""
         mgr = MagicMock()
         mgr.load.return_value = AnimusConfig()
@@ -184,7 +192,9 @@ class TestCsrfProtection:
         assert resp.status_code == 303
 
     @patch("animus_bootstrap.dashboard.routers.config.ConfigManager")
-    def test_post_with_wrong_csrf_token_rejected(self, mock_cm_cls: MagicMock, client: TestClient) -> None:
+    def test_post_with_wrong_csrf_token_rejected(
+        self, mock_cm_cls: MagicMock, client: TestClient
+    ) -> None:
         """A POST with an incorrect X-CSRF-Token header must be rejected."""
         mgr = MagicMock()
         mgr.load.return_value = AnimusConfig()
@@ -210,11 +220,7 @@ class TestXssMitigation:
     def test_no_htmlresponse_in_routers(self) -> None:
         """No router file should contain HTMLResponse(...) with interpolated strings."""
         routers_dir = (
-            Path(__file__).parent.parent
-            / "src"
-            / "animus_bootstrap"
-            / "dashboard"
-            / "routers"
+            Path(__file__).parent.parent / "src" / "animus_bootstrap" / "dashboard" / "routers"
         )
         failures: list[str] = []
         for path in routers_dir.glob("*.py"):

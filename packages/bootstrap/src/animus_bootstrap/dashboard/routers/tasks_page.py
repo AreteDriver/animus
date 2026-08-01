@@ -45,7 +45,9 @@ async def tasks_create(
     store = _get_task_store(request)
     ledger = _get_event_ledger(request)
     if store:
-        task_id = store.create(name=name, description=description, priority=priority, due_date=due_date)
+        task_id = store.create(
+            name=name, description=description, priority=priority, due_date=due_date
+        )
         if ledger is not None:
             ledger.record("task_created", "dashboard", {"task_id": task_id, "name": name})
     return RedirectResponse(url="/tasks", status_code=303)
@@ -62,8 +64,9 @@ async def tasks_complete(request: Request, task_id: str) -> object:
         if ledger is not None:
             ledger.record("task_completed", "dashboard", {"task_id": task_id})
     return templates.TemplateResponse(
-        request, "fragments/task_action_result.html",
-        {"css_class": "text-animus-green", "message": "Done"}
+        request,
+        "fragments/task_action_result.html",
+        {"css_class": "text-animus-green", "message": "Done"},
     )
 
 
@@ -78,6 +81,7 @@ async def tasks_delete(request: Request, task_id: str) -> object:
         if ledger is not None:
             ledger.record("task_deleted", "dashboard", {"task_id": task_id})
     return templates.TemplateResponse(
-        request, "fragments/task_action_result.html",
-        {"css_class": "text-animus-red", "message": "Deleted"}
+        request,
+        "fragments/task_action_result.html",
+        {"css_class": "text-animus-red", "message": "Deleted"},
     )

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import signal
 import tempfile
 import time
@@ -30,9 +29,8 @@ from animus.daemon.events import (
     WebhookHandler,
 )
 from animus.daemon.resource_guard import ResourceGuard, ResourceLimits
-from animus.daemon.scheduler import ScheduledTask, ScheduleType, TaskScheduler
-from animus.daemon.session_manager import SessionManager, WarmSession
-
+from animus.daemon.scheduler import ScheduleType, TaskScheduler
+from animus.daemon.session_manager import SessionManager
 
 # ── ResourceGuard Tests ───────────────────────────────────────────
 
@@ -376,7 +374,9 @@ class TestDaemonCore:
     @pytest.mark.asyncio
     async def test_process_file_event(self, temp_daemon):
         await temp_daemon.start()
-        file_event = FileWatchEvent(event_type=EventType.FILE_WATCH, path="/tmp/test.txt", change_type="created")
+        file_event = FileWatchEvent(
+            event_type=EventType.FILE_WATCH, path="/tmp/test.txt", change_type="created"
+        )
         result = await temp_daemon._dispatch_event(file_event)
         # Handler won't handle it if file doesn't match watch path
         assert isinstance(result, dict)
@@ -402,7 +402,9 @@ class TestDaemonCore:
     @pytest.mark.asyncio
     async def test_signal_shutdown(self, temp_daemon):
         await temp_daemon.start()
-        sig_event = SignalEvent(event_type=EventType.SIGNAL, signal_number=signal.SIGTERM, signal_name="SIGTERM")
+        sig_event = SignalEvent(
+            event_type=EventType.SIGNAL, signal_number=signal.SIGTERM, signal_name="SIGTERM"
+        )
         await temp_daemon._event_queue.put(sig_event)
         await temp_daemon._process_events()
         assert temp_daemon.state == DaemonState.STOPPED

@@ -29,7 +29,6 @@ from typing import TYPE_CHECKING, Any
 from animus.citizens.proposal import (
     EvidenceItem,
     ImprovementProposal,
-    ProposalConfidence,
     ProposalStatus,
     RiskAssessment,
 )
@@ -96,7 +95,9 @@ class AbstractionReport:
             f"{self.total_extracted} mechanism(s) extracted from {self.sources_processed} source(s)",
         ]
         if self.sources_with_no_mechanism:
-            parts.append(f"{self.sources_with_no_mechanism} source(s) with no recognizable mechanism")
+            parts.append(
+                f"{self.sources_with_no_mechanism} source(s) with no recognizable mechanism"
+            )
         if self.errors:
             parts.append(f"{len(self.errors)} error(s)")
         return "; ".join(parts)
@@ -109,76 +110,209 @@ class AbstractionReport:
 # Mapping of regex patterns → (mechanism_name, category, description_template)
 _MECHANISM_RULES: list[tuple[re.Pattern, str, str, str]] = [
     # Caching
-    (re.compile(r"\b(cach(?:e|ing)|memoiz(?:e|ation)|buffer|warm(?: up)?)\b", re.IGNORECASE),
-     "caching layer", "performance",
-     "Separate read-heavy or computed data from its source to reduce latency"),
+    (
+        re.compile(r"\b(cach(?:e|ing)|memoiz(?:e|ation)|buffer|warm(?: up)?)\b", re.IGNORECASE),
+        "caching layer",
+        "performance",
+        "Separate read-heavy or computed data from its source to reduce latency",
+    ),
     # Queue / Async
-    (re.compile(r"\b(queue|message broker|event bus|pub[/-]?sub|async|message queue|stream processing)\b", re.IGNORECASE),
-     "asynchronous communication", "reliability",
-     "Decouple producers and consumers via an intermediary message channel"),
+    (
+        re.compile(
+            r"\b(queue|message broker|event bus|pub[/-]?sub|async|message queue|stream processing)\b",
+            re.IGNORECASE,
+        ),
+        "asynchronous communication",
+        "reliability",
+        "Decouple producers and consumers via an intermediary message channel",
+    ),
     # Retry / Resilience
-    (re.compile(r"\b(retry|backoff|hedge request|circuit breaker|fail fast|graceful degrad|bulkhead|timeout)\b", re.IGNORECASE),
-     "fault tolerance", "reliability",
-     "Handle failures gracefully through retries, timeouts, or isolation boundaries"),
+    (
+        re.compile(
+            r"\b(retry|backoff|hedge request|circuit breaker|fail fast|graceful degrad|bulkhead|timeout)\b",
+            re.IGNORECASE,
+        ),
+        "fault tolerance",
+        "reliability",
+        "Handle failures gracefully through retries, timeouts, or isolation boundaries",
+    ),
     # Observability
-    (re.compile(r"\b(trace|metric|log|monitor|observ|telemetry|span|dashboard|alert)\b", re.IGNORECASE),
-     "observability", "operations",
-     "Expose internal system state through traces, metrics, and structured logs"),
+    (
+        re.compile(
+            r"\b(trace|metric|log|monitor|observ|telemetry|span|dashboard|alert)\b", re.IGNORECASE
+        ),
+        "observability",
+        "operations",
+        "Expose internal system state through traces, metrics, and structured logs",
+    ),
     # State Separation
-    (re.compile(r"\b(stateless|external state|state machine|separation of concerns|immutable|pure function)\b", re.IGNORECASE),
-     "state externalization", "architecture",
-     "Separate state from computation to enable portability and fault tolerance"),
+    (
+        re.compile(
+            r"\b(stateless|external state|state machine|separation of concerns|immutable|pure function)\b",
+            re.IGNORECASE,
+        ),
+        "state externalization",
+        "architecture",
+        "Separate state from computation to enable portability and fault tolerance",
+    ),
     # Authentication / Identity
-    (re.compile(r"\b(auth|oauth|jwt|token|session|identity|sso|mfa|rbac|permission)\b", re.IGNORECASE),
-     "identity verification", "security",
-     "Verify and authorize actors before granting access to resources"),
+    (
+        re.compile(
+            r"\b(auth|oauth|jwt|token|session|identity|sso|mfa|rbac|permission)\b", re.IGNORECASE
+        ),
+        "identity verification",
+        "security",
+        "Verify and authorize actors before granting access to resources",
+    ),
     # Encryption / Protection
-    (re.compile(r"\b(encrypt|tls|ssl|cipher|hash|sign|certificate|vault|secret|key rotation)\b", re.IGNORECASE),
-     "data protection", "security",
-     "Protect data in transit and at rest through cryptographic controls"),
+    (
+        re.compile(
+            r"\b(encrypt|tls|ssl|cipher|hash|sign|certificate|vault|secret|key rotation)\b",
+            re.IGNORECASE,
+        ),
+        "data protection",
+        "security",
+        "Protect data in transit and at rest through cryptographic controls",
+    ),
     # Testing
-    (re.compile(r"\b(mock|stub|fixture|integration test|unit test|e2e test|test coverage|testability)\b", re.IGNORECASE),
-     "testability", "quality",
-     "Design systems so that components can be verified in isolation and in composition"),
+    (
+        re.compile(
+            r"\b(mock|stub|fixture|integration test|unit test|e2e test|test coverage|testability)\b",
+            re.IGNORECASE,
+        ),
+        "testability",
+        "quality",
+        "Design systems so that components can be verified in isolation and in composition",
+    ),
     # Dependency Injection / Inversion
-    (re.compile(r"\b(dependency injection|inversion of control|ioc|factory|builder|provider|composition root)\b", re.IGNORECASE),
-     "dependency inversion", "architecture",
-     "Depend on abstractions rather than concrete implementations to reduce coupling"),
+    (
+        re.compile(
+            r"\b(dependency injection|inversion of control|ioc|factory|builder|provider|composition root)\b",
+            re.IGNORECASE,
+        ),
+        "dependency inversion",
+        "architecture",
+        "Depend on abstractions rather than concrete implementations to reduce coupling",
+    ),
     # Validation / Schema
-    (re.compile(r"\b(validation|schema|contract|type safety|strict typing|assert|invariant)\b", re.IGNORECASE),
-     "contract enforcement", "quality",
-     "Enforce boundaries and assumptions through explicit contracts and validation"),
+    (
+        re.compile(
+            r"\b(validation|schema|contract|type safety|strict typing|assert|invariant)\b",
+            re.IGNORECASE,
+        ),
+        "contract enforcement",
+        "quality",
+        "Enforce boundaries and assumptions through explicit contracts and validation",
+    ),
     # Pagination / Streaming
-    (re.compile(r"\b(paginat|cursor|offset|limit|stream|chunk|batch|backpressure)\b", re.IGNORECASE),
-     "bounded retrieval", "performance",
-     "Process large datasets in bounded chunks to control memory and latency"),
+    (
+        re.compile(
+            r"\b(paginat|cursor|offset|limit|stream|chunk|batch|backpressure)\b", re.IGNORECASE
+        ),
+        "bounded retrieval",
+        "performance",
+        "Process large datasets in bounded chunks to control memory and latency",
+    ),
     # Idempotency
-    (re.compile(r"\b(idempoten|exactly.once|at.least.once|dedup|duplicate detection)\b", re.IGNORECASE),
-     "idempotent processing", "reliability",
-     "Ensure repeated operations produce the same outcome without side effects"),
+    (
+        re.compile(
+            r"\b(idempoten|exactly.once|at.least.once|dedup|duplicate detection)\b", re.IGNORECASE
+        ),
+        "idempotent processing",
+        "reliability",
+        "Ensure repeated operations produce the same outcome without side effects",
+    ),
     # Feature Flags
-    (re.compile(r"\b(feature flag|toggle|launch darkly|canary|gradual rollout|a/b test)\b", re.IGNORECASE),
-     "progressive rollout", "deployment",
-     "Decouple release from deployment through runtime-configurable behavior switches"),
+    (
+        re.compile(
+            r"\b(feature flag|toggle|launch darkly|canary|gradual rollout|a/b test)\b",
+            re.IGNORECASE,
+        ),
+        "progressive rollout",
+        "deployment",
+        "Decouple release from deployment through runtime-configurable behavior switches",
+    ),
     # Rate Limiting
-    (re.compile(r"\b(rate limit|throttl|quota|burst|token bucket|leaky bucket)\b", re.IGNORECASE),
-     "flow control", "reliability",
-     "Protect downstream services by constraining request volume and burstiness"),
+    (
+        re.compile(
+            r"\b(rate limit|throttl|quota|burst|token bucket|leaky bucket)\b", re.IGNORECASE
+        ),
+        "flow control",
+        "reliability",
+        "Protect downstream services by constraining request volume and burstiness",
+    ),
 ]
 
 # Technology names to strip from text (implementation details)
 _TECH_STRIP_LIST = [
-    "redis", "memcached", "nginx", "haproxy", "apache", "traefik",
-    "kubernetes", "docker", "podman", "terraform", "pulumi", "ansible",
-    "aws", "gcp", "azure", "heroku", "vercel", "netlify", "cloudflare",
-    "postgres", "mysql", "mongodb", "sqlite", "dynamodb", "firebase",
-    "react", "vue", "angular", "svelte", "next.js", "nuxt", "gatsby",
-    "node.js", "deno", "bun", "python", "go", "rust", "java", "kotlin",
-    "spring", "django", "flask", "fastapi", "express", "rails",
-    "elasticsearch", "prometheus", "grafana", "jaeger", "zipkin",
-    "kafka", "rabbitmq", "sqs", "pub/sub", "zeromq", "nats",
-    "github actions", "gitlab ci", "jenkins", "circleci", "travis",
-    "webpack", "vite", "rollup", "esbuild", "babel", "typescript",
+    "redis",
+    "memcached",
+    "nginx",
+    "haproxy",
+    "apache",
+    "traefik",
+    "kubernetes",
+    "docker",
+    "podman",
+    "terraform",
+    "pulumi",
+    "ansible",
+    "aws",
+    "gcp",
+    "azure",
+    "heroku",
+    "vercel",
+    "netlify",
+    "cloudflare",
+    "postgres",
+    "mysql",
+    "mongodb",
+    "sqlite",
+    "dynamodb",
+    "firebase",
+    "react",
+    "vue",
+    "angular",
+    "svelte",
+    "next.js",
+    "nuxt",
+    "gatsby",
+    "node.js",
+    "deno",
+    "bun",
+    "python",
+    "go",
+    "rust",
+    "java",
+    "kotlin",
+    "spring",
+    "django",
+    "flask",
+    "fastapi",
+    "express",
+    "rails",
+    "elasticsearch",
+    "prometheus",
+    "grafana",
+    "jaeger",
+    "zipkin",
+    "kafka",
+    "rabbitmq",
+    "sqs",
+    "pub/sub",
+    "zeromq",
+    "nats",
+    "github actions",
+    "gitlab ci",
+    "jenkins",
+    "circleci",
+    "travis",
+    "webpack",
+    "vite",
+    "rollup",
+    "esbuild",
+    "babel",
+    "typescript",
 ]
 
 _STRIP_PATTERN = re.compile(
@@ -229,7 +363,10 @@ class AbstractionCitizen:
             return findings
 
         for py_file in self.codebase_path.rglob("*.py"):
-            if any(part.startswith(".") or part in ("__pycache__", "node_modules", "venv", ".venv") for part in py_file.parts):
+            if any(
+                part.startswith(".") or part in ("__pycache__", "node_modules", "venv", ".venv")
+                for part in py_file.parts
+            ):
                 continue
             try:
                 text = py_file.read_text(encoding="utf-8", errors="ignore")
@@ -240,16 +377,18 @@ class AbstractionCitizen:
             stripped = self.strip_implementation(text)
             mechanisms = self._extract_from_text(stripped)
             if mechanisms:
-                findings.append({
-                    "source": "codebase",
-                    "description": f"{len(mechanisms)} mechanism(s) in {rel}: {', '.join(m.name for m in mechanisms)}",
-                    "severity": "low",
-                    "context": {
-                        "file": rel,
-                        "mechanisms": [m.name for m in mechanisms],
-                        "pattern_type": "mechanism_extraction",
-                    },
-                })
+                findings.append(
+                    {
+                        "source": "codebase",
+                        "description": f"{len(mechanisms)} mechanism(s) in {rel}: {', '.join(m.name for m in mechanisms)}",
+                        "severity": "low",
+                        "context": {
+                            "file": rel,
+                            "mechanisms": [m.name for m in mechanisms],
+                            "pattern_type": "mechanism_extraction",
+                        },
+                    }
+                )
 
         logger.info("Abstraction observe_codebase: %d findings", len(findings))
         return findings
@@ -274,21 +413,29 @@ class AbstractionCitizen:
                 limit=30,
             )
             for mem in results:
-                content = mem.get("content", "") if hasattr(mem, "get") else getattr(mem, "content", "")
-                meta = mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
+                content = (
+                    mem.get("content", "") if hasattr(mem, "get") else getattr(mem, "content", "")
+                )
+                meta = (
+                    mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
+                )
                 identifier = meta.get("identifier", "") if isinstance(meta, dict) else ""
                 if content or identifier:
-                    findings.append({
-                        "source": "memory",
-                        "description": f"Harvested source: {identifier or content[:60]}",
-                        "severity": "info",
-                        "context": {
-                            "identifier": identifier,
-                            "source_type": meta.get("source_type", "unknown") if isinstance(meta, dict) else "unknown",
-                            "content": content[:200],
-                            "pattern_type": "harvested_source",
-                        },
-                    })
+                    findings.append(
+                        {
+                            "source": "memory",
+                            "description": f"Harvested source: {identifier or content[:60]}",
+                            "severity": "info",
+                            "context": {
+                                "identifier": identifier,
+                                "source_type": meta.get("source_type", "unknown")
+                                if isinstance(meta, dict)
+                                else "unknown",
+                                "content": content[:200],
+                                "pattern_type": "harvested_source",
+                            },
+                        }
+                    )
 
         except Exception as e:
             logger.warning("observe_harvested_sources failed: %s", e)
@@ -359,7 +506,9 @@ class AbstractionCitizen:
     # Proposal generation
     # ------------------------------------------------------------------
 
-    def generate_proposal(self, mechanisms: list[MechanismCard] | None = None) -> ImprovementProposal | None:
+    def generate_proposal(
+        self, mechanisms: list[MechanismCard] | None = None
+    ) -> ImprovementProposal | None:
         """Generate an improvement proposal from extracted mechanisms.
 
         Args:
@@ -574,8 +723,12 @@ class AbstractionCitizen:
             return [
                 {
                     "id": r.get("id", "") if hasattr(r, "get") else getattr(r, "id", ""),
-                    "content": r.get("content", "") if hasattr(r, "get") else getattr(r, "content", ""),
-                    "metadata": r.get("metadata", {}) if hasattr(r, "get") else getattr(r, "metadata", {}),
+                    "content": r.get("content", "")
+                    if hasattr(r, "get")
+                    else getattr(r, "content", ""),
+                    "metadata": r.get("metadata", {})
+                    if hasattr(r, "get")
+                    else getattr(r, "metadata", {}),
                 }
                 for r in results
             ]

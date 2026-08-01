@@ -12,12 +12,10 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
 from animus_kernel.memory.layer import MemoryLayer
-from animus_kernel.memory.tier import TierManager
 from animus_kernel.memory.types import Memory, MemoryTier, MemoryType
 
 
@@ -26,7 +24,9 @@ def layer(tmp_path: Path) -> MemoryLayer:
     return MemoryLayer(data_dir=tmp_path, backend="local")
 
 
-def _make_memory(content: str = "m", tier: MemoryTier = MemoryTier.WARM, access_count: int = 0) -> Memory:
+def _make_memory(
+    content: str = "m", tier: MemoryTier = MemoryTier.WARM, access_count: int = 0
+) -> Memory:
     return Memory.create(
         content=content,
         memory_type=MemoryType.SEMANTIC,

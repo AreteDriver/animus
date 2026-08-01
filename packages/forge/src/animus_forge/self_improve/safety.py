@@ -361,9 +361,7 @@ class SafetyChecker:
                 return True
         return False
 
-    def check_suggestion_content(
-        self, suggestions: list[Any]
-    ) -> list[SafetyViolation]:
+    def check_suggestion_content(self, suggestions: list[Any]) -> list[SafetyViolation]:
         """Check improvement suggestions for probe-shaped content.
 
         E11 — before an analyzer suggestion becomes a plan, each title and

@@ -39,7 +39,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -63,21 +62,21 @@ PACKAGE_ROOTS: list[tuple[str, str]] = [
 # Layer 0 = foundation. Higher number = higher layer.
 # A package may only import from packages in its own layer or lower layers.
 LAYERS: dict[str, int] = {
-    "animus_types": 0,       # Shared types (leaf)
-    "animus": 1,             # Core
-    "animus_kernel": 2,      # Memory / Kernel
-    "animus_contracts": 3,   # Contracts (cognitive layer)
-    "animus_forge": 3,       # Cognitive — Forge
-    "animus_quorum": 3,       # Cognitive — Quorum
-    "animus_bootstrap": 4,    # Interface — Bootstrap
-    "pwa": 4,                 # Interface — PWA
+    "animus_types": 0,  # Shared types (leaf)
+    "animus": 1,  # Core
+    "animus_kernel": 2,  # Memory / Kernel
+    "animus_contracts": 3,  # Contracts (cognitive layer)
+    "animus_forge": 3,  # Cognitive — Forge
+    "animus_quorum": 3,  # Cognitive — Quorum
+    "animus_bootstrap": 4,  # Interface — Bootstrap
+    "pwa": 4,  # Interface — PWA
 }
 
 # Specific deep-import patterns to forbid regardless of layer or context.
 # Keys are importer top-level packages; values are forbidden module prefixes.
 DEEP_IMPORT_DENYLIST: dict[str, list[str]] = {
     "animus_bootstrap": [
-        "animus_kernel.head.checkpoint",   # Use CheckpointFacade instead
+        "animus_kernel.head.checkpoint",  # Use CheckpointFacade instead
     ],
 }
 
@@ -95,6 +94,7 @@ SKIP_PATHS: tuple[str, ...] = (
 # Data classes
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class Violation:
     path: Path
@@ -109,6 +109,7 @@ class Violation:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _skip_path(path: Path) -> bool:
     ps = str(path)
@@ -170,6 +171,7 @@ def _line_has_boundary_ok(source_line: str) -> bool:
 # ---------------------------------------------------------------------------
 # AST context analysis
 # ---------------------------------------------------------------------------
+
 
 def _is_in_type_checking_block(stack: list[ast.AST]) -> bool:
     """Return True if the node stack includes a TYPE_CHECKING if-block."""
@@ -348,6 +350,7 @@ def _check_file(path: Path, min_severity: str) -> list[Violation]:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(

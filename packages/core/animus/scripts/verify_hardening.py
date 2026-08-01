@@ -17,6 +17,11 @@ Run::
     python -m animus.scripts.verify_hardening --output-dir /tmp/run42
 
 Closes the original 7-track hardening spec.
+
+.. note::
+    This file contains intentionally fake/dummy secrets (e.g., ``sk-ant-faketoken...``)
+    used as adversarial test inputs to verify the redaction pipeline. They are NOT
+    real credentials and are designed to be caught by the scanner.
 """
 
 from __future__ import annotations
@@ -98,10 +103,14 @@ def scenario_stage1_anthropic_key_redacted_at_ingest(data_dir: Path) -> str:
 
 def scenario_stage1_personal_email_redacted(data_dir: Path) -> str:
     """A remember() call with a known personal email is redacted."""
+    import os
+
+    os.environ["ANIMUS_REDACT_EMAILS"] = "aretedriver@gmail.com"
     layer = MemoryLayer(data_dir, backend="local")
     mem = layer.remember(content="contact: aretedriver@gmail.com")
     assert "aretedriver@gmail.com" not in mem.content
     assert "[REDACTED:personal_email]" in mem.content
+    del os.environ["ANIMUS_REDACT_EMAILS"]
     return "personal email redacted"
 
 
@@ -231,7 +240,10 @@ def scenario_stage4_gitleaks_blocks_dirty_commit(data_dir: Path) -> str:
     import subprocess
     from unittest.mock import patch
 
-    from animus_forge.self_improve.pr_manager import PRManager, SecretsDetectedError  # boundary-ok: integration test exercising Forge safety gates
+    from animus_forge.self_improve.pr_manager import (  # boundary-ok: integration test exercising Forge safety gates
+        PRManager,
+        SecretsDetectedError,
+    )
 
     mgr = PRManager(repo_path=data_dir)
     dirty_result = subprocess.CompletedProcess(
@@ -258,7 +270,10 @@ def scenario_stage4_gitleaks_blocks_dirty_commit(data_dir: Path) -> str:
 
 def scenario_stage4_safety_allow_list_blocks_random_file(data_dir: Path) -> str:
     """A file outside the allow-list emits a not_allow_listed violation."""
-    from animus_forge.self_improve.safety import SafetyChecker, SafetyConfig  # boundary-ok: integration test exercising Forge safety gates
+    from animus_forge.self_improve.safety import (  # boundary-ok: integration test exercising Forge safety gates
+        SafetyChecker,
+        SafetyConfig,
+    )
 
     cfg = SafetyConfig(allowed_files=["packages/*/src/**/*.py"])
     checker = SafetyChecker(cfg)
@@ -277,7 +292,9 @@ def scenario_stage4_default_branch_strict_mode(data_dir: Path) -> str:
     """ANIMUS_FORGE_REQUIRE_DEFAULT_BRANCH=1 refuses checkout without config."""
     import os
 
-    from animus_forge.self_improve.pr_manager import PRManager  # boundary-ok: integration test exercising Forge safety gates
+    from animus_forge.self_improve.pr_manager import (
+        PRManager,  # boundary-ok: integration test exercising Forge safety gates
+    )
 
     saved_default = os.environ.get("ANIMUS_FORGE_DEFAULT_BRANCH")
     saved_strict = os.environ.get("ANIMUS_FORGE_REQUIRE_DEFAULT_BRANCH")
@@ -339,7 +356,9 @@ def scenario_stage5_pi_footer_warns_consumer(data_dir: Path) -> str:
 
 def scenario_stage3d_completion_request_carries_sensitivity(data_dir: Path) -> str:
     """``CompletionRequest`` accepts a sensitivity field defaulting to PUBLIC."""
-    from animus_forge.providers.base import CompletionRequest  # boundary-ok: integration test exercising provider sensitivity
+    from animus_forge.providers.base import (
+        CompletionRequest,  # boundary-ok: integration test exercising provider sensitivity
+    )
 
     req_default = CompletionRequest(prompt="x")
     assert req_default.sensitivity is Sensitivity.PUBLIC
@@ -352,7 +371,9 @@ def scenario_stage3d_forge_egress_blocks_confidential(data_dir: Path) -> str:
     """Forge vendored egress helper refuses cloud for CONFIDENTIAL/SECRET tiers."""
     import os
 
-    from animus_forge.network import is_egress_allowed as forge_is_egress_allowed  # boundary-ok: integration test exercising egress gating
+    from animus_forge.network import (
+        is_egress_allowed as forge_is_egress_allowed,  # boundary-ok: integration test exercising egress gating
+    )
 
     saved = os.environ.get("ANIMUS_OFFLINE")
     try:
@@ -382,8 +403,12 @@ def scenario_stage3d_anthropic_provider_refuses_confidential(data_dir: Path) -> 
     before invoking the cloud client."""
     from unittest.mock import MagicMock
 
-    from animus_forge.network import EgressDeniedError  # boundary-ok: integration test exercising egress gating
-    from animus_forge.providers.anthropic_provider import AnthropicProvider  # boundary-ok: integration test exercising provider sensitivity
+    from animus_forge.network import (
+        EgressDeniedError,  # boundary-ok: integration test exercising egress gating
+    )
+    from animus_forge.providers.anthropic_provider import (
+        AnthropicProvider,  # boundary-ok: integration test exercising provider sensitivity
+    )
     from animus_forge.providers.base import (  # boundary-ok: integration test exercising provider sensitivity
         CompletionRequest,
         ProviderConfig,
@@ -415,8 +440,13 @@ def scenario_stage3d_tier_router_forces_local_for_secret(data_dir: Path) -> str:
         CompletionRequest,
         ProviderType,
     )
-    from animus_forge.providers.manager import ProviderManager  # boundary-ok: integration test exercising provider routing
-    from animus_forge.providers.router import RoutingConfig, TierRouter  # boundary-ok: integration test exercising provider routing
+    from animus_forge.providers.manager import (
+        ProviderManager,  # boundary-ok: integration test exercising provider routing
+    )
+    from animus_forge.providers.router import (  # boundary-ok: integration test exercising provider routing
+        RoutingConfig,
+        TierRouter,
+    )
 
     pm = MagicMock(spec=ProviderManager)
     pm.list_providers.return_value = ["ollama", "anthropic"]
@@ -445,8 +475,13 @@ def scenario_stage3d_tier_router_raises_when_no_local(data_dir: Path) -> str:
         ProviderError,
         ProviderType,
     )
-    from animus_forge.providers.manager import ProviderManager  # boundary-ok: integration test exercising provider routing
-    from animus_forge.providers.router import RoutingConfig, TierRouter  # boundary-ok: integration test exercising provider routing
+    from animus_forge.providers.manager import (
+        ProviderManager,  # boundary-ok: integration test exercising provider routing
+    )
+    from animus_forge.providers.router import (  # boundary-ok: integration test exercising provider routing
+        RoutingConfig,
+        TierRouter,
+    )
 
     pm = MagicMock(spec=ProviderManager)
     pm.list_providers.return_value = ["anthropic"]

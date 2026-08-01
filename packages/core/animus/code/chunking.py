@@ -17,7 +17,6 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
 
 from animus.logging import get_logger
 from animus.memory.redaction import redact
@@ -180,7 +179,11 @@ def chunk_codebase(
     """
     config = config or ChunkingConfig()
     globs = globs if globs is not None else ["*.py", "*.md"]
-    exclude = exclude if exclude is not None else ["*/test*", "*/__pycache__/*", "*/node_modules/*", "*/.git/*"]
+    exclude = (
+        exclude
+        if exclude is not None
+        else ["*/test*", "*/__pycache__/*", "*/node_modules/*", "*/.git/*"]
+    )
 
     results: dict[str, list[CodeChunk]] = {}
     for pattern in globs:
@@ -432,7 +435,18 @@ def _compute_complexity(node: ast.AST) -> int:
         # Skip nested definitions — they get their own chunk/complexity
         if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             continue
-        if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler, ast.With, ast.Assert, ast.comprehension)):
+        if isinstance(
+            child,
+            (
+                ast.If,
+                ast.While,
+                ast.For,
+                ast.ExceptHandler,
+                ast.With,
+                ast.Assert,
+                ast.comprehension,
+            ),
+        ):
             count += 1
         elif isinstance(child, ast.BoolOp):
             count += len(child.values) - 1

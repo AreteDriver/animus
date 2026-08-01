@@ -357,6 +357,7 @@ class TestLedgerStoreIntegrity:
         tmp_store.append(_make_event(event_id="evt-tamp-001"))
         # Directly tamper the DB
         import sqlite3
+
         with sqlite3.connect(str(tmp_store._db_path)) as conn:
             conn.execute(
                 "UPDATE ledger_events SET payload = ? WHERE event_id = ?",

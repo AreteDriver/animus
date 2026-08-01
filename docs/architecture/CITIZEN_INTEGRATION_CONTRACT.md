@@ -4,7 +4,7 @@
 **Date:** 2026-07-16
 **Status:** CANONICAL
 **Tier:** Mind Charter ↔ Canonical Architecture bridge
-**Owner:** AreteDriver
+**Owner:** your-org
 
 ---
 
@@ -275,4 +275,4 @@ class GovernanceAction(ImprovementProposal):
 
 | Version | Date | Change | Author |
 |---|---|---|---|
-| 1.0 | 2026-07-16 | Initial mapping after architecture reconciliation review | AreteDriver |
+| 1.0 | 2026-07-16 | Initial mapping after architecture reconciliation review | your-org |

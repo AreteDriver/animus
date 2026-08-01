@@ -7,7 +7,6 @@ import json
 import logging
 import uuid
 from collections.abc import AsyncGenerator
-from html import escape as html_escape
 from typing import Any
 
 from fastapi import APIRouter, Form, Request
@@ -158,7 +157,11 @@ async def tools_pending(request: Request) -> object:
     """Return pending approvals as an HTML fragment (for HTMX polling)."""
     templates = request.app.state.templates
     pending = [
-        {"id": rid, "tool_name": entry["tool_name"], "arguments": json.dumps(entry["arguments"], indent=2)[:200]}
+        {
+            "id": rid,
+            "tool_name": entry["tool_name"],
+            "arguments": json.dumps(entry["arguments"], indent=2)[:200],
+        }
         for rid, entry in _pending_approvals.items()
         if entry.get("approved") is None
     ]
@@ -238,24 +241,23 @@ async def execute_tool(
     runtime = _get_runtime(request)
     if runtime is None or getattr(runtime, "tool_executor", None) is None:
         return templates.TemplateResponse(
-            request, "fragments/tool_execution_result.html",
-            {"error": "No tool executor available."}
+            request,
+            "fragments/tool_execution_result.html",
+            {"error": "No tool executor available."},
         )
 
     try:
         arguments = json.loads(arguments_json)
     except json.JSONDecodeError:
         return templates.TemplateResponse(
-            request, "fragments/tool_execution_result.html",
-            {"error": "Invalid JSON arguments."}
+            request, "fragments/tool_execution_result.html", {"error": "Invalid JSON arguments."}
         )
 
     executor = runtime.tool_executor
     tool = executor.get_tool(tool_name)
     if tool is None:
         return templates.TemplateResponse(
-            request, "fragments/tool_execution_result.html",
-            {"error": f"Unknown tool: {tool_name}"}
+            request, "fragments/tool_execution_result.html", {"error": f"Unknown tool: {tool_name}"}
         )
 
     result = await executor.execute(tool_name, arguments)

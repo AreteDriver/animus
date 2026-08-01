@@ -28,7 +28,6 @@ from typing import TYPE_CHECKING, Any
 from animus.citizens.proposal import (
     EvidenceItem,
     ImprovementProposal,
-    ProposalConfidence,
     ProposalStatus,
     RiskAssessment,
 )
@@ -211,8 +210,12 @@ class PatternCitizen:
                 limit=50,
             )
             for mem in results:
-                content = mem.get("content", "") if hasattr(mem, "get") else getattr(mem, "content", "")
-                meta = mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
+                content = (
+                    mem.get("content", "") if hasattr(mem, "get") else getattr(mem, "content", "")
+                )
+                meta = (
+                    mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
+                )
                 if not isinstance(meta, dict):
                     meta = {}
 
@@ -223,19 +226,21 @@ class PatternCitizen:
                 tags = meta.get("tags", [])
 
                 if name or description:
-                    findings.append({
-                        "source": "memory",
-                        "description": f"Mechanism: {name or description[:60]}",
-                        "severity": "info",
-                        "context": {
-                            "name": name,
-                            "category": category,
-                            "description": description,
-                            "source_provenance": source_provenance,
-                            "tags": tags,
-                            "pattern_type": "mechanism_card",
-                        },
-                    })
+                    findings.append(
+                        {
+                            "source": "memory",
+                            "description": f"Mechanism: {name or description[:60]}",
+                            "severity": "info",
+                            "context": {
+                                "name": name,
+                                "category": category,
+                                "description": description,
+                                "source_provenance": source_provenance,
+                                "tags": tags,
+                                "pattern_type": "mechanism_card",
+                            },
+                        }
+                    )
 
         except Exception as e:
             logger.warning("observe_mechanisms failed: %s", e)
@@ -247,7 +252,9 @@ class PatternCitizen:
     # Pattern discovery
     # ------------------------------------------------------------------
 
-    def discover_patterns(self, mechanisms: list[dict[str, Any]] | None = None) -> list[PatternCard]:
+    def discover_patterns(
+        self, mechanisms: list[dict[str, Any]] | None = None
+    ) -> list[PatternCard]:
         """Discover patterns by clustering related mechanisms.
 
         Uses two clustering strategies:
@@ -355,14 +362,21 @@ class PatternCitizen:
                 seen_mech_sets.add(mech_set)
                 deduped.append(card)
 
-        logger.info("Pattern discover_patterns: %d pattern(s) from %d mechanism(s) (deduped from %d)", len(deduped), len(mechanisms), len(cards))
+        logger.info(
+            "Pattern discover_patterns: %d pattern(s) from %d mechanism(s) (deduped from %d)",
+            len(deduped),
+            len(mechanisms),
+            len(cards),
+        )
         return deduped
 
     # ------------------------------------------------------------------
     # Proposal generation
     # ------------------------------------------------------------------
 
-    def generate_proposal(self, patterns: list[PatternCard] | None = None) -> ImprovementProposal | None:
+    def generate_proposal(
+        self, patterns: list[PatternCard] | None = None
+    ) -> ImprovementProposal | None:
         """Generate an improvement proposal from discovered patterns.
 
         Args:
@@ -556,8 +570,12 @@ class PatternCitizen:
             return [
                 {
                     "id": r.get("id", "") if hasattr(r, "get") else getattr(r, "id", ""),
-                    "content": r.get("content", "") if hasattr(r, "get") else getattr(r, "content", ""),
-                    "metadata": r.get("metadata", {}) if hasattr(r, "get") else getattr(r, "metadata", {}),
+                    "content": r.get("content", "")
+                    if hasattr(r, "get")
+                    else getattr(r, "content", ""),
+                    "metadata": r.get("metadata", {})
+                    if hasattr(r, "get")
+                    else getattr(r, "metadata", {}),
                 }
                 for r in results
             ]

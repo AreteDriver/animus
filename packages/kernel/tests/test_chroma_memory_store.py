@@ -12,11 +12,10 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
-from animus_kernel.memory.types import Memory, MemoryType, Sensitivity, MemoryTier
+from animus_kernel.memory.types import Memory, MemoryTier, MemoryType, Sensitivity
 
 pytestmark = pytest.mark.skipif(
     pytest.importorskip("chromadb", reason="chromadb not installed") is None,

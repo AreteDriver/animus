@@ -208,9 +208,7 @@ class SelfImproveOrchestrator:
             # E11 — probe screening: red-team probes may masquerade as
             # improvement suggestions. Check BEFORE plan creation so a probe
             # can never reach _generate_changes or _apply_changes.
-            probe_violations = self.safety_checker.check_suggestion_content(
-                analysis.suggestions
-            )
+            probe_violations = self.safety_checker.check_suggestion_content(analysis.suggestions)
             if self.safety_checker.has_blocking_violations(probe_violations):
                 self._current_stage = WorkflowStage.FAILED
                 return ImprovementResult(

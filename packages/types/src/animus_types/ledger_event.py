@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from enum import Enum
 from typing import Any
 
@@ -11,28 +10,28 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, conint, constr
 
 
 class EventType(Enum):
-    created = 'created'
-    updated = 'updated'
-    superseded = 'superseded'
-    approved = 'approved'
-    rejected = 'rejected'
-    deleted = 'deleted'
-    restored = 'restored'
-    exported = 'exported'
-    imported = 'imported'
+    created = "created"
+    updated = "updated"
+    superseded = "superseded"
+    approved = "approved"
+    rejected = "rejected"
+    deleted = "deleted"
+    restored = "restored"
+    exported = "exported"
+    imported = "imported"
 
 
 class LedgerEvent(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
-    event_id: constr(pattern=r'^evt-[a-z0-9_-]+$')
+    event_id: constr(pattern=r"^evt-[a-z0-9_-]+$")
     event_type: EventType
-    object_id: constr(pattern=r'^[a-z][a-z0-9_-]{2,127}$')
+    object_id: constr(pattern=r"^[a-z][a-z0-9_-]{2,127}$")
     object_version: conint(ge=1)
     principal: constr(min_length=3)
-    workspace_id: constr(pattern=r'^ws-[a-z0-9_-]+$')
+    workspace_id: constr(pattern=r"^ws-[a-z0-9_-]+$")
     payload: dict[str, Any]
-    integrity_hash: constr(pattern=r'^[a-f0-9]{64}$')
+    integrity_hash: constr(pattern=r"^[a-f0-9]{64}$")
     tx_time: AwareDatetime
     parent_event_id: str | None = None

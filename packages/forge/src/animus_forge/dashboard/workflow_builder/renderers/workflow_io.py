@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import streamlit as st
 import yaml
-
 from animus_kernel.executor.loader import validate_workflow
 
 from ..constants import _get_workflow_templates

@@ -1,12 +1,12 @@
 # Animus — Project Context
 
-**Classification**: Flagship  
-**Version**: 2.3.0 (migrating to v2.1 baseline)  
-**Owner**: AreteDriver  
-**Repository**: https://github.com/AreteDriver/animus  
-**Branch**: main  
-**Last updated**: 2026-06-18  
-**Next review**: 2026-07-18  
+**Classification**: Flagship
+**Version**: 2.3.0 (migrating to v2.1 baseline)
+**Owner**: your-org
+**Repository**: https://github.com/your-org/animus
+**Branch**: main
+**Last updated**: 2026-06-18
+**Next review**: 2026-07-18
 
 ---
 
@@ -42,6 +42,6 @@ v2.1 migration: schema integration, durable core, evidence bundles.
 
 - [../roadmap/current.md](../roadmap/current.md)
 - [../architecture/charter.md](../architecture/charter.md)
-- [CLAUDE.md](https://github.com/AreteDriver/animus/blob/main/CLAUDE.md)
+- [CLAUDE.md](https://github.com/your-org/animus/blob/main/CLAUDE.md)
 - [../README.md](../README.md)
 - [ADL entry](../architecture/decisions/ADL-20260618-001.md)

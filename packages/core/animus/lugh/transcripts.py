@@ -81,7 +81,7 @@ EXPLORATION_READ_BURST = 5  # N Reads in a row ⇒ exploration (demote if pure)
 
 
 def _decode_project_dir(mangled: str) -> str:
-    """'-home-arete-projects' -> '/home/arete/projects'."""
+    """'-home-user-projects' -> '~/projects'."""
     if mangled.startswith("-"):
         return "/" + mangled.lstrip("-").replace("-", "/")
     return mangled

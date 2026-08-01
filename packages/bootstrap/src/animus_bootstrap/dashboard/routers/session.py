@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
 # Checkpoint shape returned to / loaded from the PWA
 @dataclass
 class CheckpointPayload:

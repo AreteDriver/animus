@@ -43,7 +43,7 @@ This policy establishes the operational boundaries between animus (personal exoc
 |---|---|---|
 | Personal Anthropic / OpenAI / GitHub / PyPI / Fly / Vercel / Stripe API keys | `~/.local/share/animus/secrets.env` (chmod 400) on personal hardware | On any employer-issued device |
 | Personal SSH keys | `~/.ssh/` on personal hardware | On any employer-issued device |
-| Personal git identity (`james-yng79@gmail.com` for personal work; `aretedriver@users.noreply.github.com` for OSS commits) | git config global on personal hardware | In employer-owned repos |
+| Personal git identity (`hello@example.com` for personal work; `hello@example.com` for OSS commits) | git config global on personal hardware | In employer-owned repos |
 | Employer SSO / VPN / internal API tokens | Employer-issued password manager OR employer-issued device only | In any personal secret store, animus secrets.env, or personal password manager |
 | Employer git identity (issued email) | git config local in employer repos only | As git global default on any device |
 | Personal communication accounts (Gmail, personal Discord, Substack) | Personal hardware + personal phone | Logged in on employer-issued devices |
@@ -88,7 +88,7 @@ If a memory is uncertain, default to `work-context` and exclude. Better to lose 
 
 ### What the employer should know about animus (minimal)
 
-- Public-facing: animus exists, lives at github.com/AreteDriver/animus-docs (private repo with public docs), has a public protocol layer (Quorum / convergentAI on PyPI), is referenced in the operator's portfolio.
+- Public-facing: animus exists, lives at github.com/your-org/animus-docs (private repo with public docs), has a public protocol layer (Quorum / convergentAI on PyPI), is referenced in the operator's portfolio.
 - Not disclosed: secrets store contents, integration list, message-gateway adapter list, what runs where, daily usage patterns, accumulated personal memory, the operator's reflection log.
 
 If an employer asks for technical detail on animus during an interview, the answer surface is: architecture diagram + Quorum spec + animus-docs README. That's the public artifact set. Deeper specifics are personal IP and don't get discussed.

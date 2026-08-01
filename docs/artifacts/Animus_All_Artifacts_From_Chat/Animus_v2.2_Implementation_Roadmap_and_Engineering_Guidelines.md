@@ -1,8 +1,8 @@
 # Animus v2.2 Implementation Roadmap and Engineering Guidelines
 
-**Status:** Proposed implementation authority beneath the Animus v2.1 Executable Baseline  
-**Purpose:** Convert the v2.1 implementation contract into working code, executable contracts, adversarial proof, and retained operational evidence.  
-**Scope:** The architecture-corpus vertical slice and the platform capabilities required to run it safely.  
+**Status:** Proposed implementation authority beneath the Animus v2.1 Executable Baseline
+**Purpose:** Convert the v2.1 implementation contract into working code, executable contracts, adversarial proof, and retained operational evidence.
+**Scope:** The architecture-corpus vertical slice and the platform capabilities required to run it safely.
 **Primary release principle:** A capability is not complete because code exists. It is complete only when its contract, implementation, adversarial tests, operational controls, and evidence record all agree.
 
 ---

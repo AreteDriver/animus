@@ -222,7 +222,7 @@ class OpenRouterProvider(Provider):
 
         # OpenRouter ranking headers — static Animus identifier.
         default_headers = {
-            "HTTP-Referer": "https://github.com/AreteDriver/animus",
+            "HTTP-Referer": "https://github.com/your-org/animus",
             "X-Title": "Animus",
         }
 

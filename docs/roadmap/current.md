@@ -157,4 +157,4 @@
 - [Architecture Overview](../architecture/overview.md) — 8-plane model
 - [Package Architecture](../architecture/packages.md) — Dependency graph and version matrix
 - [Decisions](../architecture/decisions/README.md) — ADRs
-- [Truth Baseline](https://github.com/AreteDriver/animus/blob/main/truth-baseline.toml) — Source of truth config (needs fix)
+- [Truth Baseline](https://github.com/your-org/animus/blob/main/truth-baseline.toml) — Source of truth config (needs fix)

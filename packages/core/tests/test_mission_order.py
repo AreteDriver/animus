@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from datetime import timedelta
 
 from animus.mission.order import (
@@ -21,7 +20,9 @@ class TestMissionConstraint:
         assert c.kind == "budget"
 
     def test_roundtrip_dict(self):
-        c = MissionConstraint(name="readonly", value=True, kind="authority", description="No writes")
+        c = MissionConstraint(
+            name="readonly", value=True, kind="authority", description="No writes"
+        )
         data = c.to_dict()
         c2 = MissionConstraint.from_dict(data)
         assert c2.name == c.name

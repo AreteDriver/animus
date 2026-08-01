@@ -50,7 +50,7 @@ The self-improve orchestrator runs a 10-stage workflow:
 
 - [Animus Core](https://pypi.org/project/animus-core/) — exocortex engine
 - [Animus Quorum](https://pypi.org/project/convergentAI/) — coordination protocol
-- [Animus Bootstrap](https://github.com/AreteDriver/animus/tree/main/packages/bootstrap) — system daemon
+- [Animus Bootstrap](https://github.com/your-org/animus/tree/main/packages/bootstrap) — system daemon
 
 ## License
 

@@ -6,10 +6,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-import pytest
-
 from animus_kernel.sandbox.pr_manager import PRManager, PRStatus, PullRequest
-
 
 # ═══════════════════════════════════════════════════════════════════
 # PRManager tests (with temp git repos)
@@ -21,16 +18,23 @@ def _init_git_repo(path: Path) -> None:
     subprocess.run(["git", "init"], cwd=str(path), capture_output=True, check=True)
     subprocess.run(
         ["git", "config", "user.email", "test@example.com"],
-        cwd=str(path), capture_output=True, check=True,
+        cwd=str(path),
+        capture_output=True,
+        check=True,
     )
     subprocess.run(
         ["git", "config", "user.name", "Test User"],
-        cwd=str(path), capture_output=True, check=True,
+        cwd=str(path),
+        capture_output=True,
+        check=True,
     )
     (path / "README.md").write_text("# Test")
     subprocess.run(["git", "add", "."], cwd=str(path), capture_output=True, check=True)
     subprocess.run(
-        ["git", "commit", "-m", "initial"], cwd=str(path), capture_output=True, check=True,
+        ["git", "commit", "-m", "initial"],
+        cwd=str(path),
+        capture_output=True,
+        check=True,
     )
 
 
@@ -135,12 +139,13 @@ class TestPRManager:
             result = manager.delete_branch(branch, force=True)
             assert result is True
 
-            branches = (
-                subprocess.run(
-                    ["git", "branch", "-a"], cwd=str(repo), capture_output=True, text=True, check=True,
-                )
-                .stdout
-            )
+            branches = subprocess.run(
+                ["git", "branch", "-a"],
+                cwd=str(repo),
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
             assert "to-delete" not in branches
 
     def test_check_conflicts_no_conflict(self):
@@ -153,7 +158,10 @@ class TestPRManager:
             (repo / "new.py").write_text("x")
             subprocess.run(["git", "add", "."], cwd=str(repo), capture_output=True, check=True)
             subprocess.run(
-                ["git", "commit", "-m", "add"], cwd=str(repo), capture_output=True, check=True,
+                ["git", "commit", "-m", "add"],
+                cwd=str(repo),
+                capture_output=True,
+                check=True,
             )
             manager.checkout_main()
 
@@ -167,7 +175,10 @@ class TestPRManager:
             (repo / "shared.py").write_text("original")
             subprocess.run(["git", "add", "."], cwd=str(repo), capture_output=True, check=True)
             subprocess.run(
-                ["git", "commit", "-m", "add shared"], cwd=str(repo), capture_output=True, check=True,
+                ["git", "commit", "-m", "add shared"],
+                cwd=str(repo),
+                capture_output=True,
+                check=True,
             )
 
             manager = PRManager(repo, default_branch="main")
@@ -176,14 +187,20 @@ class TestPRManager:
             (repo / "shared.py").write_text("branch-change")
             subprocess.run(["git", "add", "."], cwd=str(repo), capture_output=True, check=True)
             subprocess.run(
-                ["git", "commit", "-m", "branch commit"], cwd=str(repo), capture_output=True, check=True,
+                ["git", "commit", "-m", "branch commit"],
+                cwd=str(repo),
+                capture_output=True,
+                check=True,
             )
 
             manager.checkout_main()
             (repo / "shared.py").write_text("main-change")
             subprocess.run(["git", "add", "."], cwd=str(repo), capture_output=True, check=True)
             subprocess.run(
-                ["git", "commit", "-m", "main commit"], cwd=str(repo), capture_output=True, check=True,
+                ["git", "commit", "-m", "main commit"],
+                cwd=str(repo),
+                capture_output=True,
+                check=True,
             )
 
             conflict = manager.check_conflicts(branch)

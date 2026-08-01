@@ -1,8 +1,8 @@
 # G1 Evidence Coverage Baseline
 
-**Date:** 2026-07-06  
-**Animus Version:** v2.3 Mind Foundation  
-**Baseline ID:** `ADL-20260706-G1-BASELINE`  
+**Date:** 2026-07-06
+**Animus Version:** v2.3 Mind Foundation
+**Baseline ID:** `ADL-20260706-G1-BASELINE`
 **Target:** Close Kill Criterion #4 (Evidence Coverage Baseline for all G1 subsystems)
 
 ---
@@ -263,7 +263,7 @@ Subsystems audited:
 
 ## Evidence Coverage KPI
 
-**Formula:**  
+**Formula:**
 `Coverage = (Σ subsystem_coverage_scores) / (number of subsystems × 100)`
 
 | Calculation | Value |

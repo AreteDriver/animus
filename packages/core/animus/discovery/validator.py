@@ -215,8 +215,20 @@ class SchemaValidator:
                 warnings.append(f"Description contains generic phrase: '{phrase}'")
 
         # Penalize missing action verb
-        action_verbs = ["get", "set", "create", "delete", "update", "send", "fetch",
-                         "generate", "convert", "parse", "validate", "check"]
+        action_verbs = [
+            "get",
+            "set",
+            "create",
+            "delete",
+            "update",
+            "send",
+            "fetch",
+            "generate",
+            "convert",
+            "parse",
+            "validate",
+            "check",
+        ]
         has_action = any(verb in lower for verb in action_verbs)
         if not has_action:
             score -= 0.15
@@ -237,16 +249,32 @@ class SchemaValidator:
         combined = f"{name} {description}".lower()
 
         # Flag dangerous patterns
-        dangerous = ["exec", "eval", "shell", "subprocess", "os.system", "rm -rf",
-                     "delete all", "drop table", "truncate"]
+        dangerous = [
+            "exec",
+            "eval",
+            "shell",
+            "subprocess",
+            "os.system",
+            "rm -rf",
+            "delete all",
+            "drop table",
+            "truncate",
+        ]
         for pattern in dangerous:
             if pattern in combined:
                 warnings.append(f"Potential dangerous pattern detected: '{pattern}'")
                 score -= 0.2
 
         # Flag tools that claim broad access
-        access_keywords = ["all files", "any file", "full access", "unrestricted",
-                           "root", "admin", "sudo"]
+        access_keywords = [
+            "all files",
+            "any file",
+            "full access",
+            "unrestricted",
+            "root",
+            "admin",
+            "sudo",
+        ]
         for keyword in access_keywords:
             if keyword in combined:
                 warnings.append(f"Broad access claim detected: '{keyword}'")

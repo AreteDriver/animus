@@ -71,18 +71,12 @@ class LedgerStore:
                 )
                 """
             )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_ledger_object ON ledger_events(object_id)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_ledger_type ON ledger_events(event_type)"
-            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_ledger_object ON ledger_events(object_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_ledger_type ON ledger_events(event_type)")
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_ledger_workspace ON ledger_events(workspace_id)"
             )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_ledger_time ON ledger_events(tx_time)"
-            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_ledger_time ON ledger_events(tx_time)")
             conn.commit()
 
     # ------------------------------------------------------------------
@@ -186,9 +180,7 @@ class LedgerStore:
                     (object_id,),
                 ).fetchall()
             else:
-                rows = conn.execute(
-                    "SELECT * FROM ledger_events ORDER BY id ASC"
-                ).fetchall()
+                rows = conn.execute("SELECT * FROM ledger_events ORDER BY id ASC").fetchall()
         entries = [self._row_to_entry(dict(r)) for r in rows]
         return IntegrityChain.verify(entries)
 

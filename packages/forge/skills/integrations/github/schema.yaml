@@ -5,7 +5,7 @@ author: Gorgon Project
 license: MIT
 
 description: |
-  Interact with GitHub repositories. Clone, pull, push, create issues, 
+  Interact with GitHub repositories. Clone, pull, push, create issues,
   manage PRs, and automate repository workflows.
 
 dependencies:

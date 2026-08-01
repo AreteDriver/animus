@@ -15,7 +15,7 @@ from typing import Any
 
 from animus.logging import get_logger
 
-from .capability_store import CapabilityGrant, CapabilityGrantStore
+from .capability_store import CapabilityGrantStore
 
 logger = get_logger("policy.decision_point")
 
@@ -93,9 +93,9 @@ class PolicyDecisionPoint:
 
         # 2. Check expiry and revocation
         active_grants = [
-            g for g in grants
-            if (g.expires_at is None or g.expires_at > now)
-            and g.revoked_at is None
+            g
+            for g in grants
+            if (g.expires_at is None or g.expires_at > now) and g.revoked_at is None
         ]
         if not active_grants:
             return PolicyResult(
@@ -129,8 +129,7 @@ class PolicyDecisionPoint:
                 for g in active_grants
             )
             if not schema_allowed and any(
-                g.conditions and g.conditions.get("allowed_schemas")
-                for g in active_grants
+                g.conditions and g.conditions.get("allowed_schemas") for g in active_grants
             ):
                 return PolicyResult(
                     decision=Decision.DENY,

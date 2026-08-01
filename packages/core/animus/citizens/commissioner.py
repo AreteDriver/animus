@@ -13,8 +13,6 @@ The Commissioner NEVER modifies code directly. It only:
 
 from __future__ import annotations
 
-import asyncio
-import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -220,8 +218,12 @@ class ForgeCommissioner:
         if self._local_engine is not None:
             return self._local_engine
         try:
-            from animus_forge.engine import ForgeEngine  # boundary-ok: citizen degrades gracefully without Forge
-            from animus_forge.state import AppState  # boundary-ok: citizen degrades gracefully without Forge
+            from animus_forge.engine import (
+                ForgeEngine,  # boundary-ok: citizen degrades gracefully without Forge
+            )
+            from animus_forge.state import (
+                AppState,  # boundary-ok: citizen degrades gracefully without Forge
+            )
 
             state = AppState()
             if self._cognitive:

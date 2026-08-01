@@ -76,27 +76,32 @@ async def approve_proposal(proposal_id: int, request: Request) -> object:
     pm = _get_proposal_manager(request)
     if pm is None:
         return templates.TemplateResponse(
-            request, "fragments/proposal_action_result.html",
-            {"approved": False, "file": "", "error": "Not available."}
+            request,
+            "fragments/proposal_action_result.html",
+            {"approved": False, "file": "", "error": "Not available."},
         )
 
     try:
         result = pm.approve(proposal_id)
     except ValueError:
         return templates.TemplateResponse(
-            request, "fragments/proposal_action_result.html",
-            {"approved": False, "file": "", "error": "Proposal not found."}
+            request,
+            "fragments/proposal_action_result.html",
+            {"approved": False, "file": "", "error": "Proposal not found."},
         )
     except PermissionError:
         return templates.TemplateResponse(
-            request, "fragments/proposal_action_result.html",
-            {"approved": False, "file": "", "error": "Cannot modify locked file."}
+            request,
+            "fragments/proposal_action_result.html",
+            {"approved": False, "file": "", "error": "Cannot modify locked file."},
         )
 
     runtime = getattr(request.app.state, "runtime", None)
     ledger = getattr(runtime, "event_ledger", None) if runtime else None
     if ledger is not None:
-        ledger.record("proposal_approved", "dashboard", {"proposal_id": proposal_id, "file": result.file})
+        ledger.record(
+            "proposal_approved", "dashboard", {"proposal_id": proposal_id, "file": result.file}
+        )
 
     return templates.TemplateResponse(
         request,
@@ -112,16 +117,18 @@ async def reject_proposal(proposal_id: int, request: Request) -> object:
     pm = _get_proposal_manager(request)
     if pm is None:
         return templates.TemplateResponse(
-            request, "fragments/proposal_action_result.html",
-            {"approved": False, "file": "", "error": "Not available."}
+            request,
+            "fragments/proposal_action_result.html",
+            {"approved": False, "file": "", "error": "Not available."},
         )
 
     try:
         pm.reject(proposal_id)
     except ValueError:
         return templates.TemplateResponse(
-            request, "fragments/proposal_action_result.html",
-            {"approved": False, "file": "", "error": "Proposal not found."}
+            request,
+            "fragments/proposal_action_result.html",
+            {"approved": False, "file": "", "error": "Proposal not found."},
         )
 
     runtime = getattr(request.app.state, "runtime", None)

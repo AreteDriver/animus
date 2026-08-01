@@ -110,7 +110,9 @@ async def citizen_detail(request: Request, name: str) -> object:
     # Count by status
     proposal_count = len(proposals)
     approved_count = sum(1 for p in proposals if p.status == "approved")
-    pending_count = sum(1 for p in proposals if p.status in ("draft", "submitted", "pending_review"))
+    pending_count = sum(
+        1 for p in proposals if p.status in ("draft", "submitted", "pending_review")
+    )
     rejected_count = sum(1 for p in proposals if p.status == "rejected")
 
     return templates.TemplateResponse(
@@ -151,10 +153,14 @@ async def approve_citizen_proposal(request: Request, proposal_id: str) -> object
     bridge = _get_bridge(request)
 
     result = bridge.approve(proposal_id)
-    _record_event(request, "citizen_proposal_approved", {
-        "proposal_id": proposal_id,
-        "success": result.get("success", False),
-    })
+    _record_event(
+        request,
+        "citizen_proposal_approved",
+        {
+            "proposal_id": proposal_id,
+            "success": result.get("success", False),
+        },
+    )
 
     # Re-fetch the proposal so the fragment renders the updated row
     proposal = bridge.get_proposal(proposal_id)
@@ -180,10 +186,14 @@ async def reject_citizen_proposal(request: Request, proposal_id: str) -> object:
     bridge = _get_bridge(request)
 
     result = bridge.reject(proposal_id)
-    _record_event(request, "citizen_proposal_rejected", {
-        "proposal_id": proposal_id,
-        "success": result.get("success", False),
-    })
+    _record_event(
+        request,
+        "citizen_proposal_rejected",
+        {
+            "proposal_id": proposal_id,
+            "success": result.get("success", False),
+        },
+    )
 
     proposal = bridge.get_proposal(proposal_id)
     if proposal is None:
@@ -208,11 +218,15 @@ async def commission_citizen_proposal(request: Request, proposal_id: str) -> obj
     bridge = _get_bridge(request)
 
     result = bridge.commission(proposal_id)
-    _record_event(request, "citizen_proposal_commissioned", {
-        "proposal_id": proposal_id,
-        "success": result.get("success", False),
-        "stage_reached": result.get("stage_reached", ""),
-    })
+    _record_event(
+        request,
+        "citizen_proposal_commissioned",
+        {
+            "proposal_id": proposal_id,
+            "success": result.get("success", False),
+            "stage_reached": result.get("stage_reached", ""),
+        },
+    )
 
     proposal = bridge.get_proposal(proposal_id)
     if proposal is None:
@@ -292,10 +306,14 @@ async def approve_citizen_proposal_api(request: Request, proposal_id: str) -> JS
     """Approve a citizen proposal (JSON API for PWA)."""
     bridge = _get_bridge(request)
     result = bridge.approve(proposal_id)
-    _record_event(request, "citizen_proposal_approved", {
-        "proposal_id": proposal_id,
-        "success": result.get("success", False),
-    })
+    _record_event(
+        request,
+        "citizen_proposal_approved",
+        {
+            "proposal_id": proposal_id,
+            "success": result.get("success", False),
+        },
+    )
     return JSONResponse(result)
 
 
@@ -304,10 +322,14 @@ async def reject_citizen_proposal_api(request: Request, proposal_id: str) -> JSO
     """Reject a citizen proposal (JSON API for PWA)."""
     bridge = _get_bridge(request)
     result = bridge.reject(proposal_id)
-    _record_event(request, "citizen_proposal_rejected", {
-        "proposal_id": proposal_id,
-        "success": result.get("success", False),
-    })
+    _record_event(
+        request,
+        "citizen_proposal_rejected",
+        {
+            "proposal_id": proposal_id,
+            "success": result.get("success", False),
+        },
+    )
     return JSONResponse(result)
 
 
@@ -316,9 +338,13 @@ async def commission_citizen_proposal_api(request: Request, proposal_id: str) ->
     """Commission an approved proposal to Forge (JSON API for PWA)."""
     bridge = _get_bridge(request)
     result = bridge.commission(proposal_id)
-    _record_event(request, "citizen_proposal_commissioned", {
-        "proposal_id": proposal_id,
-        "success": result.get("success", False),
-        "stage_reached": result.get("stage_reached", ""),
-    })
+    _record_event(
+        request,
+        "citizen_proposal_commissioned",
+        {
+            "proposal_id": proposal_id,
+            "success": result.get("success", False),
+            "stage_reached": result.get("stage_reached", ""),
+        },
+    )
     return JSONResponse(result)

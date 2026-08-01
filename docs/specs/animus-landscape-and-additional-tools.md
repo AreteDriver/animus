@@ -2,8 +2,8 @@
 
 > ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
 
-**Date:** 2026-03-04  
-**Purpose:** Honest positioning analysis + spec for three additional Arete Tools  
+**Date:** 2026-03-04
+**Purpose:** Honest positioning analysis + spec for three additional Arete Tools
 **For:** Strategic planning, Claude Code, Animus self-directed development
 
 ---
@@ -159,8 +159,8 @@ Three tools identified as high-value, currently unspecced. All follow the same p
 ---
 
 ### Tool A: Context Hygiene
-**AI conversation quality monitor**  
-**Repo:** `arete-tools/context-hygiene`  
+**AI conversation quality monitor**
+**Repo:** `arete-tools/context-hygiene`
 **Priority:** Build after Signal ships
 
 #### Problem
@@ -347,8 +347,8 @@ context-hygiene watch --model claude            # monitor active session (Pro)
 ---
 
 ### Tool B: Prompt Debt Tracker
-**Version control and outcome tracking for prompts**  
-**Repo:** `arete-tools/prompt-debt`  
+**Version control and outcome tracking for prompts**
+**Repo:** `arete-tools/prompt-debt`
 **Priority:** Build after Autopsy ships
 
 #### Problem
@@ -508,8 +508,8 @@ prompt-debt regression my-prompt.md        # identify which change caused drop
 ---
 
 ### Tool C: Agent Specification Linter
-**Static analysis for agent configs before deployment**  
-**Repo:** `arete-tools/agentlint`  
+**Static analysis for agent configs before deployment**
+**Repo:** `arete-tools/agentlint`
 **Priority:** Build after Autopsy ships (similar buyer)
 
 #### Problem
@@ -732,8 +732,8 @@ agentlint rules                            # show all lint rules and description
 
 ### Suite Tiers (when 4+ tools live)
 
-**Developer:** $39/mo — all standalone tools, unlimited usage  
-**Team:** $25/seat/mo — all tools + team features + shared dashboards  
+**Developer:** $39/mo — all standalone tools, unlimited usage
+**Team:** $25/seat/mo — all tools + team features + shared dashboards
 **Animus Pro:** $49/mo — all tools natively integrated in Animus, self-monitoring
 
 ---

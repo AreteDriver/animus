@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Review a single file using local Ollama model."""
+
 import json
 import os
 import sys
@@ -10,9 +11,10 @@ def review_file(filepath: str) -> str:
     with open(filepath) as f:
         code = f.read()
 
-    data = json.dumps({
-        "model": os.getenv("OLLAMA_MODEL", "deepseek-coder-v2"),
-        "prompt": f"""Senior Python engineer code review.
+    data = json.dumps(
+        {
+            "model": os.getenv("OLLAMA_MODEL", "deepseek-coder-v2"),
+            "prompt": f"""Senior Python engineer code review.
 Project: Animus -- personal AI exocortex.
 Three layers: Core (identity/memory), Forge (orchestration), Quorum (coordination).
 
@@ -31,8 +33,9 @@ File: {filepath}
 ```python
 {code}
 ```""",
-        "stream": False,
-    }).encode()
+            "stream": False,
+        }
+    ).encode()
 
     req = urllib.request.Request(
         "http://localhost:11434/api/generate",

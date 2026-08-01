@@ -35,9 +35,9 @@ __all__ = [
 
 try:
     from animus.browser.bridge import BrowserBridge, BrowserConfig, BrowserResult
+    from animus.browser.cache import BrowserCache
     from animus.browser.emulation import EmulationLayer
     from animus.browser.extraction import ExtractionPipeline
-    from animus.browser.cache import BrowserCache
     from animus.browser.rate_limit import RateLimitedDomain
 
     _BROWSER_AVAILABLE = True

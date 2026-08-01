@@ -37,8 +37,7 @@ async def record_feedback(
     store = _get_feedback_store(request)
     if store is None:
         return templates.TemplateResponse(
-            request, "fragments/feedback_result.html",
-            {"error": "Feedback not available"}
+            request, "fragments/feedback_result.html", {"error": "Feedback not available"}
         )
 
     store.record(
@@ -54,10 +53,7 @@ async def record_feedback(
         ledger.record("feedback_recorded", "dashboard", {"rating": rating, "channel": channel})
 
     icon = "&#128077;" if rating > 0 else "&#128078;"
-    return templates.TemplateResponse(
-        request, "fragments/feedback_result.html",
-        {"icon": icon}
-    )
+    return templates.TemplateResponse(request, "fragments/feedback_result.html", {"icon": icon})
 
 
 @router.get("/feedback")

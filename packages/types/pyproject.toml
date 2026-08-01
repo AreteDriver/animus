@@ -9,7 +9,7 @@ description = "Shared type definitions for the Animus monorepo — generated Pyd
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "ARETE", email = "aretedriver@gmail.com" }]
+authors = [{ name = "ARETE", email = "hello@example.com" }]
 keywords = ["animus", "types", "shared"]
 classifiers = [
     "Development Status :: 4 - Beta",

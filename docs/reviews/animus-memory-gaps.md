@@ -3,9 +3,9 @@
 > ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
 
 
-**Status:** Draft  
-**Scope:** Two missing specs identified via competitive analysis (OpenClaw 3-tier memory)  
-**Author:** ARETE  
+**Status:** Draft
+**Scope:** Two missing specs identified via competitive analysis (OpenClaw 3-tier memory)
+**Author:** ARETE
 
 ---
 

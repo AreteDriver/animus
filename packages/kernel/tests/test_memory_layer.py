@@ -24,14 +24,12 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
 from animus_kernel.memory.layer import MemoryLayer
 from animus_kernel.memory.types import (
     Conversation,
-    Memory,
     MemoryTier,
     MemoryType,
     Sensitivity,
@@ -357,7 +355,9 @@ class TestConsolidate:
     def test_consolidate_old_memories(self, layer: MemoryLayer):
         # Create old episodic memories
         for i in range(3):
-            mem = layer.remember(f"old event {i}", memory_type=MemoryType.EPISODIC, tags=["project"])
+            mem = layer.remember(
+                f"old event {i}", memory_type=MemoryType.EPISODIC, tags=["project"]
+            )
             mem.created_at = datetime.now() - timedelta(days=100)
             layer.update_memory(mem)
         count = layer.consolidate(max_age_days=90, min_group_size=3)
@@ -405,7 +405,9 @@ class TestBackendResolution:
         layer = MemoryLayer(data_dir=tmp_path, backend="unknown")
         assert type(layer.store).__name__ == "LocalMemoryStore"
 
-    def test_auto_prefers_durable_when_db_url_set(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    def test_auto_prefers_durable_when_db_url_set(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
         monkeypatch.setenv("ANIMUS_DATABASE_URL", "sqlite:///:memory:")
         layer = MemoryLayer(data_dir=tmp_path, backend="auto")
         # Should pick DurableMemoryStore because DB URL is set

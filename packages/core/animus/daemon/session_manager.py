@@ -78,7 +78,7 @@ class WarmSession:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "WarmSession":
+    def from_dict(cls, data: dict) -> WarmSession:
         """Deserialize from dict."""
         return cls(
             session_id=data["session_id"],
@@ -132,7 +132,7 @@ class SessionManager:
 
     def create(self, user_id: str = "default", priority: str = "normal") -> WarmSession:
         """Create a new warm session."""
-        session_id = f"session-{int(time.time()*1000)}-{user_id}"
+        session_id = f"session-{int(time.time() * 1000)}-{user_id}"
         session = WarmSession(session_id=session_id, user_id=user_id, priority=priority)
         self._sessions[session_id] = session
         self._persist(session)
@@ -216,7 +216,9 @@ class SessionManager:
 
         return len(to_remove)
 
-    def list_sessions(self, user_id: str | None = None, active_only: bool = False) -> list[WarmSession]:
+    def list_sessions(
+        self, user_id: str | None = None, active_only: bool = False
+    ) -> list[WarmSession]:
         """List sessions, optionally filtered."""
         sessions = list(self._sessions.values())
         if user_id:

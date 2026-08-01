@@ -35,9 +35,9 @@ python -m animus.mcp_server
 
 ## Part of the Animus Monorepo
 
-- [Animus Forge](https://github.com/AreteDriver/animus/tree/main/packages/forge) — multi-agent orchestration
+- [Animus Forge](https://github.com/your-org/animus/tree/main/packages/forge) — multi-agent orchestration
 - [Animus Quorum](https://pypi.org/project/convergentAI/) — coordination protocol
-- [Animus Bootstrap](https://github.com/AreteDriver/animus/tree/main/packages/bootstrap) — system daemon
+- [Animus Bootstrap](https://github.com/your-org/animus/tree/main/packages/bootstrap) — system daemon
 
 ## License
 

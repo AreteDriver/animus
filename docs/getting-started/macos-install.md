@@ -31,7 +31,7 @@ Ollama on macOS automatically uses **Metal (Apple Silicon)** or **Intel UHD/AMD 
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/AreteDriver/animus.git
+git clone https://github.com/your-org/animus.git
 cd animus
 ```
 

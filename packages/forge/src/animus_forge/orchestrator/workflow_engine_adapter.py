@@ -9,13 +9,14 @@ from __future__ import annotations
 import json
 import logging
 
-from animus_forge.config import get_settings
 from animus_kernel.executor import (
     ExecutionResult,
     StepConfig,
     WorkflowConfig,
     WorkflowExecutor,
 )
+
+from animus_forge.config import get_settings
 
 from .workflow_engine import StepType, Workflow, WorkflowResult, WorkflowStep
 

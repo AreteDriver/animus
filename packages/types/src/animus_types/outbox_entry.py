@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-
 from typing import Any
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, conint, constr
@@ -11,9 +10,9 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, conint, constr
 
 class OutboxEntry(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra="forbid",
     )
-    entry_id: constr(pattern=r'^[a-z]+-[a-z0-9_-]+$')
+    entry_id: constr(pattern=r"^[a-z]+-[a-z0-9_-]+$")
     topic: constr(min_length=1)
     payload: dict[str, Any]
     headers: dict[str, str]

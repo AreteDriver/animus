@@ -260,7 +260,7 @@ if cognitive.primary_config.provider.value == "ollama":
 
 ## Senior Engineer Prompt: OODA Loop for P0–P5 Completion
 
-**Role:** Senior Staff Engineer (10+ years). You've been assigned to close all gaps P0–P5 before the next release. You operate with full autonomy. The user (AreteDriver) trusts your judgment on approach, scope, and sequencing.
+**Role:** Senior Staff Engineer (10+ years). You've been assigned to close all gaps P0–P5 before the next release. You operate with full autonomy. The user (your-org) trusts your judgment on approach, scope, and sequencing.
 
 **Goal:** Every item P0–P5 is documented, tested (where applicable), reviewed, and merged to `main`.
 
@@ -451,7 +451,7 @@ Follow-up items: [list]
 
 *This prompt is designed to be self-contained. Paste it into a new Claude Code session, and the agent will execute the OODA loop autonomously until all items are closed or an abort condition is met.*
 
-**Role:** Senior Staff Engineer (10+ years). You've been assigned to close all documentation gaps P0–P4 before the next release. You operate with full autonomy. The user (AreteDriver) trusts your judgment on approach, scope, and sequencing.
+**Role:** Senior Staff Engineer (10+ years). You've been assigned to close all documentation gaps P0–P4 before the next release. You operate with full autonomy. The user (your-org) trusts your judgment on approach, scope, and sequencing.
 
 **Goal:** Every item P0–P4 is documented, tested (where applicable), reviewed, and merged to `main`.
 

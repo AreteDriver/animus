@@ -344,10 +344,11 @@ class TestConfigProviderWiring:
 
     @patch.dict("os.environ", {}, clear=False)
     def test_config_openai_base_url_field(self):
-        from animus.config import ModelConfig as CfgModelConfig
-
         # Ensure OPENAI_BASE_URL env var does not override constructor value
         import os
+
+        from animus.config import ModelConfig as CfgModelConfig
+
         os.environ.pop("OPENAI_BASE_URL", None)
 
         cfg = CfgModelConfig(

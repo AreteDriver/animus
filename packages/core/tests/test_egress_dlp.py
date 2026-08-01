@@ -84,8 +84,9 @@ class TestScrubEgressHelper:
 
         assert _scrub_egress("") == ("", 0)
 
-    def test_personal_email_scrubbed_on_egress(self):
+    def test_personal_email_scrubbed_on_egress(self, monkeypatch):
         """Even if ingest somehow missed it (e.g., legacy data), egress catches."""
+        monkeypatch.setenv("ANIMUS_REDACT_EMAILS", "aretedriver@gmail.com")
         from animus.mcp_server import _scrub_egress
 
         text = "Contact: aretedriver@gmail.com for follow-up"
@@ -158,9 +159,10 @@ class TestRecallScrubsOnEgress:
         assert "AKIA" not in text
         assert "REDACTED:aws_access_key" in text
 
-    def test_recall_scrubs_personal_email_at_egress(self, server):
+    def test_recall_scrubs_personal_email_at_egress(self, server, monkeypatch):
         """The headline adversarial test: personal email cannot leak even if
         it bypassed ingest redaction (e.g., from a legacy memory)."""
+        monkeypatch.setenv("ANIMUS_REDACT_EMAILS", "aretedriver@gmail.com")
         srv, mock_memory = server
         leaked = _make_memory(content="legacy contact: aretedriver@gmail.com")
         mock_memory.recall.return_value = [leaked]

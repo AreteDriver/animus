@@ -140,7 +140,7 @@ class ScheduledTask:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "ScheduledTask":
+    def from_dict(cls, data: dict) -> ScheduledTask:
         return cls(
             task_id=data["task_id"],
             description=data["description"],
@@ -199,7 +199,7 @@ class TaskScheduler:
         metadata: dict | None = None,
     ) -> ScheduledTask:
         """Schedule a task to run at regular intervals."""
-        task_id = f"task-{int(time.time()*1000)}"
+        task_id = f"task-{int(time.time() * 1000)}"
         task = ScheduledTask(
             task_id=task_id,
             description=description,
@@ -223,7 +223,7 @@ class TaskScheduler:
         metadata: dict | None = None,
     ) -> ScheduledTask:
         """Schedule a one-time task."""
-        task_id = f"task-{int(time.time()*1000)}"
+        task_id = f"task-{int(time.time() * 1000)}"
         task = ScheduledTask(
             task_id=task_id,
             description=description,
@@ -248,7 +248,7 @@ class TaskScheduler:
         metadata: dict | None = None,
     ) -> ScheduledTask:
         """Schedule a task using cron expression."""
-        task_id = f"task-{int(time.time()*1000)}"
+        task_id = f"task-{int(time.time() * 1000)}"
         task = ScheduledTask(
             task_id=task_id,
             description=description,

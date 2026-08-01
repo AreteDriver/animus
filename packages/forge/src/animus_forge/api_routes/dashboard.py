@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+from animus_kernel.contracts.base import AgentRole
+from animus_kernel.contracts.definitions import _CONTRACT_REGISTRY
 from fastapi import APIRouter, Header
 
 from animus_forge import api_state as state
@@ -18,8 +20,6 @@ from animus_forge.api_models import (
     RecentExecution,
 )
 from animus_forge.api_routes.auth import verify_auth
-from animus_kernel.contracts.base import AgentRole
-from animus_kernel.contracts.definitions import _CONTRACT_REGISTRY
 from animus_forge.state import get_database
 
 router = APIRouter()

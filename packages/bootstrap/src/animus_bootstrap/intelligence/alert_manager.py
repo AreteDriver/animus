@@ -56,7 +56,9 @@ class AlertManager:
                     {
                         "type": "error_rate",
                         "message": f"Error rate {error_rate}/min exceeds threshold {self._error_rate_max}/min",
-                        "severity": "critical" if error_rate >= self._error_rate_max * 2 else "warning",
+                        "severity": "critical"
+                        if error_rate >= self._error_rate_max * 2
+                        else "warning",
                         "rate": error_rate,
                         "threshold": self._error_rate_max,
                     }
@@ -71,7 +73,9 @@ class AlertManager:
                     {
                         "type": "tool_failure_rate",
                         "message": f"Tool failure rate {fail_rate}/min exceeds threshold {self._tool_failure_rate_max}/min",
-                        "severity": "critical" if fail_rate >= self._tool_failure_rate_max * 2 else "warning",
+                        "severity": "critical"
+                        if fail_rate >= self._tool_failure_rate_max * 2
+                        else "warning",
                         "rate": fail_rate,
                         "threshold": self._tool_failure_rate_max,
                     }

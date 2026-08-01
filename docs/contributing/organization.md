@@ -1,10 +1,10 @@
 # Project Organization and Source Governance Guidelines
 
-**Document type:** Project standard  
-**Recommended filename:** `PROJECT_ORGANIZATION_GUIDELINES.md`  
-**Applies to:** All flagship, active, incubating, and grouped projects  
-**Owner:** AreteDriver  
-**Last updated:** 2026-06-18  
+**Document type:** Project standard
+**Recommended filename:** `PROJECT_ORGANIZATION_GUIDELINES.md`
+**Applies to:** All flagship, active, incubating, and grouped projects
+**Owner:** your-org
+**Last updated:** 2026-06-18
 
 ---
 

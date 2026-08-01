@@ -44,7 +44,7 @@ steps:
       field: fly_app
       operator: not_empty
     command: |
-      /home/arete/.fly/bin/flyctl status -a "${fly_app}" --json 2>/dev/null || echo '{"error": "flyctl failed"}'
+      ~/.fly/bin/flyctl status -a "${fly_app}" --json 2>/dev/null || echo '{"error": "flyctl failed"}'
     timeout_seconds: 15
     on_failure: skip
 
@@ -55,7 +55,7 @@ steps:
       field: fly_app
       operator: not_empty
     command: |
-      /home/arete/.fly/bin/flyctl logs -a "${fly_app}" --no-tail 2>/dev/null | tail -30
+      ~/.fly/bin/flyctl logs -a "${fly_app}" --no-tail 2>/dev/null | tail -30
     timeout_seconds: 15
     on_failure: skip
 
@@ -67,7 +67,7 @@ steps:
       operator: not_empty
     command: |
       echo "Attempting restart of ${fly_app}..."
-      /home/arete/.fly/bin/flyctl apps restart "${fly_app}" 2>&1 || \
+      ~/.fly/bin/flyctl apps restart "${fly_app}" 2>&1 || \
         echo "Restart failed — may need manual intervention"
     timeout_seconds: 60
     on_failure: skip

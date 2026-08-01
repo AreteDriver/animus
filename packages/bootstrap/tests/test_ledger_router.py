@@ -81,12 +81,8 @@ class TestListEvents:
 
     def test_filter_by_object_id(self, client: TestClient) -> None:
         store = app.state.ledger_store
-        store.append(
-            LedgerEvent.model_validate(_valid_event_dict("evt-f-001", object_id="obj-a"))
-        )
-        store.append(
-            LedgerEvent.model_validate(_valid_event_dict("evt-f-002", object_id="obj-b"))
-        )
+        store.append(LedgerEvent.model_validate(_valid_event_dict("evt-f-001", object_id="obj-a")))
+        store.append(LedgerEvent.model_validate(_valid_event_dict("evt-f-002", object_id="obj-b")))
         response = client.get("/api/ledger/events?object_id=obj-a")
         data = response.json()
         assert len(data["events"]) == 1

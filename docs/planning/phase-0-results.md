@@ -1,7 +1,7 @@
 # Phase 0 Results — Documentation Audit Pre-Flight
 
-**Branch**: `docs/audit-2026-06`  
-**Date**: 2026-06-27  
+**Branch**: `docs/audit-2026-06`
+**Date**: 2026-06-27
 **Auditor**: Claude Code (Senior Engineer Prompt)
 
 ---

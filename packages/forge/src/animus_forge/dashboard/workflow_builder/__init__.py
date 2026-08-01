@@ -13,12 +13,13 @@ into focused submodules:
 
 # get_settings must be importable from this package for test patch compatibility:
 #   monkeypatch.setattr("animus_forge.dashboard.workflow_builder.get_settings", ...)
-from animus_forge.config import get_settings  # noqa: F401
 from animus_kernel.executor.loader import (  # noqa: F401
     VALID_ON_FAILURE,
     VALID_OPERATORS,
     validate_workflow,
 )
+
+from animus_forge.config import get_settings  # noqa: F401
 
 from .builder import render_workflow_builder  # noqa: F401
 from .constants import (  # noqa: F401

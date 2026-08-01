@@ -9,20 +9,20 @@ Key design:
 - ProviderRouter: selects best provider for each request, learns from outcomes
 """
 
+from animus.routing.graph import (
+    ProviderNode,
+    RoutingEdge,
+    RoutingGraph,
+    TaskSignature,
+)
 from animus.routing.router import (
     ProviderRouter,
     RouterConfig,
     RoutingDecision,
 )
-from animus.routing.graph import (
-    RoutingGraph,
-    ProviderNode,
-    TaskSignature,
-    RoutingEdge,
-)
 from animus.routing.scorer import (
-    TrajectoryScorer,
     ScoreWeights,
+    TrajectoryScorer,
 )
 
 __all__ = [

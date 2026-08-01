@@ -25,11 +25,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from animus.citizens.abstraction import AbstractionCitizen, MechanismCard
+from animus.citizens.abstraction import MechanismCard
 from animus.citizens.architecture_citizen import ArchitectureCitizen, GapAnalysis
 from animus.citizens.first_principles import FirstPrinciplesCitizen, PrincipleCard
-from animus.citizens.proposal_queue import ProposalQueue
-from animus.citizens.pattern import PatternCitizen, PatternCard
+from animus.citizens.pattern import PatternCard, PatternCitizen
 from animus.citizens.proposal import ImprovementProposal
 from animus.citizens.research_guild import StageResult
 from animus.logging import get_logger
@@ -329,7 +328,8 @@ class MediaAbstractionAdapter:
                 mem = memory.remember(
                     content=f"{card.name}: {card.description}",
                     memory_type=MemoryType.SEMANTIC,
-                    tags=["abstraction", "research_guild", "mechanism", card.category, "media"] + card.tags,
+                    tags=["abstraction", "research_guild", "mechanism", card.category, "media"]
+                    + card.tags,
                     metadata=card.to_dict(),
                 )
                 ids.append(str(getattr(mem, "id", "")))
@@ -357,7 +357,14 @@ class MediaAbstractionAdapter:
             "reliability": ["retry", "fault", "resilien", "graceful", "timeout", "backoff"],
             "security": ["auth", "encrypt", "permission", "identity", "rbac", "secret"],
             "operations": ["observ", "metric", "trace", "log", "monitor", "telemetry"],
-            "architecture": ["modular", "boundary", "layer", "interface", "abstraction", "coupling"],
+            "architecture": [
+                "modular",
+                "boundary",
+                "layer",
+                "interface",
+                "abstraction",
+                "coupling",
+            ],
             "quality": ["test", "mock", "contract", "validation", "assert", "verif"],
             "deployment": ["feature flag", "canary", "rollout", "toggle"],
             "ai-engineering": ["model", "llm", "prompt", "inference", "embedding", "agent"],
@@ -554,7 +561,9 @@ class MediaPipelineOrchestrator:
             )
 
             if store_outputs and self.memory is not None:
-                fpc = FirstPrinciplesCitizen(memory_layer=self.memory, codebase_path=self.codebase_path)
+                fpc = FirstPrinciplesCitizen(
+                    memory_layer=self.memory, codebase_path=self.codebase_path
+                )
                 for principle in principles:
                     fpc.store_principle(principle)
                 stages[-1].stored_count = len(principles)
@@ -638,7 +647,9 @@ class MediaPipelineOrchestrator:
     ) -> OgmaOutput | None:
         """Synthesize harvested items into an OgmaOutput."""
         try:
-            return self.synthesizer.synthesize_corpus(items, model=model, repo_root=self.codebase_path)
+            return self.synthesizer.synthesize_corpus(
+                items, model=model, repo_root=self.codebase_path
+            )
         except Exception as e:
             logger.warning("MediaPipeline synthesis failed: %s", e)
             return None
@@ -726,7 +737,5 @@ class MediaPipelineOrchestrator:
                 "list_limit": list_limit,
             },
         )
-        logger.info(
-            "Scheduled media scan %s for %s (%s)", task.task_id, url, cron_expression
-        )
+        logger.info("Scheduled media scan %s for %s (%s)", task.task_id, url, cron_expression)
         return task

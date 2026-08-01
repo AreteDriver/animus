@@ -136,9 +136,7 @@ class RubricJudge:
                     },
                 )
                 text = response["message"]["content"]
-                tokens = response.get("eval_count", 0) + response.get(
-                    "prompt_eval_count", 0
-                )
+                tokens = response.get("eval_count", 0) + response.get("prompt_eval_count", 0)
                 return text, tokens
 
             elif self.config.provider == "anthropic":
@@ -199,18 +197,20 @@ class RubricJudge:
         if reference:
             lines.extend([f"## Reference answer:\n{reference}", ""])
 
-        lines.extend([
-            "## Output to evaluate:",
-            "---",
-            output_text[:4000],  # Limit to avoid context overflow
-            "---",
-            "",
-            "Respond with ONLY a JSON object in this exact format:",
-            '{"score": 1_to_5, "justification": "brief explanation"}',
-            "",
-            "Score meanings:",
-            "1 = Critical failure, 2 = Poor, 3 = Acceptable, 4 = Good, 5 = Excellent",
-        ])
+        lines.extend(
+            [
+                "## Output to evaluate:",
+                "---",
+                output_text[:4000],  # Limit to avoid context overflow
+                "---",
+                "",
+                "Respond with ONLY a JSON object in this exact format:",
+                '{"score": 1_to_5, "justification": "brief explanation"}',
+                "",
+                "Score meanings:",
+                "1 = Critical failure, 2 = Poor, 3 = Acceptable, 4 = Good, 5 = Excellent",
+            ]
+        )
 
         # Add few-shot examples if configured
         dim_examples = self.config.examples.get(dimension.name, [])
@@ -244,21 +244,21 @@ class RubricJudge:
         if reference:
             lines.extend([f"## Reference answer:\n{reference}", ""])
 
-        lines.extend([
-            "## Output to evaluate:",
-            "---",
-            output_text[:4000],
-            "---",
-            "",
-            "Respond with ONLY a JSON object in this exact format:",
-            '{"dimension_name": {"score": 1_to_5, "justification": "brief explanation"}, ...}',
-        ])
+        lines.extend(
+            [
+                "## Output to evaluate:",
+                "---",
+                output_text[:4000],
+                "---",
+                "",
+                "Respond with ONLY a JSON object in this exact format:",
+                '{"dimension_name": {"score": 1_to_5, "justification": "brief explanation"}, ...}',
+            ]
+        )
 
         return "\n".join(lines)
 
-    def _parse_dimension_score(
-        self, raw: str, dimension: Dimension
-    ) -> DimensionScore:
+    def _parse_dimension_score(self, raw: str, dimension: Dimension) -> DimensionScore:
         """Parse judge response for a single dimension."""
         try:
             # Extract JSON from response
@@ -367,9 +367,7 @@ class RubricJudge:
         total_tokens = 0
 
         for dim in rubric.dimensions:
-            prompt = self._build_dimension_prompt(
-                rubric, dim, output_text, context, reference
-            )
+            prompt = self._build_dimension_prompt(rubric, dim, output_text, context, reference)
             raw_response, tokens = self._call_judge(prompt)
             total_tokens += tokens
 

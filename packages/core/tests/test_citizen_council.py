@@ -2,7 +2,12 @@
 
 import pytest
 
-from animus.citizens import CitizenCouncil, ImprovementProposal, ProposalConfidence, ProposalStatus, RankedProposal
+from animus.citizens import (
+    CitizenCouncil,
+    ImprovementProposal,
+    ProposalStatus,
+    RankedProposal,
+)
 
 
 @pytest.fixture
@@ -96,8 +101,11 @@ class TestCitizenCouncilCollect:
     def test_add_proposal_merges_sources(self):
         council = CitizenCouncil()
         p = ImprovementProposal(
-            id="PROP-MERGE", title="Merge", problem="x",
-            recommendation="y", confidence_score=0.5,
+            id="PROP-MERGE",
+            title="Merge",
+            problem="x",
+            recommendation="y",
+            confidence_score=0.5,
         )
         council._add_proposal(p, source="architect")
         council._add_proposal(p, source="test_oracle")
@@ -155,7 +163,11 @@ class TestCitizenCouncilRanking:
             estimated_effort_hours=2.0,
             affected_components=["docs/"],
             evidence=[
-                EvidenceItem(source="codebase", description="Missing docs", data={"pattern_type": "missing_docstring"}),
+                EvidenceItem(
+                    source="codebase",
+                    description="Missing docs",
+                    data={"pattern_type": "missing_docstring"},
+                ),
             ],
         )
 
@@ -169,7 +181,11 @@ class TestCitizenCouncilRanking:
             estimated_effort_hours=2.0,
             affected_components=["core/"],
             evidence=[
-                EvidenceItem(source="codebase", description="Tight coupling", data={"pattern_type": "tight_coupling"}),
+                EvidenceItem(
+                    source="codebase",
+                    description="Tight coupling",
+                    data={"pattern_type": "tight_coupling"},
+                ),
             ],
         )
 
@@ -232,8 +248,11 @@ class TestCitizenCouncilSummary:
 class TestRankedProposal:
     def test_to_dict(self):
         p = ImprovementProposal(
-            id="PROP-T", title="Test", problem="x",
-            recommendation="y", confidence_score=0.5,
+            id="PROP-T",
+            title="Test",
+            problem="x",
+            recommendation="y",
+            confidence_score=0.5,
         )
         rp = RankedProposal(proposal=p, rank=1, priority_score=2.5)
         d = rp.to_dict()

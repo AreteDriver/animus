@@ -225,7 +225,7 @@ class SelfImproveOrchestrator:
                     success=True,
                     stage_reached=WorkflowStage.COMPLETE,
                     metadata={"message": "No improvements needed"},
-                recursive_depth=recursive_depth,
+                    recursive_depth=recursive_depth,
                 )
 
             # Stage 2: Create plan
@@ -261,7 +261,7 @@ class SelfImproveOrchestrator:
                     plan=plan,
                     violations=violations,
                     error="Safety violations prevent this improvement",
-                recursive_depth=recursive_depth,
+                    recursive_depth=recursive_depth,
                 )
 
             # Stage 3: Get plan approval
@@ -289,8 +289,8 @@ class SelfImproveOrchestrator:
                             stage_reached=WorkflowStage.AWAITING_PLAN_APPROVAL,
                             plan=plan,
                             error="Plan was rejected",
-                recursive_depth=recursive_depth,
-                )
+                            recursive_depth=recursive_depth,
+                        )
                     if status == ApprovalStatus.EXPIRED:
                         self._current_stage = WorkflowStage.FAILED
                         return ImprovementResult(
@@ -298,8 +298,8 @@ class SelfImproveOrchestrator:
                             stage_reached=WorkflowStage.AWAITING_PLAN_APPROVAL,
                             plan=plan,
                             error="Plan approval timed out",
-                recursive_depth=recursive_depth,
-                )
+                            recursive_depth=recursive_depth,
+                        )
 
             # Stage 4: Generate changes via AI
             self._current_stage = WorkflowStage.IMPLEMENTING
@@ -313,7 +313,7 @@ class SelfImproveOrchestrator:
                     stage_reached=WorkflowStage.IMPLEMENTING,
                     plan=plan,
                     error="No changes generated",
-                recursive_depth=recursive_depth,
+                    recursive_depth=recursive_depth,
                 )
 
             # Stage 5: Test in sandbox
@@ -328,8 +328,8 @@ class SelfImproveOrchestrator:
                         stage_reached=WorkflowStage.TESTING,
                         plan=plan,
                         error="Failed to apply changes to sandbox",
-                recursive_depth=recursive_depth,
-                )
+                        recursive_depth=recursive_depth,
+                    )
                 sandbox_result = await sandbox.validate_changes()
 
             if not sandbox_result.tests_passed:
@@ -341,8 +341,8 @@ class SelfImproveOrchestrator:
                         plan=plan,
                         sandbox_result=sandbox_result,
                         error="Tests failed in sandbox",
-                recursive_depth=recursive_depth,
-                )
+                        recursive_depth=recursive_depth,
+                    )
 
             # Stage 6: Get apply approval
             if self.config.human_approval_apply:
@@ -371,8 +371,8 @@ class SelfImproveOrchestrator:
                             plan=plan,
                             sandbox_result=sandbox_result,
                             error="Apply was rejected",
-                recursive_depth=recursive_depth,
-                )
+                            recursive_depth=recursive_depth,
+                        )
                     if status == ApprovalStatus.EXPIRED:
                         self._current_stage = WorkflowStage.FAILED
                         return ImprovementResult(
@@ -381,8 +381,8 @@ class SelfImproveOrchestrator:
                             plan=plan,
                             sandbox_result=sandbox_result,
                             error="Apply approval timed out",
-                recursive_depth=recursive_depth,
-                )
+                            recursive_depth=recursive_depth,
+                        )
 
             # Stage 7: Create snapshot
             snapshot = self.rollback_manager.create_snapshot(
@@ -428,8 +428,8 @@ class SelfImproveOrchestrator:
                             sandbox_result=sandbox_result,
                             pull_request=pr,
                             error=f"Merge approval {status.value}",
-                recursive_depth=recursive_depth,
-                )
+                            recursive_depth=recursive_depth,
+                        )
 
             self._current_stage = WorkflowStage.COMPLETE
             return ImprovementResult(
@@ -440,7 +440,7 @@ class SelfImproveOrchestrator:
                 sandbox_result=sandbox_result,
                 pull_request=pr,
                 recursive_depth=recursive_depth,
-                )
+            )
 
         except Exception as e:
             logger.error(f"Self-improvement failed: {e}", exc_info=True)
@@ -450,7 +450,7 @@ class SelfImproveOrchestrator:
                 stage_reached=self._current_stage,
                 error=str(e),
                 recursive_depth=recursive_depth,
-                )
+            )
 
     async def _generate_changes(self, plan: ImprovementPlan) -> dict[str, str]:
         """Generate code changes using the AI provider.

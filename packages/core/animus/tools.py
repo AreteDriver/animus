@@ -301,9 +301,7 @@ class ToolRegistry:
                 # Evict oldest entry (simple FIFO)
                 oldest = next(iter(self._intent_cache))
                 del self._intent_cache[oldest]
-            self._intent_cache[cache_key] = [
-                (round(score, 4), tool.name) for score, tool in scored
-            ]
+            self._intent_cache[cache_key] = [(round(score, 4), tool.name) for score, tool in scored]
 
         # Build result: compact for all, full for top-N
         results: list[dict] = []
@@ -405,11 +403,7 @@ class ToolRegistry:
             return 0.5  # Neutral when no intent provided
 
         def _tokenize(text: str) -> set[str]:
-            return set(
-                re.sub(r"[^a-z0-9]", "", w.lower())
-                for w in text.split()
-                if len(w) > 2
-            )
+            return set(re.sub(r"[^a-z0-9]", "", w.lower()) for w in text.split() if len(w) > 2)
 
         intent_tokens = _tokenize(intent)
         tool_text = f"{tool.name} {tool.description}"
@@ -429,9 +423,7 @@ class ToolRegistry:
         union = len(intent_tokens | tool_tokens)
         return overlap / union if union > 0 else 0.0
 
-    def _apply_history_boost(
-        self, score: float, tool_name: str
-    ) -> float:
+    def _apply_history_boost(self, score: float, tool_name: str) -> float:
         """Boost score based on recent tool usage history.
 
         Successful recent uses get a small boost; recent failures get
@@ -1228,9 +1220,7 @@ def tools_to_anthropic_format(
     result = []
 
     # Get ranked schemas from registry
-    schemas = registry.get_schema(
-        intent=intent, lazy=lazy, max_full_schemas=max_full_schemas
-    )
+    schemas = registry.get_schema(intent=intent, lazy=lazy, max_full_schemas=max_full_schemas)
 
     for schema in schemas:
         name = schema["name"]

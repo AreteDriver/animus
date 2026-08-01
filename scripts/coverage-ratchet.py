@@ -11,6 +11,7 @@ mapping ``{package: {allowed: N, directory: "path/to/tests"}}``.
 The script runs pytest with coverage, extracts the percentage, and compares
 against the stored baseline.
 """
+
 from __future__ import annotations
 
 import json
@@ -30,9 +31,12 @@ def run_coverage(package_dir: str, source: str) -> float:
     env["PYTHONPATH"] = src_dir + os.pathsep + env.get("PYTHONPATH", "")
     json_path = "/tmp/coverage-ratchet.json"
     cmd = [
-        sys.executable, "-m", "pytest",
+        sys.executable,
+        "-m",
+        "pytest",
         package_dir,
-        "-q", "--tb=short",
+        "-q",
+        "--tb=short",
         f"--cov={source}",
         f"--cov-report=json:{json_path}",
     ]
@@ -87,8 +91,7 @@ def main(argv: list[str]) -> int:
         actual = run_coverage(directory, source)
         delta = actual - allowed
         if actual < allowed:
-            print(
-                f"[FAIL] {pkg}: {actual:.1f}% coverage (allowed {allowed:.1f}%, {delta:+.1f}%)")
+            print(f"[FAIL] {pkg}: {actual:.1f}% coverage (allowed {allowed:.1f}%, {delta:+.1f}%)")
             failed = True
         else:
             status = f"{delta:+.1f}%" if delta > 0 else "at limit"

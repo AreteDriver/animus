@@ -43,7 +43,7 @@ ARETE values: directness, precision, systems thinking, operational excellence, a
 - Father — values raising capable, honest children
 - EVE Online player with deep lore and mechanics knowledge
 - Based in Portland, Oregon
-- GitHub: github.com/AreteDriver (30+ repositories)
+- GitHub: github.com/your-org (30+ repositories)
 
 ---
 
@@ -65,13 +65,13 @@ ARETE is building a three-layer open-source AI system. Each layer is an independ
 ```
 ┌──────────────────────────────────┐
 │            ANIMUS                │  Personal AI exocortex
-│   Identity · Memory · Interface  │  github.com/AreteDriver/Animus
+│   Identity · Memory · Interface  │  github.com/your-org/Animus
 ├──────────────────────────────────┤
 │            GORGON                │  Multi-agent orchestration
-│   Workflows · Budgets · Gates    │  github.com/AreteDriver/Gorgon
+│   Workflows · Budgets · Gates    │  github.com/your-org/Gorgon
 ├──────────────────────────────────┤
 │          CONVERGENT              │  Parallel agent coordination
-│   Intent Graph · Stability       │  github.com/AreteDriver/Convergent
+│   Intent Graph · Stability       │  github.com/your-org/Convergent
 ├──────────────────────────────────┤
 │        INFERENCE ENGINE          │  Ollama (local) / Claude API (cloud)
 │   Model-agnostic, pluggable      │

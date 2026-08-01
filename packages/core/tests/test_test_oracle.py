@@ -6,8 +6,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from animus.citizens import (
     ImprovementProposal,
     ProposalStatus,
@@ -99,8 +97,16 @@ class TestTestOracleCitizen:
 
     def test_observe_eval_drift_detects_drop(self):
         eval_results = [
-            {"suite": "personal-quality", "score": 0.85, "timestamp": (datetime.now() - timedelta(days=2)).isoformat()},
-            {"suite": "personal-quality", "score": 0.60, "timestamp": (datetime.now() - timedelta(days=1)).isoformat()},
+            {
+                "suite": "personal-quality",
+                "score": 0.85,
+                "timestamp": (datetime.now() - timedelta(days=2)).isoformat(),
+            },
+            {
+                "suite": "personal-quality",
+                "score": 0.60,
+                "timestamp": (datetime.now() - timedelta(days=1)).isoformat(),
+            },
         ]
         oracle = TestOracleCitizen()
         observations = oracle.observe_eval_drift(eval_results)
@@ -111,8 +117,16 @@ class TestTestOracleCitizen:
 
     def test_observe_eval_drift_no_drift(self):
         eval_results = [
-            {"suite": "personal-quality", "score": 0.85, "timestamp": (datetime.now() - timedelta(days=2)).isoformat()},
-            {"suite": "personal-quality", "score": 0.86, "timestamp": (datetime.now() - timedelta(days=1)).isoformat()},
+            {
+                "suite": "personal-quality",
+                "score": 0.85,
+                "timestamp": (datetime.now() - timedelta(days=2)).isoformat(),
+            },
+            {
+                "suite": "personal-quality",
+                "score": 0.86,
+                "timestamp": (datetime.now() - timedelta(days=1)).isoformat(),
+            },
         ]
         oracle = TestOracleCitizen()
         observations = oracle.observe_eval_drift(eval_results)
@@ -120,8 +134,16 @@ class TestTestOracleCitizen:
 
     def test_observe_eval_drift_small_decline(self):
         eval_results = [
-            {"suite": "personal-quality", "score": 0.85, "timestamp": (datetime.now() - timedelta(days=2)).isoformat()},
-            {"suite": "personal-quality", "score": 0.78, "timestamp": (datetime.now() - timedelta(days=1)).isoformat()},
+            {
+                "suite": "personal-quality",
+                "score": 0.85,
+                "timestamp": (datetime.now() - timedelta(days=2)).isoformat(),
+            },
+            {
+                "suite": "personal-quality",
+                "score": 0.78,
+                "timestamp": (datetime.now() - timedelta(days=1)).isoformat(),
+            },
         ]
         oracle = TestOracleCitizen()
         observations = oracle.observe_eval_drift(eval_results)
@@ -155,6 +177,7 @@ class TestTestOracleCitizen:
         # Set mtime to 30 days ago
         old_time = (datetime.now() - timedelta(days=30)).timestamp()
         import os
+
         os.utime(src, (old_time, old_time))
 
         oracle = TestOracleCitizen(codebase_path=codebase)
@@ -167,10 +190,12 @@ class TestTestOracleCitizen:
 
     def test_analyze_no_findings(self):
         oracle = TestOracleCitizen()
-        with patch.object(oracle, "observe_test_failures", return_value=[]), \
-             patch.object(oracle, "observe_coverage_gaps", return_value=[]), \
-             patch.object(oracle, "observe_eval_drift", return_value=[]), \
-             patch.object(oracle, "observe_uncitizened_modules", return_value=[]):
+        with (
+            patch.object(oracle, "observe_test_failures", return_value=[]),
+            patch.object(oracle, "observe_coverage_gaps", return_value=[]),
+            patch.object(oracle, "observe_eval_drift", return_value=[]),
+            patch.object(oracle, "observe_uncitizened_modules", return_value=[]),
+        ):
             regressions = oracle.analyze()
         assert regressions == []
 
@@ -178,12 +203,23 @@ class TestTestOracleCitizen:
         from animus.citizens.architect import Observation
 
         oracle = TestOracleCitizen()
-        with patch.object(oracle, "observe_test_failures", return_value=[
-            Observation(source="test_oracle", description="5 failures", severity="high", context={"pattern_type": "test_failure"}),
-        ]), \
-             patch.object(oracle, "observe_coverage_gaps", return_value=[]), \
-             patch.object(oracle, "observe_eval_drift", return_value=[]), \
-             patch.object(oracle, "observe_uncitizened_modules", return_value=[]):
+        with (
+            patch.object(
+                oracle,
+                "observe_test_failures",
+                return_value=[
+                    Observation(
+                        source="test_oracle",
+                        description="5 failures",
+                        severity="high",
+                        context={"pattern_type": "test_failure"},
+                    ),
+                ],
+            ),
+            patch.object(oracle, "observe_coverage_gaps", return_value=[]),
+            patch.object(oracle, "observe_eval_drift", return_value=[]),
+            patch.object(oracle, "observe_uncitizened_modules", return_value=[]),
+        ):
             regressions = oracle.analyze()
 
         assert len(regressions) == 1
@@ -267,7 +303,9 @@ class TestTestOracleCitizen:
     def test_build_problem_recommendation(self):
         from animus.citizens.test_oracle import QualityRegression
 
-        r = QualityRegression(regression_type="test_failure", description="5 failed", severity="high")
+        r = QualityRegression(
+            regression_type="test_failure", description="5 failed", severity="high"
+        )
         problem, recommendation = TestOracleCitizen._build_problem_recommendation(r)
         assert "failures" in problem
         assert "Fix" in recommendation

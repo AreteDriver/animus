@@ -10,20 +10,20 @@ Key design:
 - Few-shot examples calibrate judges per dimension
 """
 
+from animus.eval.judge import (
+    JudgeConfig,
+    JudgmentResult,
+    RubricJudge,
+)
+from animus.eval.rewards import (
+    RewardAggregator,
+    RewardConfig,
+)
 from animus.eval.rubric import (
     Dimension,
     Rubric,
     Score,
     ScoreLevel,
-)
-from animus.eval.judge import (
-    RubricJudge,
-    JudgeConfig,
-    JudgmentResult,
-)
-from animus.eval.rewards import (
-    RewardAggregator,
-    RewardConfig,
 )
 
 __all__ = [

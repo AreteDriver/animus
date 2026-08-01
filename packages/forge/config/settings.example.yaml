@@ -15,7 +15,7 @@ integrations:
     user_id: "me"   # Gmail API uses 'me' for the authenticated user
   github:
     token: "${GITHUB_TOKEN}"
-    repo: "AreteDriver/AI_Workflow_Orchestrator"
+    repo: "your-org/AI_Workflow_Orchestrator"
 
 workflows:
   default: "email_to_notion_to_git"

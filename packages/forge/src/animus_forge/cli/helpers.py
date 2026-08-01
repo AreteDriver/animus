@@ -8,10 +8,11 @@ import typer
 from rich.console import Console
 
 if TYPE_CHECKING:
+    from animus_kernel.executor.executor import WorkflowExecutor
+
     from animus_forge.api_clients import ClaudeCodeClient
     from animus_forge.monitoring.tracker import ExecutionTracker
     from animus_forge.orchestrator import WorkflowEngineAdapter
-    from animus_kernel.executor.executor import WorkflowExecutor
 
 console = Console()
 
@@ -54,10 +55,11 @@ def get_claude_client() -> ClaudeCodeClient:
 def get_workflow_executor(dry_run: bool = False) -> WorkflowExecutor:
     """Get workflow executor with checkpoint and budget managers."""
     try:
-        from animus_forge.budget import BudgetManager
-        from animus_forge.state.checkpoint import CheckpointManager
         from animus_kernel.executor.arete_hooks import get_arete_hooks
         from animus_kernel.executor.executor import WorkflowExecutor
+
+        from animus_forge.budget import BudgetManager
+        from animus_forge.state.checkpoint import CheckpointManager
 
         checkpoint_mgr = CheckpointManager()
         budget_mgr = BudgetManager()

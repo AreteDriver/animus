@@ -20,9 +20,13 @@ def default_data_dir() -> Path:
 class ModelConfig:
     """Configuration for the cognitive model.
 
-    Supports three providers:
-      - "ollama"    — local models via Ollama (default)
-      - "anthropic" — Claude models via Anthropic API
+    OLLAMA-FIRST DEFAULT:
+      - Ollama is the primary provider. No API keys required.
+      - Cloud providers are OPT-IN via ANIMUS_CLOUD_PROVIDER env var.
+
+    Supported providers:
+      - "ollama"    — local models via Ollama (default, zero cost)
+      - "anthropic" — Claude models via Anthropic API (opt-in)
       - "openai"    — OpenAI models, or any OpenAI-compatible endpoint
                       (LM Studio, vLLM, Together, Groq, etc.) via openai_base_url
     """

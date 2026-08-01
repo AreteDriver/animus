@@ -18,7 +18,12 @@ REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
 
 
 def _ensure_paths():
-    for rel in ("packages/core", "packages/kernel/src", "packages/types/src", "packages/contracts/src"):
+    for rel in (
+        "packages/core",
+        "packages/kernel/src",
+        "packages/types/src",
+        "packages/contracts/src",
+    ):
         abs_path = str(REPO_ROOT / rel)
         if abs_path not in sys.path:
             sys.path.insert(0, abs_path)
@@ -99,7 +104,12 @@ class TestContractsValidation:
             "security_class": "public",
             "valid_time": {"valid_from": "2024-01-01T00:00:00", "valid_to": None},
             "transaction_time": {"recorded_at": "2024-01-01T00:00:00", "superseded_at": None},
-            "provenance": {"created_by": "test", "source_refs": [], "derived_from": [], "trace_id": None},
+            "provenance": {
+                "created_by": "test",
+                "source_refs": [],
+                "derived_from": [],
+                "trace_id": None,
+            },
             "integrity": {"content_sha256": "a" * 64, "previous_version_sha256": None},
             "payload": {
                 "proposition": "The system is reliable",

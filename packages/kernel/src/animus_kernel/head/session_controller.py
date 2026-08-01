@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from enum import Enum, auto
 from pathlib import Path
 from typing import Any
@@ -52,7 +52,7 @@ class SessionPolicy:
         "Please provide a concise summary of: (1) our current task, "
         "(2) key decisions made, and (3) what should happen next."
     )
-    model_overrides: dict[str, "SessionPolicy"] = field(default_factory=dict)
+    model_overrides: dict[str, SessionPolicy] = field(default_factory=dict)
 
     def resolve_for_model(self, model: str) -> SessionPolicy:
         """Return a policy with model-specific overrides applied."""
@@ -165,18 +165,32 @@ class SessionController:
         if not self._telemetry_log:
             return {}
 
-        utilizations = [t.utilization_percent for t in self._telemetry_log if t.event == SessionLifecycleEvent.WRAPPING_UP]
-        elapsed_times = [t.elapsed_seconds for t in self._telemetry_log if t.event == SessionLifecycleEvent.WRAPPING_UP]
-        restarts = sum(1 for t in self._telemetry_log if t.event == SessionLifecycleEvent.RESTARTING)
+        utilizations = [
+            t.utilization_percent
+            for t in self._telemetry_log
+            if t.event == SessionLifecycleEvent.WRAPPING_UP
+        ]
+        elapsed_times = [
+            t.elapsed_seconds
+            for t in self._telemetry_log
+            if t.event == SessionLifecycleEvent.WRAPPING_UP
+        ]
+        restarts = sum(
+            1 for t in self._telemetry_log if t.event == SessionLifecycleEvent.RESTARTING
+        )
 
         return {
             "total_sessions": len({t.session_id for t in self._telemetry_log}),
             "total_wrapups": len(utilizations),
             "total_restarts": restarts,
-            "avg_utilization_at_wrapup": sum(utilizations) / len(utilizations) if utilizations else 0.0,
+            "avg_utilization_at_wrapup": sum(utilizations) / len(utilizations)
+            if utilizations
+            else 0.0,
             "min_utilization_at_wrapup": min(utilizations) if utilizations else 0.0,
             "max_utilization_at_wrapup": max(utilizations) if utilizations else 0.0,
-            "avg_elapsed_seconds": sum(elapsed_times) / len(elapsed_times) if elapsed_times else 0.0,
+            "avg_elapsed_seconds": sum(elapsed_times) / len(elapsed_times)
+            if elapsed_times
+            else 0.0,
         }
 
     # ------------------------------------------------------------------
@@ -224,5 +238,7 @@ class SessionController:
         turns: int,
     ) -> tuple[bool, str]:
         """Public alias for check_limits with consistent return shape."""
-        breached, reason = self.check_limits(session_id, utilization_percent, elapsed_seconds, turns)
+        breached, reason = self.check_limits(
+            session_id, utilization_percent, elapsed_seconds, turns
+        )
         return breached, reason

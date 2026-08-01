@@ -58,10 +58,10 @@ class _MockBrowser:
 
 async def _mock_fetch_demo() -> None:
     """Run the pipeline against mocked Chrome to prove contracts."""
-    from animus.browser.bridge import BrowserBridge, BrowserConfig, BrowserResult
+    from animus.browser.bridge import BrowserConfig, BrowserResult
     from animus.browser.cache import BrowserCache
-    from animus.browser.rate_limit import RateLimitedDomain
     from animus.browser.extraction import ExtractionPipeline
+    from animus.browser.rate_limit import RateLimitedDomain
 
     print("=" * 60)
     print("Animus Browser Bridge — Mock POC")
@@ -80,12 +80,7 @@ async def _mock_fetch_demo() -> None:
 
     # 3. Extraction pipeline (no real tab — use the class directly)
     pipeline = ExtractionPipeline(cfg)
-    sample_html = (
-        "<html><body>"
-        "<h1>Hello World</h1>"
-        "<p>This is a paragraph.</p>"
-        "</body></html>"
-    )
+    sample_html = "<html><body><h1>Hello World</h1><p>This is a paragraph.</p></body></html>"
     # We can't call pipeline.extract without a real tab, but we can
     # verify the quality gate and cleaning logic directly.
     is_low = pipeline._is_low_quality("cookie consent subscribe newsletter")
@@ -102,12 +97,16 @@ async def _mock_fetch_demo() -> None:
         status_code=200,
         format=cfg.format,
     )
-    await cache.put("https://example.com/article", cfg, {
-        "url": result.url,
-        "title": result.title,
-        "content": result.content,
-        "status_code": result.status_code,
-    })
+    await cache.put(
+        "https://example.com/article",
+        cfg,
+        {
+            "url": result.url,
+            "title": result.title,
+            "content": result.content,
+            "status_code": result.status_code,
+        },
+    )
     cached = await cache.get("https://example.com/article", cfg)
     print(f"[5] Cache hit after put: {cached is not None}")
     print(f"    Cached title: {cached['title']}")

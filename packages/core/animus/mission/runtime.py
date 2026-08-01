@@ -7,7 +7,6 @@ implement the same interface as replaceable adapters.
 
 from __future__ import annotations
 
-from abc import abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Protocol
@@ -48,14 +47,12 @@ class AgentRuntime(Protocol):
     """
 
     @property
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     @property
-    def capabilities(self) -> RuntimeCapabilities:
-        ...
+    def capabilities(self) -> RuntimeCapabilities: ...
 
-    def spawn(self, order: "MissionOrder") -> str:
+    def spawn(self, order: MissionOrder) -> str:
         """Spawn a new mission context. Returns a runtime handle."""
         ...
 
@@ -117,7 +114,7 @@ class LocalRuntime:
     def capabilities(self) -> RuntimeCapabilities:
         return self._capabilities
 
-    def spawn(self, order: "MissionOrder") -> str:
+    def spawn(self, order: MissionOrder) -> str:
         import uuid
 
         handle = f"local-{uuid.uuid4().hex[:8]}"
@@ -140,12 +137,16 @@ class LocalRuntime:
         if ctx is None:
             return {"error": f"Handle {handle} not found", "status": "error"}
 
-        ctx["messages"].append({"direction": "in", "payload": payload, "timestamp": datetime.now().isoformat()})
+        ctx["messages"].append(
+            {"direction": "in", "payload": payload, "timestamp": datetime.now().isoformat()}
+        )
 
         # Simple dispatch: echo structured response based on payload type
         response = self._dispatch_message(ctx, payload)
 
-        ctx["messages"].append({"direction": "out", "payload": response, "timestamp": datetime.now().isoformat()})
+        ctx["messages"].append(
+            {"direction": "out", "payload": response, "timestamp": datetime.now().isoformat()}
+        )
         return response
 
     def _dispatch_message(self, ctx: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
@@ -200,7 +201,9 @@ class LocalRuntime:
         result = self._simulate_tool(tool_name, params, ctx)
         return result
 
-    def _simulate_tool(self, tool_name: str, params: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
+    def _simulate_tool(
+        self, tool_name: str, params: dict[str, Any], ctx: dict[str, Any]
+    ) -> dict[str, Any]:
         # Default simulation: return params as structured result
         # Subclasses or real adapters override this
         if tool_name == "read_file":

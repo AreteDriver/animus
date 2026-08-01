@@ -48,15 +48,15 @@ result = obj.do_something()
 
 ## Part of the Animus Monorepo
 
-- [Animus Core](https://github.com/AreteDriver/animus/tree/main/packages/core) — exocortex engine
-- [Animus Forge](https://github.com/AreteDriver/animus/tree/main/packages/forge) — orchestration
+- [Animus Core](https://github.com/your-org/animus/tree/main/packages/core) — exocortex engine
+- [Animus Forge](https://github.com/your-org/animus/tree/main/packages/forge) — orchestration
 - [Animus Quorum](https://pypi.org/project/convergentAI/) — coordination protocol
-- [Animus Bootstrap](https://github.com/AreteDriver/animus/tree/main/packages/bootstrap) — system daemon
+- [Animus Bootstrap](https://github.com/your-org/animus/tree/main/packages/bootstrap) — system daemon
 
 ## Development
 
 ```bash
-git clone git@github.com:AreteDriver/animus.git
+git clone git@github.com:your-org/animus.git
 cd animus/packages/<package-name>
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
@@ -65,4 +65,4 @@ pytest tests/ -v
 
 ## License
 
-MIT — 2026, AreteDriver
+MIT — 2026, your-org

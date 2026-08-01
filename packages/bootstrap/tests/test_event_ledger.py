@@ -6,8 +6,6 @@ import tempfile
 import time
 from pathlib import Path
 
-import pytest
-
 from animus_bootstrap.intelligence.event_ledger import EventLedger
 
 

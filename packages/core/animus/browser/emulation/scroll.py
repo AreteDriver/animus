@@ -7,7 +7,6 @@ Idle intervals are right-skewed to mirror natural reading pauses.
 
 from __future__ import annotations
 
-import math
 import random
 from typing import TYPE_CHECKING
 
@@ -39,7 +38,6 @@ class ScrollEmulator:
 
     async def traverse_page(self, tab: Any, timing: TimingEmulator) -> None:
         """Scroll through ~90 % of page height with natural pauses."""
-        import asyncio
 
         # Determine total scrollable height
         height_js = "document.body.scrollHeight - window.innerHeight"
@@ -75,7 +73,6 @@ class ScrollEmulator:
 
     async def scroll_to_element(self, tab: Any, selector: str, timing: TimingEmulator) -> None:
         """Smooth-scroll to an internal anchor with deceleration."""
-        import asyncio
 
         js = f"""
             const el = document.querySelector({repr(selector)});

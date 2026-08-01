@@ -5,15 +5,12 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-import pytest
-
 from animus_kernel.sandbox.analyzer import (
     AnalysisResult,
     CodebaseAnalyzer,
     ImprovementCategory,
     ImprovementSuggestion,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════
 # CodebaseAnalyzer static analysis tests
@@ -32,16 +29,20 @@ class TestCodebaseAnalyzerStatic:
     def test_detect_long_function(self):
         # Add a trailing short function so the analyzer's regex loop
         # has a chance to measure long_one's length.
-        code = '\n'.join([
-            "def short():",
-            "    pass",
-            "",
-            "def long_one():",
-        ] + ["    print('line')"] * 60 + [
-            "",
-            "def trailing():",
-            "    pass",
-        ])
+        code = "\n".join(
+            [
+                "def short():",
+                "    pass",
+                "",
+                "def long_one():",
+            ]
+            + ["    print('line')"] * 60
+            + [
+                "",
+                "def trailing():",
+                "    pass",
+            ]
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             src = Path(tmpdir) / "src"
@@ -244,7 +245,9 @@ class TestCodebaseAnalyzerStatic:
             doc_result = analyzer.analyze(categories=[ImprovementCategory.DOCUMENTATION])
 
             # Should only find doc issues
-            assert all(s.category == ImprovementCategory.DOCUMENTATION for s in doc_result.suggestions)
+            assert all(
+                s.category == ImprovementCategory.DOCUMENTATION for s in doc_result.suggestions
+            )
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -361,7 +364,7 @@ class TestCodebaseAnalyzerPerformance:
             assert not any("self_improve" in f for f in affected)
 
     def test_self_targeting_allows_self_improve_when_enabled(self):
-        code = 'def helper():\n    # TODO: optimize\n    pass\n'
+        code = "def helper():\n    # TODO: optimize\n    pass\n"
 
         with tempfile.TemporaryDirectory() as tmpdir:
             src = Path(tmpdir) / "src"

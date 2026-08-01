@@ -2,23 +2,21 @@
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
 
 from animus.code.chunking import (
+    ChunkingConfig,
     ChunkType,
     CodeChunk,
-    ChunkingConfig,
     _chunk_json,
     _chunk_markdown,
     _chunk_python,
     _chunk_window,
     _chunk_yaml,
     _redact_chunk,
-    chunk_file,
     chunk_codebase,
+    chunk_file,
 )
-
 
 # ---------------------------------------------------------------------------
 # Python AST chunking
@@ -27,10 +25,7 @@ from animus.code.chunking import (
 
 class TestChunkPython:
     def test_function_chunk(self):
-        code = (
-            "def hello():\n"
-            "    pass\n"
-        )
+        code = "def hello():\n    pass\n"
         chunks = _chunk_python(code, ChunkingConfig())
         funcs = [c for c in chunks if c.chunk_type == ChunkType.FUNCTION]
         assert len(funcs) == 1
@@ -39,21 +34,14 @@ class TestChunkPython:
         assert funcs[0].end_line == 2
 
     def test_async_function_chunk(self):
-        code = (
-            "async def fetch():\n"
-            "    return 42\n"
-        )
+        code = "async def fetch():\n    return 42\n"
         chunks = _chunk_python(code, ChunkingConfig())
         funcs = [c for c in chunks if c.chunk_type == ChunkType.FUNCTION]
         assert len(funcs) == 1
         assert funcs[0].metadata["name"] == "fetch"
 
     def test_class_chunk(self):
-        code = (
-            "class Foo:\n"
-            "    def bar(self):\n"
-            "        pass\n"
-        )
+        code = "class Foo:\n    def bar(self):\n        pass\n"
         chunks = _chunk_python(code, ChunkingConfig())
         classes = [c for c in chunks if c.chunk_type == ChunkType.CLASS]
         methods = [c for c in chunks if c.chunk_type == ChunkType.METHOD]
@@ -77,12 +65,7 @@ class TestChunkPython:
         assert classes[0].metadata["name"] == "Big"
 
     def test_module_level_code(self):
-        code = (
-            "x = 1\n"
-            "def hello():\n"
-            "    pass\n"
-            "y = 2\n"
-        )
+        code = "x = 1\ndef hello():\n    pass\ny = 2\n"
         chunks = _chunk_python(code, ChunkingConfig())
         mods = [c for c in chunks if c.chunk_type == ChunkType.MODULE]
         assert len(mods) == 1
@@ -103,12 +86,7 @@ class TestChunkPython:
 class TestChunkMarkdown:
     def test_header_split(self):
         text = (
-            "# Title\n\n"
-            "Intro text.\n\n"
-            "## Section A\n\n"
-            "Content A.\n\n"
-            "## Section B\n\n"
-            "Content B.\n"
+            "# Title\n\nIntro text.\n\n## Section A\n\nContent A.\n\n## Section B\n\nContent B.\n"
         )
         chunks = _chunk_markdown(text, ChunkingConfig())
         assert len(chunks) == 3
@@ -135,12 +113,7 @@ class TestChunkMarkdown:
 
 class TestChunkYaml:
     def test_top_level_keys(self):
-        text = (
-            "foo: 1\n"
-            "bar:\n"
-            "  nested: 2\n"
-            "baz: 3\n"
-        )
+        text = "foo: 1\nbar:\n  nested: 2\nbaz: 3\n"
         chunks = _chunk_yaml(text, ChunkingConfig())
         assert len(chunks) == 3
         keys = {c.metadata["key"] for c in chunks}

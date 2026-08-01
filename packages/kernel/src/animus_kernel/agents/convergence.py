@@ -184,7 +184,10 @@ def create_bridge(db_path: str | None = None) -> Any:
     try:
         from pathlib import Path
 
-        from animus_quorum import CoordinationConfig, GorgonBridge  # boundary-ok: optional Quorum integration
+        from animus_quorum import (  # boundary-ok: optional Quorum integration
+            CoordinationConfig,
+            GorgonBridge,
+        )
 
         if db_path is None:
             db_dir = Path.home() / ".animus"

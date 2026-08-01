@@ -430,13 +430,12 @@ def main():
     # Show pending autonomous proposals on startup
     try:
         from animus.citizens import ProposalQueue
+
         pq = ProposalQueue(memory_layer=None)
         pq.load_from_memory()
         pending = pq.list_pending()
         if pending:
-            console.print(
-                f"\n[yellow]⚡ {len(pending)} proposal(s) pending review:[/yellow]"
-            )
+            console.print(f"\n[yellow]⚡ {len(pending)} proposal(s) pending review:[/yellow]")
             for qp in pending[:3]:
                 p = qp.proposal
                 console.print(
@@ -518,20 +517,25 @@ def main():
         proactive = ProactiveEngine(config.data_dir, memory)
         logger.info("Proactive engine initialized")
 
-    # Dual-model routing: if primary is Ollama and ANTHROPIC_API_KEY is set,
-    # use Claude as primary brain and Ollama as local hands (or vice versa).
+    # Ollama-first: cloud providers are opt-in only.
+    # Set ANIMUS_CLOUD_PROVIDER=anthropic|openai to enable cloud.
     fallback_config: ModelConfig | None = None
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
-    if model_config.provider.value == "ollama" and anthropic_key:
-        # Swap: Claude becomes primary, Ollama becomes fallback
-        fallback_config = model_config
+    cloud_provider = os.environ.get("ANIMUS_CLOUD_PROVIDER", "").lower()
+    if cloud_provider == "anthropic":
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not anthropic_key:
+            raise ValueError("ANIMUS_CLOUD_PROVIDER=anthropic requires ANTHROPIC_API_KEY")
+        fallback_config = model_config  # Ollama becomes fallback
         model_config = ModelConfig.anthropic("claude-sonnet-4-20250514")
         model_config.api_key = anthropic_key
-    elif model_config.provider.value == "anthropic":
-        # Add Ollama fallback for cheap tasks
-        ollama_model = os.environ.get("OLLAMA_MODEL", "deepseek-coder-v2")
-        fallback_config = ModelConfig.ollama(ollama_model)
-        fallback_config.base_url = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+    elif cloud_provider == "openai":
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        if not openai_key:
+            raise ValueError("ANIMUS_CLOUD_PROVIDER=openai requires OPENAI_API_KEY")
+        fallback_config = model_config
+        model_config = ModelConfig.openai("gpt-4o")
+        model_config.api_key = openai_key
+    # Default: Ollama remains primary, no fallback
 
     cognitive = CognitiveLayer(
         primary_config=model_config,
@@ -589,7 +593,7 @@ def main():
             cz = identity.citizen_zero
             migrated = False
             if "founding_human" not in cz:
-                cz["founding_human"] = "AreteDriver"
+                cz["founding_human"] = os.environ.get("ANIMUS_FOUNDING_HUMAN", "your-username")
                 migrated = True
             if "founding_events" not in cz:
                 cz["founding_events"] = [
@@ -616,7 +620,7 @@ def main():
                 "role": "native",
                 "origin": "Evolved from Claude Code prototype",
                 "state_dir": config.citizen_zero.citizen_dir,
-                "founding_human": "AreteDriver",
+                "founding_human": os.environ.get("ANIMUS_FOUNDING_HUMAN", "your-username"),
                 "founding_events": [
                     "2026-06-22: Claude Code prototype formalized",
                     "2026-06-23: Animus-native implementation bootstrapped",

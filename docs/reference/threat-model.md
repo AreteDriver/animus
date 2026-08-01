@@ -4,7 +4,7 @@ Status: living document. Last updated 2026-05-26 alongside the 10/10
 polish pass (post-Stage 3.D + sibling adopters + systemd narrowing).
 
 This document captures what the [hardening
-pass](https://github.com/AreteDriver/animus/blob/main/packages/core/animus/scripts/verify_hardening.py) defends
+pass](https://github.com/your-org/animus/blob/main/packages/core/animus/scripts/verify_hardening.py) defends
 against, the adversaries it considers, the assumptions it relies on,
 and what it explicitly does not address. The hardening was built
 reactively against specific surfaces; this document is the formal

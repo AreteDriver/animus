@@ -12,8 +12,6 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import pytest
-
 from animus.citizens.proposal import ProposalStatus
 from animus.citizens.session_steward import (
     EfficiencyPattern,
@@ -21,7 +19,6 @@ from animus.citizens.session_steward import (
     SessionAuditReport,
     SessionStewardCitizen,
 )
-
 
 # ── Mock Telemetry ────────────────────────────────────────────────
 

@@ -86,9 +86,10 @@ class TestEventLedgerIntegration:
 
     def test_task_create_records_event(self, client: TestClient) -> None:
         """Creating a task via dashboard records a task_created event."""
-        from animus_bootstrap.intelligence.tools.builtin.task_store import TaskStore
-        import tempfile
         import pathlib
+        import tempfile
+
+        from animus_bootstrap.intelligence.tools.builtin.task_store import TaskStore
 
         with tempfile.TemporaryDirectory() as tmp:
             store = TaskStore(pathlib.Path(tmp) / "tasks.db")
@@ -101,7 +102,12 @@ class TestEventLedgerIntegration:
 
             resp = client.post(
                 "/tasks/create",
-                data={"name": "test event", "description": "", "priority": "normal", "due_date": ""},
+                data={
+                    "name": "test event",
+                    "description": "",
+                    "priority": "normal",
+                    "due_date": "",
+                },
                 headers=_csrf_headers(client),
                 follow_redirects=False,
             )

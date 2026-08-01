@@ -1,7 +1,7 @@
 # Animus — Lean Manufacturing Audit
 
-**Method:** Toyota Production System (TPS) applied to software · Date: 2026-06-14  
-**Auditor:** ARETE · Scope: 564 commits across 18 months · Outcome: Cut, Repurpose, Accelerate  
+**Method:** Toyota Production System (TPS) applied to software · Date: 2026-06-14
+**Auditor:** ARETE · Scope: 564 commits across 18 months · Outcome: Cut, Repurpose, Accelerate
 **Doctrine:** *"The floor is still the test."* — Principle: value is proven only by usage, not by architecture diagrams.
 
 ---
@@ -190,8 +190,8 @@ Portfolio updates ←→ Discord/Slack (operator copies/pastes manually)
 | C7 | **Skill evolver + benchmark CI** | Evolver exists with no skills to evolve | Delete `evolver/`. Benchmarks: move to manual quarterly run, not CI. |
 | C8 | **OGMA synthesis package** | Research artifact, not product code | Extract to `research/ogma-spec.md`. Delete `packages/ogma/`. |
 
-**Estimated code reduction: ~15,000 lines (~30% of repo).**  
-**Test reduction: ~2,000 tests (still leaving 12,000+).**  
+**Estimated code reduction: ~15,000 lines (~30% of repo).**
+**Test reduction: ~2,000 tests (still leaving 12,000+).**
 **Maintenance burden: Significantly reduced.**
 
 ---
@@ -235,8 +235,8 @@ Portfolio updates ←→ Discord/Slack (operator copies/pastes manually)
               → [Act manually] → [Forget to record outcome] → [Repeat next session]
 ```
 
-**Lead time:** Variable, 5 min–30 min per interaction.  
-**Touchpoints:** 4–7.  
+**Lead time:** Variable, 5 min–30 min per interaction.
+**Touchpoints:** 4–7.
 **Automation:** Low. Operator carries context.
 
 ### Future State (lean)
@@ -248,13 +248,13 @@ Portfolio updates ←→ Discord/Slack (operator copies/pastes manually)
               → [Next session begins where last ended, no manual recall]
 ```
 
-**Lead time:** Near-zero.  
-**Touchpoints:** 1 (Claude Code).  
+**Lead time:** Near-zero.
+**Touchpoints:** 1 (Claude Code).
 **Automation:** High. Animus carries context.
 
 ### The Constraint
 
-The bottleneck is **not** the model or the memory or the UI.  
+The bottleneck is **not** the model or the memory or the UI.
 The bottleneck is **transport** — moving context between the operator's brain and the tools.
 
 **Elevate the constraint:** Make MCP consume everything. Eliminate all other interfaces as primary surfaces. The dashboard becomes a read-only status page. The PWA becomes a capture-only satellite. The CLI becomes an emergency fallback.

@@ -6,8 +6,6 @@ Tools are registered via the existing animus MCP server plumbing.
 
 from __future__ import annotations
 
-import json
-import logging
 from typing import Any
 
 from animus.browser.bridge import BrowserBridge, BrowserConfig, BrowserResult

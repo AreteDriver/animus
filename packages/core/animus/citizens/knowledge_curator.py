@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -182,8 +182,27 @@ class KnowledgeCuratorCitizen:
         claims: list[tuple[str, str, dict]] = []  # (topic, claim_polarity, context)
 
         polarity_keywords = {
-            "positive": ["is", "does", "supports", "enables", "improves", "correct", "fast", "safe"],
-            "negative": ["is not", "does not", "breaks", "disables", "degrades", "bug", "slow", "unsafe", "deprecated"],
+            "positive": [
+                "is",
+                "does",
+                "supports",
+                "enables",
+                "improves",
+                "correct",
+                "fast",
+                "safe",
+            ],
+            "negative": [
+                "is not",
+                "does not",
+                "breaks",
+                "disables",
+                "degrades",
+                "bug",
+                "slow",
+                "unsafe",
+                "deprecated",
+            ],
         }
 
         for mem in memories:
@@ -198,12 +217,22 @@ class KnowledgeCuratorCitizen:
 
             for topic in topics:
                 topic_lc = topic.lower()
-                pos_score = sum(1 for kw in polarity_keywords["positive"] if topic_lc in content and kw in content)
-                neg_score = sum(1 for kw in polarity_keywords["negative"] if topic_lc in content and kw in content)
+                pos_score = sum(
+                    1
+                    for kw in polarity_keywords["positive"]
+                    if topic_lc in content and kw in content
+                )
+                neg_score = sum(
+                    1
+                    for kw in polarity_keywords["negative"]
+                    if topic_lc in content and kw in content
+                )
 
                 if pos_score > 0 or neg_score > 0:
                     polarity = "positive" if pos_score >= neg_score else "negative"
-                    claims.append((topic, polarity, {"memory_id": mem_id, "content_snippet": content[:100]}))
+                    claims.append(
+                        (topic, polarity, {"memory_id": mem_id, "content_snippet": content[:100]})
+                    )
 
         # Find contradictions: same topic, opposite polarity from different memories
         topic_polarities: dict[str, list[tuple[str, dict]]] = {}
@@ -260,10 +289,23 @@ class KnowledgeCuratorCitizen:
 
         # Time-sensitive keywords that degrade without dates
         time_sensitive_keywords = [
-            "recently", "lately", "new", "upcoming", "soon",
-            "last month", "last week", "yesterday", "just",
-            "deprecated", "version", "v2", "v3", "latest",
-            "now supports", "recently changed", "ccpgames",
+            "recently",
+            "lately",
+            "new",
+            "upcoming",
+            "soon",
+            "last month",
+            "last week",
+            "yesterday",
+            "just",
+            "deprecated",
+            "version",
+            "v2",
+            "v3",
+            "latest",
+            "now supports",
+            "recently changed",
+            "ccpgames",
         ]
 
         for mem in memories:
@@ -413,6 +455,7 @@ class KnowledgeCuratorCitizen:
 
         try:
             from animus.citizens.eval_evidence import query_eval_runs
+
             eval_runs = query_eval_runs(limit=20)
 
             for run in eval_runs:
@@ -422,7 +465,12 @@ class KnowledgeCuratorCitizen:
                 rubric_band = run.get("rubric_band", "")
 
                 # Knowledge-relevant failure modes
-                knowledge_failures = {"schema_drift", "hallucination", "wrong_answer", "contract_violation"}
+                knowledge_failures = {
+                    "schema_drift",
+                    "hallucination",
+                    "wrong_answer",
+                    "contract_violation",
+                }
                 if failure_mode in knowledge_failures:
                     observations.append(
                         Observation(
@@ -513,7 +561,10 @@ class KnowledgeCuratorCitizen:
             return None
 
         # Focus on highest-severity drift
-        top = max(drifts, key=lambda d: {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(d.severity, 0))
+        top = max(
+            drifts,
+            key=lambda d: {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(d.severity, 0),
+        )
 
         # Build problem/recommendation based on drift type
         problem, recommendation = self._build_problem_recommendation(top)
@@ -557,7 +608,10 @@ class KnowledgeCuratorCitizen:
             evidence=evidence[:5],  # Limit evidence to top 5
             root_cause="Knowledge accumulated without systematic verification or cross-referencing",
             recommendation=recommendation,
-            alternatives_considered=["Status quo (stale knowledge persists)", "Manual periodic audits"],
+            alternatives_considered=[
+                "Status quo (stale knowledge persists)",
+                "Manual periodic audits",
+            ],
             expected_benefits="Higher trust in Animus memory; fewer incorrect code suggestions",
             potential_risks=risks,
             confidence_score=0.6,
@@ -565,7 +619,11 @@ class KnowledgeCuratorCitizen:
             affected_components=components,
             evaluation_plan="Re-run Knowledge Curator scan after maintenance; verify drift count reduced",
             rollback_plan="Restore memory from snapshot taken before maintenance",
-            success_metrics=["Stale reference count reduced", "Contradictions resolved", "Orphan topics linked"],
+            success_metrics=[
+                "Stale reference count reduced",
+                "Contradictions resolved",
+                "Orphan topics linked",
+            ],
             status=ProposalStatus.DRAFT,
         )
 
@@ -638,7 +696,9 @@ class KnowledgeCuratorCitizen:
         anchors = []
 
         # Look for module/file references
-        for match in re.finditer(r"\b([a-z_][a-z0-9_]*)\.(?:py|js|ts|go|rs)\b", content, re.IGNORECASE):
+        for match in re.finditer(
+            r"\b([a-z_][a-z0-9_]*)\.(?:py|js|ts|go|rs)\b", content, re.IGNORECASE
+        ):
             anchors.append(match.group(1))
 
         # Look for ClassName references (CamelCase)
@@ -646,7 +706,9 @@ class KnowledgeCuratorCitizen:
             anchors.append(match.group(1))
 
         # Look for function_name references following "def " or "method "
-        for match in re.finditer(r"\b(?:def|method|function)\s+([a-z_][a-z0-9_]*)\b", content, re.IGNORECASE):
+        for match in re.finditer(
+            r"\b(?:def|method|function)\s+([a-z_][a-z0-9_]*)\b", content, re.IGNORECASE
+        ):
             anchors.append(match.group(1))
 
         return list(set(anchors))

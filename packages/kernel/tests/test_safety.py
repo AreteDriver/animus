@@ -5,10 +5,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-import pytest
-
 from animus_kernel.sandbox.safety import SafetyChecker, SafetyConfig, SafetyViolation
-
 
 # ═══════════════════════════════════════════════════════════════════
 # SafetyConfig tests

@@ -1,10 +1,10 @@
 # Animus Evidence Bundle
 
-**Version**: bootstrap-v0.8.0-198-g02f4810  
-**Git SHA**: `02f481007d924d6443b8b05f701b87c6f23f387b`  
-**Branch**: main  
-**Timestamp**: 2026-06-29T07:17:32.397034+00:00  
-**Builder**: arete  
+**Version**: bootstrap-v0.8.0-198-g02f4810
+**Git SHA**: `02f481007d924d6443b8b05f701b87c6f23f387b`
+**Branch**: main
+**Timestamp**: 2026-06-29T07:17:32.397034+00:00
+**Builder**: arete
 
 ---
 
@@ -23,7 +23,7 @@
 
 ## Schema Validation
 
-**All valid**: ✅ Yes  
+**All valid**: ✅ Yes
 **Schemas checked**: 20
 
 ## Dependencies

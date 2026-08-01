@@ -1,7 +1,7 @@
 # Forge / Kernel Executor Dedup — Phase 1 Gap Analysis
 
-> Analysis date: 2026-07-24  
-> Analyst: Claude (autonomous loop, ADL-20260723-001)  
+> Analysis date: 2026-07-24
+> Analyst: Claude (autonomous loop, ADL-20260723-001)
 > Scope: Identify overlapping and duplicated execution primitives between `packages/forge/` and `packages/kernel/`. Phase 2 (consolidation) requires explicit user confirmation.
 
 ---
@@ -129,29 +129,29 @@ These files exist only in Forge and add orchestration layers on top of Kernel pr
 ### Option A: Remove Forge Wrapper Layer (Minimal)
 Replace all `from animus_forge.workflow import X` with `from animus_kernel.executor import X` across Forge codebase. Delete `forge/src/animus_forge/workflow/` wrappers.
 
-**Effort:** ~1 day  
-**Impact:** Breaks any external code importing from `animus_forge.workflow`  
+**Effort:** ~1 day
+**Impact:** Breaks any external code importing from `animus_forge.workflow`
 **Benefit:** Eliminates 279 lines of dead-weight indirection
 
 ### Option B: Merge `executions/` into Kernel (Medium)
 Move `executions/` to Kernel as the canonical implementation. Have Forge re-export from Kernel (like `workflow/` does today).
 
-**Effort:** ~2–3 days  
-**Impact:** Requires reconciling `state.backends` import paths  
+**Effort:** ~2–3 days
+**Impact:** Requires reconciling `state.backends` import paths
 **Benefit:** Eliminates the last significant soft-fork
 
 ### Option C: Extract Shared Execution Platform (Large)
 Move all execution primitives (executor + executions + shared state) into a new `packages/execution/` package. Both Forge and Kernel depend on it.
 
-**Effort:** ~1–2 weeks  
-**Impact:** Major dependency restructuring; requires CI overhaul  
+**Effort:** ~1–2 weeks
+**Impact:** Major dependency restructuring; requires CI overhaul
 **Benefit:** Cleanest architecture for future multi-package scaling
 
 ### Option D: Leave As-Is (Recommended for Now)
 The current pattern (Kernel owns engine, Forge re-exports + adds orchestration) is functional and well-tested. The duplication surface is small (`executions/` soft-fork, 530 lines). The cost of refactoring exceeds the maintenance burden at this time.
 
-**Effort:** 0 days  
-**Impact:** None  
+**Effort:** 0 days
+**Impact:** None
 **Benefit:** Preserves stability; revisit after Kernel reaches v1.0
 
 ---

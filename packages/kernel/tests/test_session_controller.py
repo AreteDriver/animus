@@ -11,8 +11,6 @@ from datetime import timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from animus_kernel.head.checkpoint import HeadCheckpoint, HeadCheckpointStore
 from animus_kernel.head.context_manager import HeadContextManager
 from animus_kernel.head.repl import HeadREPL
@@ -20,9 +18,7 @@ from animus_kernel.head.session_controller import (
     SessionController,
     SessionLifecycleEvent,
     SessionPolicy,
-    SessionTelemetry,
 )
-
 
 # ------------------------------------------------------------------
 # SessionPolicy
@@ -236,9 +232,7 @@ class TestHeadREPLSessionLifecycle:
                 assert repl._session_wrapped_up is True
 
     def test_restart_session_generates_new_id(self) -> None:
-        with patch.object(
-            HeadREPL, "_generate_session_id", side_effect=["old-id", "new-id"]
-        ):
+        with patch.object(HeadREPL, "_generate_session_id", side_effect=["old-id", "new-id"]):
             with patch("animus_kernel.head.repl.OllamaProvider") as mock_provider:
                 mock_provider.return_value.is_configured.return_value = True
                 repl = HeadREPL(model="qwen2.5:14b")

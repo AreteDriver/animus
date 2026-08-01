@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Form, Request
-from markupsafe import escape as _esc
 
 router = APIRouter()
 
@@ -46,16 +45,30 @@ async def identity_edit_form(filename: str, request: Request) -> object:
     mgr = _get_identity_manager(request)
     if mgr is None:
         return templates.TemplateResponse(
-            request, "fragments/identity_edit_form.html",
-            {"filename": "", "card_id": "", "content": "", "locked": True, "error": "Identity manager not available."}
+            request,
+            "fragments/identity_edit_form.html",
+            {
+                "filename": "",
+                "card_id": "",
+                "content": "",
+                "locked": True,
+                "error": "Identity manager not available.",
+            },
         )
 
     try:
         content = mgr.read(filename)
     except ValueError:
         return templates.TemplateResponse(
-            request, "fragments/identity_edit_form.html",
-            {"filename": "", "card_id": "", "content": "", "locked": True, "error": "Unknown identity file."}
+            request,
+            "fragments/identity_edit_form.html",
+            {
+                "filename": "",
+                "card_id": "",
+                "content": "",
+                "locked": True,
+                "error": "Unknown identity file.",
+            },
         )
 
     locked = filename in mgr.LOCKED_FILES
@@ -74,8 +87,15 @@ async def identity_save(filename: str, request: Request, content: str = Form("")
     mgr = _get_identity_manager(request)
     if mgr is None:
         return templates.TemplateResponse(
-            request, "fragments/identity_file_view.html",
-            {"filename": "", "card_id": "", "preview": "", "locked": True, "error": "Identity manager not available."}
+            request,
+            "fragments/identity_file_view.html",
+            {
+                "filename": "",
+                "card_id": "",
+                "preview": "",
+                "locked": True,
+                "error": "Identity manager not available.",
+            },
         )
 
     locked = filename in mgr.LOCKED_FILES
@@ -86,8 +106,15 @@ async def identity_save(filename: str, request: Request, content: str = Form("")
             mgr.write(filename, content)
     except (ValueError, PermissionError):
         return templates.TemplateResponse(
-            request, "fragments/identity_file_view.html",
-            {"filename": filename, "card_id": filename.replace(".", "-"), "preview": "", "locked": locked, "error": "Failed to save file."}
+            request,
+            "fragments/identity_file_view.html",
+            {
+                "filename": filename,
+                "card_id": filename.replace(".", "-"),
+                "preview": "",
+                "locked": locked,
+                "error": "Failed to save file.",
+            },
         )
 
     return _render_file_view(request, filename, content, locked)
@@ -100,16 +127,30 @@ async def identity_view(filename: str, request: Request) -> object:
     mgr = _get_identity_manager(request)
     if mgr is None:
         return templates.TemplateResponse(
-            request, "fragments/identity_file_view.html",
-            {"filename": "", "card_id": "", "preview": "", "locked": True, "error": "Identity manager not available."}
+            request,
+            "fragments/identity_file_view.html",
+            {
+                "filename": "",
+                "card_id": "",
+                "preview": "",
+                "locked": True,
+                "error": "Identity manager not available.",
+            },
         )
 
     try:
         content = mgr.read(filename)
     except ValueError:
         return templates.TemplateResponse(
-            request, "fragments/identity_file_view.html",
-            {"filename": "", "card_id": "", "preview": "", "locked": True, "error": "Unknown identity file."}
+            request,
+            "fragments/identity_file_view.html",
+            {
+                "filename": "",
+                "card_id": "",
+                "preview": "",
+                "locked": True,
+                "error": "Unknown identity file.",
+            },
         )
 
     locked = filename in mgr.LOCKED_FILES

@@ -905,9 +905,7 @@ Respond with ONLY valid JSON in this exact format:
         if self._judge_provider is None:
             raise JudgeError("rubric_judge has no judge_provider configured")
 
-        criteria_block = "\n".join(
-            f"- {name}: {desc}" for name, desc in self._criteria.items()
-        )
+        criteria_block = "\n".join(f"- {name}: {desc}" for name, desc in self._criteria.items())
         prompt = self._prompt_template.format(
             input=case.input,
             expected=expected or "N/A",

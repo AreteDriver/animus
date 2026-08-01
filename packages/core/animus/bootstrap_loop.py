@@ -27,7 +27,6 @@ from animus.citizens import (
     ProposalQueue,
     TestOracleCitizen,
 )
-from animus.citizens.proposal import ProposalStatus
 from animus.cognitive import CognitiveLayer, ModelConfig
 from animus.forge.engine import ForgeEngine
 from animus.forge.models import AgentConfig, GateConfig, WorkflowConfig, WorkflowState
@@ -158,11 +157,19 @@ def run_consensus(
     to accept proposed improvements.
     """
     try:
-        from animus_quorum.coordination_config import CoordinationConfig  # boundary-ok: optional Quorum integration
-        from animus_quorum.protocol import AgentIdentity, Vote, VoteChoice  # boundary-ok: optional Quorum integration
+        from animus_quorum.coordination_config import (
+            CoordinationConfig,  # boundary-ok: optional Quorum integration
+        )
+        from animus_quorum.protocol import (  # boundary-ok: optional Quorum integration
+            AgentIdentity,
+            Vote,
+            VoteChoice,
+        )
         from animus_quorum.score_store import ScoreStore  # boundary-ok: optional Quorum integration
         from animus_quorum.scoring import PhiScorer  # boundary-ok: optional Quorum integration
-        from animus_quorum.triumvirate import Triumvirate  # boundary-ok: optional Quorum integration
+        from animus_quorum.triumvirate import (
+            Triumvirate,  # boundary-ok: optional Quorum integration
+        )
 
         # In-memory score store for bootstrap (no persistence needed yet)
         store = ScoreStore(":memory:")
@@ -348,7 +355,11 @@ class BootstrapLoop:
             self.memory = MemoryLayer(data_dir=mem_dir, backend="json")
 
         # Proposal queue for tracking approval lifecycle
-        queue_path = data_dir / "proposal_queue.json" if data_dir else identity.root / ".animus" / "proposal_queue.json"
+        queue_path = (
+            data_dir / "proposal_queue.json"
+            if data_dir
+            else identity.root / ".animus" / "proposal_queue.json"
+        )
         self.proposal_queue = ProposalQueue(
             memory_layer=self.memory,
             storage_path=str(queue_path),
@@ -384,7 +395,9 @@ class BootstrapLoop:
         # Conversation Designer citizen for NL interface improvements
         if self._enable_conversation_designer:
             self.conversation_designer = ConversationDesignerCitizen(
-                conversation_log_dir=data_dir / "conversations" if data_dir else identity.root / ".animus" / "conversations",
+                conversation_log_dir=data_dir / "conversations"
+                if data_dir
+                else identity.root / ".animus" / "conversations",
                 memory_layer=self.memory,
             )
             logger.info("Conversation Designer Citizen enabled for bootstrap loop")
@@ -406,7 +419,9 @@ class BootstrapLoop:
             self.test_oracle = TestOracleCitizen(
                 codebase_path=identity.root,
                 memory_layer=self.memory,
-                eval_results_dir=data_dir / ".animus" / "eval_results" if data_dir else identity.root / ".animus" / "eval_results",
+                eval_results_dir=data_dir / ".animus" / "eval_results"
+                if data_dir
+                else identity.root / ".animus" / "eval_results",
             )
             logger.info("Test Oracle Citizen enabled for bootstrap loop")
         else:
@@ -507,7 +522,9 @@ class BootstrapLoop:
 
         designer_result = self.run_conversation_designer_cycle()
         if designer_result:
-            citizen_proposals.append({"citizen": "conversation_designer", "proposal": designer_result})
+            citizen_proposals.append(
+                {"citizen": "conversation_designer", "proposal": designer_result}
+            )
 
         curator_result = self.run_knowledge_curator_cycle()
         if curator_result:
@@ -553,9 +570,7 @@ class BootstrapLoop:
         results = []
         for qp in approved:
             proposal = qp.proposal
-            logger.info(
-                f"Commissioning approved proposal {proposal.id}: {proposal.title}"
-            )
+            logger.info(f"Commissioning approved proposal {proposal.id}: {proposal.title}")
 
             # Execute via Forge Commissioner
             commission_result = self.forge_commissioner.commission(proposal)
@@ -566,7 +581,9 @@ class BootstrapLoop:
                     proposal.id, actor="forge", reason="Auto-executed at end of bootstrap cycle"
                 )
                 self.proposal_queue.complete(
-                    proposal.id, actor="forge", reason=f"Forge execution succeeded: {commission_result.stage_reached}"
+                    proposal.id,
+                    actor="forge",
+                    reason=f"Forge execution succeeded: {commission_result.stage_reached}",
                 )
                 logger.info(
                     f"Proposal {proposal.id} commissioned successfully. Stage: {commission_result.stage_reached}"
@@ -661,9 +678,7 @@ class BootstrapLoop:
                 self.proposal_queue.submit(
                     proposal, priority=1, tags=["architect", "auto-generated"]
                 )
-                logger.info(
-                    f"Architect generated proposal {proposal.id}: {proposal.title}"
-                )
+                logger.info(f"Architect generated proposal {proposal.id}: {proposal.title}")
                 return proposal.to_dict()
             else:
                 logger.info("Architect found no actionable findings this cycle")
@@ -733,9 +748,7 @@ class BootstrapLoop:
                 self.proposal_queue.submit(
                     proposal, priority=2, tags=["knowledge_curator", "auto-generated"]
                 )
-                logger.info(
-                    f"Knowledge Curator generated proposal {proposal.id}: {proposal.title}"
-                )
+                logger.info(f"Knowledge Curator generated proposal {proposal.id}: {proposal.title}")
                 return proposal.to_dict()
             else:
                 logger.info("Knowledge Curator found no actionable drift this cycle")
@@ -769,9 +782,7 @@ class BootstrapLoop:
                 self.proposal_queue.submit(
                     proposal, priority=1, tags=["test_oracle", "auto-generated"]
                 )
-                logger.info(
-                    f"Test Oracle generated proposal {proposal.id}: {proposal.title}"
-                )
+                logger.info(f"Test Oracle generated proposal {proposal.id}: {proposal.title}")
                 return proposal.to_dict()
             else:
                 logger.info("Test Oracle found no actionable regressions this cycle")

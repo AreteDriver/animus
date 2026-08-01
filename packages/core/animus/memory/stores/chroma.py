@@ -95,8 +95,7 @@ class ChromaMemoryStore(MemoryStore):
                 metadata={"hnsw:space": "cosine"},
             )
             logger.info(
-                f"ChromaDB ready at {self.chroma_dir} "
-                f"with {self.collection.count()} documents"
+                f"ChromaDB ready at {self.chroma_dir} with {self.collection.count()} documents"
             )
         except ImportError as e:
             raise ImportError("ChromaDB not installed. Install with: pip install chromadb") from e

@@ -276,7 +276,7 @@ For interviews and walkthroughs:
 
 ## Links
 
-- **Repository:** [github.com/AreteDriver/animus](https://github.com/AreteDriver/animus)
+- **Repository:** [github.com/your-org/animus](https://github.com/your-org/animus)
 - **Architecture:** [docs/../architecture/overview.md](../architecture/overview.md)
 - **Use Cases:** [docs/use-cases.md](use-cases.md)
 - **Safety Model:** [docs/../reference/safety.md](../reference/safety.md)

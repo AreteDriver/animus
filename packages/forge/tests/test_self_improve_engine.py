@@ -707,9 +707,7 @@ class TestFullPipeline:
 
         # Patch analyzer to return probe + legit suggestions
         with patch.object(orch.analyzer, "analyze") as mock_analyze:
-            mock_analyze.return_value = MagicMock(
-                suggestions=[probe_suggestion, legit_suggestion]
-            )
+            mock_analyze.return_value = MagicMock(suggestions=[probe_suggestion, legit_suggestion])
             with patch.object(orch, "_apply_changes") as mock_apply:
                 result = asyncio.run(orch.run())
 

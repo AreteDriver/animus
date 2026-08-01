@@ -1,9 +1,9 @@
 # Animus Project Charter
 
-**Version**: 1.0  
-**Date**: 2026-06-18  
-**Classification**: Flagship  
-**Owner**: AreteDriver  
+**Version**: 1.0
+**Date**: 2026-06-18
+**Classification**: Flagship
+**Owner**: your-org
 
 ---
 
@@ -52,7 +52,7 @@ Build a **Mind-class AI exocortex** — a persistent, self-improving personal in
 
 ## Authority
 
-- **Decision maker**: AreteDriver
+- **Decision maker**: your-org
 - **Architecture authority**: ADL entries (ADL-20260618-001 for v2.1 commitment)
 - **Change control**: ADR process in `adrs/`
 

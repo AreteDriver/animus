@@ -130,7 +130,11 @@ class YouTubeSource:
         if self.playlist_url:
             # Derive a stable source_id from the playlist URL
             match = re.search(r"[?&]list=([A-Za-z0-9_-]+)", self.playlist_url)
-            return f"youtube:playlist:{match.group(1)}" if match else f"youtube:playlist:{self.playlist_url}"
+            return (
+                f"youtube:playlist:{match.group(1)}"
+                if match
+                else f"youtube:playlist:{self.playlist_url}"
+            )
         return f"youtube:{self.channel}"
 
     def fetch(self, limit: int | None = None) -> Iterable[SourceItem]:
@@ -289,7 +293,12 @@ def probe_playlist(playlist_url: str) -> dict:
     if not _yt_dlp_available():
         return {"ok": False, "video_count": 0, "sample_titles": [], "error": "yt-dlp not installed"}
     if not playlist_url or "list=" not in playlist_url:
-        return {"ok": False, "video_count": 0, "sample_titles": [], "error": "not a valid playlist URL"}
+        return {
+            "ok": False,
+            "video_count": 0,
+            "sample_titles": [],
+            "error": "not a valid playlist URL",
+        }
     src = YouTubeSource(playlist_url=playlist_url, fetch_captions=False, list_limit=3)
     rows = src._list_videos(3)
     return {

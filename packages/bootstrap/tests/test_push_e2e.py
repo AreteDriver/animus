@@ -26,10 +26,10 @@ from animus_bootstrap.dashboard.app import app
 from animus_bootstrap.intelligence.push_sender import generate_vapid_keys
 from animus_bootstrap.intelligence.push_store import PushSubscriptionStore
 
-
 # ------------------------------------------------------------------
 # Mock push endpoint
 # ------------------------------------------------------------------
+
 
 class _Captured:
     """Thread-safe request capture."""
@@ -56,11 +56,13 @@ class _MockPushHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length) if content_length > 0 else b""
 
-        CAPTURED.add({
-            "path": self.path,
-            "headers": dict(self.headers),
-            "body": body.decode("utf-8") if body else None,
-        })
+        CAPTURED.add(
+            {
+                "path": self.path,
+                "headers": dict(self.headers),
+                "body": body.decode("utf-8") if body else None,
+            }
+        )
 
         self.send_response(201)
         self.end_headers()
@@ -126,7 +128,9 @@ def _wait_for_requests(captured: _Captured, expected: int, timeout: float = 3.0)
         if len(reqs) >= expected:
             return reqs
         if time.monotonic() >= deadline:
-            raise AssertionError(f"Expected {expected} request(s), got {len(reqs)} after {timeout}s")
+            raise AssertionError(
+                f"Expected {expected} request(s), got {len(reqs)} after {timeout}s"
+            )
         time.sleep(0.05)
 
 
@@ -155,7 +159,9 @@ def restore_push_store() -> Iterator[None]:
 
 
 class TestPushE2E:
-    def test_send_test_hits_mock_endpoint(self, tmp_path, monkeypatch, restore_push_store: None) -> None:  # type: ignore[no-untyped-def]
+    def test_send_test_hits_mock_endpoint(
+        self, tmp_path, monkeypatch, restore_push_store: None
+    ) -> None:  # type: ignore[no-untyped-def]
         """Subscribe a fake endpoint on a local HTTP server, send a test push,
         and verify the mock server receives a well-formed Web Push request.
         """
@@ -172,13 +178,15 @@ class TestPushE2E:
 
         # Create a store with one subscription pointing at our mock server.
         store = PushSubscriptionStore(tmp_path / "push_e2e.db")
-        store.add({
-            "endpoint": endpoint,
-            "keys": {
-                "p256dh": "BOrvLCh7aN4U8bZ3vVjQv8X1s2t3u4v5w6x7y8z9a0b1c2d3e4f5g6h7i8j9k0l1m2n3o4p5q6r7s8t9u0v1w2x3y4z5a6b7c8d9e0f1",
-                "auth": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-            },
-        })
+        store.add(
+            {
+                "endpoint": endpoint,
+                "keys": {
+                    "p256dh": "BOrvLCh7aN4U8bZ3vVjQv8X1s2t3u4v5w6x7y8z9a0b1c2d3e4f5g6h7i8j9k0l1m2n3o4p5q6r7s8t9u0v1w2x3y4z5a6b7c8d9e0f1",
+                    "auth": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+                },
+            }
+        )
         app.state.push_store = store
 
         # Generate real VAPID keys so the JWT signature is valid.
@@ -242,10 +250,12 @@ class TestPushE2E:
         monkeypatch.setitem(sys.modules, "pywebpush", fake)
 
         store = PushSubscriptionStore(tmp_path / "push_e2e_prune.db")
-        store.add({
-            "endpoint": endpoint,
-            "keys": {"p256dh": "x", "auth": "y"},
-        })
+        store.add(
+            {
+                "endpoint": endpoint,
+                "keys": {"p256dh": "x", "auth": "y"},
+            }
+        )
         app.state.push_store = store
 
         original_config = getattr(app.state, "config", None)
