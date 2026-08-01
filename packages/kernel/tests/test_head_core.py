@@ -194,7 +194,7 @@ class TestHeadToolOrchestrator:
                 memory_dir=Path(tmpdir) / "memory",
                 enable_shell=True,
             )
-            result = orchestrator.execute("run_shell", {"command": "rm -rf /"})
+            result = orchestrator.execute("run_shell", {"command": "whoami"})
             assert "not in allowed list" in result
 
     def test_remember_and_recall(self) -> None:

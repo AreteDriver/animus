@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shlex
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -371,46 +372,103 @@ class HeadToolOrchestrator:
     # Handlers
     # ------------------------------------------------------------------
 
+    # Characters that enable shell parsing when they appear in a command
+    # string.  Rejecting them before shlex.split prevents chaining, pipes,
+    # redirections, command substitution, newline injection, and backslash
+    # escapes from reaching the subprocess invocation.
+    _SHELL_INJECTION_CHARS: frozenset[str] = frozenset(";&|`$<>\\\n\r")
+
+    # Interpreter binaries that can execute arbitrary code from an argument.
+    _INTERPRETER_COMMANDS: frozenset[str] = frozenset(
+        {"python", "python3", "node", "nodejs", "ruby", "perl", "php"}
+    )
+    _INTERPRETER_CODE_FLAGS: frozenset[str] = frozenset({"-c", "--command", "-e", "--eval"})
+
     def _handle_run_shell(self, args: dict) -> str:
-        """Safely execute a shell command."""
+        """Safely execute a shell command.
+
+        Runs with shell=False and an argv list.  Shell metacharacters are
+        rejected, only bare command names from the allowlist are permitted,
+        and the working directory is constrained to the project root.
+        """
         command = args.get("command", "").strip()
         if not command:
             return "[ERROR: Empty command]"
 
-        # Safety: extract the base command
-        base_cmd = command.split()[0]
+        if any(ch in command for ch in self._SHELL_INJECTION_CHARS):
+            return "[ERROR: Command contains forbidden shell metacharacters]"
+
+        try:
+            argv = shlex.split(command)
+        except ValueError as exc:
+            return f"[ERROR: Invalid command syntax: {exc}]"
+
+        if not argv:
+            return "[ERROR: Empty command]"
+
+        raw_base = argv[0]
+        if "/" in raw_base or "\\" in raw_base or raw_base.startswith(".."):
+            return f"[ERROR: Command must be a bare name, not a path: {raw_base}]"
+
+        base_cmd = raw_base
         if base_cmd not in self.allowed_commands:
             return (
                 f"[ERROR: Command '{base_cmd}' not in allowed list. "
                 f"Allowed: {sorted(self.allowed_commands)}]"
             )
 
-        cwd = args.get("cwd")
-        if cwd:
-            cwd = Path(cwd)
-            if not cwd.exists():
-                return f"[ERROR: Working directory does not exist: {cwd}]"
+        # Interpreter code-execution defense: reject flags like python -c or
+        # node -e that evaluate arbitrary code from an argument.
+        if base_cmd in self._INTERPRETER_COMMANDS:
+            if any(flag in argv for flag in self._INTERPRETER_CODE_FLAGS):
+                return f"[ERROR: Command '{base_cmd}' code-execution flag is not allowed]"
+
+        # Controlled cwd: must be a subdirectory of the project root.
+        cwd_arg = args.get("cwd")
+        if cwd_arg:
+            try:
+                cwd_path = Path(cwd_arg).resolve()
+                cwd_path.relative_to(self.project_root.resolve())
+            except (ValueError, OSError):
+                return f"[ERROR: Working directory outside project root: {cwd_arg}]"
         else:
-            cwd = self.project_root
+            cwd_path = self.project_root
+
+        if not cwd_path.exists():
+            return f"[ERROR: Working directory does not exist: {cwd_path}]"
+
+        # Cap timeout to a reasonable maximum.
+        max_timeout = 300
+        try:
+            timeout = int(args.get("timeout", 30))
+        except (TypeError, ValueError):
+            timeout = 30
+        timeout = min(max(timeout, 1), max_timeout)
 
         try:
             result = subprocess.run(
-                command,
-                shell=True,
+                argv,
+                shell=False,
                 capture_output=True,
                 text=True,
-                cwd=str(cwd),
-                timeout=30.0,
+                cwd=str(cwd_path),
+                timeout=timeout,
             )
             output = []
             if result.stdout:
-                output.append(f"STDOUT:\n{result.stdout}")
+                stdout = result.stdout
+                if len(stdout) > 8000:
+                    stdout = stdout[:8000] + "\n... [STDOUT TRUNCATED]"
+                output.append(f"STDOUT:\n{stdout}")
             if result.stderr:
-                output.append(f"STDERR:\n{result.stderr}")
+                stderr = result.stderr
+                if len(stderr) > 8000:
+                    stderr = stderr[:8000] + "\n... [STDERR TRUNCATED]"
+                output.append(f"STDERR:\n{stderr}")
             output.append(f"EXIT CODE: {result.returncode}")
             return "\n\n".join(output)
         except subprocess.TimeoutExpired:
-            return "[ERROR: Command timed out after 30 seconds]"
+            return f"[ERROR: Command timed out after {timeout}s]"
         except Exception as exc:
             return f"[ERROR: {exc}]"
 
