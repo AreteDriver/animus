@@ -244,6 +244,11 @@ class TestMCPServerRegistryUsesRestrictivePolicy:
 
                 _mcp_server_module.create_mcp_server()
 
+        # The stubbed reload above replaces module-level FastMCP with a stub.
+        # Reload with the real MCP SDK so subsequent tests in the same process
+        # do not inherit the stub.
+        importlib.reload(_mcp_server_module)
+
         assert "animus_run_workflow" in registered_tools, (
             f"animus_run_workflow tool not registered; got {list(registered_tools.keys())}"
         )

@@ -291,6 +291,11 @@ if FastMCP is not None:
             if max_concurrent_calls > 0:
                 self._concurrency_semaphore = asyncio.Semaphore(max_concurrent_calls)
 
+        @property
+        def _tools(self) -> dict[str, Any]:
+            """Backward-compatible `_tools` mapping (MCP SDK >=1.6 removed it)."""
+            return {tool.name: tool for tool in self._tool_manager.list_tools()}
+
         def _ensure_gater(self) -> None:
             """Populate gater with metadata from the tool manager."""
             if self._gater_initialized:
