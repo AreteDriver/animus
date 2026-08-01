@@ -5,8 +5,8 @@ compile_schemas.py — Generate Python Pydantic models from JSON Schema contract
 Usage:
     python scripts/compile_schemas.py
 
-Reads packages/contracts/*.schema.json and writes generated Pydantic v2 models
-into packages/types/src/animus_types/.
+Reads packages/contracts/src/animus_contracts/schemas/*.schema.json and writes
+generated Pydantic v2 models into packages/types/src/animus_types/.
 
 Requires:
     - datamodel-code-generator (pip install datamodel-code-generator)
