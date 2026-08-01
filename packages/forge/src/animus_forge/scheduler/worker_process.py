@@ -213,8 +213,14 @@ class WorkerProcess:
         if pid is None:
             return
 
+        def _is_group_leader(p: int) -> bool:
+            try:
+                return os.getpgid(p) == p
+            except ProcessLookupError:
+                return False
+
         # Try graceful process-group termination on POSIX.
-        if sys.platform != "win32" and os.getpgid(pid) == pid:
+        if sys.platform != "win32" and _is_group_leader(pid):
             try:
                 os.killpg(pid, signal.SIGTERM)
                 logger.info("Sent SIGTERM to process group %s for task %s", pid, self.task_id)
@@ -242,7 +248,7 @@ class WorkerProcess:
             )
 
         # Hard kill.
-        if sys.platform != "win32" and os.getpgid(pid) == pid:
+        if sys.platform != "win32" and _is_group_leader(pid):
             try:
                 os.killpg(pid, signal.SIGKILL)
                 logger.info("Sent SIGKILL to process group %s for task %s", pid, self.task_id)

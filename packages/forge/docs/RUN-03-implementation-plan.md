@@ -4,7 +4,7 @@
 **Depends on:** RUN-00 (baseline tests), RUN-01 (supervised lifecycle), RUN-02 (atomic lease redesign)  
 **Primary invariant:** A killed or timed-out worker's entire process tree is terminated; shutdown leaves no orphan process or container.  
 **Date:** 2026-07-31  
-**Status:** Awaiting approval
+**Status:** Closed — implemented and verified 2026-08-01
 
 ---
 
@@ -244,5 +244,5 @@ No schema changes. RUN-02 already added `task_attempts`. We will store terminal 
 - [x] Isolation status is observable via `MissionScheduler.status()`.
 - [x] `test_kill_slot_does_not_terminate_container_task` flipped to assert real termination.
 - [x] New `test_scheduler_worker.py` passes.
-- [x] Full scheduler suite still passes (89 passed / 7 xfailed, including `test_scheduler_worker.py`).
+- [x] Full scheduler suite still passes (115 passed / 7 xfailed across `tests/test_scheduler*.py`).
 - [x] Ruff clean.

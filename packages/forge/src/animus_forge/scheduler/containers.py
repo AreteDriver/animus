@@ -16,7 +16,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -29,17 +29,11 @@ class ContainerConfig:
     image: str = "python:3.12-slim"
     runtime: str = "auto"  # "docker", "podman", or "auto"
     workspace_mount: str | None = None  # host path; defaults to cwd
-    extra_volumes: list[str] = None  # ["/host:/container", ...]
-    env: dict[str, str] = None
+    extra_volumes: list[str] = field(default_factory=list)
+    env: dict[str, str] = field(default_factory=dict)
     timeout_seconds: int = 300
     remove: bool = True
     network: str = "none"  # "none", "host", or bridge name
-
-    def __post_init__(self):
-        if self.extra_volumes is None:
-            self.extra_volumes = []
-        if self.env is None:
-            self.env = {}
 
 
 @dataclass
