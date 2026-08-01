@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
@@ -18,7 +18,7 @@ from animus_forge.missions.domain import (
 )
 from animus_forge.missions.store import MissionLedger
 from animus_forge.scheduler.cost_enforcer import CostEnforcer
-from animus_forge.scheduler.lease import LeaseManager, LeaseStatus
+from animus_forge.scheduler.lease import LeaseAcquireError, LeaseManager, LeaseStatus
 from animus_forge.scheduler.metrics import SchedulerMetrics
 from animus_forge.scheduler.mission_scheduler import MissionScheduler, SchedulerConfig
 from animus_forge.scheduler.worker_pool import CitizenWorkerPool, PoolConfig
@@ -106,10 +106,11 @@ class TestLeaseManager:
         lease_manager.acquire(
             task_id="task-1", mission_id="m", citizen_role="b", worker_id="w1"
         )
-        second = lease_manager.acquire(
-            task_id="task-1", mission_id="m", citizen_role="b", worker_id="w2"
-        )
-        assert second is None
+        with pytest.raises(LeaseAcquireError) as exc_info:
+            lease_manager.acquire(
+                task_id="task-1", mission_id="m", citizen_role="b", worker_id="w2"
+            )
+        assert exc_info.value.reason == "already_leased"
 
     def test_renew_extends_expiry(self, lease_manager):
         lease = lease_manager.acquire(
@@ -137,13 +138,14 @@ class TestLeaseManager:
             task_id="t1", mission_id="m", citizen_role="b", worker_id="w1", ttl_seconds=1
         )
         # Fast-forward past expiry
-        future = datetime.now() + timedelta(seconds=5)
+        future = datetime.now(UTC) + timedelta(seconds=5)
         recovered = lease_manager.recover_expired(as_of=future)
         assert recovered == ["t1"]
 
-        fetched = lease_manager.get_lease(lease.lease_id)
-        assert fetched is not None
-        assert fetched.status == LeaseStatus.EXPIRED
+        # Expired leases are removed from current and recorded in history.
+        assert lease_manager.get_lease(lease.lease_id) is None
+        history = lease_manager.history_for_task("t1")
+        assert any(h["status"] == LeaseStatus.EXPIRED for h in history)
 
     def test_get_active_leases(self, lease_manager):
         lease_manager.acquire(task_id="t1", mission_id="m", citizen_role="b", worker_id="w1")
@@ -303,7 +305,7 @@ class TestCitizenWorkerPool:
         assert lease is not None
         # Fast-forward
         recovered = lease_manager.recover_expired(
-            as_of=datetime.now() + timedelta(seconds=10)
+            as_of=datetime.now(UTC) + timedelta(seconds=10)
         )
         assert recovered == ["t-expired"]
         await worker_pool.stop()

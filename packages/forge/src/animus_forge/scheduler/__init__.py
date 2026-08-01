@@ -2,7 +2,7 @@
 
 from animus_forge.scheduler.containers import ContainerConfig, ContainerManager
 from animus_forge.scheduler.cost_enforcer import CostEnforcer
-from animus_forge.scheduler.lease import Lease, LeaseManager, LeaseStatus
+from animus_forge.scheduler.lease import Lease, LeaseAcquireError, LeaseManager, LeaseStatus
 from animus_forge.scheduler.lifecycle import (
     LoopHandle,
     LoopSupervisor,
@@ -32,6 +32,7 @@ __all__ = [
     "CronConfig",
     "IntervalConfig",
     "Lease",
+    "LeaseAcquireError",
     "LeaseManager",
     "LeaseStatus",
     "LoopHandle",

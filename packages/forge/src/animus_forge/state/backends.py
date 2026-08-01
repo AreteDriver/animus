@@ -121,14 +121,39 @@ class SQLiteBackend(DatabaseBackend):
 
     @contextmanager
     def transaction(self) -> Generator[None, None, None]:
-        """Context manager for transactions."""
+        """Context manager for transactions.
+
+        Supports nested calls via SAVEPOINT so multiple manager operations can
+        be composed inside a single outer transaction. Top-level calls commit
+        or rollback the real transaction; nested calls release or roll back to
+        the savepoint.
+        """
         conn = self._get_conn()
+        depth = getattr(self._local, "tx_depth", 0)
+        self._local.tx_depth = depth + 1
+        savepoint = f"sp_{depth}"
         try:
+            if depth == 0:
+                conn.execute("BEGIN")
+            else:
+                conn.execute(f"SAVEPOINT {savepoint}")
             yield
-            conn.commit()
+            if depth == 0:
+                conn.commit()
+            else:
+                conn.execute(f"RELEASE SAVEPOINT {savepoint}")
         except Exception:
-            conn.rollback()
+            if depth == 0:
+                conn.rollback()
+            else:
+                try:
+                    conn.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+                    conn.execute(f"RELEASE SAVEPOINT {savepoint}")
+                except Exception:
+                    pass
             raise
+        finally:
+            self._local.tx_depth -= 1
 
     def close(self) -> None:
         """Close database connection."""
@@ -259,14 +284,39 @@ class PostgresBackend(DatabaseBackend):
 
     @contextmanager
     def transaction(self) -> Generator[None, None, None]:
-        """Context manager for transactions."""
+        """Context manager for transactions.
+
+        Supports nested calls via SAVEPOINT so multiple manager operations can
+        be composed inside a single outer transaction. Top-level calls commit
+        or rollback the real transaction; nested calls release or roll back to
+        the savepoint.
+        """
         conn = self._get_conn()
+        depth = getattr(self._local, "tx_depth", 0)
+        self._local.tx_depth = depth + 1
+        savepoint = f"sp_{depth}"
         try:
+            if depth == 0:
+                conn.execute("BEGIN")
+            else:
+                conn.execute(f"SAVEPOINT {savepoint}")
             yield
-            conn.commit()
+            if depth == 0:
+                conn.commit()
+            else:
+                conn.execute(f"RELEASE SAVEPOINT {savepoint}")
         except Exception:
-            conn.rollback()
+            if depth == 0:
+                conn.rollback()
+            else:
+                try:
+                    conn.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+                    conn.execute(f"RELEASE SAVEPOINT {savepoint}")
+                except Exception:
+                    pass
             raise
+        finally:
+            self._local.tx_depth -= 1
 
     def close(self) -> None:
         """Close database connection."""

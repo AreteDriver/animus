@@ -1,5 +1,6 @@
 -- Migration 012: Evaluation benchmark results
--- Stores eval suite runs and per-case results for quality tracking
+-- Stores eval suite runs and per-case results for quality tracking.
+-- score_variance column and idx_eval_runs_dedup index are part of this migration.
 
 CREATE TABLE IF NOT EXISTS eval_runs (
     id TEXT PRIMARY KEY,

@@ -208,7 +208,6 @@ async def test_recovery_loop_survives_three_intervals(
         assert recovery["state"] != "failed", "recovery loop failed"
 
 
-@pytest.mark.xfail(reason="RUN-00 defect #3: task_id unique constraint blocks reacquisition")
 def test_released_task_can_reacquire_lease(lease_manager):
     """After a lease is released the same task must be claimable again."""
     lease = lease_manager.acquire(
@@ -234,10 +233,9 @@ def test_released_task_can_reacquire_lease(lease_manager):
     assert second.lease_id != lease.lease_id
 
 
-@pytest.mark.xfail(reason="RUN-00 defect #3: expired lease leaves task_id blocked")
 def test_expired_task_can_reacquire_lease(lease_manager):
     """After a lease expires the same task must be claimable again."""
-    from datetime import datetime, timedelta
+    from datetime import UTC, datetime, timedelta
 
     lease = lease_manager.acquire(
         task_id="task-1",
@@ -248,7 +246,7 @@ def test_expired_task_can_reacquire_lease(lease_manager):
     )
     assert lease is not None
 
-    recovered = lease_manager.recover_expired(as_of=datetime.now() + timedelta(seconds=5))
+    recovered = lease_manager.recover_expired(as_of=datetime.now(UTC) + timedelta(seconds=5))
     assert recovered == ["task-1"]
 
     second = lease_manager.acquire(
@@ -262,7 +260,6 @@ def test_expired_task_can_reacquire_lease(lease_manager):
 
 
 @pytest.mark.asyncio()
-@pytest.mark.xfail(reason="RUN-00 defect #4: lease acquisition and task transition are not atomic")
 async def test_dispatch_atomicity_rollback_leaves_task_eligible(
     ledger, lease_manager, worker_pool, cost_enforcer, metrics, sample_mission, sample_task
 ):

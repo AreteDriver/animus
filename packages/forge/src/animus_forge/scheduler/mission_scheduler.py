@@ -15,6 +15,7 @@ from uuid import UUID
 
 from animus_forge.missions.domain import CitizenOutput, MissionStatus, Task, TaskContext, TaskStatus
 from animus_forge.missions.store import MissionLedger
+from animus_forge.scheduler.atomic_dispatch import AtomicDispatcher
 from animus_forge.scheduler.cost_enforcer import CostEnforcer
 from animus_forge.scheduler.lease import LeaseManager
 from animus_forge.scheduler.lifecycle import (
@@ -87,6 +88,12 @@ class MissionScheduler:
         self.workspace = workspace
         self.metrics = metrics
         self.config = config or SchedulerConfig()
+        self.dispatcher = AtomicDispatcher(
+            ledger=ledger,
+            lease_manager=lease_manager,
+            cost_enforcer=cost_enforcer,
+            metrics=metrics,
+        )
 
         self._supervisor = LoopSupervisor(
             restart_config=RestartConfig(
@@ -196,24 +203,22 @@ class MissionScheduler:
             if not self._supervisor.should_continue:
                 break
 
-            # 3. Cost gate
-            ok, reason = self.cost.can_start_task(
-                str(task.mission_id),
-                estimated_cost=Decimal("0.10"),
-                mission_cap=self.config.default_mission_cap_usd,
-            )
-            if not ok:
-                logger.warning("Cost gate blocked task %s: %s", task.task_id, reason)
-                continue
+            # 3. Reserve a worker slot before acquiring the lease.
+            free_slot_id = self.pool.reserve_slot()
+            if free_slot_id is None:
+                logger.debug("No free worker slot for task %s", task.task_id)
+                return dispatched
 
-            # 4. Transition task to LEASED
-            try:
-                self.ledger.transition_task(
-                    task_id=task.task_id,
-                    to_status=TaskStatus.LEASED,
-                )
-            except Exception:
-                logger.warning("Task %s no longer eligible for lease (race?)", task.task_id)
+            # 4. Atomically dispatch: budget, attempt, lease, transition.
+            result = self.dispatcher.dispatch(
+                task=task,
+                worker_id=free_slot_id,
+                default_ttl_seconds=self.config.default_task_ttl_seconds,
+                default_mission_cap_usd=self.config.default_mission_cap_usd,
+                estimated_cost_usd=Decimal("0.10"),
+            )
+            if not result.ok:
+                logger.warning("Dispatch failed for task %s: %s", task.task_id, result.error)
                 continue
 
             # 5. Build context (include latest checkpoint if present)
@@ -235,33 +240,21 @@ class MissionScheduler:
                 output_schema=None,
             )
 
-            # 6. Submit to pool (lease acquired inside submit)
+            # 6. Submit to the reserved slot using the pre-acquired lease.
             lease_id = await self.pool.submit(
                 task_id=str(task.task_id),
                 citizen_role=task.citizen_role,
                 context=ctx,
                 mission_id=str(task.mission_id),
                 ttl_seconds=self.config.default_task_ttl_seconds,
+                lease=result.lease,
+                slot_id=free_slot_id,
             )
             if not lease_id:
-                # Pool full or lease race — revert task to READY
-                try:
-                    self.ledger.transition_task(
-                        task_id=task.task_id,
-                        to_status=TaskStatus.READY,
-                    )
-                except Exception:
-                    logger.warning("Failed to revert task %s to READY", task.task_id)
+                # Pool rejected the slot — roll the atomic dispatch back.
+                if result.lease:
+                    self.dispatcher.rollback_dispatch(result.lease, outcome="pool_rejected")
                 continue
-
-            # 7. Transition to RUNNING now that worker is dispatched
-            try:
-                self.ledger.transition_task(
-                    task_id=task.task_id,
-                    to_status=TaskStatus.RUNNING,
-                )
-            except Exception:
-                logger.warning("Failed to transition task %s to RUNNING", task.task_id)
 
             dispatched += 1
             if self.metrics:
@@ -296,7 +289,49 @@ class MissionScheduler:
             self._supervisor.mark_tick("result_consumer")
 
     async def _process_result(self, task_id_str: str, result_dict: dict[str, Any]) -> None:
-        """Process a single completed task result."""
+        """Process a single completed task result with lease/generation fencing."""
+        meta = result_dict.pop("_scheduler_meta", None) or {}
+        result_lease_id = meta.get("lease_id")
+
+        # Find task in ledger
+        task = self.ledger.get_task_by_id(task_id_str)
+        if not task:
+            logger.warning("Result received for unknown task %s", task_id_str)
+            return
+
+        # Lease/generation fencing: ignore results whose lease is no longer active
+        # or whose generation does not match the current lease.
+        current_lease = self.lease.get_lease_for_task(task_id_str)
+        result_generation = meta.get("generation")
+        stale = (
+            result_lease_id
+            and current_lease is not None
+            and (
+                current_lease.lease_id != result_lease_id
+                or (result_generation is not None and current_lease.generation != result_generation)
+            )
+        )
+        if stale:
+            logger.warning(
+                "Stale result for task %s (lease %s/gen %s vs current %s/gen %s); ignoring",
+                task_id_str,
+                result_lease_id,
+                result_generation,
+                current_lease.lease_id if current_lease else None,
+                current_lease.generation if current_lease else None,
+            )
+            return
+
+        # If a lease_id was provided but no active lease exists, the result is also stale.
+        if result_lease_id and current_lease is None:
+            logger.warning(
+                "Stale result for task %s (lease %s/gen %s); no active lease; ignoring",
+                task_id_str,
+                result_lease_id,
+                result_generation,
+            )
+            return
+
         try:
             output = CitizenOutput(**result_dict)
         except Exception as exc:
@@ -308,15 +343,8 @@ class MissionScheduler:
             )
 
         # Release lease
-        lease = self.lease.get_lease_for_task(task_id_str)
-        if lease:
-            self.lease.release(lease.lease_id, outcome=output.status)
-
-        # Find task in ledger
-        task = self.ledger.get_task_by_id(task_id_str)
-        if not task:
-            logger.warning("Result received for unknown task %s", task_id_str)
-            return
+        if current_lease:
+            self.lease.release(current_lease.lease_id, outcome=output.status)
 
         # Record cost (placeholder until real cost plumbing exists)
         self.cost.record(

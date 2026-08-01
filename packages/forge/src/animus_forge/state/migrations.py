@@ -30,6 +30,13 @@ def _adapt_sql_for_postgres(sql: str) -> str:
         sql,
         flags=re.IGNORECASE,
     )
+    # Replace SQLite strftime default expression with PostgreSQL CURRENT_TIMESTAMP
+    sql = re.sub(
+        r"strftime\s*\(\s*'[^']+'\s*,\s*'now'\s*\)",
+        "CURRENT_TIMESTAMP",
+        sql,
+        flags=re.IGNORECASE,
+    )
     return sql
 
 

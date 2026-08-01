@@ -23,6 +23,7 @@ from animus_forge.citizens.builder import BuilderCitizen
 from animus_forge.citizens.planner import PlannerCitizen
 from animus_forge.citizens.reviewer import ReviewerCitizen
 from animus_forge.missions.domain import Task, TaskContext
+from animus_forge.scheduler.lease import Lease
 
 if TYPE_CHECKING:
     from animus_forge.scheduler.containers import ContainerManager
@@ -94,6 +95,7 @@ class WorkerSlot:
 
     slot_id: str
     lease_id: str | None = None
+    lease_generation: int | None = None
     task_id: str | None = None
     citizen_role: str | None = None
     started_at: float | None = None
@@ -178,10 +180,12 @@ class CitizenWorkerPool:
         *,
         mission_id: str = "unknown",
         ttl_seconds: int | None = None,
+        lease: Lease | None = None,
+        slot_id: str | None = None,
     ) -> str | None:
         """Try to submit a task to the pool.
 
-        1. Acquire a lease.
+        1. If *lease* is not provided, acquire a lease.
         2. If successful, dispatch to the process pool.
         3. Return the lease_id so the scheduler can track it.
 
@@ -190,25 +194,35 @@ class CitizenWorkerPool:
             acquisition failed.
         """
         # Find a free slot
-        free_slot = next(
-            (s for s in self._slots.values() if s.lease_id is None),
-            None,
-        )
-        if not free_slot:
-            logger.debug("No free worker slot for task %s", task_id)
-            return None
+        if slot_id is not None:
+            free_slot = self._slots.get(slot_id)
+            if free_slot is None or free_slot.lease_id is not None:
+                logger.debug("Requested slot %s unavailable for task %s", slot_id, task_id)
+                return None
+        else:
+            free_slot = next(
+                (s for s in self._slots.values() if s.lease_id is None),
+                None,
+            )
+            if not free_slot:
+                logger.debug("No free worker slot for task %s", task_id)
+                return None
 
-        lease = self.lease.acquire(
-            task_id=task_id,
-            mission_id=mission_id,
-            citizen_role=citizen_role,
-            worker_id=free_slot.slot_id,
-            ttl_seconds=ttl_seconds or self.config.worker_timeout_seconds,
-        )
-        if not lease:
-            return None
+        if lease is None:
+            lease = self.lease.acquire(
+                task_id=task_id,
+                mission_id=mission_id,
+                citizen_role=citizen_role,
+                worker_id=free_slot.slot_id,
+                ttl_seconds=ttl_seconds or self.config.worker_timeout_seconds,
+            )
+            if not lease:
+                return None
+        else:
+            logger.debug("Using pre-acquired lease %s for task %s", lease.lease_id, task_id)
 
         free_slot.lease_id = lease.lease_id
+        free_slot.lease_generation = lease.generation
         free_slot.task_id = task_id
         free_slot.citizen_role = citizen_role
         free_slot.started_at = time.time()
@@ -292,16 +306,26 @@ class CitizenWorkerPool:
                 "confidence": 0.0,
             }
 
-        # Free the slot
+        # Free the slot and capture lease metadata for upstream fencing
+        lease_id = None
+        lease_generation = None
         for slot in self._slots.values():
             if slot.task_id == task_id:
+                lease_id = slot.lease_id
+                lease_generation = slot.lease_generation
                 slot.lease_id = None
+                slot.lease_generation = None
                 slot.task_id = None
                 slot.citizen_role = None
                 slot.started_at = None
                 break
 
         self._pending.pop(task_id, None)
+
+        # Embed scheduler metadata so result consumer can fence stale results
+        if lease_id:
+            result["_scheduler_meta"] = {"lease_id": lease_id, "generation": lease_generation}
+
         await self._results_queue.put((task_id, result))
 
     async def results(self) -> asyncio.Queue[tuple[str, dict]]:
@@ -318,6 +342,18 @@ class CitizenWorkerPool:
 
     def free_count(self) -> int:
         return sum(1 for s in self._slots.values() if s.lease_id is None)
+
+    def reserve_slot(self) -> str | None:
+        """Atomically reserve an idle slot and return its id.
+
+        The slot is not marked as occupied until submit() is called with the
+        returned id, but this helper gives the caller a deterministic slot id
+        to pass to the atomic dispatcher before lease acquisition.
+        """
+        for slot in self._slots.values():
+            if slot.lease_id is None:
+                return slot.slot_id
+        return None
 
     def kill_slot(self, slot_id: str) -> bool:
         """Hard-kill a worker slot (used for stuck / zombie recovery).
@@ -337,6 +373,7 @@ class CitizenWorkerPool:
             self._pending[slot.task_id].cancel()
 
         slot.lease_id = None
+        slot.lease_generation = None
         slot.task_id = None
         slot.citizen_role = None
         slot.started_at = None
