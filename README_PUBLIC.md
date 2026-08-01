@@ -87,7 +87,7 @@ Animus defaults to 100% local inference. If you want Claude or GPT-4 as a fallba
 
 ```bash
 export ANIMUS_CLOUD_PROVIDER=anthropic
-export ANTHROPIC_API_KEY=sk-ant-...
+export ANTHROPIC_API_KEY=<your-anthropic-api-key>
 ```
 
 Cloud providers are **never enabled automatically**.
