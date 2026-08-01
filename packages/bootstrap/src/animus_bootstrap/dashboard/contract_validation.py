@@ -1,8 +1,8 @@
 """FastAPI integration for Animus Contracts runtime validation.
 
 Provides a dependency factory and route decorator so API handlers can gate
-incoming payloads against the canonical JSON schemas in
-``packages/contracts/``.
+incoming payloads against the canonical JSON schemas shipped with
+``animus-contracts``.
 
 Usage::
 

@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.resolve()
-SCHEMA_DIR = REPO_ROOT / "packages" / "contracts"
+SCHEMA_DIR = REPO_ROOT / "packages" / "contracts" / "src" / "animus_contracts" / "schemas"
 
 
 def _load_schema(name: str) -> dict:

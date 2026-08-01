@@ -119,8 +119,7 @@ jobs:
 
       - name: Install packages
         run: |
-          pip install -e packages/contracts/
-          pip install -e packages/types/
+          pip install -e packages/types/ -e packages/contracts/
 
       - name: Validate schemas
         run: python3 scripts/validate_schemas.py
@@ -138,8 +137,7 @@ jobs:
 
       - name: Install packages
         run: |
-          pip install -e packages/contracts/
-          pip install -e packages/types/
+          pip install -e packages/types/ -e "packages/contracts/[dev]"
 
       - name: Validate contracts
         run: python scripts/validate_contracts.py
@@ -246,7 +244,7 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-kernel-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: pip install -e "packages/kernel/[dev]"
+        run: pip install -e packages/types/ -e "packages/kernel/[dev]"
 
       - name: Test with coverage
         run: pytest packages/kernel/tests/ -v --tb=short --cov=animus_kernel --cov-report=term-missing --cov-report=xml
@@ -577,6 +575,11 @@ jobs:
 
       - name: Install package and SBOM tools
         run: |
+          case "${{ matrix.package }}" in
+            core|kernel|forge|contracts)
+              pip install -e packages/types/
+              ;;
+          esac
           pip install -e "packages/${{ matrix.package }}/" pip-licenses cyclonedx-bom
 
       - name: Generate license CSV

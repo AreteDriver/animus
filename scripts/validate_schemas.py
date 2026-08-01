@@ -19,6 +19,7 @@ Exit codes:
     0 — All checks passed.
     1 — One or more checks failed (exits on first failure by default).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -30,7 +31,14 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-DEFAULT_CONTRACTS_DIR = Path(__file__).resolve().parent.parent / "packages" / "contracts"
+DEFAULT_CONTRACTS_DIR = (
+    Path(__file__).resolve().parent.parent
+    / "packages"
+    / "contracts"
+    / "src"
+    / "animus_contracts"
+    / "schemas"
+)
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TYPES_DIR = REPO_ROOT / "packages" / "types" / "src" / "animus_types"
 
@@ -83,9 +91,7 @@ def check_unique_ids(schemas: dict[Path, dict]) -> list[str]:
             errors.append(f"{path.name}: Missing $id")
             continue
         if sid in seen:
-            errors.append(
-                f"{path.name}: Duplicate $id '{sid}' (also in {seen[sid].name})"
-            )
+            errors.append(f"{path.name}: Duplicate $id '{sid}' (also in {seen[sid].name})")
         else:
             seen[sid] = path
     return errors
@@ -100,9 +106,7 @@ def check_filename_matches_id(schemas: dict[Path, dict]) -> list[str]:
             continue
         expected_name = sid.split("/")[-1]
         if path.name != expected_name:
-            errors.append(
-                f"{path.name}: Filename mismatch — $id expects '{expected_name}'"
-            )
+            errors.append(f"{path.name}: Filename mismatch — $id expects '{expected_name}'")
     return errors
 
 
@@ -153,9 +157,7 @@ def check_dangling_refs(schemas: dict[Path, dict]) -> list[str]:
                 resolved = ref
 
             if resolved not in ids:
-                errors.append(
-                    f"{path.name}: Dangling $ref '{ref}' (resolved: '{resolved}')"
-                )
+                errors.append(f"{path.name}: Dangling $ref '{ref}' (resolved: '{resolved}')")
 
     return errors
 
@@ -301,9 +303,7 @@ def check_pydantic_models(schemas: dict[Path, dict]) -> list[str]:
                 )
                 continue
         except ImportError as exc:
-            errors.append(
-                f"{path.name}: Cannot import animus_types.{module_name} ({exc})"
-            )
+            errors.append(f"{path.name}: Cannot import animus_types.{module_name} ({exc})")
             continue
 
         # Verify the class is a Pydantic model (has model_validate)

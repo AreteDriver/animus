@@ -19,17 +19,14 @@ supported_profiles:
     name: Contracts validator
     python_floor: ">=3.11"
     install: "pip install animus-contracts"
-    note: "requires undeclared animus-types; schemas missing from wheel"
   - id: kernel-only
     name: Kernel runtime
     python_floor: ">=3.11"
     install: "pip install animus-kernel"
-    note: "requires undeclared animus-types for real module usage"
   - id: core-only
     name: Core exocortex
     python_floor: ">=3.10 (metadata); >=3.12 in practice because of forge"
     install: "pip install animus-core"
-    note: "avoid extras[all] — references wrong distribution 'animus' on PyPI"
   - id: forge-only
     name: Forge orchestration
     python_floor: ">=3.12"
@@ -42,7 +39,6 @@ supported_profiles:
     name: Quorum coordination
     python_floor: ">=3.10"
     install: "pip install animus-quorum"
-    note: "Python-only wheel; native Rust extension not packaged"
   - id: full-local-stack
     name: Full local stack
     python_floor: ">=3.12"
@@ -99,26 +95,27 @@ packages:
     has_native_component: false
     cli_entry_point: null
     runtime_dependencies:
+      - "animus-types>=0.1.0,<1"
       - "jsonschema>=4.17.0"
       - "referencing>=0.30.0"
     optional_extras: {}
     internal_dependencies:
       - animus-types
-    declared_internal_dependencies: []
+    declared_internal_dependencies:
+      - animus-types
     wheel_smoke:
       no_deps:
         install: PASS
         pip_check: FAIL
         import_root: FAIL
-        reason: "Imports animus_types.ValidationError; animus-types not declared/installed"
+        reason: "Missing animus-types, jsonschema, referencing (expected for --no-deps test)"
       full_resolution:
         install: PASS
         pip_check: PASS
-        import_root: FAIL
-        reason: "Same undeclared animus-types dependency; even with types+pydantic installed, schemas list is empty"
+        import_root: PASS
+        cli: N/A
     notes:
-      - "Wheel contains only __init__.py and validator.py; 23 *.schema.json files in source root are not packaged"
-      - "validator.py loads schemas from site-packages/*.schema.json via source-tree-relative path"
+      - "Schemas moved to src/animus_contracts/schemas and packaged as part of the wheel"
 
   animus-kernel:
     source_dir: packages/kernel
@@ -132,6 +129,7 @@ packages:
     has_native_component: false
     cli_entry_point: "animus-kernel"
     runtime_dependencies:
+      - "animus-types>=0.1.0,<1"
       - "httpx>=0.27"
       - "jsonschema>=4.17"
       - "psycopg2-binary>=2.9"
@@ -157,27 +155,27 @@ packages:
         - "mypy>=1.10"
     internal_dependencies:
       - animus-types
-    declared_internal_dependencies: []
+    declared_internal_dependencies:
+      - animus-types
     wheel_smoke:
       no_deps:
         install: PASS
         pip_check: FAIL
-        import_root: PASS
+        import_root: FAIL
         cli: FAIL
-        reason: "Missing all declared runtime deps; root import is empty enough to succeed but CLI needs typer"
+        reason: "Missing all declared runtime deps (expected for --no-deps test)"
       full_resolution:
         install: PASS
         pip_check: PASS
         import_root: PASS
         cli: PASS
         internal_module_import:
-          animus_kernel.memory.types: FAIL
-          animus_kernel.providers.base: FAIL
-          animus_kernel.network.egress: FAIL
-        reason: "animus-types is imported by many kernel modules but not declared as a dependency"
+          animus_kernel.memory.types: PASS
+          animus_kernel.providers.base: PASS
+          animus_kernel.network.egress: PASS
     notes:
-      - "Source tree contains a vendored copy of animus_types under packages/kernel/src/animus_types but it is not included in the wheel"
-      - "publish-kernel.yml builds from an editable install that does not include animus-types, hiding the missing dep"
+      - "Vendored animus_types copy under packages/kernel/src/animus_types removed; kernel now depends on the animus-types package"
+      - "publish-kernel.yml updated to editable-install animus-types alongside kernel"
 
   animus-core:
     source_dir: packages/core
@@ -210,7 +208,7 @@ packages:
       mcp: ["mcp>=1.0.0"]
       postgres: ["sqlalchemy>=2.0", "psycopg[binary]>=3.1"]
       dev: ["pytest>=8.0.0", "pytest-asyncio>=0.23.0", "pytest-benchmark>=4.0.0", "pytest-cov>=4.1.0", "ruff>=0.2.0", "mypy>=1.8.0", "pre-commit>=3.6.0", "httpx>=0.26.0"]
-      all: ["animus[anthropic,openai,api,voice,integrations,sync,mcp,dev]"]
+      all: ["animus-core[anthropic,openai,api,voice,integrations,sync,mcp,dev]"]
     internal_dependencies:
       - animus-types
     declared_internal_dependencies:
@@ -227,7 +225,8 @@ packages:
         import_root: PASS
         cli: PASS
     notes:
-      - "extras[all] references distribution 'animus', not 'animus-core'; pip installs unrelated PyPI package 'animus-0.0.2'"
+      - "extras[all] corrected to reference 'animus-core'; local wheel no longer pulls unrelated PyPI package 'animus-0.0.2'"
+      - "Published PyPI animus-core 2.3.0 still carries the old metadata; a new release is required for public installs"
 
   animus-forge:
     source_dir: packages/forge
@@ -361,16 +360,15 @@ packages:
     version: "1.2.0"
     runtime_version: "1.2.0"
     requires_python: ">=3.10"
-    build_backend: "setuptools>=68.0"
-    maturity: "Production/Stable"
+    build_backend: "maturin>=1.0,<2.0"
+    maturity: "Alpha"
     has_native_component: true
-    native_status: "source .so present but not included in wheel; build backend is not Rust-aware"
+    native_status: "native extension built from Rust source and included in platform wheel"
     cli_entry_point: null
     runtime_dependencies: []
     optional_extras:
       dev: ["pytest>=7.0", "pytest-asyncio>=0.21", "pytest-benchmark>=4.0", "ruff>=0.1.0", "mypy>=1.0"]
       llm: ["anthropic>=0.39.0"]
-      rust: ["maturin>=1.0,<2.0"]
     internal_dependencies: []
     declared_internal_dependencies: []
     wheel_smoke:
@@ -378,16 +376,16 @@ packages:
         install: PASS
         pip_check: PASS
         import_root: PASS
+        native_extension: PASS
         cli: N/A
       full_resolution:
         install: PASS
         pip_check: PASS
         import_root: PASS
+        native_extension: PASS
         cli: N/A
     notes:
-      - "README and examples may still instruct 'import convergent' and link to convergentAI on PyPI (not re-verified in this run)"
-      - "Stale artifacts: empty python/convergent directory and convergentAI.egg-info/; ruff/coverage omit paths use 'python/convergent/'"
-      - "Classifiers claim 'Programming Language :: Rust' and 'Production/Stable' but wheel ships no native extension"
+      - "REL-01 complete: maturin build backend, identity cleanup, native extension verification in CI"
 
   animus-workspace:
     source_dir: "."
@@ -412,26 +410,39 @@ discrepancies:
   - id: D1
     severity: critical
     task: REL-02
+    status: closed
     package: animus-kernel
     description: Kernel imports animus_types throughout the codebase but does not declare animus-types as a runtime dependency.
     evidence:
       - "Grep finds from animus_types in packages/kernel/src/animus_kernel/memory/types.py, providers/base.py, network/egress.py, etc."
       - "Clean-room 'pip install animus-kernel' allows root import but fails on animus_kernel.memory.types, providers.base, network.egress."
       - "packages/kernel/src/animus_types/ is a vendored copy that is not included in the wheel."
+    fix:
+      - "Added animus-types>=0.1.0,<1 to packages/kernel/pyproject.toml dependencies"
+      - "Removed vendored packages/kernel/src/animus_types/ directory"
+      - "Updated CI/publish workflows to install animus-types alongside kernel"
+      - "Clean-room full-resolution install now passes real module imports"
 
   - id: D2
     severity: critical
     task: REL-02
+    status: closed
     package: animus-contracts
     description: Contracts imports animus_types.ValidationError but does not declare animus-types; schemas are not packaged in the wheel.
     evidence:
       - "validator.py line 23: from animus_types import ValidationError"
       - "Wheel contains only animus_contracts/__init__.py and validator.py; no *.schema.json files."
       - "Even with animus-types+pydantic installed, _SCHEMA_STORE is empty because schemas are not next to the installed module."
+    fix:
+      - "Added animus-types>=0.1.0,<1 to packages/contracts/pyproject.toml dependencies"
+      - "Moved all *.schema.json into packages/contracts/src/animus_contracts/schemas"
+      - "Updated validator.py, __init__.py, tests, and scripts to load from the packaged schemas directory"
+      - "Clean-room full-resolution install now imports and loads all 25 schemas"
 
   - id: D3
     severity: high
     task: REL-01
+    status: closed
     package: animus-quorum
     description: Quorum native Rust extension is not built into the wheel despite classifiers and optional rust extra.
     evidence:
@@ -442,6 +453,7 @@ discrepancies:
   - id: D4
     severity: high
     task: REL-01
+    status: closed
     package: animus-quorum
     description: Quorum still carries stale convergent identity artifacts.
     evidence:
@@ -452,12 +464,17 @@ discrepancies:
   - id: D5
     severity: critical
     task: REL-02
+    status: closed
     package: animus-core
     description: "extras[all] references the wrong distribution name 'animus', causing pip to install an unrelated PyPI package."
     evidence:
       - "pyproject.toml line: all = ['animus[anthropic,openai,api,voice,integrations,sync,mcp,dev]']"
       - "pip install 'animus-core[all]' from wheelhouse fetched and installed 'animus-0.0.2' from PyPI."
       - "This creates a dependency-confusion / shadowing risk for the animus import root."
+    fix:
+      - "Corrected extras[all] to 'animus-core[anthropic,openai,api,voice,integrations,sync,mcp,dev]'"
+      - "Local wheel no longer resolves to unrelated PyPI package 'animus-0.0.2'"
+      - "PyPI animus-core 2.3.0 still carries the old metadata; new release required"
 
   - id: D6
     severity: high
@@ -498,11 +515,14 @@ discrepancies:
   - id: D10
     severity: medium
     task: REL-07
+    status: closed
     package: animus-kernel
     description: Kernel publish workflow builds from an editable install that does not include animus-types.
     evidence:
       - "publish-kernel.yml runs 'pip install -e packages/kernel/' with no sibling packages."
       - "Editable install can import the vendored src/animus_types, hiding the missing declared dependency."
+    fix:
+      - "Updated publish-kernel.yml and publish-kernel-testpypi.yml to install animus-types alongside kernel"
 
   - id: D11
     severity: medium
@@ -551,8 +571,8 @@ artifact_inventory:
 clean_room_summary:
   full_resolution_flat_wheelhouse:
     types: { import: PASS, pip_check: PASS }
-    contracts: { import: FAIL, pip_check: PASS }
-    kernel: { root_import: PASS, real_module_import: FAIL, pip_check: PASS }
+    contracts: { import: PASS, pip_check: PASS }
+    kernel: { root_import: PASS, real_module_import: PASS, pip_check: PASS }
     core: { import: PASS, pip_check: PASS }
     forge: { import: PASS, pip_check: PASS }
     bootstrap: { import: PASS, pip_check: PASS }

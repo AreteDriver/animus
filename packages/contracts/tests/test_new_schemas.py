@@ -10,11 +10,8 @@ import json
 from pathlib import Path
 
 import pytest
+from animus_contracts import SCHEMAS_DIR, ValidationError, validate
 from jsonschema import Draft202012Validator
-
-from animus_contracts import ValidationError, validate
-
-SCHEMAS_DIR = Path(__file__).resolve().parent.parent
 
 
 def _schema_path(name: str) -> Path:

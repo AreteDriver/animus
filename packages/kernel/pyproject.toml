@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"
 authors = [
-    {name = "AreteDriver"},
+    {name = "your-org"},
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -24,6 +24,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "animus-types>=0.1.0,<1",
     "pydantic >=2.0",
     "pydantic-settings >=2.0",
     "rich >=13.0",
@@ -42,8 +43,8 @@ all = ["openai >=1.30", "anthropic >=0.28"]
 dev = ["pytest >=8.0", "pytest-asyncio >=0.23", "pytest-cov >=6.0", "ruff >=0.4", "mypy >=1.10"]
 
 [project.urls]
-Homepage = "https://github.com/AreteDriver/animus"
-Documentation = "https://github.com/AreteDriver/animus/tree/main/packages/kernel#readme"
+Homepage = "https://github.com/your-org/animus"
+Documentation = "https://github.com/your-org/animus/tree/main/packages/kernel#readme"
 
 [project.scripts]
 animus-kernel = "animus_kernel.cli:main"

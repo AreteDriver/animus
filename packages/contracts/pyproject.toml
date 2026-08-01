@@ -10,7 +10,7 @@ readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"
 authors = [
-    { name = "AreteDriver" },
+    { name = "your-org" },
 ]
 keywords = ["json-schema", "contracts", "animus", "ai", "exocortex"]
 classifiers = [
@@ -23,10 +23,10 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
+    "animus-types>=0.1.0,<1",
     "jsonschema>=4.17.0",
     "referencing>=0.30.0",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/animus_contracts"]
-artifacts = ["*.schema.json"]

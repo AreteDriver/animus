@@ -23,7 +23,9 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
-CONTRACTS_DIR = REPO_ROOT / "packages" / "contracts"
+CONTRACTS_DIR = (
+    REPO_ROOT / "packages" / "contracts" / "src" / "animus_contracts" / "schemas"
+)
 TYPES_DIR = REPO_ROOT / "packages" / "types" / "src" / "animus_types"
 
 ERRORS: list[str] = []

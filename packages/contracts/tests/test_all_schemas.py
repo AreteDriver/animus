@@ -10,11 +10,8 @@ import json
 from pathlib import Path
 
 import pytest
+from animus_contracts import SCHEMAS_DIR, ValidationError, validate
 from jsonschema import Draft202012Validator
-
-from animus_contracts import ValidationError, validate
-
-SCHEMAS_DIR = Path(__file__).resolve().parent.parent
 
 ALL_SCHEMA_NAMES = [
     "action",
@@ -480,9 +477,7 @@ class TestForecast:
                 "horizon": "2026-07-02T00:00:00Z",
                 "resolution_rule": "Check metrics at 14:00",
                 "assumptions": ["Normal traffic"],
-                "alternative_outcomes": [
-                    {"outcome": "No spike", "probability": 0.25}
-                ],
+                "alternative_outcomes": [{"outcome": "No spike", "probability": 0.25}],
             },
         )
 

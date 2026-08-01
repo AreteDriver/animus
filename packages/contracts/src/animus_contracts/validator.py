@@ -26,11 +26,11 @@ from jsonschema import Draft202012Validator
 logger = logging.getLogger(__name__)
 
 _pkg_dir = Path(__file__).resolve().parent
-SCHEMAS_DIR = _pkg_dir.parent.parent  # canonical: next to pyproject.toml
+SCHEMAS_DIR = _pkg_dir / "schemas"
 
 
 def _load_schemas() -> dict[str, Any]:
-    """Load every ``*.schema.json`` in the package directory into a URI store."""
+    """Load every ``*.schema.json`` shipped with the package into a URI store."""
     store: dict[str, Any] = {}
     for path in SCHEMAS_DIR.glob("*.schema.json"):
         try:
