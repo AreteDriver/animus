@@ -15,11 +15,15 @@ from __future__ import annotations
 import asyncio
 import inspect
 import time
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+from contextlib import asynccontextmanager
 from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
-from fastapi.testclient import TestClient
 
 from animus_forge.api import app
 from animus_forge.missions.domain import (
@@ -38,6 +42,17 @@ from animus_forge.scheduler.metrics import SchedulerMetrics
 from animus_forge.scheduler.mission_scheduler import MissionScheduler, SchedulerConfig
 from animus_forge.scheduler.worker_pool import CitizenWorkerPool, PoolConfig
 from animus_forge.state.backends import SQLiteBackend
+
+
+@asynccontextmanager
+async def managed_scheduler(scheduler: MissionScheduler) -> MissionScheduler:
+    """Start a scheduler and guarantee it is stopped on exit."""
+    await scheduler.start()
+    try:
+        yield scheduler
+    finally:
+        await scheduler.stop()
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -145,7 +160,6 @@ def slow_container_pool(lease_manager):
 
 
 @pytest.mark.asyncio()
-@pytest.mark.xfail(reason="RUN-00 defect #1: scheduler loop dies on normal timeout")
 async def test_scheduler_loop_survives_three_intervals(
     ledger, lease_manager, worker_pool, cost_enforcer, metrics
 ):
@@ -158,18 +172,16 @@ async def test_scheduler_loop_survives_three_intervals(
         metrics=metrics,
         config=SchedulerConfig(poll_interval_seconds=0.05),
     )
-    await scheduler.start()
-    await asyncio.sleep(0.25)  # Five poll intervals
+    async with managed_scheduler(scheduler):
+        await asyncio.sleep(0.25)  # Five poll intervals
 
-    assert scheduler._run_task is not None
-    assert not scheduler._run_task.done(), "scheduler run loop exited prematurely"
-    assert scheduler._run_task.exception() is None
-
-    await scheduler.stop()
+        assert scheduler.is_running, "scheduler stopped unexpectedly"
+        dispatcher = scheduler._supervisor.snapshot().get("dispatcher")
+        assert dispatcher is not None
+        assert dispatcher["state"] != "failed", "dispatcher loop failed"
 
 
 @pytest.mark.asyncio()
-@pytest.mark.xfail(reason="RUN-00 defect #2: recovery loop dies on normal timeout")
 async def test_recovery_loop_survives_three_intervals(
     ledger, lease_manager, cost_enforcer, metrics
 ):
@@ -186,14 +198,14 @@ async def test_recovery_loop_survives_three_intervals(
         metrics=metrics,
         config=SchedulerConfig(poll_interval_seconds=1.0, enable_recovery=True),
     )
-    await scheduler.start()
-    # Wait long enough for several recovery poll intervals to elapse.
-    await asyncio.sleep(0.25)
+    async with managed_scheduler(scheduler):
+        # Wait long enough for several recovery poll intervals to elapse.
+        await asyncio.sleep(0.25)
 
-    assert scheduler._recovery_task is not None
-    assert not scheduler._recovery_task.done(), "recovery loop exited prematurely"
-
-    await scheduler.stop()
+        assert scheduler.is_running, "scheduler stopped unexpectedly"
+        recovery = scheduler._supervisor.snapshot().get("recovery")
+        assert recovery is not None
+        assert recovery["state"] != "failed", "recovery loop failed"
 
 
 @pytest.mark.xfail(reason="RUN-00 defect #3: task_id unique constraint blocks reacquisition")
@@ -277,20 +289,18 @@ async def test_dispatch_atomicity_rollback_leaves_task_eligible(
             raise RuntimeError("simulated crash after lease acquisition")
         return original_transition(task_id, to_status, error)
 
-    with patch.object(ledger, "transition_task", side_effect=failing_transition):
-        await scheduler.start()
-        await scheduler.run_once()
+    async with managed_scheduler(scheduler):
+        with patch.object(ledger, "transition_task", side_effect=failing_transition):
+            await scheduler.run_once()
 
-    task = ledger.get_task(sample_task.task_id)
-    # The task must still be eligible for dispatch (READY or LEASED), and there
-    # must be no active lease left behind.
-    assert task.status in (TaskStatus.READY, TaskStatus.LEASED), f"task stuck in {task.status}"
+        task = ledger.get_task(sample_task.task_id)
+        # The task must still be eligible for dispatch (READY or LEASED), and there
+        # must be no active lease left behind.
+        assert task.status in (TaskStatus.READY, TaskStatus.LEASED), f"task stuck in {task.status}"
 
-    active = lease_manager.get_active_leases()
-    active_for_task = [lease for lease in active if lease.task_id == str(sample_task.task_id)]
-    assert len(active_for_task) == 0, "orphan active lease remains after partial dispatch failure"
-
-    await scheduler.stop()
+        active = lease_manager.get_active_leases()
+        active_for_task = [lease for lease in active if lease.task_id == str(sample_task.task_id)]
+        assert len(active_for_task) == 0, "orphan active lease remains after partial dispatch failure"
 
 
 @pytest.mark.asyncio()
@@ -337,18 +347,30 @@ async def test_kill_slot_does_not_terminate_container_task(slow_container_pool, 
 
 
 @pytest.mark.asyncio()
-@pytest.mark.xfail(reason="RUN-00 defect #6/7: shutdown event not reset; wait=False cleanup unproven")
-async def test_pool_stop_start_cycle_restores_recovery(slow_container_pool):
-    """After stop/start the recovery loop must run again."""
+async def test_pool_stop_start_cycle_restores_recovery(
+    ledger, lease_manager, slow_container_pool, cost_enforcer, metrics
+):
+    """After scheduler stop/start the recovery loop must run again."""
     pool = slow_container_pool
-    await pool.start()
+    scheduler = MissionScheduler(
+        ledger=ledger,
+        lease_manager=lease_manager,
+        worker_pool=pool,
+        cost_enforcer=cost_enforcer,
+        metrics=metrics,
+        config=SchedulerConfig(poll_interval_seconds=1.0, enable_recovery=True),
+    )
 
-    # Stop the pool.
-    await pool.stop()
-    assert not pool._initialised
+    await scheduler.start()
+    assert scheduler.is_running
+
+    # Stop the scheduler and its supervised recovery loop.
+    await scheduler.stop()
+    assert not pool.is_running
 
     # Restart; the recovery loop should be able to poll again.
-    await pool.start()
+    await scheduler.start()
+    assert scheduler.is_running
 
     loop_ran = asyncio.Event()
 
@@ -359,7 +381,7 @@ async def test_pool_stop_start_cycle_restores_recovery(slow_container_pool):
     with patch.object(pool.lease, "recover_expired", side_effect=recover_once):
         await asyncio.wait_for(loop_ran.wait(), timeout=1.0)
 
-    await pool.stop()
+    await scheduler.stop()
 
 
 @pytest.mark.asyncio()
@@ -385,23 +407,21 @@ async def test_recorded_cost_reflects_actual_usage(
     # The worker result currently carries no provider/model/token metadata,
     # so the scheduler records a zero-cost local/default event.  The intended
     # design propagates actual usage from the worker result.
-    await scheduler.start()
-    await scheduler.run_once()
-    await asyncio.sleep(3.0)
+    async with managed_scheduler(scheduler):
+        await scheduler.run_once()
+        await asyncio.sleep(3.0)
 
-    rows = cost_enforcer._backend.fetchall(
-        "SELECT * FROM cost_events WHERE mission_id = ? AND task_id = ?",
-        (str(sample_mission.mission_id), str(sample_task.task_id)),
-    )
-    assert len(rows) == 1, f"expected single cost event, got {len(rows)}"
-    event = rows[0]
-    assert event["provider"] == "openai", f"provider not recorded: {event['provider']}"
-    assert event["model"] == "gpt-4o", f"model not recorded: {event['model']}"
-    assert event["usage_tokens_input"] == 1000
-    assert event["usage_tokens_output"] == 500
-    assert Decimal(event["cost_usd"]) > Decimal("0")
-
-    await scheduler.stop()
+        rows = cost_enforcer._backend.fetchall(
+            "SELECT * FROM cost_events WHERE mission_id = ? AND task_id = ?",
+            (str(sample_mission.mission_id), str(sample_task.task_id)),
+        )
+        assert len(rows) == 1, f"expected single cost event, got {len(rows)}"
+        event = rows[0]
+        assert event["provider"] == "openai", f"provider not recorded: {event['provider']}"
+        assert event["model"] == "gpt-4o", f"model not recorded: {event['model']}"
+        assert event["usage_tokens_input"] == 1000
+        assert event["usage_tokens_output"] == 500
+        assert Decimal(event["cost_usd"]) > Decimal("0")
 
 
 @pytest.mark.xfail(reason="RUN-00 defect #9: budget reservation is not atomic")
@@ -438,16 +458,14 @@ async def test_mission_completes_without_review_verdict(
         metrics=metrics,
         config=SchedulerConfig(poll_interval_seconds=1.0, default_task_ttl_seconds=30),
     )
-    await scheduler.start()
-    await scheduler.run_once()
-    await asyncio.sleep(3.5)
+    async with managed_scheduler(scheduler):
+        await scheduler.run_once()
+        await asyncio.sleep(3.5)
 
-    mission = ledger.get_mission(sample_mission.mission_id)
-    assert mission.status != MissionStatus.COMPLETED, "mission completed without review verdict"
-    # The intended behavior is to land in REVIEW and wait for a verdict.
-    assert mission.status == MissionStatus.REVIEW, f"expected REVIEW, got {mission.status}"
-
-    await scheduler.stop()
+        mission = ledger.get_mission(sample_mission.mission_id)
+        assert mission.status != MissionStatus.COMPLETED, "mission completed without review verdict"
+        # The intended behavior is to land in REVIEW and wait for a verdict.
+        assert mission.status == MissionStatus.REVIEW, f"expected REVIEW, got {mission.status}"
 
 
 @pytest.mark.asyncio()
@@ -485,15 +503,13 @@ async def test_cancelled_required_task_allows_completion(
         metrics=metrics,
         config=SchedulerConfig(poll_interval_seconds=1.0, default_task_ttl_seconds=30),
     )
-    await scheduler.start()
-    # Dispatch the normal task; when it completes, _check_mission_completion runs.
-    await scheduler.run_once()
-    await asyncio.sleep(3.5)
+    async with managed_scheduler(scheduler):
+        # Dispatch the normal task; when it completes, _check_mission_completion runs.
+        await scheduler.run_once()
+        await asyncio.sleep(3.5)
 
-    mission = ledger.get_mission(sample_mission.mission_id)
-    assert mission.status != MissionStatus.COMPLETED, "mission completed despite cancelled required task"
-
-    await scheduler.stop()
+        mission = ledger.get_mission(sample_mission.mission_id)
+        assert mission.status != MissionStatus.COMPLETED, "mission completed despite cancelled required task"
 
 
 @pytest.mark.asyncio()
@@ -515,16 +531,14 @@ async def test_checkpoint_attempt_id_is_not_task_id(
         metrics=metrics,
         config=SchedulerConfig(poll_interval_seconds=1.0, default_task_ttl_seconds=30),
     )
-    await scheduler.start()
-    await scheduler.run_once()
-    await asyncio.sleep(3.5)
+    async with managed_scheduler(scheduler):
+        await scheduler.run_once()
+        await asyncio.sleep(3.5)
 
-    checkpoints = ledger.list_checkpoints(sample_task.task_id)
-    assert len(checkpoints) >= 1
-    for cp in checkpoints:
-        assert cp.attempt_id != sample_task.task_id, "checkpoint attempt_id equals task_id"
-
-    await scheduler.stop()
+        checkpoints = ledger.list_checkpoints(sample_task.task_id)
+        assert len(checkpoints) >= 1
+        for cp in checkpoints:
+            assert cp.attempt_id != sample_task.task_id, "checkpoint attempt_id equals task_id"
 
 
 @pytest.mark.asyncio()
@@ -563,36 +577,35 @@ async def test_retry_does_not_create_distinct_attempt_id(
         )
         await MissionScheduler._process_result(scheduler, task_id, fail_output.model_dump(mode="json"))
 
-    with patch.object(scheduler, "_process_result", side_effect=fake_fail_result):
-        await scheduler.start()
-        await scheduler.run_once()
-        await asyncio.sleep(2.0)
+    async with managed_scheduler(scheduler):
+        with patch.object(scheduler, "_process_result", side_effect=fake_fail_result):
+            await scheduler.run_once()
+            await asyncio.sleep(2.0)
 
-    task = ledger.get_task(task.task_id)
-    assert task.current_attempt > 0, "task was not retried"
+        task = ledger.get_task(task.task_id)
+        assert task.current_attempt > 0, "task was not retried"
 
-    checkpoints = ledger.list_checkpoints(task.task_id)
-    attempt_ids = {cp.attempt_id for cp in checkpoints}
-    assert len(attempt_ids) >= 2, f"retry reused the same attempt_id: {attempt_ids}"
-
-    await scheduler.stop()
+        checkpoints = ledger.list_checkpoints(task.task_id)
+        attempt_ids = {cp.attempt_id for cp in checkpoints}
+        assert len(attempt_ids) >= 2, f"retry reused the same attempt_id: {attempt_ids}"
 
 
-@pytest.mark.xfail(reason="RUN-00 defect #14: API routes inspect private _stopped field")
 def test_api_routes_inspect_private_stopped_field():
     """Scheduler control endpoints must use a public lifecycle interface."""
     from animus_forge.api_routes import mission_scheduler as routes
 
     source = inspect.getsource(routes)
-    assert "_stopped" not in source, "API routes read private _stopped field"
+    assert "mission_scheduler._stopped" not in source, "API routes read private _stopped field"
+    assert "is_running" in source, "API routes should use the public is_running interface"
 
 
 @pytest.mark.asyncio()
-@pytest.mark.xfail(reason="RUN-00 defect #15: API route tests use mocks instead of real scheduler")
 async def test_api_with_real_scheduler_lifecycle(
     ledger, lease_manager, worker_pool, cost_enforcer, metrics
 ):
     """The scheduler API must work against a real scheduler instance."""
+    from httpx import ASGITransport, AsyncClient
+
     from animus_forge import api_state
     from animus_forge.api_routes.auth import create_access_token
 
@@ -608,24 +621,29 @@ async def test_api_with_real_scheduler_lifecycle(
         config=SchedulerConfig(poll_interval_seconds=0.1),
     )
 
-    # Inject a real scheduler into the app state.
-    api_state.mission_scheduler = scheduler
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # The app lifespan creates and starts its own scheduler.  Stop it so
+        # we can substitute the test scheduler cleanly.
+        await client.post("/v1/scheduler/stop", headers=headers)
 
-    with TestClient(app) as client:
-        response = client.post("/v1/scheduler/start", headers=headers)
+        # Inject the test scheduler and exercise it through the API.
+        api_state.mission_scheduler = scheduler
+
+        response = await client.post("/v1/scheduler/start", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "started"
 
         # Real status must reflect the running scheduler.
-        response = client.get("/v1/scheduler/status", headers=headers)
+        response = await client.get("/v1/scheduler/status", headers=headers)
         assert response.status_code == 200
         status = response.json()
-        assert status["running"] is True
+        assert status["is_running"] is True
         # Health should expose a public lifecycle state, not a private flag.
         assert "lifecycle_state" in status
 
-        response = client.post("/v1/scheduler/stop", headers=headers)
+        response = await client.post("/v1/scheduler/stop", headers=headers)
         assert response.status_code == 200
 
     api_state.mission_scheduler = None
@@ -650,28 +668,26 @@ async def test_duplicate_result_records_cost_twice(
         metrics=metrics,
         config=SchedulerConfig(poll_interval_seconds=1.0, default_task_ttl_seconds=30),
     )
-    await scheduler.start()
-    await scheduler.run_once()
-    await asyncio.sleep(3.5)
+    async with managed_scheduler(scheduler):
+        await scheduler.run_once()
+        await asyncio.sleep(3.5)
 
-    task = ledger.get_task(sample_task.task_id)
-    assert task.status == TaskStatus.COMPLETED
+        task = ledger.get_task(sample_task.task_id)
+        assert task.status == TaskStatus.COMPLETED
 
-    # Re-deliver the exact same completed result.
-    completed_output = CitizenOutput(
-        status="completed",
-        summary="duplicate result",
-        confidence=0.9,
-    )
-    await scheduler._process_result(str(sample_task.task_id), completed_output.model_dump(mode="json"))
+        # Re-deliver the exact same completed result.
+        completed_output = CitizenOutput(
+            status="completed",
+            summary="duplicate result",
+            confidence=0.9,
+        )
+        await scheduler._process_result(str(sample_task.task_id), completed_output.model_dump(mode="json"))
 
-    rows = cost_enforcer._backend.fetchall(
-        "SELECT * FROM cost_events WHERE mission_id = ? AND task_id = ?",
-        (str(sample_mission.mission_id), str(sample_task.task_id)),
-    )
-    assert len(rows) == 1, f"duplicate result caused {len(rows)} cost events instead of 1"
-
-    await scheduler.stop()
+        rows = cost_enforcer._backend.fetchall(
+            "SELECT * FROM cost_events WHERE mission_id = ? AND task_id = ?",
+            (str(sample_mission.mission_id), str(sample_task.task_id)),
+        )
+        assert len(rows) == 1, f"duplicate result caused {len(rows)} cost events instead of 1"
 
 
 @pytest.mark.asyncio()
@@ -709,14 +725,10 @@ async def test_two_schedulers_maintain_single_active_lease(
         config=SchedulerConfig(poll_interval_seconds=1.0, default_task_ttl_seconds=30),
     )
 
-    await scheduler_a.start()
-    await scheduler_b.start()
+    async with managed_scheduler(scheduler_a):
+        async with managed_scheduler(scheduler_b):
+            await asyncio.gather(scheduler_a.run_once(), scheduler_b.run_once())
 
-    await asyncio.gather(scheduler_a.run_once(), scheduler_b.run_once())
-
-    active = lease_manager.get_active_leases()
-    task_leases = [lease for lease in active if lease.task_id == str(sample_task.task_id)]
-    assert len(task_leases) <= 1, f"race allowed {len(task_leases)} active leases for one task"
-
-    await scheduler_a.stop()
-    await scheduler_b.stop()
+            active = lease_manager.get_active_leases()
+            task_leases = [lease for lease in active if lease.task_id == str(sample_task.task_id)]
+            assert len(task_leases) <= 1, f"race allowed {len(task_leases)} active leases for one task"

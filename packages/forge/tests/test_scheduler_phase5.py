@@ -5,13 +5,11 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta
 from decimal import Decimal
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
 from animus_forge.missions.domain import (
-    Artifact,
-    Checkpoint,
     Mission,
     MissionStatus,
     Task,
@@ -19,14 +17,12 @@ from animus_forge.missions.domain import (
     TaskStatus,
 )
 from animus_forge.missions.store import MissionLedger
-from animus_forge.missions.transitions import TransitionError
 from animus_forge.scheduler.cost_enforcer import CostEnforcer
-from animus_forge.scheduler.lease import Lease, LeaseManager, LeaseStatus
+from animus_forge.scheduler.lease import LeaseManager, LeaseStatus
 from animus_forge.scheduler.metrics import SchedulerMetrics
 from animus_forge.scheduler.mission_scheduler import MissionScheduler, SchedulerConfig
 from animus_forge.scheduler.worker_pool import CitizenWorkerPool, PoolConfig
 from animus_forge.state.backends import SQLiteBackend
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -314,7 +310,6 @@ class TestCitizenWorkerPool:
 
     async def test_container_mode_dispatches_via_manager(self, lease_manager):
         """When isolation_mode='container', submit delegates to ContainerManager."""
-        from animus_forge.scheduler.containers import ContainerManager
 
         class FakeContainerManager:
             def __init__(self):
@@ -508,7 +503,7 @@ class TestMissionScheduler:
         )
         await scheduler.start()
         snap = scheduler.status()
-        assert snap["running"] is True
+        assert snap["is_running"] is True
         assert snap["active_workers"] == 0
         assert snap["free_slots"] == 2
         await scheduler.stop()
@@ -588,7 +583,6 @@ class TestCheckpointPersistence:
         ledger.create_mission(sample_mission)
         ledger.create_task(sample_task)
 
-        from uuid import uuid4
         attempt = uuid4()
         ledger.save_checkpoint(sample_task.task_id, attempt, "stage_1", inputs={"step": 1})
         ledger.save_checkpoint(sample_task.task_id, attempt, "stage_2", inputs={"step": 2})
@@ -601,7 +595,6 @@ class TestCheckpointPersistence:
         ledger.create_mission(sample_mission)
         ledger.create_task(sample_task)
 
-        from uuid import uuid4
         attempt = uuid4()
         ledger.save_checkpoint(
             sample_task.task_id,

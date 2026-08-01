@@ -3,6 +3,14 @@
 from animus_forge.scheduler.containers import ContainerConfig, ContainerManager
 from animus_forge.scheduler.cost_enforcer import CostEnforcer
 from animus_forge.scheduler.lease import Lease, LeaseManager, LeaseStatus
+from animus_forge.scheduler.lifecycle import (
+    LoopHandle,
+    LoopSupervisor,
+    RestartConfig,
+    RestartPolicy,
+    SchedulerLifecycleState,
+    SchedulerStatusSnapshot,
+)
 from animus_forge.scheduler.metrics import SchedulerMetrics
 from animus_forge.scheduler.mission_scheduler import MissionScheduler, SchedulerConfig
 from animus_forge.scheduler.schedule_manager import (
@@ -26,12 +34,18 @@ __all__ = [
     "Lease",
     "LeaseManager",
     "LeaseStatus",
+    "LoopHandle",
+    "LoopSupervisor",
     "MissionScheduler",
     "PoolConfig",
+    "RestartConfig",
+    "RestartPolicy",
     "ScheduleExecutionLog",
     "ScheduleManager",
     "SchedulerConfig",
+    "SchedulerLifecycleState",
     "SchedulerMetrics",
+    "SchedulerStatusSnapshot",
     "ScheduleStatus",
     "ScheduleType",
     "WorkflowSchedule",

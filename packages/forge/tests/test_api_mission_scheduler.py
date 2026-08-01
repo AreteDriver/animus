@@ -41,14 +41,13 @@ def test_client(memory_backend):
 
     # Wire up a minimal mission scheduler mock
     scheduler_mock = MagicMock()
-    scheduler_mock._stopped = asyncio.Event()
-    scheduler_mock._stopped.set()  # Start as "stopped"
+    scheduler_mock.is_running = False  # Start as "stopped"
     scheduler_mock.start = MagicMock(return_value=asyncio.Future())
     scheduler_mock.start.return_value.set_result(None)
     scheduler_mock.stop = MagicMock(return_value=asyncio.Future())
     scheduler_mock.stop.return_value.set_result(None)
     scheduler_mock.status.return_value = {
-        "running": True,
+        "is_running": True,
         "active_workers": 1,
         "free_slots": 3,
         "global_spend_usd": "0.50",
@@ -80,27 +79,27 @@ class TestSchedulerEndpoints:
         import animus_forge.api_state as api_state
 
         # Mark as already running
-        api_state.mission_scheduler._stopped.clear()
+        api_state.mission_scheduler.is_running = True
         response = test_client.post("/v1/scheduler/start", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "already_running"
 
         # Reset for other tests
-        api_state.mission_scheduler._stopped.set()
+        api_state.mission_scheduler.is_running = False
 
     def test_stop_scheduler(self, test_client, auth_headers):
         import animus_forge.api_state as api_state
 
         # Mark as running
-        api_state.mission_scheduler._stopped.clear()
+        api_state.mission_scheduler.is_running = True
         response = test_client.post("/v1/scheduler/stop", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "stopped"
 
         # Reset
-        api_state.mission_scheduler._stopped.set()
+        api_state.mission_scheduler.is_running = False
 
     def test_stop_already_stopped(self, test_client, auth_headers):
         response = test_client.post("/v1/scheduler/stop", headers=auth_headers)
@@ -112,7 +111,7 @@ class TestSchedulerEndpoints:
         response = test_client.get("/v1/scheduler/status", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
-        assert "running" in data
+        assert "is_running" in data
         assert "active_workers" in data
         assert "free_slots" in data
         assert data["global_spend_usd"] == "0.50"

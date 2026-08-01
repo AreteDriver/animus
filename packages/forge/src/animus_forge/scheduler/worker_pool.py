@@ -22,11 +22,11 @@ from animus_forge.citizens.base import Citizen
 from animus_forge.citizens.builder import BuilderCitizen
 from animus_forge.citizens.planner import PlannerCitizen
 from animus_forge.citizens.reviewer import ReviewerCitizen
-from animus_forge.missions.domain import CitizenOutput, Task, TaskContext
+from animus_forge.missions.domain import Task, TaskContext
 
 if TYPE_CHECKING:
-    from animus_forge.scheduler.lease import LeaseManager
     from animus_forge.scheduler.containers import ContainerManager
+    from animus_forge.scheduler.lease import LeaseManager
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +143,7 @@ class CitizenWorkerPool:
     async def start(self) -> None:
         if self._initialised:
             return
+        self._shutdown_event.clear()
         self._executor = ProcessPoolExecutor(
             max_workers=self.config.max_workers,
             mp_context=multiprocessing.get_context("spawn"),
@@ -151,6 +152,10 @@ class CitizenWorkerPool:
             self._slots[str(i)] = WorkerSlot(slot_id=str(i))
         self._initialised = True
         logger.info("CitizenWorkerPool started with %d slots", self.config.max_workers)
+
+    @property
+    def is_running(self) -> bool:
+        return self._initialised
 
     async def stop(self) -> None:
         if not self._initialised:
@@ -349,4 +354,7 @@ class CitizenWorkerPool:
             recovered = self.lease.recover_expired()
             if recovered:
                 logger.warning("Recovered %d expired tasks: %s", len(recovered), recovered)
-            await asyncio.wait_for(self._shutdown_event.wait(), timeout=interval)
+            try:
+                await asyncio.wait_for(self._shutdown_event.wait(), timeout=interval)
+            except TimeoutError:
+                pass

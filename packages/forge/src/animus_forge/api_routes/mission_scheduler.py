@@ -8,7 +8,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Header
 
 from animus_forge import api_state as state
-from animus_forge.api_errors import AUTH_RESPONSES, bad_request, not_found
+from animus_forge.api_errors import AUTH_RESPONSES, bad_request
 from animus_forge.api_routes.auth import verify_auth
 
 router = APIRouter()
@@ -22,7 +22,7 @@ async def start_scheduler(authorization: str | None = Header(None)):
     if state.mission_scheduler is None:
         raise bad_request("Mission scheduler not initialized")
 
-    if state.mission_scheduler._stopped.is_set() is False:
+    if state.mission_scheduler.is_running:
         return {"status": "already_running"}
 
     await state.mission_scheduler.start()
@@ -37,7 +37,7 @@ async def stop_scheduler(authorization: str | None = Header(None)):
     if state.mission_scheduler is None:
         raise bad_request("Mission scheduler not initialized")
 
-    if state.mission_scheduler._stopped.is_set():
+    if not state.mission_scheduler.is_running:
         return {"status": "already_stopped"}
 
     await state.mission_scheduler.stop()
@@ -45,7 +45,7 @@ async def stop_scheduler(authorization: str | None = Header(None)):
 
 
 @router.get("/scheduler/status", responses=AUTH_RESPONSES)
-def get_scheduler_status(authorization: str | None = Header(None)):
+async def get_scheduler_status(authorization: str | None = Header(None)):
     """Return the current scheduler status snapshot."""
     verify_auth(authorization)
 
@@ -56,7 +56,7 @@ def get_scheduler_status(authorization: str | None = Header(None)):
 
 
 @router.get("/scheduler/metrics", responses=AUTH_RESPONSES)
-def get_scheduler_metrics(
+async def get_scheduler_metrics(
     mission_id: str | None = None,
     authorization: str | None = Header(None),
 ):

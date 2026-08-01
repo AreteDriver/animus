@@ -10,15 +10,28 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import UUID
 
 from animus_forge.missions.domain import CitizenOutput, MissionStatus, Task, TaskContext, TaskStatus
 from animus_forge.missions.store import MissionLedger
 from animus_forge.scheduler.cost_enforcer import CostEnforcer
 from animus_forge.scheduler.lease import LeaseManager
-from animus_forge.scheduler.metrics import LEASE_EXPIRED, MISSION_COMPLETED, MISSION_FAILED, RESULT_PROCESSED, SchedulerMetrics, TASK_DISPATCHED
-from animus_forge.scheduler.worker_pool import CitizenWorkerPool, PoolConfig
+from animus_forge.scheduler.lifecycle import (
+    LoopSupervisor,
+    RestartConfig,
+    RestartPolicy,
+    SchedulerLifecycleState,
+    SchedulerStatusSnapshot,
+)
+from animus_forge.scheduler.metrics import (
+    MISSION_COMPLETED,
+    MISSION_FAILED,
+    RESULT_PROCESSED,
+    TASK_DISPATCHED,
+    SchedulerMetrics,
+)
+from animus_forge.scheduler.worker_pool import CitizenWorkerPool
 from animus_forge.workspace import WorkspaceManager
 
 logger = logging.getLogger(__name__)
@@ -75,29 +88,59 @@ class MissionScheduler:
         self.metrics = metrics
         self.config = config or SchedulerConfig()
 
-        self._run_task: asyncio.Task | None = None
-        self._recovery_task: asyncio.Task | None = None
-        self._result_consumer_task: asyncio.Task | None = None
-        self._stopped = asyncio.Event()
+        self._supervisor = LoopSupervisor(
+            restart_config=RestartConfig(
+                policy=RestartPolicy.ON_FAILURE,
+                max_restarts=3,
+                delay_seconds=0.5,
+            ),
+        )
+        self._supervisor.register("dispatcher", self._run_loop)
+        self._supervisor.register("result_consumer", self._consume_results)
+        if self.config.enable_recovery:
+            self._supervisor.register("recovery", self.pool.run_recovery_loop)
 
     # ------------------------------------------------------------------
-    # Lifecycle
+    # Public lifecycle interface
     # ------------------------------------------------------------------
+
+    @property
+    def lifecycle_state(self) -> SchedulerLifecycleState:
+        return self._supervisor.state
+
+    @property
+    def is_running(self) -> bool:
+        return self._supervisor.is_running
+
+    @property
+    def is_ready(self) -> bool:
+        return self.lifecycle_state == SchedulerLifecycleState.RUNNING
+
+    @property
+    def is_healthy(self) -> bool:
+        return self._supervisor.is_healthy
 
     async def start(self) -> None:
+        """Start the scheduler and its supervised loops.
+
+        Idempotent: returns immediately if the scheduler is already running
+        or starting.  Safe to call after ``stop()`` to restart.
+        """
+        if self.is_running:
+            logger.debug("MissionScheduler.start() called while in state %s", self.lifecycle_state)
+            return
+
         await self.pool.start()
-        self._stopped.clear()
-        self._run_task = asyncio.create_task(self._run_loop())
-        self._result_consumer_task = asyncio.create_task(self._consume_results())
-        if self.config.enable_recovery:
-            self._recovery_task = asyncio.create_task(self.pool.run_recovery_loop())
-        logger.info("MissionScheduler started")
+        await self._supervisor.start()
+        logger.info("MissionScheduler started (state=%s)", self.lifecycle_state.value)
 
     async def stop(self) -> None:
-        self._stopped.set()
-        for t in (self._run_task, self._result_consumer_task, self._recovery_task):
-            if t:
-                t.cancel()
+        """Stop the scheduler gracefully and await supervised loop cleanup."""
+        if not self.is_running:
+            logger.debug("MissionScheduler.stop() called while in state %s", self.lifecycle_state)
+            return
+
+        await self._supervisor.stop()
         await self.pool.stop()
         logger.info("MissionScheduler stopped")
 
@@ -109,15 +152,26 @@ class MissionScheduler:
     # Run loop
     # ------------------------------------------------------------------
 
+    async def _wait_for_stop_or_timeout(self, timeout: float) -> None:
+        """Wait for the stop signal, swallowing the normal timeout."""
+        try:
+            await asyncio.wait_for(self._supervisor.stop_requested.wait(), timeout=timeout)
+        except TimeoutError:
+            pass
+
     async def _run_loop(self) -> None:
-        while not self._stopped.is_set():
+        while self._supervisor.should_continue:
             try:
                 dispatched = await self._tick()
                 if dispatched:
                     logger.info("Tick dispatched %d task(s)", dispatched)
+            except asyncio.CancelledError:
+                raise
             except Exception:
                 logger.exception("Scheduler tick failed")
-            await asyncio.wait_for(self._stopped.wait(), timeout=self.config.poll_interval_seconds)
+                self._supervisor.record_error("dispatcher", "tick failed")
+            self._supervisor.mark_tick("dispatcher")
+            await self._wait_for_stop_or_timeout(self.config.poll_interval_seconds)
 
     async def _tick(self) -> int:
         """Core tick: find READY tasks, budget-check, lease, dispatch."""
@@ -139,7 +193,7 @@ class MissionScheduler:
             return 0
 
         for task in ready_tasks:
-            if self._stopped.is_set():
+            if not self._supervisor.should_continue:
                 break
 
             # 3. Cost gate
@@ -225,19 +279,21 @@ class MissionScheduler:
 
     async def _consume_results(self) -> None:
         """Background coroutine that processes completed task results."""
-        while not self._stopped.is_set():
+        while self._supervisor.should_continue:
             try:
                 queue = await self.pool.results()
                 task_id_str, result_dict = await asyncio.wait_for(
                     queue.get(),
                     timeout=1.0,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
+                self._supervisor.mark_tick("result_consumer")
                 continue
             except asyncio.CancelledError:
                 break
 
             await self._process_result(task_id_str, result_dict)
+            self._supervisor.mark_tick("result_consumer")
 
     async def _process_result(self, task_id_str: str, result_dict: dict[str, Any]) -> None:
         """Process a single completed task result."""
@@ -381,14 +437,17 @@ class MissionScheduler:
     # ------------------------------------------------------------------
 
     def status(self) -> dict[str, Any]:
-        """Snapshot of scheduler health for observability."""
-        snap: dict[str, Any] = {
-            "running": not self._stopped.is_set(),
-            "active_workers": self.pool.active_count(),
-            "free_slots": self.pool.free_count(),
-            "global_spend_usd": str(self.cost.global_spend()),
-            "global_cap_usd": str(self.cost.global_cap),
-        }
-        if self.metrics:
-            snap["metrics_summary"] = self.metrics.summary()
-        return snap
+        """Public snapshot of scheduler health for observability."""
+        snap = SchedulerStatusSnapshot(
+            lifecycle_state=self.lifecycle_state,
+            loops=self._supervisor.snapshot(),
+            active_workers=self.pool.active_count(),
+            free_slots=self.pool.free_count(),
+            global_spend_usd=str(self.cost.global_spend()),
+            global_cap_usd=str(self.cost.global_cap),
+            last_tick_at=self._supervisor.last_tick_at,
+            last_error=self._supervisor.last_error,
+            restart_count=self._supervisor.restart_count,
+            metrics_summary=self.metrics.summary() if self.metrics else None,
+        )
+        return snap.to_dict()
