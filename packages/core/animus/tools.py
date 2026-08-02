@@ -1413,6 +1413,17 @@ def _tool_http_request(params: dict, policy: ToolPolicy | None = None) -> ToolRe
 
     timeout = min(params.get("timeout", 30), 60)
 
+    # Network authorization enforced by the registry-owned policy.
+    if policy is not None:
+        authz = policy.authorize_network({"url": url, "method": method})
+        if not authz.allowed:
+            return ToolResult(
+                tool_name="http_request",
+                success=False,
+                output=None,
+                error=authz.reason,
+            )
+
     try:
         import urllib.parse
         import urllib.request
