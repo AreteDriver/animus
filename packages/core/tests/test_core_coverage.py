@@ -12,6 +12,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from animus.tools import WorkspaceToolPolicy
+
 # ===================================================================
 # Learning Layer
 # ===================================================================
@@ -455,6 +457,15 @@ class TestToolRegistry:
 class TestBuiltinTools:
     """Tests for built-in tool functions."""
 
+    def _make_policy(self, tmp_path: Path, **kwargs) -> WorkspaceToolPolicy:
+        defaults = {
+            "allowed_paths": [str(tmp_path)],
+            "write_roots": [str(tmp_path)],
+            "command_enabled": True,
+        }
+        defaults.update(kwargs)
+        return WorkspaceToolPolicy(**defaults)
+
     def test_get_datetime_error(self):
         from animus.tools import _tool_get_datetime
 
@@ -473,69 +484,73 @@ class TestBuiltinTools:
     def test_read_file_not_found(self, tmp_path: Path):
         from animus.tools import _tool_read_file
 
-        result = _tool_read_file({"path": str(tmp_path / "missing.txt")})
+        policy = self._make_policy(tmp_path)
+        result = _tool_read_file({"path": str(tmp_path / "missing.txt")}, policy=policy)
         assert result.success is False
         assert "not found" in result.error
 
     def test_read_file_is_directory(self, tmp_path: Path):
         from animus.tools import _tool_read_file
 
-        result = _tool_read_file({"path": str(tmp_path)})
+        policy = self._make_policy(tmp_path)
+        result = _tool_read_file({"path": str(tmp_path)}, policy=policy)
         assert result.success is False
         assert "Not a file" in result.error
 
     def test_read_file_too_large(self, tmp_path: Path):
         from animus.tools import _tool_read_file
 
+        policy = self._make_policy(tmp_path)
         big_file = tmp_path / "big.txt"
         big_file.write_text("x" * 200)
-        result = _tool_read_file({"path": str(big_file), "max_size": 100})
+        result = _tool_read_file({"path": str(big_file), "max_size": 100}, policy=policy)
         assert result.success is False
         assert "too large" in result.error
 
     def test_read_file_success(self, tmp_path: Path):
         from animus.tools import _tool_read_file
 
+        policy = self._make_policy(tmp_path)
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello world")
-        result = _tool_read_file({"path": str(test_file)})
+        result = _tool_read_file({"path": str(test_file)}, policy=policy)
         assert result.success is True
         assert result.output == "hello world"
 
     def test_read_file_blocked_path(self, tmp_path: Path):
-        from animus.tools import _set_security_config, _tool_read_file
+        from animus.tools import WorkspaceToolPolicy, _tool_read_file
 
-        mock_config = MagicMock()
-        mock_config.blocked_paths = [str(tmp_path)]
-        mock_config.allowed_paths = ["/tmp"]
-        _set_security_config(mock_config)
-        try:
-            result = _tool_read_file({"path": str(tmp_path / "test.txt")})
-            assert result.success is False
-            assert "blocked" in result.error.lower() or "denied" in result.error.lower()
-        finally:
-            _set_security_config(None)
+        policy = WorkspaceToolPolicy(
+            allowed_paths=["/tmp"],
+            blocked_paths=[str(tmp_path)],
+        )
+        result = _tool_read_file({"path": str(tmp_path / "test.txt")}, policy=policy)
+        assert result.success is False
+        assert "blocked" in result.error.lower() or "denied" in result.error.lower()
 
     def test_list_files_not_found(self, tmp_path: Path):
         from animus.tools import _tool_list_files
 
-        result = _tool_list_files({"directory": str(tmp_path / "missing")})
+        policy = self._make_policy(tmp_path)
+        result = _tool_list_files({"directory": str(tmp_path / "missing")}, policy=policy)
         assert result.success is False
         assert "not found" in result.error
 
     def test_list_files_success(self, tmp_path: Path):
         from animus.tools import _tool_list_files
 
+        policy = self._make_policy(tmp_path)
         (tmp_path / "a.txt").write_text("a")
         (tmp_path / "b.txt").write_text("b")
-        result = _tool_list_files({"directory": str(tmp_path), "pattern": "*.txt"})
+        result = _tool_list_files({"directory": str(tmp_path), "pattern": "*.txt"}, policy=policy)
         assert result.success is True
         assert "a.txt" in result.output
 
     def test_list_files_no_matches(self, tmp_path: Path):
         from animus.tools import _tool_list_files
 
-        result = _tool_list_files({"directory": str(tmp_path), "pattern": "*.xyz"})
+        policy = self._make_policy(tmp_path)
+        result = _tool_list_files({"directory": str(tmp_path), "pattern": "*.xyz"}, policy=policy)
         assert result.success is True
         assert "No matches" in result.output
 
@@ -546,61 +561,56 @@ class TestBuiltinTools:
         assert result.success is False
         assert "Missing" in result.error
 
-    def test_run_command_success(self):
+    def test_run_command_success(self, tmp_path: Path):
         from animus.tools import _tool_run_command
 
-        result = _tool_run_command({"command": "echo hello"})
+        policy = self._make_policy(tmp_path)
+        result = _tool_run_command({"command": "echo hello"}, policy=policy)
         assert result.success is True
         assert "hello" in result.output
 
-    def test_run_command_failure(self):
+    def test_run_command_failure(self, tmp_path: Path):
         from animus.tools import _tool_run_command
 
-        result = _tool_run_command({"command": "false"})
+        policy = self._make_policy(tmp_path)
+        result = _tool_run_command({"command": "false"}, policy=policy)
         assert result.success is False
 
-    def test_run_command_timeout(self):
+    def test_run_command_timeout(self, tmp_path: Path):
         from animus.tools import _tool_run_command
 
-        result = _tool_run_command({"command": "sleep 60", "timeout": 1})
+        policy = self._make_policy(tmp_path)
+        result = _tool_run_command({"command": "sleep 60", "timeout": 1}, policy=policy)
         assert result.success is False
         assert "timed out" in result.error
 
-    def test_run_command_with_security_config(self):
-        from animus.tools import _set_security_config, _tool_run_command
+    def test_run_command_with_policy(self, tmp_path: Path):
+        from animus.tools import WorkspaceToolPolicy, _tool_run_command
 
-        mock_config = MagicMock()
-        mock_config.command_enabled = True
-        mock_config.command_blocklist = []
-        mock_config.command_timeout_seconds = 5
-        mock_config.write_roots = []
-        _set_security_config(mock_config)
-        try:
-            result = _tool_run_command({"command": "echo test", "timeout": 30})
-            assert result.success is True
-        finally:
-            _set_security_config(None)
+        policy = WorkspaceToolPolicy(
+            command_enabled=True,
+            command_blocklist=[],
+            command_timeout_seconds=5,
+        )
+        result = _tool_run_command({"command": "echo test", "timeout": 30}, policy=policy)
+        assert result.success is True
 
-    def test_run_command_disabled(self):
-        from animus.tools import _set_security_config, _tool_run_command
+    def test_run_command_disabled(self, tmp_path: Path):
+        from animus.tools import WorkspaceToolPolicy, _tool_run_command
 
-        mock_config = MagicMock()
-        mock_config.command_enabled = False
-        _set_security_config(mock_config)
-        try:
-            result = _tool_run_command({"command": "echo test"})
-            assert result.success is False
-            assert "disabled" in result.error
-        finally:
-            _set_security_config(None)
+        policy = WorkspaceToolPolicy(command_enabled=False)
+        result = _tool_run_command({"command": "echo test"}, policy=policy)
+        assert result.success is False
+        assert "disabled" in result.error
 
     # --- write_file tests ---
 
     def test_write_file_success(self, tmp_path: Path):
         from animus.tools import _tool_write_file
 
+        policy = self._make_policy(tmp_path)
         target = tmp_path / "output.txt"
-        result = _tool_write_file({"path": str(target), "content": "hello\nworld"})
+        result = _tool_write_file({"path": str(target), "content": "hello\nworld"}, policy=policy)
         assert result.success is True
         assert "2 lines" in result.output
         assert target.read_text() == "hello\nworld"
@@ -608,8 +618,9 @@ class TestBuiltinTools:
     def test_write_file_creates_parent_dirs(self, tmp_path: Path):
         from animus.tools import _tool_write_file
 
+        policy = self._make_policy(tmp_path)
         target = tmp_path / "sub" / "dir" / "file.txt"
-        result = _tool_write_file({"path": str(target), "content": "nested"})
+        result = _tool_write_file({"path": str(target), "content": "nested"}, policy=policy)
         assert result.success is True
         assert target.read_text() == "nested"
 
@@ -623,29 +634,29 @@ class TestBuiltinTools:
     def test_write_file_missing_content(self, tmp_path: Path):
         from animus.tools import _tool_write_file
 
-        result = _tool_write_file({"path": str(tmp_path / "f.txt")})
+        policy = self._make_policy(tmp_path)
+        result = _tool_write_file({"path": str(tmp_path / "f.txt")}, policy=policy)
         assert result.success is False
         assert "content" in result.error.lower()
 
     def test_write_file_blocked_path(self, tmp_path: Path):
-        from animus.tools import _set_security_config, _tool_write_file
+        from animus.tools import WorkspaceToolPolicy, _tool_write_file
 
-        mock_config = MagicMock()
-        mock_config.blocked_paths = [str(tmp_path)]
-        mock_config.allowed_paths = ["/tmp"]
-        _set_security_config(mock_config)
-        try:
-            result = _tool_write_file({"path": str(tmp_path / "blocked.txt"), "content": "x"})
-            assert result.success is False
-            assert "denied" in result.error.lower() or "blocked" in result.error.lower()
-        finally:
-            _set_security_config(None)
+        policy = WorkspaceToolPolicy(
+            allowed_paths=["/tmp"],
+            blocked_paths=[str(tmp_path)],
+            write_roots=["/tmp"],
+        )
+        result = _tool_write_file({"path": str(tmp_path / "blocked.txt"), "content": "x"}, policy=policy)
+        assert result.success is False
+        assert "denied" in result.error.lower() or "blocked" in result.error.lower()
 
     # --- edit_file tests ---
 
     def test_edit_file_success(self, tmp_path: Path):
         from animus.tools import _tool_edit_file
 
+        policy = self._make_policy(tmp_path)
         target = tmp_path / "code.py"
         target.write_text("def hello():\n    return 'world'\n")
         result = _tool_edit_file(
@@ -653,7 +664,8 @@ class TestBuiltinTools:
                 "path": str(target),
                 "old_text": "return 'world'",
                 "new_text": "return 'universe'",
-            }
+            },
+            policy=policy,
         )
         assert result.success is True
         assert "universe" in target.read_text()
@@ -661,6 +673,7 @@ class TestBuiltinTools:
     def test_edit_file_text_not_found(self, tmp_path: Path):
         from animus.tools import _tool_edit_file
 
+        policy = self._make_policy(tmp_path)
         target = tmp_path / "code.py"
         target.write_text("hello world")
         result = _tool_edit_file(
@@ -668,7 +681,8 @@ class TestBuiltinTools:
                 "path": str(target),
                 "old_text": "missing text",
                 "new_text": "replacement",
-            }
+            },
+            policy=policy,
         )
         assert result.success is False
         assert "Could not find" in result.error
@@ -676,6 +690,7 @@ class TestBuiltinTools:
     def test_edit_file_multiple_matches(self, tmp_path: Path):
         from animus.tools import _tool_edit_file
 
+        policy = self._make_policy(tmp_path)
         target = tmp_path / "code.py"
         target.write_text("foo\nfoo\nbar")
         result = _tool_edit_file(
@@ -683,7 +698,8 @@ class TestBuiltinTools:
                 "path": str(target),
                 "old_text": "foo",
                 "new_text": "baz",
-            }
+            },
+            policy=policy,
         )
         assert result.success is False
         assert "2 locations" in result.error
@@ -691,12 +707,14 @@ class TestBuiltinTools:
     def test_edit_file_not_found(self, tmp_path: Path):
         from animus.tools import _tool_edit_file
 
+        policy = self._make_policy(tmp_path)
         result = _tool_edit_file(
             {
                 "path": str(tmp_path / "missing.py"),
                 "old_text": "a",
                 "new_text": "b",
-            }
+            },
+            policy=policy,
         )
         assert result.success is False
         assert "not found" in result.error.lower()
@@ -709,24 +727,23 @@ class TestBuiltinTools:
         assert "old_text" in result.error.lower()
 
     def test_edit_file_blocked_path(self, tmp_path: Path):
-        from animus.tools import _set_security_config, _tool_edit_file
+        from animus.tools import WorkspaceToolPolicy, _tool_edit_file
 
-        mock_config = MagicMock()
-        mock_config.blocked_paths = [str(tmp_path)]
-        mock_config.allowed_paths = ["/tmp"]
-        _set_security_config(mock_config)
-        try:
-            result = _tool_edit_file(
-                {
-                    "path": str(tmp_path / "blocked.py"),
-                    "old_text": "a",
-                    "new_text": "b",
-                }
-            )
-            assert result.success is False
-            assert "denied" in result.error.lower() or "blocked" in result.error.lower()
-        finally:
-            _set_security_config(None)
+        policy = WorkspaceToolPolicy(
+            allowed_paths=["/tmp"],
+            blocked_paths=[str(tmp_path)],
+            write_roots=["/tmp"],
+        )
+        result = _tool_edit_file(
+            {
+                "path": str(tmp_path / "blocked.py"),
+                "old_text": "a",
+                "new_text": "b",
+            },
+            policy=policy,
+        )
+        assert result.success is False
+        assert "denied" in result.error.lower() or "blocked" in result.error.lower()
 
     def test_web_search_missing_query(self):
         from animus.tools import _tool_web_search
@@ -873,13 +890,10 @@ class TestCreateDefaultRegistry:
         mock_config.command_enabled = True
         mock_config.command_blocklist = []
         mock_config.command_timeout_seconds = 30
+        mock_config.write_roots = []
 
         registry = create_default_registry(security_config=mock_config)
         assert len(registry.list_tools()) >= 6
-        # Clean up
-        from animus.tools import _set_security_config
-
-        _set_security_config(None)
 
 
 class TestMemoryTools:
@@ -1381,57 +1395,33 @@ class TestSecurityValidation:
     """Tests for path and command security validation."""
 
     def test_validate_path_glob_blocked(self):
-        from animus.tools import _set_security_config, _validate_path
+        from animus.tools import WorkspaceToolPolicy, _validate_path
 
-        mock_config = MagicMock()
-        mock_config.blocked_paths = ["/etc/*"]
-        mock_config.allowed_paths = ["/"]
-        _set_security_config(mock_config)
-        try:
-            valid, error = _validate_path("/etc/passwd")
-            assert valid is False
-            assert "blocked" in error.lower()
-        finally:
-            _set_security_config(None)
+        policy = WorkspaceToolPolicy(allowed_paths=["/"], blocked_paths=["/etc/*"])
+        valid, error = _validate_path("/etc/passwd", policy=policy)
+        assert valid is False
+        assert "blocked" in error.lower()
 
     def test_validate_path_not_allowed(self):
-        from animus.tools import _set_security_config, _validate_path
+        from animus.tools import WorkspaceToolPolicy, _validate_path
 
-        mock_config = MagicMock()
-        mock_config.blocked_paths = []
-        mock_config.allowed_paths = ["/tmp"]
-        _set_security_config(mock_config)
-        try:
-            valid, error = _validate_path("/home/secret")
-            assert valid is False
-            assert "not in allowed" in error.lower()
-        finally:
-            _set_security_config(None)
+        policy = WorkspaceToolPolicy(allowed_paths=["/tmp"])
+        valid, error = _validate_path("/home/secret", policy=policy)
+        assert valid is False
+        assert "not in allowed" in error.lower()
 
     def test_validate_command_dangerous_patterns(self):
-        from animus.tools import _set_security_config, _validate_command
+        from animus.tools import WorkspaceToolPolicy, _validate_command
 
-        mock_config = MagicMock()
-        mock_config.command_enabled = True
-        mock_config.command_blocklist = []
-        _set_security_config(mock_config)
-        try:
-            valid, error = _validate_command("echo $(whoami)")
-            assert valid is False
-            assert "disallowed" in error.lower()
-        finally:
-            _set_security_config(None)
+        policy = WorkspaceToolPolicy(command_enabled=True)
+        valid, error = _validate_command("echo $(whoami)", policy=policy)
+        assert valid is False
+        assert "disallowed" in error.lower()
 
     def test_validate_command_blocklist(self):
-        from animus.tools import _set_security_config, _validate_command
+        from animus.tools import WorkspaceToolPolicy, _validate_command
 
-        mock_config = MagicMock()
-        mock_config.command_enabled = True
-        mock_config.command_blocklist = [r"\brm\b"]
-        _set_security_config(mock_config)
-        try:
-            valid, error = _validate_command("rm -rf /")
-            assert valid is False
-            assert "blocked" in error.lower()
-        finally:
-            _set_security_config(None)
+        policy = WorkspaceToolPolicy(command_enabled=True, command_blocklist=[r"\brm\b"])
+        valid, error = _validate_command("rm -rf /", policy=policy)
+        assert valid is False
+        assert "blocked" in error.lower()

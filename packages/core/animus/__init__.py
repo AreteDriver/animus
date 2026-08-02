@@ -31,7 +31,16 @@ from animus.memory import (
 from animus.proactive import Nudge, NudgePriority, NudgeType, ProactiveEngine
 from animus.register import Register, RegisterTranslator, detect_register
 from animus.tasks import Task, TaskStatus, TaskTracker
-from animus.tools import Tool, ToolRegistry, ToolResult, create_default_registry
+from animus.tools import (
+    DenyAllToolPolicy,
+    ExplicitUnrestrictedDevelopmentPolicy,
+    Tool,
+    ToolPolicy,
+    ToolRegistry,
+    ToolResult,
+    WorkspaceToolPolicy,
+    create_default_registry,
+)
 
 # Optional imports - available when dependencies are installed
 try:
@@ -114,10 +123,14 @@ __all__ = [
     "TaskStatus",
     "TaskTracker",
     "TaskWeight",
+    "DenyAllToolPolicy",
+    "ExplicitUnrestrictedDevelopmentPolicy",
     "Tool",
+    "ToolPolicy",
     "ToolRegistry",
     "ToolResult",
     "VoiceInput",
+    "WorkspaceToolPolicy",
     "VoiceInterface",
     "VoiceOutput",
     "WorkflowConfig",

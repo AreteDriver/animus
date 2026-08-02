@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shlex
 import subprocess
 import time
 from dataclasses import dataclass, field
@@ -580,25 +581,67 @@ class ForgeToolRegistry:
         self._pending_writes.clear()
         return count
 
+    # Characters that enable shell parsing when they appear in a command
+    # string.  We reject the string outright before shlex.split so that no
+    # shell operator, substitution, redirection, or newline can reach the
+    # parser.  This is defense-in-depth: the actual subprocess.run call also
+    # uses shell=False with an argv list.
+    _SHELL_INJECTION_CHARS: frozenset[str] = frozenset(";&|`$<>\\\n\r")
+
+    # Interpreter binaries that can execute arbitrary code from an argument.
+    _INTERPRETER_COMMANDS: frozenset[str] = frozenset(
+        {"python", "python3", "node", "nodejs", "ruby", "perl", "php"}
+    )
+    _INTERPRETER_CODE_FLAGS: frozenset[str] = frozenset({"-c", "--command", "-e", "--eval"})
+
     def _handle_run_command(self, args: dict) -> str:
         command = args.get("command", "")
-        timeout = args.get("timeout", 30)
 
-        # Validate command against whitelist
-        cmd_parts = command.split()
-        if not cmd_parts:
+        # Reject shell metacharacters before tokenization.  This blocks
+        # chaining (;, &&, ||), pipes, redirections, command substitution,
+        # newline injection, and backslash escapes.
+        if any(ch in command for ch in self._SHELL_INJECTION_CHARS):
+            return "Error: Command contains forbidden shell metacharacters"
+
+        try:
+            argv = shlex.split(command)
+        except ValueError as exc:
+            return f"Error: Invalid command syntax: {exc}"
+
+        if not argv:
             return "Error: Empty command"
 
-        base_cmd = Path(cmd_parts[0]).name
+        # Validate command against whitelist.  Only bare command names are
+        # accepted; absolute/relative paths are rejected to prevent PATH
+        # shadowing and arbitrary binary execution.
+        raw_base = argv[0]
+        if "/" in raw_base or "\\" in raw_base or raw_base.startswith(".."):
+            return f"Error: Command must be a bare name, not a path: {raw_base}"
+
+        base_cmd = Path(raw_base).name
         if base_cmd not in self._allowed_commands:
             return (
                 f"Error: Command '{base_cmd}' not in allowed list: {sorted(self._allowed_commands)}"
             )
 
+        # Interpreter code-execution defense: reject flags like python -c or
+        # node -e that evaluate arbitrary code from an argument.
+        if base_cmd in self._INTERPRETER_COMMANDS:
+            if any(flag in argv for flag in self._INTERPRETER_CODE_FLAGS):
+                return f"Error: Command '{base_cmd}' code-execution flag is not allowed"
+
+        # Cap timeout to a reasonable maximum.
+        max_timeout = 300
+        try:
+            timeout = int(args.get("timeout", 30))
+        except (TypeError, ValueError):
+            timeout = 30
+        timeout = min(max(timeout, 1), max_timeout)
+
         try:
             result = subprocess.run(
-                command,
-                shell=True,
+                argv,
+                shell=False,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
@@ -608,6 +651,8 @@ class ForgeToolRegistry:
             if result.returncode != 0:
                 output += f"\nSTDERR:\n{result.stderr}" if result.stderr else ""
                 output += f"\nExit code: {result.returncode}"
+            if len(output) > MAX_TOOL_OUTPUT_CHARS:
+                output = output[:MAX_TOOL_OUTPUT_CHARS] + "\n... (truncated)"
             return output or "(no output)"
         except subprocess.TimeoutExpired:
             return f"Error: Command timed out after {timeout}s"

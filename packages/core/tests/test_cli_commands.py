@@ -297,28 +297,23 @@ class TestWriteRootsSandboxIntegration:
         assert config.write_roots == []
 
     def test_sandbox_restricts_writes(self, tmp_path):
-        from animus.config import ToolsSecurityConfig
-        from animus.tools import _set_security_config, _validate_write_path
+        from animus.tools import WorkspaceToolPolicy, _validate_write_path
 
         sandbox = tmp_path / "sandbox"
         sandbox.mkdir()
 
-        config = ToolsSecurityConfig(
+        policy = WorkspaceToolPolicy(
             allowed_paths=[str(tmp_path)],
             write_roots=[str(sandbox)],
         )
-        _set_security_config(config)
-        try:
-            # Inside sandbox — OK
-            ok, err = _validate_write_path(str(sandbox / "file.py"))
-            assert ok
+        # Inside sandbox — OK
+        ok, err = _validate_write_path(str(sandbox / "file.py"), policy)
+        assert ok
 
-            # Outside sandbox — blocked
-            ok, err = _validate_write_path(str(tmp_path / "outside.py"))
-            assert not ok
-            assert "Write denied" in err
-        finally:
-            _set_security_config(None)
+        # Outside sandbox — blocked
+        ok, err = _validate_write_path(str(tmp_path / "outside.py"), policy)
+        assert not ok
+        assert "Write denied" in err
 
 
 class TestCommandSandbox:
@@ -326,90 +321,74 @@ class TestCommandSandbox:
 
     def test_command_cwd_set_to_write_root(self, tmp_path):
         """Commands run from within sandbox directory."""
-        from animus.config import ToolsSecurityConfig
-        from animus.tools import _set_security_config, _tool_run_command
+        from animus.tools import WorkspaceToolPolicy, _tool_run_command
 
         sandbox = tmp_path / "sandbox"
         sandbox.mkdir()
 
-        config = ToolsSecurityConfig(
+        policy = WorkspaceToolPolicy(
             allowed_paths=[str(tmp_path)],
             write_roots=[str(sandbox)],
+            command_enabled=True,
         )
-        _set_security_config(config)
-        try:
-            result = _tool_run_command({"command": "pwd"})
-            assert result.success
-            assert str(sandbox) in result.output
-        finally:
-            _set_security_config(None)
+        result = _tool_run_command({"command": "pwd"}, policy)
+        assert result.success
+        assert str(sandbox) in result.output
 
     def test_rm_outside_sandbox_blocked(self, tmp_path):
         """rm targeting paths outside sandbox is blocked."""
-        from animus.config import ToolsSecurityConfig
-        from animus.tools import _set_security_config, _validate_command
+        from animus.tools import WorkspaceToolPolicy, _validate_command
 
         sandbox = tmp_path / "sandbox"
         sandbox.mkdir()
 
-        config = ToolsSecurityConfig(
+        policy = WorkspaceToolPolicy(
             allowed_paths=[str(tmp_path)],
             write_roots=[str(sandbox)],
+            command_enabled=True,
         )
-        _set_security_config(config)
-        try:
-            # rm inside sandbox — OK
-            ok, err = _validate_command(f"rm {sandbox}/file.txt")
-            assert ok, f"Expected OK, got: {err}"
+        # rm inside sandbox — OK
+        ok, err = _validate_command(f"rm {sandbox}/file.txt", policy)
+        assert ok, f"Expected OK, got: {err}"
 
-            # rm outside sandbox — blocked
-            ok, err = _validate_command(f"rm {tmp_path}/important.py")
-            assert not ok
-            assert "outside sandbox" in err
-        finally:
-            _set_security_config(None)
+        # rm outside sandbox — blocked
+        ok, err = _validate_command(f"rm {tmp_path}/important.py", policy)
+        assert not ok
+        assert "outside sandbox" in err
 
     def test_mv_outside_sandbox_blocked(self, tmp_path):
         """mv targeting paths outside sandbox is blocked."""
-        from animus.config import ToolsSecurityConfig
-        from animus.tools import _set_security_config, _validate_command
+        from animus.tools import WorkspaceToolPolicy, _validate_command
 
         sandbox = tmp_path / "sandbox"
         sandbox.mkdir()
 
-        config = ToolsSecurityConfig(
+        policy = WorkspaceToolPolicy(
             allowed_paths=[str(tmp_path)],
             write_roots=[str(sandbox)],
+            command_enabled=True,
         )
-        _set_security_config(config)
-        try:
-            ok, err = _validate_command(f"mv {tmp_path}/file.py {sandbox}/file.py")
-            assert not ok
-            assert "outside sandbox" in err
-        finally:
-            _set_security_config(None)
+        ok, err = _validate_command(f"mv {tmp_path}/file.py {sandbox}/file.py", policy)
+        assert not ok
+        assert "outside sandbox" in err
 
     def test_non_destructive_commands_allowed(self, tmp_path):
         """Non-destructive commands (ls, cat, etc.) are not blocked by sandbox."""
-        from animus.config import ToolsSecurityConfig
-        from animus.tools import _set_security_config, _validate_command
+        from animus.tools import WorkspaceToolPolicy, _validate_command
 
         sandbox = tmp_path / "sandbox"
         sandbox.mkdir()
 
-        config = ToolsSecurityConfig(
+        policy = WorkspaceToolPolicy(
             allowed_paths=[str(tmp_path)],
             write_roots=[str(sandbox)],
+            command_enabled=True,
         )
-        _set_security_config(config)
-        try:
-            ok, err = _validate_command(f"ls {tmp_path}")
-            assert ok
+        ok, err = _validate_command(f"ls {tmp_path}", policy)
+        assert ok
 
-            ok, err = _validate_command("echo hello")
-            assert ok
+        ok, err = _validate_command("echo hello", policy)
+        assert ok
 
-            ok, err = _validate_command("ruff check .")
-            assert ok
-        finally:
-            _set_security_config(None)
+        ok, err = _validate_command("ruff check .", policy)
+        assert ok

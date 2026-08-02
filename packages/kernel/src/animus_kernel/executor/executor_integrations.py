@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import shlex
 import subprocess
 import tempfile
 from datetime import UTC
@@ -98,6 +99,51 @@ class IntegrationHandlersMixin:
         # Determine timeout: use step timeout if set, otherwise use global setting
         timeout = step.timeout_seconds or settings.shell_timeout_seconds
 
+        # SEC-03: workflow shell steps must run with shell=False.  Template
+        # substitution can still produce a shell-like string, so we tokenize it
+        # with shlex.split and pass an argv list.  Shell operators (pipes,
+        # redirects, command chaining) in templates are rejected below because
+        # they cannot be expressed safely with shell=False; this is a known
+        # security-vs-flexibility trade-off.
+        _SHELL_INJECTION_CHARS: frozenset[str] = frozenset(";&|`$<>\\\n\r")
+        _INTERPRETER_COMMANDS: frozenset[str] = frozenset(
+            {"python", "python3", "node", "nodejs", "ruby", "perl", "php"}
+        )
+        _INTERPRETER_CODE_FLAGS: frozenset[str] = frozenset({"-c", "--command", "-e", "--eval"})
+
+        if any(ch in command for ch in _SHELL_INJECTION_CHARS):
+            raise ValueError(
+                "Substituted shell command contains forbidden shell metacharacters; "
+                "workflow shell steps do not support pipes, redirects, or command chaining"
+            )
+
+        try:
+            argv = shlex.split(command)
+        except ValueError as exc:
+            raise ValueError(f"Invalid shell command syntax after substitution: {exc}") from exc
+
+        if not argv:
+            raise ValueError("Shell command parsed to empty argument list")
+
+        raw_base = argv[0]
+        if "/" in raw_base or "\\" in raw_base or raw_base.startswith(".."):
+            raise ValueError(f"Shell command must use a bare command name, not a path: {raw_base}")
+
+        base_cmd = Path(raw_base).name
+        if settings.shell_allowed_commands:
+            allowed = [c.strip() for c in settings.shell_allowed_commands.split(",")]
+            if base_cmd not in allowed:
+                raise ValueError(
+                    f"Command '{base_cmd}' not in allowed list. "
+                    f"Allowed commands: {', '.join(allowed)}"
+                )
+
+        if base_cmd in _INTERPRETER_COMMANDS:
+            if any(flag in argv for flag in _INTERPRETER_CODE_FLAGS):
+                raise ValueError(
+                    f"Command '{base_cmd}' code-execution flag is not allowed in shell steps"
+                )
+
         logger.debug(
             "Executing shell command (timeout=%ds): %s",
             timeout,
@@ -106,8 +152,8 @@ class IntegrationHandlersMixin:
 
         try:
             result = subprocess.run(
-                command,
-                shell=True,
+                argv,
+                shell=False,
                 capture_output=True,
                 text=True,
                 timeout=timeout,

@@ -906,19 +906,20 @@ def main():
                 # Sandbox: restrict writes to a build workspace
                 import tempfile
 
-                from animus.tools import _set_security_config
+                from animus.tools import WorkspaceToolPolicy
 
                 build_workspace = Path(tempfile.mkdtemp(prefix="animus_build_"))
-                sandbox_config = config.security.tools if hasattr(config, "security") else None
-                if sandbox_config is None:
-                    from animus.config import ToolsSecurityConfig
-
-                    sandbox_config = ToolsSecurityConfig()
-                sandbox_config.write_roots = [str(build_workspace)]
-                _set_security_config(sandbox_config)
+                build_policy = WorkspaceToolPolicy(
+                    allowed_paths=[str(build_workspace)],
+                    write_roots=[str(build_workspace)],
+                    command_enabled=True,
+                )
+                build_registry = create_default_registry(policy=build_policy)
                 console.print(f"[dim]Build workspace: {build_workspace}[/dim]")
 
-                engine = ForgeEngine(cognitive=cognitive, checkpoint_dir=cp_dir, tools=tools)
+                engine = ForgeEngine(
+                    cognitive=cognitive, checkpoint_dir=cp_dir, tools=build_registry
+                )
                 console.print(f"[cyan][bold]Build Pipeline[/bold]: {task_desc}[/cyan]")
                 console.print("  Steps: planner → coder → verifier → fixer")
                 console.print(f"  Budget: ${wf_config.max_cost_usd:.2f}")
@@ -942,9 +943,7 @@ def main():
                     )
                 except Exception as e:
                     console.print(f"[yellow]Build failed: {e}[/yellow]")
-                finally:
-                    # Reset security config after build
-                    _set_security_config(None)
+                # No global security state to reset; policy is owned by build_registry.
                 continue
 
             if user_input.lower() == "/history":
@@ -1146,10 +1145,27 @@ def main():
 
                 # Approval for sensitive tools
                 if tool.requires_approval:
-                    confirm = prompt(f"Execute '{tool_name}'? (y/n): ").strip().lower()
-                    if confirm != "y":
-                        console.print("[yellow]Tool execution cancelled.[/yellow]")
-                        continue
+                    auto_approve = os.environ.get("ANIMUS_AUTO_APPROVE", "").lower() in (
+                        "1",
+                        "true",
+                        "yes",
+                    )
+                    if not auto_approve:
+                        confirm = prompt(f"Execute '{tool_name}'? (y/n): ").strip().lower()
+                        if confirm != "y":
+                            console.print("[yellow]Tool execution cancelled.[/yellow]")
+                            continue
+                    params = dict(params)
+                    params["_approval_id"] = tools.request_approval(
+                        tool_name,
+                        params,
+                        approver="auto-approve" if auto_approve else "cli-user",
+                        reason=(
+                            "ANIMUS_AUTO_APPROVE enabled"
+                            if auto_approve
+                            else "Interactive CLI approval"
+                        ),
+                    )
 
                 with perf_log("tool_execute", tool_name=tool_name) as _tctx:
                     result = tools.execute(tool_name, params)

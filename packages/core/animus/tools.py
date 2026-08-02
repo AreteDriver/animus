@@ -7,138 +7,569 @@ Provides tool definitions, registry, and built-in tools for agentic capabilities
 import asyncio
 import fnmatch
 import glob as glob_module
+import hashlib
+import inspect
 import json
 import re
 import shlex
 import subprocess
+import uuid
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from animus.logging import get_logger
 
 logger = get_logger("tools")
 
-# Security config - initialized by create_tool_registry()
-_security_config = None
+
+# =============================================================================
+# Tool policy layer
+# =============================================================================
 
 
-def _set_security_config(config) -> None:
-    """Set the security configuration for tools."""
-    global _security_config
-    _security_config = config
+@dataclass(frozen=True)
+class AuthorizationResult:
+    """Structured result of a policy authorization check.
 
-
-def _validate_path(path: str) -> tuple[bool, str | None]:
+    ``reason`` must be present when ``allowed`` is False so callers and logs
+    can explain why an action was denied without leaking sensitive data.
     """
-    Validate a file path against security rules.
 
-    Returns:
-        (is_valid, error_message)
+    allowed: bool
+    reason: str | None = None
+
+
+class ToolPolicy(ABC):
+    """Immutable, registry-owned security policy for executable tools.
+
+    Every ``ToolRegistry`` instance must own a concrete policy. Missing or
+    ``None`` policy defaults to ``DenyAllToolPolicy`` so the registry fails
+    closed. Multiple registries in the same process can safely hold different
+    policies because no mutable module-level state is consulted at runtime.
     """
-    if _security_config is None:
-        return True, None  # No config = no restrictions (dev mode)
 
-    resolved = Path(path).expanduser().resolve()
+    @abstractmethod
+    def authorize_read(
+        self, path: str, context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        """Authorize reading from ``path``."""
+        ...
 
-    # Check blocked paths
-    for blocked in _security_config.blocked_paths:
-        blocked_resolved = Path(blocked).expanduser()
-        # Handle glob patterns in blocked paths
-        if "*" in blocked:
-            if fnmatch.fnmatch(str(resolved), str(blocked_resolved)):
-                return False, f"Access denied: path matches blocked pattern '{blocked}'"
-        elif resolved == blocked_resolved or blocked_resolved in resolved.parents:
-            return False, "Access denied: path is blocked"
+    @abstractmethod
+    def authorize_write(
+        self, path: str, context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        """Authorize writing to ``path``."""
+        ...
 
-    # Check if within allowed paths
-    in_allowed = False
-    for allowed in _security_config.allowed_paths:
-        allowed_resolved = Path(allowed).expanduser().resolve()
-        if resolved == allowed_resolved or allowed_resolved in resolved.parents:
-            in_allowed = True
-            break
+    @abstractmethod
+    def authorize_command(
+        self, argv: list[str], context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        """Authorize executing ``argv`` (already tokenized)."""
+        ...
 
-    if not in_allowed:
-        return False, "Access denied: path not in allowed directories"
-
-    return True, None
+    @abstractmethod
+    def authorize_network(
+        self, request: dict[str, Any], context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        """Authorize a network ``request`` dict (url, method, ...)."""
+        ...
 
 
-def _validate_write_path(path: str) -> tuple[bool, str | None]:
-    """Validate a path for write operations (write_file, edit_file).
+class DenyAllToolPolicy(ToolPolicy):
+    """Default, fail-closed policy: every sensitive action is denied."""
 
-    First runs standard path validation, then checks write_roots sandbox.
-    When write_roots is configured, writes are restricted to those directories.
+    def authorize_read(
+        self, path: str, context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        return AuthorizationResult(
+            allowed=False,
+            reason="Access denied: no tool policy configured for this registry",
+        )
+
+    def authorize_write(
+        self, path: str, context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        return AuthorizationResult(
+            allowed=False,
+            reason="Write denied: no tool policy configured for this registry",
+        )
+
+    def authorize_command(
+        self, argv: list[str], context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        return AuthorizationResult(
+            allowed=False,
+            reason="Command execution denied: no tool policy configured for this registry",
+        )
+
+    def authorize_network(
+        self, request: dict[str, Any], context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        return AuthorizationResult(
+            allowed=False,
+            reason="Network access denied: no tool policy configured for this registry",
+        )
+
+
+class WorkspaceToolPolicy(ToolPolicy):
+    """Workspace-scoped policy for filesystem, command, and network tools.
+
+    Reads are restricted to ``allowed_paths`` minus ``blocked_paths``. Writes
+    are further restricted to ``write_roots`` when configured. Commands are
+    allowed only when ``command_enabled`` is True and pass the
+    ``command_blocklist``/``command_allowlist`` checks. Destructive commands
+    (rm, mv, cp, chmod, chown) with path arguments are sandboxed to
+    ``write_roots``. Network requests are denied by default; callers must
+    explicitly allow them with ``network_allowed=True``.
     """
-    is_valid, error = _validate_path(path)
-    if not is_valid:
-        return is_valid, error
 
-    if _security_config is None or not _security_config.write_roots:
-        return True, None
+    def __init__(
+        self,
+        *,
+        allowed_paths: list[str] | None = None,
+        blocked_paths: list[str] | None = None,
+        write_roots: list[str] | None = None,
+        command_enabled: bool = False,
+        command_allowlist: list[str] | None = None,
+        command_blocklist: list[str] | None = None,
+        command_timeout_seconds: int = 30,
+        network_allowed: bool = False,
+    ) -> None:
+        # Normalize paths immediately so the policy object is immutable after
+        # construction. Paths with globs are preserved as-is for fnmatch.
+        self.allowed_paths = allowed_paths or []
+        self.blocked_paths = blocked_paths or []
+        self.write_roots = write_roots or []
+        self.command_enabled = command_enabled
+        self.command_allowlist = command_allowlist or []
+        self.command_blocklist = command_blocklist or []
+        self.command_timeout_seconds = command_timeout_seconds
+        self.network_allowed = network_allowed
 
-    resolved = Path(path).expanduser().resolve()
-    for root in _security_config.write_roots:
-        root_resolved = Path(root).expanduser().resolve()
-        if resolved == root_resolved or root_resolved in resolved.parents:
-            return True, None
+    @classmethod
+    def from_tools_security_config(cls, config) -> "WorkspaceToolPolicy":
+        """Build a workspace policy from a ``ToolsSecurityConfig`` instance.
 
-    return False, f"Write denied: path not in write_roots ({_security_config.write_roots})"
+        This is a migration helper: legacy config dataclass attributes are
+        translated into the immutable policy object without retaining any
+        reference to mutable global state.
+        """
+        return cls(
+            allowed_paths=list(config.allowed_paths),
+            blocked_paths=list(config.blocked_paths),
+            write_roots=list(config.write_roots),
+            command_enabled=bool(config.command_enabled),
+            command_blocklist=list(config.command_blocklist),
+            command_timeout_seconds=int(config.command_timeout_seconds),
+        )
 
+    def _resolve(self, path: str) -> Path:
+        return Path(path).expanduser().resolve()
 
-def _validate_command(command: str) -> tuple[bool, str | None]:
-    """
-    Validate a shell command against security rules.
+    def _is_blocked(self, resolved: Path) -> str | None:
+        for blocked in self.blocked_paths:
+            blocked_resolved = Path(blocked).expanduser()
+            if "*" in blocked:
+                if fnmatch.fnmatch(str(resolved), str(blocked_resolved)):
+                    return f"Access denied: path matches blocked pattern '{blocked}'"
+            elif resolved == blocked_resolved or blocked_resolved in resolved.parents:
+                return "Access denied: path is blocked"
+        return None
 
-    Returns:
-        (is_valid, error_message)
-    """
-    if _security_config is None:
-        return True, None
+    def _in_allowed(self, resolved: Path) -> bool:
+        for allowed in self.allowed_paths:
+            allowed_resolved = Path(allowed).expanduser().resolve()
+            if resolved == allowed_resolved or allowed_resolved in resolved.parents:
+                return True
+        return False
 
-    if not _security_config.command_enabled:
-        return False, "Command execution is disabled"
+    def _in_write_roots(self, resolved: Path) -> bool:
+        for root in self.write_roots:
+            root_resolved = Path(root).expanduser().resolve()
+            if resolved == root_resolved or root_resolved in resolved.parents:
+                return True
+        return False
 
-    # Normalize whitespace to prevent bypass via extra spaces
-    normalized = re.sub(r"\s+", " ", command.strip())
+    def authorize_read(
+        self, path: str, context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        try:
+            resolved = self._resolve(path)
+        except (OSError, ValueError):
+            return AuthorizationResult(allowed=False, reason=f"Access denied: invalid path '{path}'")
 
-    # Block shell metacharacters that enable injection via subshells
-    dangerous_patterns = [
-        r"\$\(",  # $(command) subshell
-        r"`[^`]+`",  # `command` backtick subshell
-        r"\|\s*sh\b",  # pipe to sh
-        r"\|\s*bash\b",  # pipe to bash
-    ]
-    for pattern in dangerous_patterns:
-        if re.search(pattern, command, re.IGNORECASE):
-            return False, "Command contains disallowed shell constructs"
+        blocked_reason = self._is_blocked(resolved)
+        if blocked_reason:
+            return AuthorizationResult(allowed=False, reason=blocked_reason)
 
-    # Check command blocklist against normalized form
-    for pattern in _security_config.command_blocklist:
-        if re.search(pattern, normalized, re.IGNORECASE):
-            return False, "Command blocked by security policy"
+        if not self._in_allowed(resolved):
+            return AuthorizationResult(
+                allowed=False, reason="Access denied: path not in allowed directories"
+            )
 
-    # Sandbox: block destructive commands targeting paths outside write_roots
-    if _security_config.write_roots:
-        destructive_cmds = ("rm", "mv", "cp", "chmod", "chown")
-        parts = normalized.split()
-        if parts and parts[0] in destructive_cmds:
-            for arg in parts[1:]:
-                if arg.startswith("-"):
-                    continue  # Skip flags
-                arg_path = Path(arg).expanduser().resolve()
-                in_sandbox = any(
-                    arg_path == Path(r).expanduser().resolve()
-                    or Path(r).expanduser().resolve() in arg_path.parents
-                    for r in _security_config.write_roots
+        return AuthorizationResult(allowed=True)
+
+    def authorize_write(
+        self, path: str, context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        read_result = self.authorize_read(path)
+        if not read_result.allowed:
+            return read_result
+
+        if self.write_roots:
+            try:
+                resolved = self._resolve(path)
+            except (OSError, ValueError):
+                return AuthorizationResult(
+                    allowed=False, reason=f"Write denied: invalid path '{path}'"
                 )
-                if not in_sandbox:
-                    return False, f"Command targets path outside sandbox: {arg}"
+            if not self._in_write_roots(resolved):
+                return AuthorizationResult(
+                    allowed=False,
+                    reason=f"Write denied: path not in write_roots ({self.write_roots})",
+                )
 
-    return True, None
+        return AuthorizationResult(allowed=True)
+
+    def authorize_command(
+        self, argv: list[str], context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        if not self.command_enabled:
+            return AuthorizationResult(allowed=False, reason="Command execution is disabled")
+
+        if not argv:
+            return AuthorizationResult(allowed=False, reason="Command execution denied: empty command")
+
+        command = " ".join(argv)
+        normalized = re.sub(r"\s+", " ", command.strip())
+
+        dangerous_patterns = [
+            r"\$\(",
+            r"`[^`]+`",
+            r"\|\s*sh\b",
+            r"\|\s*bash\b",
+        ]
+        for pattern in dangerous_patterns:
+            if re.search(pattern, command, re.IGNORECASE):
+                return AuthorizationResult(
+                    allowed=False, reason="Command contains disallowed shell constructs"
+                )
+
+        for pattern in self.command_blocklist:
+            if re.search(pattern, normalized, re.IGNORECASE):
+                return AuthorizationResult(allowed=False, reason="Command blocked by security policy")
+
+        if self.command_allowlist:
+            allowed = False
+            for pattern in self.command_allowlist:
+                if re.search(pattern, normalized, re.IGNORECASE):
+                    allowed = True
+                    break
+            if not allowed:
+                return AuthorizationResult(
+                    allowed=False, reason="Command not in allowlist"
+                )
+
+        if self.write_roots:
+            destructive_cmds = ("rm", "mv", "cp", "chmod", "chown")
+            parts = normalized.split()
+            if parts and parts[0] in destructive_cmds:
+                for arg in parts[1:]:
+                    if arg.startswith("-"):
+                        continue
+                    try:
+                        arg_path = Path(arg).expanduser().resolve()
+                    except (OSError, ValueError):
+                        return AuthorizationResult(
+                            allowed=False, reason=f"Command targets invalid path: {arg}"
+                        )
+                    if not self._in_write_roots(arg_path):
+                        return AuthorizationResult(
+                            allowed=False,
+                            reason=f"Command targets path outside sandbox: {arg}",
+                        )
+
+        return AuthorizationResult(allowed=True)
+
+    def authorize_network(
+        self, request: dict[str, Any], context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        if not self.network_allowed:
+            return AuthorizationResult(
+                allowed=False,
+                reason="Network access denied by workspace policy",
+            )
+        return AuthorizationResult(allowed=True)
+
+
+class ExplicitUnrestrictedDevelopmentPolicy(ToolPolicy):
+    """Opt-in, alarmingly named policy that allows all tool actions.
+
+    This policy exists only for explicit local development scenarios where the
+    operator deliberately chooses to bypass all execution-plane restrictions.
+    It must be constructed explicitly; it is never the default.
+    """
+
+    def __init__(self) -> None:
+        logger.warning(
+            "ExplicitUnrestrictedDevelopmentPolicy is active: all tool security checks are disabled"
+        )
+
+    def authorize_read(
+        self, path: str, context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        return AuthorizationResult(allowed=True)
+
+    def authorize_write(
+        self, path: str, context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        return AuthorizationResult(allowed=True)
+
+    def authorize_command(
+        self, argv: list[str], context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        return AuthorizationResult(allowed=True)
+
+    def authorize_network(
+        self, request: dict[str, Any], context: dict[str, Any] | None = None
+    ) -> AuthorizationResult:
+        return AuthorizationResult(allowed=True)
+
+
+# =============================================================================
+# Approval layer
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class ApprovalDecision:
+    """Immutable record of a human/operator approval decision for a tool call.
+
+    The decision binds a specific tool name and a stable hash of the logical
+    parameters.  Sensitive parameter values are never stored verbatim; only
+    the opaque ``params_hash`` is retained so approvals cannot be replayed with
+    different inputs.
+    """
+
+    request_id: str
+    tool_name: str
+    params_hash: str
+    requesting_actor: str
+    scope: str
+    expiry: datetime
+    decision: Literal["allow", "deny"]
+    approver: str
+    reason: str
+
+    def is_expired(self, now: datetime | None = None) -> bool:
+        if now is None:
+            now = datetime.now(timezone.utc)
+        return now > self.expiry
+
+
+class ApprovalStore(ABC):
+    """Persistent or in-memory backing store for approval decisions.
+
+    Implementations must be able to create, lookup, and expire approvals.
+    Verification logic (allow vs. deny, expiry, tool/parameter match) lives on
+    the store so it can be reused by custom backends.
+    """
+
+    @abstractmethod
+    def request_approval(
+        self,
+        tool_name: str,
+        params_hash: str,
+        requesting_actor: str,
+        scope: str,
+        expiry: datetime,
+        decision: Literal["allow", "deny"],
+        approver: str,
+        reason: str,
+    ) -> ApprovalDecision:
+        """Record a new approval decision and return it."""
+        ...
+
+    @abstractmethod
+    def lookup(self, request_id: str) -> ApprovalDecision | None:
+        """Fetch an approval decision by id."""
+        ...
+
+    @abstractmethod
+    def verify(
+        self,
+        decision: ApprovalDecision,
+        tool_name: str,
+        params_hash: str,
+    ) -> tuple[bool, str]:
+        """Return (is_valid, reason) for using ``decision`` to run ``tool_name``
+        with ``params_hash``.
+        """
+        ...
+
+    @abstractmethod
+    def expire_approvals(self, now: datetime | None = None) -> int:
+        """Remove expired approvals.  Returns the number deleted."""
+        ...
+
+
+class InMemoryApprovalStore(ApprovalStore):
+    """Default, process-local approval store."""
+
+    def __init__(self) -> None:
+        self._approvals: dict[str, ApprovalDecision] = {}
+
+    def request_approval(
+        self,
+        tool_name: str,
+        params_hash: str,
+        requesting_actor: str,
+        scope: str,
+        expiry: datetime,
+        decision: Literal["allow", "deny"],
+        approver: str,
+        reason: str,
+    ) -> ApprovalDecision:
+        request_id = str(uuid.uuid4())
+        decision_obj = ApprovalDecision(
+            request_id=request_id,
+            tool_name=tool_name,
+            params_hash=params_hash,
+            requesting_actor=requesting_actor,
+            scope=scope,
+            expiry=expiry,
+            decision=decision,
+            approver=approver,
+            reason=reason,
+        )
+        self._approvals[request_id] = decision_obj
+        return decision_obj
+
+    def lookup(self, request_id: str) -> ApprovalDecision | None:
+        return self._approvals.get(request_id)
+
+    def verify(
+        self,
+        decision: ApprovalDecision,
+        tool_name: str,
+        params_hash: str,
+    ) -> tuple[bool, str]:
+        if decision.decision != "allow":
+            return False, "Approval decision is deny"
+        if decision.is_expired():
+            return False, "Approval expired"
+        if decision.tool_name != tool_name:
+            return False, "Approval tool mismatch"
+        if decision.params_hash != params_hash:
+            return False, "Approval parameter mismatch"
+        return True, ""
+
+    def expire_approvals(self, now: datetime | None = None) -> int:
+        if now is None:
+            now = datetime.now(timezone.utc)
+        expired_ids = [
+            request_id
+            for request_id, decision in self._approvals.items()
+            if decision.is_expired(now)
+        ]
+        for request_id in expired_ids:
+            del self._approvals[request_id]
+        return len(expired_ids)
+
+
+# Internal execution-control parameters that must not reach the tool handler or
+# be included in the canonical parameter hash.
+_INTERNAL_PARAM_KEYS = {"_approval_id", "approval_id"}
+
+# Keys whose values are considered sensitive.  Their canonical representation is
+# replaced by a short one-way hash so the approval hash binds to the exact
+# secret without leaking it in logs or the approval store.
+_SENSITIVE_KEY_RE = re.compile(
+    r"(?:^|[^a-z0-9])(password|secret|token|credential|private|api[_-]?key|auth[_-]?value|bearer|apikey)(?:$|[^a-z0-9])",
+    re.IGNORECASE,
+)
+
+
+def _canonical_params_hash(params: Any) -> str:
+    """Return a stable SHA-256 hash of the logical tool parameters.
+
+    * Dict keys are sorted recursively for deterministic serialization.
+    * Internal control keys (e.g. ``_approval_id``) are stripped.
+    * Values for sensitive-looking keys are replaced by a one-way hash so the
+      canonical hash binds to the secret without exposing it.
+    """
+
+    def _mask_sensitive(key: str, value: Any) -> Any:
+        if _SENSITIVE_KEY_RE.search(key):
+            # Use a stable keyed-like representation: hash the canonical form
+            # of the value so different secrets produce different parameter
+            # hashes, but the secret itself is not stored or logged.
+            canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
+            digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+            return f"__redacted_{digest}"
+        return value
+
+    def _normalize(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                k: _normalize(_mask_sensitive(k, v))
+                for k, v in sorted(value.items())
+                if k not in _INTERNAL_PARAM_KEYS
+            }
+        if isinstance(value, list):
+            return [_normalize(item) for item in value]
+        return value
+
+    normalized = _normalize(params)
+    canonical = json.dumps(normalized, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+# Legacy helpers used by direct callers and tests. When no policy is provided,
+# the registry default (DenyAllToolPolicy) is used, which makes missing policy
+# fail closed.
+
+def _policy_or_deny(policy: ToolPolicy | None) -> ToolPolicy:
+    return policy if policy is not None else DenyAllToolPolicy()
+
+
+def _validate_path(path: str, policy: ToolPolicy | None = None) -> tuple[bool, str | None]:
+    """
+    Validate a file path against the supplied policy.
+
+    Returns:
+        (is_valid, error_message)
+    """
+    result = _policy_or_deny(policy).authorize_read(path)
+    return result.allowed, result.reason
+
+
+def _validate_write_path(
+    path: str, policy: ToolPolicy | None = None
+) -> tuple[bool, str | None]:
+    """Validate a path for write operations (write_file, edit_file)."""
+    result = _policy_or_deny(policy).authorize_write(path)
+    return result.allowed, result.reason
+
+
+def _validate_command(
+    command: str, policy: ToolPolicy | None = None
+) -> tuple[bool, str | None]:
+    """
+    Validate a shell command against the supplied policy.
+
+    Returns:
+        (is_valid, error_message)
+    """
+    argv = shlex.split(command)
+    result = _policy_or_deny(policy).authorize_command(argv)
+    return result.allowed, result.reason
 
 
 @dataclass
@@ -209,16 +640,55 @@ class ToolRegistry:
     Registry for managing and executing tools.
 
     Provides tool registration, lookup, and execution with error handling.
+    Each registry owns an immutable ``ToolPolicy``; no module-level mutable
+    state is consulted during execution.
     """
 
     _MAX_INTENT_CACHE = 50  # Prevent unbounded growth
 
-    def __init__(self):
+    def __init__(
+        self,
+        policy: ToolPolicy | None = None,
+        approval_store: ApprovalStore | None = None,
+    ):
         self._tools: dict[str, Tool] = {}
         self._tool_history: dict[str, list[dict]] = {}
         # Session-scoped intent cache: intent string -> sorted list of (score, tool_name)
         self._intent_cache: dict[str, list[tuple[float, str]]] = {}
+        self.policy = policy if policy is not None else DenyAllToolPolicy()
+        self.approval_store = approval_store if approval_store is not None else InMemoryApprovalStore()
         logger.debug("ToolRegistry initialized")
+
+    def request_approval(
+        self,
+        tool_name: str,
+        params: dict,
+        *,
+        requesting_actor: str = "system",
+        scope: str = "execution",
+        expiry_seconds: int = 300,
+        decision: Literal["allow", "deny"] = "allow",
+        approver: str = "human",
+        reason: str = "Interactive approval",
+    ) -> str:
+        """Create an approval decision for ``tool_name`` with ``params``.
+
+        Returns the ``request_id`` that must be supplied to ``execute()`` via
+        the ``_approval_id`` execution parameter or the ``context`` dict.
+        """
+        params_hash = _canonical_params_hash(params)
+        expiry = datetime.now(timezone.utc) + timedelta(seconds=expiry_seconds)
+        decision_obj = self.approval_store.request_approval(
+            tool_name=tool_name,
+            params_hash=params_hash,
+            requesting_actor=requesting_actor,
+            scope=scope,
+            expiry=expiry,
+            decision=decision,
+            approver=approver,
+            reason=reason,
+        )
+        return decision_obj.request_id
 
     def register(self, tool: Tool) -> None:
         """Register a tool."""
@@ -388,7 +858,7 @@ class ToolRegistry:
     def _iso_score(self, intent: str, tool: Tool) -> float:
         """Score tool relevance to user intent using keyword overlap.
 
-        Lightweight Intent–Schema Overlap (ISO) scoring. Tokenizes the
+        Lightweight Intent-Schema Overlap (ISO) scoring. Tokenizes the
         intent and tool metadata (name, description, param names) into
         normalized keyword sets, then computes Jaccard similarity.
 
@@ -476,13 +946,25 @@ class ToolRegistry:
             lines.append(f"  {i}: {tool.name}{params_hint} — {tool.description[:80]}")
         return "\n".join(lines), number_map
 
-    def execute(self, name: str, params: dict) -> ToolResult:
+    def execute(
+        self,
+        name: str,
+        params: dict,
+        context: dict[str, Any] | None = None,
+    ) -> ToolResult:
         """
         Execute a tool by name with given parameters.
+
+        If the tool has ``requires_approval=True``, the caller must supply a
+        valid ``_approval_id`` either in the ``context`` dict or in ``params``.
+        The approval decision is verified against the canonical hash of the
+        logical parameters.  Approval failures produce a structured denial
+        without invoking the tool handler.
 
         Args:
             name: Tool name
             params: Parameters to pass to the tool
+            context: Optional execution context (may contain ``_approval_id``)
 
         Returns:
             ToolResult with success/failure and output
@@ -497,9 +979,72 @@ class ToolRegistry:
                 error=f"Tool '{name}' not found",
             )
 
+        # Strip internal execution-control keys before hashing or passing to the
+        # tool handler so they cannot leak into tool logic or the audit log.
+        handler_params: Any
+        if isinstance(params, dict):
+            handler_params = {
+                k: v for k, v in params.items() if k not in _INTERNAL_PARAM_KEYS
+            }
+        else:
+            handler_params = params
+
+        if tool.requires_approval:
+            approval_id: str | None = None
+            if context is not None:
+                approval_id = context.get("_approval_id") or context.get("approval_id")
+            if not approval_id and isinstance(params, dict):
+                approval_id = params.get("_approval_id") or params.get("approval_id")
+
+            if not approval_id:
+                logger.warning(
+                    f"Approval required but no approval_id provided for tool '{name}'"
+                )
+                return ToolResult(
+                    tool_name=name,
+                    success=False,
+                    output=None,
+                    error="Approval required but no approval_id provided",
+                )
+
+            decision = self.approval_store.lookup(approval_id)
+            if decision is None:
+                logger.warning(
+                    f"Approval '{approval_id}' not found for tool '{name}'"
+                )
+                return ToolResult(
+                    tool_name=name,
+                    success=False,
+                    output=None,
+                    error=f"Approval '{approval_id}' not found",
+                )
+
+            params_hash = _canonical_params_hash(handler_params)
+            allowed, reason = self.approval_store.verify(
+                decision, tool.name, params_hash
+            )
+            if not allowed:
+                logger.warning(
+                    f"Approval verification failed for tool '{name}': {reason}"
+                )
+                return ToolResult(
+                    tool_name=name,
+                    success=False,
+                    output=None,
+                    error=f"Approval verification failed: {reason}",
+                )
+
+            logger.info(
+                f"Approval allowed: tool={name} request_id={approval_id} "
+                f"actor={decision.requesting_actor} approver={decision.approver} "
+                f"reason={decision.reason}"
+            )
+
         try:
-            logger.debug(f"Executing tool: {name} with params: {params}")
-            result = tool.handler(params)
+            logger.debug(
+                f"Executing tool: {name} with param keys: {list(handler_params.keys())}"
+            )
+            result = tool.handler(handler_params)
             logger.debug(f"Tool {name} completed: success={result.success}")
             return result
         except Exception as e:
@@ -511,9 +1056,14 @@ class ToolRegistry:
                 error=str(e),
             )
 
-    async def execute_async(self, name: str, params: dict) -> ToolResult:
+    async def execute_async(
+        self,
+        name: str,
+        params: dict,
+        context: dict[str, Any] | None = None,
+    ) -> ToolResult:
         """Async wrapper for tool execution."""
-        return await asyncio.to_thread(self.execute, name, params)
+        return await asyncio.to_thread(self.execute, name, params, context)
 
 
 # =============================================================================
@@ -521,7 +1071,7 @@ class ToolRegistry:
 # =============================================================================
 
 
-def _tool_get_datetime(params: dict) -> ToolResult:
+def _tool_get_datetime(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
     """Get current date and time."""
     format_str = params.get("format", "%Y-%m-%d %H:%M:%S")
     try:
@@ -541,7 +1091,7 @@ def _tool_get_datetime(params: dict) -> ToolResult:
         )
 
 
-def _tool_read_file(params: dict) -> ToolResult:
+def _tool_read_file(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
     """Read contents of a local file."""
     path = params.get("path")
     if not path:
@@ -553,7 +1103,7 @@ def _tool_read_file(params: dict) -> ToolResult:
         )
 
     # Security validation
-    is_valid, error = _validate_path(path)
+    is_valid, error = _validate_path(path, policy)
     if not is_valid:
         logger.warning(f"Path validation failed for '{path}': {error}")
         return ToolResult(
@@ -606,13 +1156,13 @@ def _tool_read_file(params: dict) -> ToolResult:
         )
 
 
-def _tool_list_files(params: dict) -> ToolResult:
+def _tool_list_files(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
     """List files matching a pattern."""
     pattern = params.get("pattern", "*")
     directory = params.get("directory", ".")
 
     # Security validation
-    is_valid, error = _validate_path(directory)
+    is_valid, error = _validate_path(directory, policy)
     if not is_valid:
         logger.warning(f"Path validation failed for '{directory}': {error}")
         return ToolResult(
@@ -660,7 +1210,7 @@ def _tool_list_files(params: dict) -> ToolResult:
         )
 
 
-def _tool_run_command(params: dict) -> ToolResult:
+def _tool_run_command(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
     """Execute a shell command (requires approval)."""
     command = params.get("command")
     if not command:
@@ -672,7 +1222,7 @@ def _tool_run_command(params: dict) -> ToolResult:
         )
 
     # Security validation
-    is_valid, error = _validate_command(command)
+    is_valid, error = _validate_command(command, policy)
     if not is_valid:
         logger.warning(f"Command validation failed for '{command}': {error}")
         return ToolResult(
@@ -685,11 +1235,11 @@ def _tool_run_command(params: dict) -> ToolResult:
     try:
         timeout = params.get("timeout", 30)
         cwd = None
-        if _security_config:
-            timeout = min(timeout, _security_config.command_timeout_seconds)
-            # Sandbox: run commands from within write_roots when set
-            if _security_config.write_roots:
-                cwd = _security_config.write_roots[0]
+        active_policy = _policy_or_deny(policy)
+        if isinstance(active_policy, WorkspaceToolPolicy):
+            timeout = min(timeout, active_policy.command_timeout_seconds)
+            if active_policy.write_roots:
+                cwd = active_policy.write_roots[0]
 
         result = subprocess.run(
             shlex.split(command),
@@ -726,7 +1276,7 @@ def _tool_run_command(params: dict) -> ToolResult:
         )
 
 
-def _tool_write_file(params: dict) -> ToolResult:
+def _tool_write_file(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
     """Write content to a file (creates or overwrites). Requires approval."""
     path = params.get("path")
     content = params.get("content")
@@ -745,7 +1295,7 @@ def _tool_write_file(params: dict) -> ToolResult:
             error="Missing required parameter: content",
         )
 
-    is_valid, error = _validate_write_path(path)
+    is_valid, error = _validate_write_path(path, policy)
     if not is_valid:
         return ToolResult(tool_name="write_file", success=False, output=None, error=error)
 
@@ -770,7 +1320,7 @@ def _tool_write_file(params: dict) -> ToolResult:
         return ToolResult(tool_name="write_file", success=False, output=None, error=str(e))
 
 
-def _tool_edit_file(params: dict) -> ToolResult:
+def _tool_edit_file(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
     """Replace specific text in a file (find and replace). Requires approval."""
     path = params.get("path")
     old_text = params.get("old_text")
@@ -790,7 +1340,7 @@ def _tool_edit_file(params: dict) -> ToolResult:
             error="Missing required parameters: old_text and new_text",
         )
 
-    is_valid, error = _validate_write_path(path)
+    is_valid, error = _validate_write_path(path, policy)
     if not is_valid:
         return ToolResult(tool_name="edit_file", success=False, output=None, error=error)
 
@@ -833,7 +1383,7 @@ def _tool_edit_file(params: dict) -> ToolResult:
         return ToolResult(tool_name="edit_file", success=False, output=None, error=str(e))
 
 
-def _tool_http_request(params: dict) -> ToolResult:
+def _tool_http_request(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
     """Make an HTTP request to a REST API endpoint."""
     url = params.get("url")
     if not url:
@@ -854,6 +1404,17 @@ def _tool_http_request(params: dict) -> ToolResult:
         )
 
     timeout = min(params.get("timeout", 30), 60)
+
+    # Network authorization enforced by the registry-owned policy.
+    if policy is not None:
+        authz = policy.authorize_network({"url": url, "method": method})
+        if not authz.allowed:
+            return ToolResult(
+                tool_name="http_request",
+                success=False,
+                output=None,
+                error=authz.reason,
+            )
 
     try:
         import urllib.parse
@@ -937,7 +1498,7 @@ def _tool_http_request(params: dict) -> ToolResult:
         )
 
 
-def _tool_web_search(params: dict) -> ToolResult:
+def _tool_web_search(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
     """Search the web using DuckDuckGo Instant Answer API."""
     query = params.get("query")
     if not query:
@@ -1194,6 +1755,37 @@ BUILTIN_TOOLS = [
 ]
 
 
+def _handler_accepts_policy(handler: Callable) -> bool:
+    """Return True if the callable has a ``policy`` keyword parameter."""
+    try:
+        sig = inspect.signature(handler)
+    except (ValueError, TypeError):
+        return False
+    return "policy" in sig.parameters
+
+
+def _bind_tool(registry: ToolRegistry, tool: Tool) -> Tool:
+    """Return a copy of ``tool`` whose handler receives the registry's policy.
+
+    Handlers that do not accept a ``policy`` keyword are left untouched so
+    external integrations and dynamically registered tools keep working.
+    """
+    if not _handler_accepts_policy(tool.handler):
+        return tool
+
+    def bound_handler(params: dict) -> ToolResult:
+        return tool.handler(params, policy=registry.policy)
+
+    return Tool(
+        name=tool.name,
+        description=tool.description,
+        parameters=tool.parameters,
+        handler=bound_handler,
+        requires_approval=tool.requires_approval,
+        category=tool.category,
+    )
+
+
 def tools_to_anthropic_format(
     registry: ToolRegistry,
     intent: str | None = None,
@@ -1237,24 +1829,34 @@ def tools_to_anthropic_format(
     return result
 
 
-def create_default_registry(security_config=None) -> ToolRegistry:
+def create_default_registry(
+    policy: ToolPolicy | None = None,
+    security_config: Any = None,
+) -> ToolRegistry:
     """Create a ToolRegistry with all built-in tools registered.
 
     Args:
-        security_config: Optional ToolsSecurityConfig for tool validation.
+        policy: Explicit ``ToolPolicy`` for the registry. Defaults to
+            ``DenyAllToolPolicy`` when omitted.
+        security_config: Legacy ``ToolsSecurityConfig`` (deprecated, retained
+            as a migration convenience). If provided and ``policy`` is not,
+            it is converted to a ``WorkspaceToolPolicy``.
     """
-    if security_config:
-        _set_security_config(security_config)
-        logger.info("Tools security config loaded")
+    if policy is not None and security_config is not None:
+        raise ValueError("Specify either policy or security_config, not both")
 
-    registry = ToolRegistry()
+    if policy is None and security_config is not None:
+        policy = WorkspaceToolPolicy.from_tools_security_config(security_config)
+        logger.info("Tools security config converted to workspace policy")
+
+    registry = ToolRegistry(policy=policy)
     for tool in BUILTIN_TOOLS:
-        registry.register(tool)
+        registry.register(_bind_tool(registry, tool))
 
     # Register Lugh repo harvester tool
     from animus.lugh.repos import HARVEST_TOOL
 
-    registry.register(HARVEST_TOOL)
+    registry.register(_bind_tool(registry, HARVEST_TOOL))
 
     # Register Lugh watchlist tools
     from animus.lugh.watchlist_tools import (
@@ -1264,34 +1866,36 @@ def create_default_registry(security_config=None) -> ToolRegistry:
         WATCHLIST_SCAN_TOOL,
     )
 
-    registry.register(WATCHLIST_ADD_TOOL)
-    registry.register(WATCHLIST_REMOVE_TOOL)
-    registry.register(WATCHLIST_LIST_TOOL)
-    registry.register(WATCHLIST_SCAN_TOOL)
+    registry.register(_bind_tool(registry, WATCHLIST_ADD_TOOL))
+    registry.register(_bind_tool(registry, WATCHLIST_REMOVE_TOOL))
+    registry.register(_bind_tool(registry, WATCHLIST_LIST_TOOL))
+    registry.register(_bind_tool(registry, WATCHLIST_SCAN_TOOL))
 
     # Register Forge integration tools
     from animus.forge_tools import FORGE_TOOLS
 
     for tool in FORGE_TOOLS:
-        registry.register(tool)
+        registry.register(_bind_tool(registry, tool))
 
     logger.info(f"Created default registry with {len(registry.list_tools())} tools")
     return registry
 
 
-def create_memory_tools(memory_layer) -> list[Tool]:
+def create_memory_tools(memory_layer, policy: ToolPolicy | None = None) -> list[Tool]:
     """
     Create memory-related tools that require a MemoryLayer instance.
 
     Args:
         memory_layer: MemoryLayer instance to use for memory operations
+        policy: Optional policy parameter for signature compatibility with
+            bound handlers; ignored by these tools.
 
     Returns:
         List of Tool objects for memory operations
     """
     from animus.memory import MemoryType
 
-    def _tool_search_memory(params: dict) -> ToolResult:
+    def _tool_search_memory(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
         """Search memories."""
         query = params.get("query")
         if not query:
@@ -1335,7 +1939,7 @@ def create_memory_tools(memory_layer) -> list[Tool]:
                 error=str(e),
             )
 
-    def _tool_save_memory(params: dict) -> ToolResult:
+    def _tool_save_memory(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
         """Save a new memory."""
         content = params.get("content")
         if not content:
@@ -1421,7 +2025,7 @@ def create_memory_tools(memory_layer) -> list[Tool]:
     ]
 
 
-def create_local_think_tool(cognitive_layer) -> Tool:
+def create_local_think_tool(cognitive_layer, policy: ToolPolicy | None = None) -> Tool:
     """Create a tool that delegates subtasks to the local/cheap model.
 
     When Claude is the primary model, this tool lets it offload cheap
@@ -1431,7 +2035,7 @@ def create_local_think_tool(cognitive_layer) -> Tool:
     Only useful when dual models are configured (cloud primary + local fallback).
     """
 
-    def _tool_local_think(params: dict) -> ToolResult:
+    def _tool_local_think(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
         """Run a subtask on the local model."""
         prompt = params.get("prompt")
         if not prompt:

@@ -17,6 +17,7 @@ from animus.tools import (
     Tool,
     ToolRegistry,
     ToolResult,
+    WorkspaceToolPolicy,
     create_default_registry,
 )
 
@@ -196,31 +197,36 @@ class TestBuiltinTools:
         assert "-" in result.output  # Contains date separator
 
     def test_list_files_tool(self):
-        registry = create_default_registry()
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create some files
             Path(tmpdir, "test.txt").touch()
             Path(tmpdir, "other.py").touch()
 
+            policy = WorkspaceToolPolicy(allowed_paths=[tmpdir])
+            registry = create_default_registry(policy=policy)
             result = registry.execute("list_files", {"directory": tmpdir, "pattern": "*.txt"})
             assert result.success is True
             assert "test.txt" in result.output
 
     def test_read_file_tool(self):
-        registry = create_default_registry()
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("Hello, World!")
             f.flush()
+            file_path = f.name
 
-            result = registry.execute("read_file", {"path": f.name})
-            assert result.success is True
-            assert "Hello, World!" in result.output
+        policy = WorkspaceToolPolicy(allowed_paths=[str(Path(file_path).parent)])
+        registry = create_default_registry(policy=policy)
+        result = registry.execute("read_file", {"path": file_path})
+        assert result.success is True
+        assert "Hello, World!" in result.output
 
     def test_read_file_not_found(self):
-        registry = create_default_registry()
-        result = registry.execute("read_file", {"path": "/nonexistent/file.txt"})
-        assert result.success is False
-        assert "not found" in result.error.lower()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            policy = WorkspaceToolPolicy(allowed_paths=[tmpdir])
+            registry = create_default_registry(policy=policy)
+            result = registry.execute("read_file", {"path": "/nonexistent/file.txt"})
+            assert result.success is False
+            assert "not found" in result.error.lower() or "denied" in result.error.lower()
 
 
 # =============================================================================

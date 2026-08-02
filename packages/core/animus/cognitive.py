@@ -1171,8 +1171,20 @@ When you have gathered enough information, provide your final answer."""
                             }
                         )
                         continue
+                    # Translate the interactive boolean approval into a stored
+                    # decision and pass its id to the execution boundary so it
+                    # can be audited and verified.
+                    approved_input = dict(block.input)
+                    approved_input["_approval_id"] = tools.request_approval(
+                        block.name,
+                        block.input,
+                        approver="cognitive-callback",
+                        reason="Approved by approval_callback",
+                    )
+                else:
+                    approved_input = block.input
 
-                result = tools.execute(block.name, block.input)
+                result = tools.execute(block.name, approved_input)
                 tools.record_tool_use(block.name, result.success)
 
                 # Notify Meta-Thinker of tool execution
@@ -1334,9 +1346,18 @@ When you have gathered enough information, provide your final answer."""
                     if not approval_callback(tool_name, params):
                         tool_results.append(f"[Tool '{tool_name}' was not approved]")
                         continue
+                    approved_params = dict(params)
+                    approved_params["_approval_id"] = tools.request_approval(
+                        tool_name,
+                        params,
+                        approver="cognitive-callback",
+                        reason="Approved by approval_callback",
+                    )
+                else:
+                    approved_params = params
 
                 # Execute tool
-                result = tools.execute(tool_name, params)
+                result = tools.execute(tool_name, approved_params)
                 tools.record_tool_use(tool_name, result.success)
 
                 # Notify Meta-Thinker
@@ -1501,9 +1522,18 @@ Your final answer (after TOOL: 0) should address the user's request directly."""
                         }
                     )
                     continue
+                approved_params = dict(params)
+                approved_params["_approval_id"] = tools.request_approval(
+                    tool_name,
+                    params,
+                    approver="cognitive-callback",
+                    reason="Approved by approval_callback",
+                )
+            else:
+                approved_params = params
 
             # Execute
-            result = tools.execute(tool_name, params)
+            result = tools.execute(tool_name, approved_params)
             logger.debug(f"Tool {tool_name} result: success={result.success}")
 
             messages.append({"role": "assistant", "content": response})
