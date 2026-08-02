@@ -8,12 +8,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from animus.memory import Memory, MemoryType
 from animus.mcp_server import MCPDeploymentMode
+from animus.memory import Memory, MemoryType
 from animus.tools import (
     DenyAllToolPolicy,
     Tool,
-    ToolPolicy,
     ToolRegistry,
     ToolResult,
     WorkspaceToolPolicy,

@@ -13,16 +13,16 @@ from __future__ import annotations
 
 import importlib
 import logging
-import pytest
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from animus.memory import MemoryLayer
 from animus.memory.types import Sensitivity
-from animus.mcp_server import MCPDeploymentMode
 from animus.tools import (
     DenyAllToolPolicy,
     Tool,
@@ -278,7 +278,10 @@ class TestMCPServerRegistryUsesRestrictivePolicy:
 
         fake_model_config = MagicMock()
 
-        with patch("animus.tools.create_default_registry", side_effect=_capture_create_registry), \
+        # The handler closure imports ``create_default_registry`` from ``animus.tools``
+        # at module-load time, so patching the module attribute is not enough. Patch the
+        # function reference held by ``animus.mcp_server`` directly.
+        with patch("animus.mcp_server.create_default_registry", side_effect=_capture_create_registry), \
              patch("animus.cognitive.CognitiveLayer") as mock_cognitive_cls, \
              patch("animus.cognitive.ModelConfig") as mock_model_cls, \
              patch("animus.forge.ForgeEngine", return_value=fake_engine), \

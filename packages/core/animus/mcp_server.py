@@ -15,7 +15,7 @@ import os
 import secrets
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -430,7 +430,7 @@ if FastMCP is not None:
                 return result
 
 
-def create_mcp_server(policy: ToolPolicy | None = None) -> "GatedFastMCP":
+def create_mcp_server(policy: ToolPolicy | None = None) -> GatedFastMCP:
     """Create and configure the Animus MCP server.
 
     Args:
@@ -836,7 +836,6 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> "GatedFastMCP":
         from animus.forge import ForgeEngine
         from animus.forge.loader import load_workflow
         from animus.forge.models import ForgeError
-        from animus.tools import WorkspaceToolPolicy, create_default_registry
 
         wf_path = Path(workflow_path)
         if not wf_path.exists():
@@ -1328,7 +1327,7 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> "GatedFastMCP":
             if store_proposal:
                 stored = architect.store_proposal(proposal)
                 if stored:
-                    lines.append(f"✅ Proposal stored in memory for review.")
+                    lines.append("✅ Proposal stored in memory for review.")
                 else:
                     lines.append("⚠️ Memory layer unavailable — proposal not persisted.")
         else:
@@ -1495,15 +1494,6 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> "GatedFastMCP":
         if auth_err:
             return auth_err
 
-        from animus.citizens import ConversationDesignerCitizen
-
-        cb_path = config.citizens.codebase_path or str(config.data_dir.parent)
-        log_dir = config.citizens.conversation_log_dir or None
-        designer = ConversationDesignerCitizen(
-            conversation_log_dir=log_dir,
-            memory_layer=memory,
-        )
-
         if status == "pending":
             try:
                 from animus.memory import MemoryType
@@ -1650,13 +1640,6 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> "GatedFastMCP":
         if auth_err:
             return auth_err
 
-        from animus.citizens import KnowledgeCuratorCitizen
-
-        cb_path = config.citizens.codebase_path or str(config.data_dir.parent)
-        curator = KnowledgeCuratorCitizen(
-            codebase_path=cb_path,
-            memory_layer=memory,
-        )
 
         if status == "pending":
             try:
@@ -1790,10 +1773,6 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> "GatedFastMCP":
         if auth_err:
             return auth_err
 
-        from animus.citizens import TestOracleCitizen
-
-        cb_path = config.citizens.codebase_path or str(config.data_dir.parent)
-        oracle = TestOracleCitizen(codebase_path=cb_path, memory_layer=memory)
 
         if status == "pending":
             try:
@@ -2225,7 +2204,7 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> "GatedFastMCP":
             lines.append(f"**Title:** {proposal.title}")
             lines.append(f"**Problem:** {proposal.problem}")
             lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
-            lines.append(f"**Recommendation:**")
+            lines.append("**Recommendation:**")
             lines.append(proposal.recommendation)
             if proposal.potential_risks:
                 lines.append("**Risks:**")
@@ -3109,7 +3088,7 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> "GatedFastMCP":
                 stored_count = 0
                 for item in items:
                     try:
-                        mem = memory.remember(
+                        memory.remember(
                             content=item.raw_text or item.summary or item.title,
                             memory_type=MemoryType.SEMANTIC,
                             tags=["harvester", "research_guild", "media", item.source_id],
