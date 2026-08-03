@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
+from animus_types.secrets import redact as _log_redact
+
 from animus.logging import get_logger
 from animus.memory.redaction import redact
 from animus.memory.tier import TierManager
@@ -140,7 +142,15 @@ class MemoryLayer:
         )
 
         self.store.store(memory)
-        logger.info(f"Remembered {memory_type.value} memory: {content[:50]}...")
+        # SEC-06: log the redacted preview, never the raw original content.
+        safe_preview = _log_redact(redacted_content)[:50]
+        logger.info(
+            "Remembered %s memory: %s... (id=%s, redactions=%s)",
+            memory_type.value,
+            safe_preview,
+            memory.id,
+            combined_metadata.get("_redaction_count", 0),
+        )
 
         # Link entities mentioned in the content to this memory
         if self.entity_memory:
@@ -151,7 +161,7 @@ class MemoryLayer:
                     auto_discover=self.auto_discover_entities,
                 )
             except Exception as e:
-                logger.debug(f"Entity linking during remember failed: {e}")
+                logger.debug("Entity linking during remember failed: %s", _log_redact(str(e)))
 
         return memory
 

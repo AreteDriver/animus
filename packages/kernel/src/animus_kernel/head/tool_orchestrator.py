@@ -16,6 +16,7 @@ from typing import Any
 from animus_kernel.memory.stores.local import LocalMemoryStore
 from animus_kernel.memory.types import Memory, MemoryTier, MemoryType
 from animus_kernel.tools.registry import ForgeToolRegistry, ToolDefinition
+from animus_types.secrets import redact, redact_exception
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +157,7 @@ class HeadToolOrchestrator:
             )
             return result.get("content", "[MCP: no content]")
         except Exception as exc:
-            return f"[ERROR: MCP tool failed: {exc}]"
+            return f"[ERROR: MCP tool failed: {redact_exception(exc)}]"
 
     # ------------------------------------------------------------------
     # Schema exposure
@@ -184,13 +185,24 @@ class HeadToolOrchestrator:
     # Execution
     # ------------------------------------------------------------------
 
+    def _redact_nested(self, value: Any) -> Any:
+        """Recursively redact string leaves in dicts/lists while preserving structure."""
+        if isinstance(value, str):
+            return redact(value)
+        if isinstance(value, dict):
+            return {k: self._redact_nested(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [self._redact_nested(v) for v in value]
+        return value
+
     def execute(self, name: str, arguments: dict) -> str:
         """Execute a tool by name with arguments.
 
         Returns:
             Tool result as a string (max 8000 chars).
         """
-        logger.info("Tool call: %s(%s)", name, json.dumps(arguments))
+        safe_args = self._redact_nested(arguments)
+        logger.info("Tool call: %s(%s)", name, json.dumps(safe_args))
 
         # Forge tools first
         if name in self._forge._tools:
@@ -213,8 +225,9 @@ class HeadToolOrchestrator:
             result = tool_def.handler(arguments)
             return self._truncate(result)
         except Exception as exc:
-            logger.exception("Forge tool %s failed", name)
-            return f"[ERROR executing {name}: {exc}]"
+            safe_exc = redact_exception(exc)
+            logger.error("Forge tool %s failed: %s", name, safe_exc)
+            return f"[ERROR executing {name}: {safe_exc}]"
 
     def _execute_head(self, name: str, arguments: dict) -> str:
         """Execute a Head-specific tool."""
@@ -223,8 +236,9 @@ class HeadToolOrchestrator:
             result = tool_def.handler(arguments)
             return self._truncate(result)
         except Exception as exc:
-            logger.exception("Head tool %s failed", name)
-            return f"[ERROR executing {name}: {exc}]"
+            safe_exc = redact_exception(exc)
+            logger.error("Head tool %s failed: %s", name, safe_exc)
+            return f"[ERROR executing {name}: {safe_exc}]"
 
     @staticmethod
     def _truncate(result: Any, max_len: int = 8000) -> str:
@@ -412,7 +426,7 @@ class HeadToolOrchestrator:
         except subprocess.TimeoutExpired:
             return "[ERROR: Command timed out after 30 seconds]"
         except Exception as exc:
-            return f"[ERROR: {exc}]"
+            return f"[ERROR: {redact_exception(exc)}]"
 
     def _handle_remember(self, args: dict) -> str:
         """Store a semantic memory."""

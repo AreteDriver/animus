@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from animus_types.secrets import redact_exception
+
 from .anthropic_provider import AnthropicProvider
 from .azure_openai_provider import AzureOpenAIProvider
 from .base import (
@@ -221,19 +223,21 @@ class ProviderManager:
             logger.debug(f"Attempting completion with provider: {name}")
             return provider.complete(request), None
         except RateLimitError as e:
-            logger.warning(f"Rate limit hit for {name}: {e}")
+            logger.warning("Rate limit hit for %s: %s", name, redact_exception(e))
             if not use_fallback:
+                e.args = (redact_exception(e),)
                 raise
             return None, e
         except ProviderError as e:
-            logger.warning(f"Provider {name} failed: {e}")
+            logger.warning("Provider %s failed: %s", name, redact_exception(e))
             if not use_fallback:
+                e.args = (redact_exception(e),)
                 raise
             return None, e
         except Exception as e:
-            logger.error(f"Unexpected error from {name}: {e}")
+            logger.error("Unexpected error from %s: %s", name, redact_exception(e))
             if not use_fallback:
-                raise ProviderError(f"Provider error: {e}")
+                raise ProviderError(f"Provider error: {redact_exception(e)}") from e
             return None, e
 
     def complete(
@@ -256,7 +260,7 @@ class ProviderManager:
             if error:
                 last_error = error
 
-        raise ProviderError(f"All providers failed. Last error: {last_error}")
+        raise ProviderError(f"All providers failed. Last error: {redact_exception(last_error)}")
 
     async def _try_provider_completion_async(
         self, name: str, request: CompletionRequest, use_fallback: bool
@@ -274,19 +278,21 @@ class ProviderManager:
             logger.debug(f"Attempting async completion with provider: {name}")
             return await provider.complete_async(request), None
         except RateLimitError as e:
-            logger.warning(f"Rate limit hit for {name}: {e}")
+            logger.warning("Rate limit hit for %s: %s", name, redact_exception(e))
             if not use_fallback:
+                e.args = (redact_exception(e),)
                 raise
             return None, e
         except ProviderError as e:
-            logger.warning(f"Provider {name} failed: {e}")
+            logger.warning("Provider %s failed: %s", name, redact_exception(e))
             if not use_fallback:
+                e.args = (redact_exception(e),)
                 raise
             return None, e
         except Exception as e:
-            logger.error(f"Unexpected error from {name}: {e}")
+            logger.error("Unexpected error from %s: %s", name, redact_exception(e))
             if not use_fallback:
-                raise ProviderError(f"Provider error: {e}")
+                raise ProviderError(f"Provider error: {redact_exception(e)}") from e
             return None, e
 
     async def complete_async(
@@ -322,7 +328,7 @@ class ProviderManager:
             if error:
                 last_error = error
 
-        raise ProviderError(f"All providers failed. Last error: {last_error}")
+        raise ProviderError(f"All providers failed. Last error: {redact_exception(last_error)}")
 
     async def generate_async(
         self,

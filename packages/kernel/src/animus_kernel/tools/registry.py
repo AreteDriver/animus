@@ -18,6 +18,7 @@ from typing import Any
 
 from animus_kernel.tools.filesystem import FilesystemTools
 from animus_kernel.tools.safety import PathValidator
+from animus_types.secrets import redact, redact_exception
 
 logger = logging.getLogger(__name__)
 
@@ -368,16 +369,26 @@ class ForgeToolRegistry:
             return result
         except Exception as e:
             duration_ms = (time.monotonic() - start) * 1000
-            logger.warning("Tool %s execution failed: %s", tool_name, e)
+            logger.warning("Tool %s execution failed: %s", tool_name, redact_exception(e))
             self._emit_audit(
                 tool_name,
                 arguments,
                 agent_id,
                 False,
-                error=str(e),
+                error=redact_exception(e),
                 duration_ms=duration_ms,
             )
-            return f"Error executing {tool_name}: {e}"
+            return f"Error executing {tool_name}: {redact_exception(e)}"
+
+    def _redact_nested(self, value: Any) -> Any:
+        """Recursively redact string leaves while preserving structure."""
+        if isinstance(value, str):
+            return redact(value)
+        if isinstance(value, dict):
+            return {k: self._redact_nested(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [self._redact_nested(v) for v in value]
+        return value
 
     def _emit_audit(
         self,
@@ -389,13 +400,13 @@ class ForgeToolRegistry:
         duration_ms: float = 0.0,
     ) -> None:
         """Emit a structured audit log entry for a tool execution."""
-        # Sanitize arguments — don't log full file content
-        safe_args = dict(arguments)
-        if "content" in safe_args:
-            content = safe_args["content"]
-            safe_args["content"] = (
-                f"({len(content)} chars)" if isinstance(content, str) else "(binary)"
-            )
+        # Sanitize arguments — don't log full file content or credential-like strings.
+        safe_args: dict[str, Any] = {}
+        for key, value in arguments.items():
+            if key == "content" and isinstance(value, str):
+                safe_args[key] = f"({len(value)} chars)"
+            else:
+                safe_args[key] = self._redact_nested(value)
 
         entry = {
             "timestamp": datetime.now(UTC).isoformat(),
@@ -407,7 +418,7 @@ class ForgeToolRegistry:
             "duration_ms": round(duration_ms, 2),
         }
         if error:
-            entry["error"] = error
+            entry["error"] = redact(error)
 
         try:
             audit_logger.info(json.dumps(entry, default=str))

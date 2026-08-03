@@ -16,6 +16,8 @@ import tempfile
 from dataclasses import dataclass
 from typing import Any
 
+from animus_types.secrets import mask_env_command_args, redact, redact_exception
+
 logger = logging.getLogger(__name__)
 
 
@@ -196,7 +198,10 @@ except Exception as exc:
 
     def _run_container(self, payload_path: str) -> dict[str, Any]:
         cmd = self._build_command(payload_path)
-        logger.info("Container task: %s", " ".join(cmd))
+        # SEC-06: log the command with environment values masked; the real ``cmd``
+        # is still passed to subprocess unchanged.
+        safe_cmd = mask_env_command_args(cmd)
+        logger.info("Container task: %s", " ".join(safe_cmd))
         try:
             result = subprocess.run(
                 cmd,
@@ -215,18 +220,21 @@ except Exception as exc:
             }
 
         if result.returncode != 0:
-            logger.error("Container stderr: %s", result.stderr)
+            safe_stderr = redact(result.stderr)
+            logger.error("Container stderr: %s", safe_stderr)
             return {
                 "status": "failed",
-                "summary": f"Container exit {result.returncode}: {result.stderr[:200]}",
+                "summary": redact(
+                    f"Container exit {result.returncode}: {result.stderr[:200]}"
+                ),
                 "changed_files": [],
                 "evidence": [],
-                "risks": [{"severity": "critical", "description": result.stderr[:500]}],
+                "risks": [{"severity": "critical", "description": redact(result.stderr[:500])}],
                 "confidence": 0.0,
             }
 
         # Last non-empty line of stdout should be JSON
-        lines = [l for l in result.stdout.splitlines() if l.strip()]
+        lines = [line for line in result.stdout.splitlines() if line.strip()]
         if not lines:
             return {
                 "status": "failed",
@@ -242,9 +250,9 @@ except Exception as exc:
         except json.JSONDecodeError as exc:
             return {
                 "status": "failed",
-                "summary": f"Invalid JSON from container: {exc}",
+                "summary": f"Invalid JSON from container: {redact_exception(exc)}",
                 "changed_files": [],
-                "evidence": [{"type": "raw_output", "detail": result.stdout[:500]}],
-                "risks": [{"severity": "critical", "description": str(exc)}],
+                "evidence": [{"type": "raw_output", "detail": redact(result.stdout[:500])}],
+                "risks": [{"severity": "critical", "description": redact_exception(exc)}],
                 "confidence": 0.0,
             }

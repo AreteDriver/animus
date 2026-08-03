@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+from animus_types.secrets import redact_exception
+
 from animus.logging import get_logger
 from animus.network import EgressDeniedError
 from animus.protocols.intelligence import IntelligenceProvider
@@ -339,8 +341,8 @@ class OllamaModel(ModelInterface):
             logger.error("ollama package not installed")
             return "[Error: ollama package not installed]"
         except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
-            logger.error(f"Ollama error: {e}")
-            return f"[Error communicating with Ollama: {e}]"
+            logger.error("Ollama error: %s", redact_exception(e))
+            return f"[Error communicating with Ollama: {redact_exception(e)}]"
 
     def generate_with_tools(
         self,
@@ -454,11 +456,11 @@ class AnthropicModel(ModelInterface):
             logger.error("anthropic package not installed")
             return "[Error: anthropic package not installed]"
         except EgressDeniedError as e:
-            logger.warning(f"Egress blocked: {e}")
-            return f"[Egress blocked: {e}]"
+            logger.warning("Egress blocked: %s", redact_exception(e))
+            return f"[Egress blocked: {redact_exception(e)}]"
         except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
-            logger.error(f"Anthropic error: {e}")
-            return f"[Error communicating with Anthropic: {e}]"
+            logger.error("Anthropic error: %s", redact_exception(e))
+            return f"[Error communicating with Anthropic: {redact_exception(e)}]"
 
     def generate_with_tools(
         self,
@@ -576,8 +578,8 @@ class OpenAIModel(ModelInterface):
             logger.error("openai package not installed")
             return "[Error: openai package not installed. Install with: pip install openai]"
         except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
-            logger.error(f"OpenAI error: {e}")
-            return f"[Error communicating with OpenAI: {e}]"
+            logger.error("OpenAI error: %s", redact_exception(e))
+            return f"[Error communicating with OpenAI: {redact_exception(e)}]"
 
     def generate_with_tools(
         self,
@@ -681,8 +683,8 @@ class LlamaCppModel(OpenAIModel):
             logger.error("openai package not installed")
             return "[Error: openai package not installed. Install with: pip install openai]"
         except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
-            logger.error(f"llama.cpp error: {e}")
-            return f"[Error communicating with llama.cpp server: {e}]"
+            logger.error("llama.cpp error: %s", redact_exception(e))
+            return f"[Error communicating with llama.cpp server: {redact_exception(e)}]"
 
 
 def create_model(config: ModelConfig) -> ModelInterface:
@@ -775,7 +777,7 @@ class CognitiveLayer:
         try:
             response = self.primary.generate(prompt, system)
         except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
-            logger.warning(f"Primary model failed: {e}")
+            logger.warning("Primary model failed: %s", redact_exception(e))
             # Fall back if available
             if self.fallback:
                 logger.info("Falling back to secondary model")
@@ -788,7 +790,7 @@ class CognitiveLayer:
             try:
                 self.entity_memory.extract_and_link(prompt)
             except Exception as e:
-                logger.debug(f"Entity extraction failed: {e}")
+                logger.debug(f"Entity extraction failed: {redact_exception(e)}")
 
         return response
 
@@ -817,12 +819,12 @@ class CognitiveLayer:
         try:
             return target.generate(prompt, system)
         except (ConnectionError, RuntimeError, ValueError, TimeoutError) as e:
-            logger.warning(f"Local delegation failed ({target_name}): {e}")
+            logger.warning("Local delegation failed (%s): %s", target_name, redact_exception(e))
             # If local fails and we have a different primary, try that
             if target is not self.primary:
                 logger.info("Local model unavailable, using primary as fallback")
                 return self.primary.generate(prompt, system)
-            return f"[Error: local model unavailable: {e}]"
+            return f"[Error: local model unavailable: {redact_exception(e)}]"
 
     def think_routed(
         self,
@@ -876,7 +878,7 @@ class CognitiveLayer:
 
             except Exception as e:
                 latency_ms = (__import__("time").time() - start_time) * 1000
-                logger.warning(f"Routed provider {decision.provider_name} failed: {e}")
+                logger.warning("Routed provider %s failed: %s", decision.provider_name, redact_exception(e))
                 self.provider_router.record_failure(
                     provider_name=decision.provider_name,
                     prompt=prompt,
@@ -911,7 +913,7 @@ class CognitiveLayer:
                 if entity_context:
                     extra_parts.append(entity_context)
             except Exception as e:
-                logger.debug(f"Entity context generation failed: {e}")
+                logger.debug(f"Entity context generation failed: {redact_exception(e)}")
 
         # Proactive context nudge
         if self.proactive:
@@ -920,7 +922,7 @@ class CognitiveLayer:
                 if nudge:
                     extra_parts.append(f"Related past context:\n{nudge.content}")
             except Exception as e:
-                logger.debug(f"Context nudge generation failed: {e}")
+                logger.debug(f"Context nudge generation failed: {redact_exception(e)}")
 
         if not extra_parts:
             return context
@@ -1065,9 +1067,15 @@ When you have gathered enough information, provide your final answer."""
 
         Uses structured tool_use content blocks instead of markdown parsing.
         """
-        from animus.tools import tools_to_anthropic_format
-        from animus.meta.events import IterationStarted, ResponseReceived, ToolExecution, LoopCompleted, MaxIterationsReached
+        from animus.meta.events import (
+            IterationStarted,
+            LoopCompleted,
+            MaxIterationsReached,
+            ResponseReceived,
+            ToolExecution,
+        )
         from animus.meta.signals import SignalType
+        from animus.tools import tools_to_anthropic_format
 
         # Initialize Meta-Thinker for this session
         if self.meta_thinker:
@@ -1256,7 +1264,13 @@ When you have gathered enough information, provide your final answer."""
         approval_callback: Callable | None = None,
     ) -> str:
         """Agentic loop using markdown ```tool blocks (Ollama/Mock/OpenAI)."""
-        from animus.meta.events import IterationStarted, ResponseReceived, ToolExecution, LoopCompleted, MaxIterationsReached
+        from animus.meta.events import (
+            IterationStarted,
+            LoopCompleted,
+            MaxIterationsReached,
+            ResponseReceived,
+            ToolExecution,
+        )
         from animus.meta.signals import SignalType
 
         # Initialize Meta-Thinker for this session

@@ -21,6 +21,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal
 
+from animus_types.secrets import redact, redact_exception
+
 from animus.logging import get_logger
 from animus.network.client import GovernedClient
 
@@ -1034,19 +1036,24 @@ class ToolRegistry:
             )
             if not allowed:
                 logger.warning(
-                    f"Approval verification failed for tool '{name}': {reason}"
+                    "Approval verification failed for tool '%s': %s",
+                    name,
+                    redact(reason),
                 )
                 return ToolResult(
                     tool_name=name,
                     success=False,
                     output=None,
-                    error=f"Approval verification failed: {reason}",
+                    error=redact(f"Approval verification failed: {reason}"),
                 )
 
             logger.info(
-                f"Approval allowed: tool={name} request_id={approval_id} "
-                f"actor={decision.requesting_actor} approver={decision.approver} "
-                f"reason={decision.reason}"
+                "Approval allowed: tool=%s request_id=%s actor=%s approver=%s reason=%s",
+                name,
+                approval_id,
+                decision.requesting_actor,
+                decision.approver,
+                redact(decision.reason),
             )
 
         try:
@@ -1057,12 +1064,12 @@ class ToolRegistry:
             logger.debug(f"Tool {name} completed: success={result.success}")
             return result
         except Exception as e:
-            logger.error(f"Tool {name} failed with exception: {e}")
+            logger.error("Tool %s failed with exception: %s", name, redact_exception(e))
             return ToolResult(
                 tool_name=name,
                 success=False,
                 output=None,
-                error=str(e),
+                error=redact_exception(e),
             )
 
     async def execute_async(
@@ -1096,7 +1103,7 @@ def _tool_get_datetime(params: dict, policy: ToolPolicy | None = None) -> ToolRe
             tool_name="get_datetime",
             success=False,
             output=None,
-            error=str(e),
+            error=redact_exception(e),
         )
 
 
@@ -1114,12 +1121,12 @@ def _tool_read_file(params: dict, policy: ToolPolicy | None = None) -> ToolResul
     # Security validation
     is_valid, error = _validate_path(path, policy)
     if not is_valid:
-        logger.warning(f"Path validation failed for '{path}': {error}")
+        logger.warning("Path validation failed for '%s': %s", path, redact(error or ""))
         return ToolResult(
             tool_name="read_file",
             success=False,
             output=None,
-            error=error,
+            error=redact(error or ""),
         )
 
     try:
@@ -1161,7 +1168,7 @@ def _tool_read_file(params: dict, policy: ToolPolicy | None = None) -> ToolResul
             tool_name="read_file",
             success=False,
             output=None,
-            error=str(e),
+            error=redact_exception(e),
         )
 
 
@@ -1173,12 +1180,12 @@ def _tool_list_files(params: dict, policy: ToolPolicy | None = None) -> ToolResu
     # Security validation
     is_valid, error = _validate_path(directory, policy)
     if not is_valid:
-        logger.warning(f"Path validation failed for '{directory}': {error}")
+        logger.warning("Path validation failed for '%s': %s", directory, redact(error or ""))
         return ToolResult(
             tool_name="list_files",
             success=False,
             output=None,
-            error=error,
+            error=redact(error or ""),
         )
 
     try:
@@ -1215,7 +1222,7 @@ def _tool_list_files(params: dict, policy: ToolPolicy | None = None) -> ToolResu
             tool_name="list_files",
             success=False,
             output=None,
-            error=str(e),
+            error=redact_exception(e),
         )
 
 
@@ -1233,12 +1240,12 @@ def _tool_run_command(params: dict, policy: ToolPolicy | None = None) -> ToolRes
     # Security validation
     is_valid, error = _validate_command(command, policy)
     if not is_valid:
-        logger.warning(f"Command validation failed for '{command}': {error}")
+        logger.warning("Command validation failed for '%s': %s", redact(command), redact(error or ""))
         return ToolResult(
             tool_name="run_command",
             success=False,
             output=None,
-            error=error,
+            error=redact(error or ""),
         )
 
     try:
@@ -1281,7 +1288,7 @@ def _tool_run_command(params: dict, policy: ToolPolicy | None = None) -> ToolRes
             tool_name="run_command",
             success=False,
             output=None,
-            error=str(e),
+            error=redact_exception(e),
         )
 
 
@@ -1326,7 +1333,7 @@ def _tool_write_file(params: dict, policy: ToolPolicy | None = None) -> ToolResu
             error=f"Permission denied: {path}",
         )
     except OSError as e:
-        return ToolResult(tool_name="write_file", success=False, output=None, error=str(e))
+        return ToolResult(tool_name="write_file", success=False, output=None, error=redact_exception(e))
 
 
 def _tool_edit_file(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
@@ -1389,7 +1396,7 @@ def _tool_edit_file(params: dict, policy: ToolPolicy | None = None) -> ToolResul
             error=f"Permission denied: {path}",
         )
     except OSError as e:
-        return ToolResult(tool_name="edit_file", success=False, output=None, error=str(e))
+        return ToolResult(tool_name="edit_file", success=False, output=None, error=redact_exception(e))
 
 
 def _tool_http_request(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
@@ -1452,12 +1459,12 @@ def _tool_http_request(params: dict, policy: ToolPolicy | None = None) -> ToolRe
             content=body_str,
         )
     except Exception as e:
-        logger.debug("http_request failed: %s", e)
+        logger.debug("http_request failed: %s", redact_exception(e))
         return ToolResult(
             tool_name="http_request",
             success=False,
             output=None,
-            error=str(e),
+            error=redact_exception(e),
         )
 
     output = f"HTTP {response.status}\n"
@@ -1538,12 +1545,12 @@ def _tool_web_search(params: dict, policy: ToolPolicy | None = None) -> ToolResu
             output="\n".join(results),
         )
     except Exception as e:
-        logger.debug("web_search failed: %s", e)
+        logger.debug("web_search failed: %s", redact_exception(e))
         return ToolResult(
             tool_name="web_search",
             success=False,
             output=None,
-            error=str(e),
+            error=redact_exception(e),
         )
 
 
@@ -1919,7 +1926,7 @@ def create_memory_tools(memory_layer, policy: ToolPolicy | None = None) -> list[
                 tool_name="search_memory",
                 success=False,
                 output=None,
-                error=str(e),
+                error=redact_exception(e),
             )
 
     def _tool_save_memory(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
@@ -1953,7 +1960,7 @@ def create_memory_tools(memory_layer, policy: ToolPolicy | None = None) -> list[
                 tool_name="save_memory",
                 success=False,
                 output=None,
-                error=str(e),
+                error=redact_exception(e),
             )
 
     return [
@@ -2042,7 +2049,7 @@ def create_local_think_tool(cognitive_layer, policy: ToolPolicy | None = None) -
                 tool_name="local_think",
                 success=False,
                 output=None,
-                error=str(e),
+                error=redact_exception(e),
             )
 
     return Tool(

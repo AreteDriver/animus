@@ -6,6 +6,7 @@ import os
 import sys
 from pathlib import Path
 
+from animus_types.secrets import redact
 from prompt_toolkit import prompt
 from prompt_toolkit.history import FileHistory
 from rich.console import Console
@@ -90,7 +91,7 @@ def _approval_callback(tool_name: str, params: dict) -> bool:
         return True
     console.print(f"  [yellow]Tool: {tool_name}[/yellow]")
     for k, v in params.items():
-        preview = str(v)[:100]
+        preview = redact(str(v))[:100]
         if len(str(v)) > 100:
             preview += "..."
         console.print(f"    [dim]{k}: {preview}[/dim]")
@@ -2660,8 +2661,13 @@ def main():
         except EOFError:
             break
         except Exception as e:
-            logger.exception(f"Error in main loop: {e}")
-            console.print(f"[red]Error: {e}[/red]")
+            from animus_types.secrets import redact_exception
+
+            safe = redact_exception(e)
+            # SEC-06: do not use logger.exception here; it would emit the raw
+            # traceback, which can carry unredacted exception args.
+            logger.error("Error in main loop: %s", safe)
+            console.print(f"[red]Error: {safe}[/red]")
 
     # Post-session cleanup
     if cz_session:
@@ -2672,7 +2678,9 @@ def main():
                 eval_report=_cz_eval_report,
             )
         except Exception as e:
-            logger.warning(f"Citizen Zero session cleanup failed: {e}")
+            from animus_types.secrets import redact_exception
+
+            logger.warning("Citizen Zero session cleanup failed: %s", redact_exception(e))
 
     # Close the persistent event loop
     loop.close()

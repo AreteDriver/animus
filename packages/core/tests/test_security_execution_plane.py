@@ -20,6 +20,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from animus_types.secrets import redact
 
 from animus.memory import MemoryLayer
 from animus.memory.types import Sensitivity
@@ -32,6 +33,7 @@ from animus.tools import (
     ToolResult,
     WorkspaceToolPolicy,
     _tool_http_request,
+    _tool_run_command,
     _validate_command,
     _validate_path,
     create_default_registry,
@@ -632,15 +634,66 @@ class TestGovernedClientSSRFBlocks:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# SEC-08 — MemoryLayer logs raw unredacted content at INFO level
+# SEC-06 — Secret-safe logging and telemetry
 # ═══════════════════════════════════════════════════════════════════
 
 
-class TestMemoryLayerLogsRawSecrets:
-    def test_remember_logs_original_secret_before_redaction(self, tmp_path: Path, caplog):
-        """MemoryLayer.remember() stores the redacted copy but logs the raw original
-        content in its INFO-level preview."""
-        fake_secret = "sk-ant-api03-fakefakefakefakefakefake"
+class _PrivateKeyParts:
+    """Assemble a fake private key block at runtime so the source file never
+    contains the contiguous marker lines that secret scanners flag.
+    """
+
+    BEGIN = "-----BEGIN "
+    END = "-----END "
+    RSA = "RSA PRIVATE KEY"
+    PAD = "-----"
+    BODY = "MIIEpAIBAAKCAQEAx..."
+
+    @classmethod
+    def block(cls) -> str:
+        return "\n".join(
+            [
+                f"{cls.BEGIN}{cls.RSA}{cls.PAD}",
+                cls.BODY,
+                f"{cls.END}{cls.RSA}{cls.PAD}",
+            ]
+        )
+
+
+class TestRedactionCorpus:
+    """Sanity-check the shared fake-secret corpus used by SEC-06 tests."""
+
+    def test_fake_secrets_are_detected_and_redacted(self, fake_secret_corpus):
+        for name, secret in fake_secret_corpus.items():
+            if name == "correlation_id":
+                continue
+            redacted = redact(secret)
+            assert secret not in redacted, (
+                f"secret type {name!r} was not redacted: {redacted!r}"
+            )
+
+    def test_correlation_id_survives_redaction(self, fake_secret_corpus):
+        cid = fake_secret_corpus["correlation_id"]
+        assert redact(f"request_id={cid}") == f"request_id={cid}"
+
+    def test_multiline_private_key_redacted(self):
+        block = _PrivateKeyParts.block()
+        redacted = redact(block)
+        assert _PrivateKeyParts.BODY not in redacted
+        assert "[REDACTED:" in redacted
+
+    def test_base64_encoded_token_redacted(self, fake_secret_corpus):
+        token = fake_secret_corpus["encoded_token"]
+        redacted = redact(token)
+        assert token not in redacted
+
+
+class TestMemoryLayerLogsNoSecrets:
+    def test_remember_log_does_not_contain_raw_secret(
+        self, tmp_path: Path, caplog, fake_secret_corpus
+    ):
+        """MemoryLayer.remember() must log a redacted preview, never the raw secret."""
+        fake_secret = fake_secret_corpus["anthropic_key"]
         content = f"API key is {fake_secret}"
 
         data_dir = tmp_path / "memory"
@@ -662,9 +715,145 @@ class TestMemoryLayerLogsRawSecrets:
         assert len(stored) == 1
         assert fake_secret not in stored[0].content
 
-        # Pre-fix: the INFO preview contains the raw secret.
+        # Post-fix: the INFO preview must not contain the raw secret.
         raw_in_log = any(fake_secret in record.message for record in caplog.records)
-        assert raw_in_log, (
-            "Expected raw secret in INFO log preview before fix; "
+        assert raw_in_log is False, (
+            "Raw secret leaked into INFO log preview; "
             f"logs: {[r.message for r in caplog.records]}"
         )
+        # Operational metadata (memory id) still present.
+        assert any(stored[0].id[:8] in record.message for record in caplog.records)
+
+
+class TestToolCommandLogsNoSecrets:
+    def test_command_validation_log_does_not_emit_secret(
+        self, caplog, fake_secret_corpus
+    ):
+        """A rejected command containing a secret must not leak the secret in logs."""
+        secret = fake_secret_corpus["password_labeled"]
+        # command_enabled=False by default, so any command is denied.
+        command = f"echo {secret}"
+
+        animus_logger = logging.getLogger("animus")
+        old_propagate = animus_logger.propagate
+        animus_logger.propagate = True
+        try:
+            with caplog.at_level(logging.WARNING, logger="animus.tools"):
+                result = _tool_run_command({"command": command})
+        finally:
+            animus_logger.propagate = old_propagate
+
+        assert result.success is False
+        logged = "\n".join(record.message for record in caplog.records)
+        assert secret not in logged, (
+            f"Raw secret leaked into command validation log: {logged}"
+        )
+        # Operational signal: command intent still present.
+        assert "echo" in logged
+
+
+class TestHttpToolLogsNoSecrets:
+    def test_http_request_failure_log_does_not_emit_auth_secret(
+        self, caplog, fake_secret_corpus
+    ):
+        """An HTTP request failure must not echo the bearer/api-key in logs."""
+        secret = fake_secret_corpus["bearer_token"]
+
+        animus_logger = logging.getLogger("animus")
+        old_propagate = animus_logger.propagate
+        animus_logger.propagate = True
+        try:
+            with caplog.at_level(logging.DEBUG, logger="animus.tools"):
+                result = _tool_http_request(
+                    {
+                        "url": "http://127.0.0.1:1/",
+                        "method": "GET",
+                        "timeout": 1,
+                        "auth_type": "bearer",
+                        "auth_value": secret,
+                    }
+                )
+        finally:
+            animus_logger.propagate = old_propagate
+
+        assert result.success is False
+        logged = "\n".join(record.message for record in caplog.records)
+        assert secret not in logged, (
+            f"Bearer secret leaked into HTTP tool log: {logged}"
+        )
+        assert "http_request failed" in logged
+
+
+class TestMCPAuthFailureLogsNoSecrets:
+    def test_mcp_auth_failure_log_does_not_echo_key(self, monkeypatch, caplog):
+        """A failed MCP API-key check logs the event but not the supplied key."""
+        monkeypatch.setenv("ANIMUS_MCP_API_KEY", "real-key-never-logged-fake")
+        # Force re-import of module-level key by reloading is not required:
+        # _check_auth reads the module variable, which was set at import time.
+        # We patch it directly for a deterministic test.
+        import animus.mcp_server as _mcp_server
+
+        _mcp_server._MCP_API_KEY = "real-key-never-logged-fake"
+        try:
+            animus_logger = logging.getLogger("animus")
+            old_propagate = animus_logger.propagate
+            animus_logger.propagate = True
+            try:
+                with caplog.at_level(logging.WARNING, logger="animus.mcp_server"):
+                    error = _mcp_server._check_auth("wrong-key-value")
+            finally:
+                animus_logger.propagate = old_propagate
+
+            assert error is not None
+            logged = "\n".join(record.message for record in caplog.records)
+            assert "wrong-key-value" not in logged
+            assert "real-key-never-logged-fake" not in logged
+            assert "API key mismatch" in logged
+        finally:
+            _mcp_server._MCP_API_KEY = None
+
+
+class TestApprovalDecisionLogsNoSecrets:
+    def test_approval_reason_is_redacted_in_log(self, caplog, fake_secret_corpus):
+        """Approval decision logs keep metadata but redact the reason string."""
+        secret = fake_secret_corpus["github_token"]
+        registry = ToolRegistry()
+
+        def handler(params: dict) -> ToolResult:
+            return ToolResult(tool_name="dangerous", success=True, output="ran")
+
+        registry.register(
+            Tool(
+                name="dangerous",
+                description="requires human approval",
+                parameters={"type": "object", "properties": {}, "required": []},
+                handler=handler,
+                requires_approval=True,
+            )
+        )
+
+        params = {"target": "production"}
+        approval_id = registry.request_approval(
+            "dangerous",
+            params,
+            approver="test",
+            reason=f"approved because {secret}",
+        )
+        params["_approval_id"] = approval_id
+
+        animus_logger = logging.getLogger("animus")
+        old_propagate = animus_logger.propagate
+        animus_logger.propagate = True
+        try:
+            with caplog.at_level(logging.INFO, logger="animus.tools"):
+                result = registry.execute("dangerous", params)
+        finally:
+            animus_logger.propagate = old_propagate
+
+        assert result.success is True
+        logged = "\n".join(record.message for record in caplog.records)
+        assert secret not in logged, (
+            f"Approval secret leaked into INFO log: {logged}"
+        )
+        # Correlation/request metadata preserved.
+        assert approval_id in logged

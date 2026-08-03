@@ -51,6 +51,33 @@ def mock_cognitive() -> CognitiveLayer:
 
 
 @pytest.fixture
+def fake_secret_corpus() -> dict[str, str]:
+    """Inert fake secrets for SEC redaction tests.
+
+    These values are deliberately synthetic and exercise every credential
+    pattern in ``animus_types.secrets`` plus multiline and base64-encoded
+    forms. They must never appear in logs, errors, or traces after redaction.
+    """
+    import base64
+
+    encoded_token_input = b"sk-ant-api03-encodedfakefakefakefakefakefake"
+    return {
+        "anthropic_key": "sk-ant-api03-fakefakefakefakefakefakefakefakefake",
+        "openai_key": "sk-abcdefghijklmnopqrstuvwxyz1234567890abcdef",
+        "github_token": "ghp_fake1234567890abcdef",
+        "github_pat": "github_pat_11ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdef",
+        "aws_access_key": "AKIAIOSFODNN7EXAMPLE",
+        "stripe_key": "sk_test_fakefakefakefakefakefakefakefake",  # synthetic; not a real Stripe key
+        "slack_token": "xoxb-fakefakefakefakefakefakefakefake",
+        "bearer_token": "Bearer fakefakefakefakefakefakefakefakefakefakefakefake",
+        "api_key_label": "my_secret_key_is: fakefakefakefakefakefakefake",
+        "password_labeled": "password=Sup3rS3cr3tP@ssw0rd!12345",
+        "encoded_token": base64.b64encode(encoded_token_input).decode(),
+        "correlation_id": "550e8400-e29b-41d4-a716-446655440000",
+    }
+
+
+@pytest.fixture
 def mock_cognitive_factory():
     """Factory for creating CognitiveLayer with custom responses."""
 

@@ -59,6 +59,10 @@ CREDENTIAL_PATTERNS: dict[str, str] = {
         r"[\s_\-:=]+[\[\(\"']?\s*"
         r"[A-Za-z0-9._\-!@#$%^&*+=]{6,}"
     ),
+    "password_label": (
+        r"(?i)\b(?:password|passwd|pwd)\s*[:=]+[\[\(\"']?\s*"
+        r"[A-Za-z0-9._\-!@#$%^&*+=]{6,}"
+    ),
 }
 
 _COMPILED: list[tuple[str, Pattern[str]]] = [
@@ -125,3 +129,144 @@ def scan_for_secrets(text: str, *, include_high_entropy: bool = True) -> list[st
     if include_high_entropy and find_high_entropy_tokens(text):
         names.append("high_entropy_token")
     return names
+
+
+# ---------------------------------------------------------------------------
+# Redaction helpers (SEC-06 — secret-safe logging and telemetry)
+# ---------------------------------------------------------------------------
+
+REDACTED_FMT = "[REDACTED:{name}]"
+
+
+class _NoSecretMatch(Exception):
+    """Internal sentinel used by ``redact`` to skip zero-width matches."""
+
+
+def redact(text: str, *, include_high_entropy: bool = True) -> str:
+    """Return a redacted copy of ``text``.
+
+    Every credential pattern match and (by default) every prefixless
+    high-entropy token is replaced with ``[REDACTED:<pattern_name>]``.  The
+    placeholder contains no secret material and is safe to log or return.
+
+    Correlation IDs, UUIDs, hex SHAs, and other low-entropy tokens are left
+    untouched because the high-entropy bar requires three character classes.
+    """
+    if not text:
+        return text
+
+    # Collect spans in a single pass over all patterns.  Merge overlapping
+    # spans so the longest match wins and placeholders never overlap.
+    raw_spans: list[tuple[int, int, str]] = []
+    for name, pattern in _COMPILED:
+        for match in pattern.finditer(text):
+            if match.start() == match.end():
+                continue
+            raw_spans.append((match.start(), match.end(), name))
+
+    if include_high_entropy:
+        for tok in find_high_entropy_tokens(text):
+            idx = text.find(tok)
+            while idx != -1:
+                raw_spans.append((idx, idx + len(tok), "high_entropy_token"))
+                idx = text.find(tok, idx + 1)
+
+    if not raw_spans:
+        return text
+
+    raw_spans.sort()
+    merged: list[tuple[int, int, str]] = []
+    for start, end, name in raw_spans:
+        if merged and start < merged[-1][1]:
+            prev_start, prev_end, prev_name = merged[-1]
+            # Prefer the earlier/larger span for determinism; type names are
+            # stable, but overlapping spans are rare in practice.
+            merged[-1] = (prev_start, max(prev_end, end), prev_name)
+        else:
+            merged.append((start, end, name))
+
+    out_parts: list[str] = []
+    cursor = 0
+    for start, end, name in merged:
+        out_parts.append(text[cursor:start])
+        out_parts.append(REDACTED_FMT.format(name=name))
+        cursor = end
+    out_parts.append(text[cursor:])
+    return "".join(out_parts)
+
+
+def redact_exception(exc: Exception | None, *, include_high_entropy: bool = True) -> str:
+    """Return a redacted string for an exception, never the raw args.
+
+    This is the safe way to log an exception that may carry request details,
+    headers, or payload snippets: the type name and redacted message are
+    preserved, but credential-like substrings are masked.
+    """
+    if exc is None:
+        return ""
+    message = " ".join(str(a) for a in exc.args) if exc.args else type(exc).__name__
+    return redact(message, include_high_entropy=include_high_entropy)
+
+
+def _split_env_arg(arg: str) -> tuple[str, str] | None:
+    """Parse ``-e KEY=VALUE`` or ``--env=KEY=VALUE`` and return ``(key, value)``.
+
+    Returns ``None`` for flags without an inline value.
+    """
+    if arg.startswith("--env="):
+        rest = arg[len("--env="):]
+        if "=" in rest:
+            key, value = rest.split("=", 1)
+            return key, value
+        return rest, ""
+    if arg.startswith("-e") and not arg.startswith("-e="):
+        rest = arg[2:]
+        if not rest:
+            return None
+        if "=" in rest:
+            key, value = rest.split("=", 1)
+            return key, value
+        return rest, ""
+    return None
+
+
+def mask_env_command_args(cmd: list[str]) -> list[str]:
+    """Return a copy of a container/shell command with ``-e`` values masked.
+
+    Every ``-e KEY=VALUE`` / ``--env=KEY=VALUE`` argument has its value replaced
+    by ``[REDACTED]``.  Flags like ``-e KEY`` (value on next argv) are also
+    handled: the next argv is replaced with ``KEY=[REDACTED]``.
+
+    This prevents container command logging from emitting environment values
+    while keeping the command structure useful for debugging.
+    """
+    out: list[str] = []
+    skip_next_value = False
+    for arg in cmd:
+        if skip_next_value:
+            # Previous arg was a bare -e/--env flag; this argv is the value.
+            if "=" in arg:
+                key, _ = arg.split("=", 1)
+                out.append(f"{key}=[REDACTED]")
+            else:
+                out.append(f"{arg}=[REDACTED]")
+            skip_next_value = False
+            continue
+
+        if arg in ("-e", "--env"):
+            out.append(arg)
+            skip_next_value = True
+            continue
+
+        parsed = _split_env_arg(arg)
+        if parsed is not None:
+            key, _ = parsed
+            if arg.startswith("-e"):
+                out.append(f"-e={key}=[REDACTED]")
+            else:
+                out.append(f"--env={key}=[REDACTED]")
+            continue
+
+        out.append(arg)
+
+    return out

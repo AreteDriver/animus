@@ -55,6 +55,8 @@ def _check_auth(api_key: str = "") -> str | None:
         return None  # No auth configured
     if api_key == _MCP_API_KEY:
         return None
+    # SEC-06: log the auth failure without echoing the supplied key.
+    logger.warning("MCP authentication failed: API key mismatch")
     return "Authentication required. Pass api_key parameter matching ANIMUS_MCP_API_KEY."
 
 
@@ -1034,7 +1036,7 @@ def create_mcp_server():
             if store_proposal:
                 stored = architect.store_proposal(proposal)
                 if stored:
-                    lines.append(f"✅ Proposal stored in memory for review.")
+                    lines.append("✅ Proposal stored in memory for review.")
                 else:
                     lines.append("⚠️ Memory layer unavailable — proposal not persisted.")
         else:
@@ -1931,7 +1933,7 @@ def create_mcp_server():
             lines.append(f"**Title:** {proposal.title}")
             lines.append(f"**Problem:** {proposal.problem}")
             lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
-            lines.append(f"**Recommendation:**")
+            lines.append("**Recommendation:**")
             lines.append(proposal.recommendation)
             if proposal.potential_risks:
                 lines.append("**Risks:**")

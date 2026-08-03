@@ -20,6 +20,7 @@ from typing import Any
 from animus.network.client import GovernedClient
 
 from animus_kernel.logger import get_logger
+from animus_types.secrets import redact, redact_exception
 
 logger = get_logger("tools")
 
@@ -282,17 +283,19 @@ class ToolRegistry:
             )
 
         try:
-            logger.debug(f"Executing tool: {name} with params: {params}")
+            logger.debug(
+                "Executing tool: %s with params: %s", name, redact(str(params))
+            )
             result = tool.handler(params)
-            logger.debug(f"Tool {name} completed: success={result.success}")
+            logger.debug("Tool %s completed: success=%s", name, result.success)
             return result
         except Exception as e:
-            logger.error(f"Tool {name} failed with exception: {e}")
+            logger.error("Tool %s failed with exception: %s", name, redact_exception(e))
             return ToolResult(
                 tool_name=name,
                 success=False,
                 output=None,
-                error=str(e),
+                error=redact_exception(e),
             )
 
     async def execute_async(self, name: str, params: dict) -> ToolResult:
@@ -321,7 +324,7 @@ def _tool_get_datetime(params: dict) -> ToolResult:
             tool_name="get_datetime",
             success=False,
             output=None,
-            error=str(e),
+            error=redact_exception(e),
         )
 
 
@@ -339,12 +342,12 @@ def _tool_read_file(params: dict) -> ToolResult:
     # Security validation
     is_valid, error = _validate_path(path)
     if not is_valid:
-        logger.warning(f"Path validation failed for '{path}': {error}")
+        logger.warning("Path validation failed for '%s': %s", path, redact(error or ""))
         return ToolResult(
             tool_name="read_file",
             success=False,
             output=None,
-            error=error,
+            error=redact(error or ""),
         )
 
     try:
@@ -386,7 +389,7 @@ def _tool_read_file(params: dict) -> ToolResult:
             tool_name="read_file",
             success=False,
             output=None,
-            error=str(e),
+            error=redact_exception(e),
         )
 
 
@@ -398,12 +401,12 @@ def _tool_list_files(params: dict) -> ToolResult:
     # Security validation
     is_valid, error = _validate_path(directory)
     if not is_valid:
-        logger.warning(f"Path validation failed for '{directory}': {error}")
+        logger.warning("Path validation failed for '%s': %s", directory, redact(error or ""))
         return ToolResult(
             tool_name="list_files",
             success=False,
             output=None,
-            error=error,
+            error=redact(error or ""),
         )
 
     try:
@@ -440,7 +443,7 @@ def _tool_list_files(params: dict) -> ToolResult:
             tool_name="list_files",
             success=False,
             output=None,
-            error=str(e),
+            error=redact_exception(e),
         )
 
 
@@ -458,12 +461,12 @@ def _tool_run_command(params: dict) -> ToolResult:
     # Security validation
     is_valid, error = _validate_command(command)
     if not is_valid:
-        logger.warning(f"Command validation failed for '{command}': {error}")
+        logger.warning("Command validation failed for '%s': %s", redact(command), redact(error or ""))
         return ToolResult(
             tool_name="run_command",
             success=False,
             output=None,
-            error=error,
+            error=redact(error or ""),
         )
 
     try:
@@ -506,7 +509,7 @@ def _tool_run_command(params: dict) -> ToolResult:
             tool_name="run_command",
             success=False,
             output=None,
-            error=str(e),
+            error=redact_exception(e),
         )
 
 
@@ -551,7 +554,7 @@ def _tool_write_file(params: dict) -> ToolResult:
             error=f"Permission denied: {path}",
         )
     except OSError as e:
-        return ToolResult(tool_name="write_file", success=False, output=None, error=str(e))
+        return ToolResult(tool_name="write_file", success=False, output=None, error=redact_exception(e))
 
 
 def _tool_edit_file(params: dict) -> ToolResult:
@@ -614,7 +617,7 @@ def _tool_edit_file(params: dict) -> ToolResult:
             error=f"Permission denied: {path}",
         )
     except OSError as e:
-        return ToolResult(tool_name="edit_file", success=False, output=None, error=str(e))
+        return ToolResult(tool_name="edit_file", success=False, output=None, error=redact_exception(e))
 
 
 def _tool_http_request(params: dict) -> ToolResult:
@@ -674,12 +677,12 @@ def _tool_http_request(params: dict) -> ToolResult:
             content=body_str,
         )
     except Exception as e:
-        logger.debug("http_request failed: %s", e)
+        logger.debug("http_request failed: %s", redact_exception(e))
         return ToolResult(
             tool_name="http_request",
             success=False,
             output=None,
-            error=str(e),
+            error=redact_exception(e),
         )
 
     output = f"HTTP {response.status}\n"
@@ -760,12 +763,12 @@ def _tool_web_search(params: dict) -> ToolResult:
             output="\n".join(results),
         )
     except Exception as e:
-        logger.debug("web_search failed: %s", e)
+        logger.debug("web_search failed: %s", redact_exception(e))
         return ToolResult(
             tool_name="web_search",
             success=False,
             output=None,
-            error=str(e),
+            error=redact_exception(e),
         )
 
 
@@ -1065,7 +1068,7 @@ def create_memory_tools(memory_layer) -> list[Tool]:
                 tool_name="search_memory",
                 success=False,
                 output=None,
-                error=str(e),
+                error=redact_exception(e),
             )
 
     def _tool_save_memory(params: dict) -> ToolResult:
@@ -1099,7 +1102,7 @@ def create_memory_tools(memory_layer) -> list[Tool]:
                 tool_name="save_memory",
                 success=False,
                 output=None,
-                error=str(e),
+                error=redact_exception(e),
             )
 
     return [
@@ -1188,7 +1191,7 @@ def create_local_think_tool(cognitive_layer) -> Tool:
                 tool_name="local_think",
                 success=False,
                 output=None,
-                error=str(e),
+                error=redact_exception(e),
             )
 
     return Tool(

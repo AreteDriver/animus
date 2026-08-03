@@ -15,16 +15,23 @@ and ``subprocess.run``.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 from animus_forge.missions.domain import TaskContext
+from animus_forge.providers.base import (
+    CompletionRequest,
+    CompletionResponse,
+    Provider,
+    ProviderConfig,
+    ProviderError,
+    ProviderType,
+)
+from animus_forge.providers.manager import ProviderManager
 from animus_forge.scheduler.containers import ContainerConfig, ContainerManager
 from animus_forge.scheduler.worker_pool import CitizenWorkerPool, PoolConfig
-
 
 # ═══════════════════════════════════════════════════════════════════
 # Helpers
@@ -60,12 +67,9 @@ class TestContainerModeSilentFallback:
         pool = _make_worker_pool(lease_manager, isolation_mode="container", container_manager=None)
         await pool.start()
 
-        process_submits: list = []
-        container_submits: list = []
-
-        original_submit = pool._executor.submit if pool._executor else None
-
         import concurrent.futures
+
+        process_submits: list = []
 
         def _capture_submit(fn, *args, **kwargs):
             process_submits.append((fn.__name__ if hasattr(fn, "__name__") else fn, args, kwargs))
@@ -95,7 +99,6 @@ class TestContainerModeSilentFallback:
         assert len(process_submits) == 1, (
             "Expected silent fallback to ProcessPoolExecutor; no process submit captured"
         )
-        assert len(container_submits) == 0
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -146,14 +149,13 @@ class TestContainerRuntimeLimitsMissing:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# SEC-09d — environment values are logged in container command
+# SEC-06 — environment values must not be logged in container command
 # ═══════════════════════════════════════════════════════════════════
 
 
 class TestContainerEnvLogging:
-    def test_run_container_logs_environment_values(self, monkeypatch, caplog):
-        """ContainerManager._run_container logs the full command including
-        '-e FAKE_API_KEY=secret123'."""
+    def test_run_container_masks_environment_values(self, monkeypatch, caplog):
+        """ContainerManager._run_container logs the command with env values masked."""
         fake_secret = "secret123-not-real"
         monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/docker" if cmd == "docker" else None)
 
@@ -168,7 +170,80 @@ class TestContainerEnvLogging:
                 cm._run_container("/tmp/payload.json")
 
         logged = "\n".join(record.message for record in caplog.records)
-        assert fake_secret in logged, (
-            "Expected container command log to include the raw env value before fix; "
+        assert fake_secret not in logged, (
+            "Container command log leaked raw environment value; "
             f"logs: {logged}"
         )
+        assert "FAKE_API_KEY=[REDACTED]" in logged
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SEC-06 — provider error messages must not echo credentials
+# ═══════════════════════════════════════════════════════════════════
+
+
+class _SecretLeakingProvider(Provider):
+    """Mock provider whose error message contains a fake API key."""
+
+    def __init__(self, secret: str):
+        super().__init__(ProviderConfig(provider_type=ProviderType.ANTHROPIC))
+        self._secret = secret
+
+    @property
+    def name(self) -> str:
+        return "secret-leak"
+
+    @property
+    def provider_type(self) -> ProviderType:
+        return ProviderType.ANTHROPIC
+
+    def _get_fallback_model(self) -> str:
+        return "claude-3"
+
+    def is_configured(self) -> bool:
+        return True
+
+    def initialize(self) -> None:
+        pass
+
+    def complete(self, request: CompletionRequest) -> CompletionResponse:
+        raise ProviderError(f"Authentication failed: key={self._secret}")
+
+    async def complete_async(self, request: CompletionRequest) -> CompletionResponse:
+        raise ProviderError(f"Authentication failed: key={self._secret}")
+
+
+class TestProviderErrorLogsNoSecrets:
+    def test_provider_error_log_and_exception_redact_secret(
+        self, caplog, monkeypatch
+    ):
+        """Provider errors that carry credentials must be redacted in logs and
+        in the final ``ProviderError`` message.
+        """
+        fake_secret = "sk-ant-api03-fakefakefakefakefakefakefakefakefake"
+        manager = ProviderManager()
+        manager.register("leaker", provider=_SecretLeakingProvider(fake_secret))
+
+        logger = logging.getLogger("animus_forge.providers.manager")
+        old_propagate = logger.propagate
+        logger.propagate = True
+        try:
+            with caplog.at_level(logging.WARNING, logger=logger.name):
+                with pytest.raises(ProviderError) as exc_info:
+                    manager.complete(
+                        CompletionRequest(prompt="hello"), use_fallback=False
+                    )
+        finally:
+            logger.propagate = old_propagate
+
+        logged = "\n".join(record.message for record in caplog.records)
+        assert fake_secret not in logged, (
+            f"Provider error log leaked secret: {logged}"
+        )
+        assert "Provider leaker failed" in logged
+
+        raised = str(exc_info.value)
+        assert fake_secret not in raised, (
+            f"ProviderError message leaked secret: {raised}"
+        )
+        assert "Authentication failed" in raised

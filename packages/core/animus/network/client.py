@@ -37,7 +37,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from animus_types.egress import EgressDeniedError, is_egress_allowed
-from animus_types.secrets import _COMPILED as _SECRET_PATTERNS
+from animus_types.secrets import redact, redact_exception
 from animus_types.sensitivity import Sensitivity
 
 logger = logging.getLogger("animus.network.client")
@@ -102,34 +102,6 @@ class Response:
     url: str
 
 
-# ---------------------------------------------------------------------------
-# Redaction helpers
-# ---------------------------------------------------------------------------
-
-
-def _redact(text: str) -> str:
-    """Replace detected credential patterns and high-entropy tokens.
-
-    The goal is to make sure denied-request log lines and error strings
-    returned to callers never echo a secret.  We intentionally match the
-    same canonical patterns used by ``animus_types.secrets``.
-    """
-    if not text:
-        return text
-    for name, pattern in _SECRET_PATTERNS:
-        text = pattern.sub(lambda _m, _name=name: f"[REDACTED:{_name}]", text)
-    return text
-
-
-def _redact_exception(exc: Exception) -> str:
-    """Return a redacted string for an exception, never the raw args."""
-    message = " ".join(str(a) for a in exc.args) if exc.args else type(exc).__name__
-    return _redact(message)
-
-
-# ---------------------------------------------------------------------------
-# IP / URL validation
-# ---------------------------------------------------------------------------
 
 
 def _decode_ipv4_literal(host: str) -> ipaddress.IPv4Address | None:
@@ -218,7 +190,7 @@ def _normalize_url(url: str) -> urllib.parse.ParseResult:
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in _ALLOWED_SCHEMES:
         raise SSRFBlockedError(
-            _redact(f"Unsupported URL scheme for governed request: {parsed.scheme}")
+            redact(f"Unsupported URL scheme for governed request: {parsed.scheme}")
         )
     if not parsed.hostname:
         raise SSRFBlockedError("URL is missing a host")
@@ -289,7 +261,7 @@ def _validating_resolver(
             results = original(host, port, family, type, proto, flags)
         except OSError as exc:
             raise SSRFBlockedError(
-                _redact(f"DNS resolution failed for {host}: {exc}")
+                redact(f"DNS resolution failed for {host}: {exc}")
             ) from exc
 
         allowed: list[tuple[int, int, int, str, tuple[Any, ...]]] = []
@@ -534,7 +506,7 @@ class GovernedClient:
             content=outbound_content,
         ):
             raise EgressDeniedError(
-                _redact(
+                redact(
                     f"Egress denied by policy for {original_host} "
                     f"with sensitivity {effective_sensitivity.name}"
                 )
@@ -581,7 +553,7 @@ class GovernedClient:
                     )
                 except Exception as read_exc:
                     logger.debug(
-                        "Failed to read HTTP error body: %s", _redact_exception(read_exc)
+                        "Failed to read HTTP error body: %s", redact_exception(read_exc)
                     )
                     resp = Response(
                         status=exc.code,
