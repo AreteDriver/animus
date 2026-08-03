@@ -168,8 +168,9 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -e packages/types/
-          pip install -e "packages/core/[dev]"
           pip install -e "packages/kernel/[dev]"
+          pip install -e "packages/quorum/[dev]"
+          pip install -e "packages/core/[dev]"
           pip install -e "packages/forge/[dev]"
           pip install -e "packages/bootstrap/[dev]"
           pip install mypy
@@ -227,7 +228,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.12"]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
 
@@ -265,7 +266,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.12"]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
 
@@ -392,10 +393,11 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-forge-
 
       - name: Install dependencies
-        # animus-types is a sibling pip-installable package and is not
-        # published to PyPI — pip resolves it from the local path when
-        # both -e targets are part of the same install transaction.
-        run: pip install -e packages/types/ -e "packages/forge/[dev]"
+        run: |
+          pip install -e packages/types/
+          pip install -e "packages/quorum/[dev]"
+          pip install -e "packages/kernel/[dev]"
+          pip install -e "packages/forge/[dev]"
 
       - name: Test with coverage
         working-directory: packages/forge
@@ -414,7 +416,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.12"]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
 
@@ -580,6 +582,10 @@ jobs:
               pip install -e packages/types/
               ;;
           esac
+          if [[ "${{ matrix.package }}" == "forge" ]]; then
+            pip install -e "packages/quorum/[dev]"
+            pip install -e "packages/kernel/[dev]"
+          fi
           pip install -e "packages/${{ matrix.package }}/" pip-licenses cyclonedx-bom
 
       - name: Generate license CSV
