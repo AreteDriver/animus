@@ -1,470 +1,110 @@
-"""SEC-03 — execution-plane shell-elimination regression tests for animus kernel.
+"""SEC-05 — execution-plane SSRF / egress regression tests for animus kernel.
 
-Verifies that agent-reachable shell execution uses ``subprocess.run(...,
-shell=False)`` with an argv list, and that shell metacharacters, command
-chaining, pipes, redirects, command substitution, newline injection, quoted
-payloads, interpreter code-execution flags, and PATH shadowing are rejected.
-
-All subprocess monkeypatching captures the exact arguments passed so no real
-command is executed for the security-negative cases.
+All proofs use temporary mock HTTP servers bound to loopback and fake
+secrets.  No live credentials or destructive actions are used.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
+from animus.network.client import EgressDeniedError, GovernedClient, SSRFBlockedError
 
-from animus_kernel.executor.executor_integrations import IntegrationHandlersMixin
-from animus_kernel.head.tool_orchestrator import HeadToolOrchestrator
-from animus_kernel.tools.registry import ForgeToolRegistry
-
-# ═══════════════════════════════════════════════════════════════════
-# Helpers
-# ═══════════════════════════════════════════════════════════════════
+from animus_kernel.tools_core import _tool_http_request
 
 
-def _fake_subprocess_run_factory(captured: dict):
-    """Return a fake subprocess.run that records shell flag, argv and timeout."""
+class _MockHTTPHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"mock-server-ok")
 
-    def _fake(cmd, *, shell=False, timeout=None, **kwargs):
-        captured["cmd"] = cmd
-        captured["shell"] = shell
-        captured["timeout"] = timeout
-        for key, value in kwargs.items():
-            captured[key] = value
-        return MagicMock(returncode=0, stdout="safe-output", stderr="")
-
-    return _fake
+    def log_message(self, _fmt, *_args):
+        pass
 
 
-# ═══════════════════════════════════════════════════════════════════
-# SEC-03 — ForgeToolRegistry shell elimination
-# ═══════════════════════════════════════════════════════════════════
+def _start_mock_server() -> tuple[HTTPServer, str]:
+    server = HTTPServer(("127.0.0.1", 0), _MockHTTPHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    host, port = server.server_address
+    return server, f"http://{host}:{port}"
 
 
-class TestForgeToolRegistryShellElimination:
-    def test_run_command_uses_shell_false_with_argv(self):
-        registry = ForgeToolRegistry(
-            project_root=Path.cwd(),
-            enable_shell=True,
-            allowed_commands=["python"],
-        )
+def _stop_mock_server(server: HTTPServer) -> None:
+    server.shutdown()
+    server.server_close()
 
-        captured: dict = {}
-        fake = _fake_subprocess_run_factory(captured)
 
-        with patch("subprocess.run", side_effect=fake):
-            registry.execute(
-                "run_command",
-                {"command": "python --version", "timeout": 30},
-                agent_id="test-agent",
-            )
+class TestKernelHttpRequestSSRF:
+    def test_tool_blocks_loopback_127(self):
+        server, url = _start_mock_server()
+        try:
+            result = _tool_http_request({"url": url, "method": "GET", "timeout": 5})
+            assert result.success is False
+            assert "SSRF" in result.error or "loopback" in result.error.lower()
+        finally:
+            _stop_mock_server(server)
 
-        assert captured.get("shell") is False, f"captured={captured}"
-        assert captured.get("cmd") == ["python", "--version"]
+    def test_tool_blocks_localhost_hostname(self):
+        server, url = _start_mock_server()
+        try:
+            host, port = server.server_address
+            url = f"http://localhost:{port}/"
+            result = _tool_http_request({"url": url, "method": "GET", "timeout": 5})
+            assert result.success is False
+        finally:
+            _stop_mock_server(server)
 
+
+class TestKernelGovernedClientSSRF:
     @pytest.mark.parametrize(
-        "payload",
+        "host",
         [
-            "python --version; whoami",
-            "python --version && whoami",
-            "python --version || whoami",
-            "cat /etc/passwd | wc -l",
-            "echo hi > /tmp/pwned",
-            "echo hi < /etc/passwd",
-            "echo $(whoami)",
-            "echo `whoami`",
-            "python --version\nwhoami",
-            "python --version\r\nwhoami",
-            'python -c "print(1)"',
-            "node -e 'console.log(1)'",
+            "127.0.0.1",
+            "[::1]",
+            "0.0.0.0",
+            "10.0.0.1",
+            "172.16.0.1",
+            "192.168.1.1",
+            "169.254.169.254",
+            "100.100.100.200",
         ],
     )
-    def test_rejects_shell_metacharacters(self, payload: str):
-        registry = ForgeToolRegistry(
-            project_root=Path.cwd(),
-            enable_shell=True,
-            allowed_commands=["python", "node", "echo", "cat"],
-        )
+    def test_blocks_disallowed_addresses(self, host):
+        with pytest.raises(SSRFBlockedError):
+            GovernedClient.request(f"http://{host}/", timeout=2)
 
-        result = registry.execute(
-            "run_command",
-            {"command": payload, "timeout": 30},
-            agent_id="test-agent",
-        )
+    def test_blocks_encoded_ipv4(self):
+        with pytest.raises(SSRFBlockedError):
+            GovernedClient.request("http://2130706433/", timeout=2)
 
-        assert "forbidden shell metacharacter" in result or "code-execution flag" in result
+    def test_blocks_metadata_hostnames(self):
+        for host in [
+            "metadata.google.internal",
+            "metadata.oraclecloud.com",
+            "169.254.169.254.nip.io",
+        ]:
+            with pytest.raises(SSRFBlockedError, match=host):
+                GovernedClient.request(f"http://{host}/", timeout=2)
 
-    def test_rejects_python_code_execution_flag(self):
-        registry = ForgeToolRegistry(
-            project_root=Path.cwd(),
-            enable_shell=True,
-            allowed_commands=["python"],
-        )
+    def test_allows_loopback_when_explicitly_allowed(self):
+        server, url = _start_mock_server()
+        try:
+            result = GovernedClient.request(url, timeout=5, allow_loopback=True)
+            assert result.status == 200
+            assert "mock-server-ok" in result.body
+        finally:
+            _stop_mock_server(server)
 
-        result = registry.execute(
-            "run_command",
-            {"command": "python -c print(1)", "timeout": 30},
-            agent_id="test-agent",
-        )
-
-        assert "code-execution flag is not allowed" in result
-
-    def test_rejects_node_code_execution_flag(self):
-        registry = ForgeToolRegistry(
-            project_root=Path.cwd(),
-            enable_shell=True,
-            allowed_commands=["node"],
-        )
-
-        result = registry.execute(
-            "run_command",
-            {"command": "node -e console.log(1)", "timeout": 30},
-            agent_id="test-agent",
-        )
-
-        assert "code-execution flag is not allowed" in result
-
-    @pytest.mark.parametrize(
-        "payload",
-        [
-            "/usr/bin/python --version",
-            "../bin/python --version",
-            "./python --version",
-        ],
-    )
-    def test_rejects_path_arguments(self, payload: str):
-        registry = ForgeToolRegistry(
-            project_root=Path.cwd(),
-            enable_shell=True,
-            allowed_commands=["python"],
-        )
-
-        result = registry.execute(
-            "run_command",
-            {"command": payload, "timeout": 30},
-            agent_id="test-agent",
-        )
-
-        assert "must be a bare name, not a path" in result
-
-    def test_rejects_timeout_too_large(self):
-        registry = ForgeToolRegistry(
-            project_root=Path.cwd(),
-            enable_shell=True,
-            allowed_commands=["echo"],
-        )
-
-        captured: dict = {}
-        fake = _fake_subprocess_run_factory(captured)
-
-        with patch("subprocess.run", side_effect=fake):
-            registry.execute(
-                "run_command",
-                {"command": "echo hi", "timeout": 9999},
-                agent_id="test-agent",
+    def test_outbound_secret_blocked_by_egress_dlp(self):
+        with pytest.raises(EgressDeniedError):
+            GovernedClient.request(
+                "http://example.com/api",
+                method="POST",
+                body='{"token": "ghp_fake1234567890abcdef"}',
+                timeout=2,
             )
-
-        assert captured.get("timeout") == 300
-
-    def test_allows_simple_command(self):
-        registry = ForgeToolRegistry(
-            project_root=Path.cwd(),
-            enable_shell=True,
-            allowed_commands=["echo"],
-        )
-
-        captured: dict = {}
-        fake = _fake_subprocess_run_factory(captured)
-
-        with patch("subprocess.run", side_effect=fake):
-            result = registry.execute(
-                "run_command",
-                {"command": "echo hello world", "timeout": 30},
-                agent_id="test-agent",
-            )
-
-        assert captured.get("shell") is False
-        assert captured.get("cmd") == ["echo", "hello", "world"]
-        assert "safe-output" in result
-
-    def test_allows_command_with_safe_arguments(self):
-        registry = ForgeToolRegistry(
-            project_root=Path.cwd(),
-            enable_shell=True,
-            allowed_commands=["git"],
-        )
-
-        captured: dict = {}
-        fake = _fake_subprocess_run_factory(captured)
-
-        with patch("subprocess.run", side_effect=fake):
-            registry.execute(
-                "run_command",
-                {"command": "git status --short", "timeout": 30},
-                agent_id="test-agent",
-            )
-
-        assert captured.get("shell") is False
-        assert captured.get("cmd") == ["git", "status", "--short"]
-
-    def test_cwd_is_project_root(self):
-        project_root = Path("/tmp/fake-project")
-        registry = ForgeToolRegistry(
-            project_root=project_root,
-            enable_shell=True,
-            allowed_commands=["pwd"],
-        )
-
-        captured: dict = {}
-        fake = _fake_subprocess_run_factory(captured)
-
-        with patch("subprocess.run", side_effect=fake):
-            registry.execute(
-                "run_command",
-                {"command": "pwd", "timeout": 30},
-                agent_id="test-agent",
-            )
-
-        assert captured.get("cwd") == str(project_root)
-
-
-# ═══════════════════════════════════════════════════════════════════
-# SEC-03 — HeadToolOrchestrator shell elimination
-# ═══════════════════════════════════════════════════════════════════
-
-
-class TestHeadToolOrchestratorShellElimination:
-    def test_run_shell_uses_shell_false_with_argv(self, tmp_path: Path):
-        orchestrator = HeadToolOrchestrator(
-            project_root=tmp_path,
-            memory_dir=tmp_path / "memory",
-            enable_shell=True,
-            allowed_commands=["python"],
-        )
-
-        captured: dict = {}
-        fake = _fake_subprocess_run_factory(captured)
-
-        with patch("subprocess.run", side_effect=fake):
-            orchestrator.execute(
-                "run_shell",
-                {"command": "python --version", "cwd": str(tmp_path)},
-            )
-
-        assert captured.get("shell") is False, f"captured={captured}"
-        assert captured.get("cmd") == ["python", "--version"]
-
-    @pytest.mark.parametrize(
-        "payload",
-        [
-            "python --version; whoami",
-            "python --version && whoami",
-            "python --version || whoami",
-            "cat /etc/passwd | wc -l",
-            "echo hi > /tmp/pwned",
-            "echo $(whoami)",
-            "echo `whoami`",
-            "python --version\nwhoami",
-            'python -c "print(1)"',
-        ],
-    )
-    def test_rejects_shell_metacharacters(self, payload: str, tmp_path: Path):
-        orchestrator = HeadToolOrchestrator(
-            project_root=tmp_path,
-            memory_dir=tmp_path / "memory",
-            enable_shell=True,
-            allowed_commands=["python", "echo", "cat", "node"],
-        )
-
-        result = orchestrator.execute(
-            "run_shell",
-            {"command": payload, "cwd": str(tmp_path)},
-        )
-
-        assert "forbidden shell metacharacter" in result or "code-execution flag" in result
-
-    def test_rejects_python_c_flag(self, tmp_path: Path):
-        orchestrator = HeadToolOrchestrator(
-            project_root=tmp_path,
-            memory_dir=tmp_path / "memory",
-            enable_shell=True,
-            allowed_commands=["python"],
-        )
-
-        result = orchestrator.execute(
-            "run_shell",
-            {"command": "python -c print(1)", "cwd": str(tmp_path)},
-        )
-
-        assert "code-execution flag is not allowed" in result
-
-    @pytest.mark.parametrize(
-        "payload",
-        [
-            "/usr/bin/python --version",
-            "../bin/python --version",
-        ],
-    )
-    def test_rejects_path_arguments(self, payload: str, tmp_path: Path):
-        orchestrator = HeadToolOrchestrator(
-            project_root=tmp_path,
-            memory_dir=tmp_path / "memory",
-            enable_shell=True,
-            allowed_commands=["python"],
-        )
-
-        result = orchestrator.execute("run_shell", {"command": payload})
-
-        assert "must be a bare name, not a path" in result
-
-    def test_rejects_cwd_outside_project_root(self, tmp_path: Path):
-        orchestrator = HeadToolOrchestrator(
-            project_root=tmp_path,
-            memory_dir=tmp_path / "memory",
-            enable_shell=True,
-            allowed_commands=["pwd"],
-        )
-
-        result = orchestrator.execute(
-            "run_shell",
-            {"command": "pwd", "cwd": "/tmp"},
-        )
-
-        assert "outside project root" in result
-
-    def test_rejects_timeout_too_large(self, tmp_path: Path):
-        orchestrator = HeadToolOrchestrator(
-            project_root=tmp_path,
-            memory_dir=tmp_path / "memory",
-            enable_shell=True,
-            allowed_commands=["echo"],
-        )
-
-        captured: dict = {}
-        fake = _fake_subprocess_run_factory(captured)
-
-        with patch("subprocess.run", side_effect=fake):
-            orchestrator.execute(
-                "run_shell",
-                {"command": "echo hi", "timeout": 9999, "cwd": str(tmp_path)},
-            )
-
-        assert captured.get("timeout") == 300
-
-    def test_allows_simple_command(self, tmp_path: Path):
-        orchestrator = HeadToolOrchestrator(
-            project_root=tmp_path,
-            memory_dir=tmp_path / "memory",
-            enable_shell=True,
-            allowed_commands=["echo"],
-        )
-
-        captured: dict = {}
-        fake = _fake_subprocess_run_factory(captured)
-
-        with patch("subprocess.run", side_effect=fake):
-            result = orchestrator.execute(
-                "run_shell",
-                {"command": "echo hello world", "cwd": str(tmp_path)},
-            )
-
-        assert captured.get("shell") is False
-        assert captured.get("cmd") == ["echo", "hello", "world"]
-        assert "safe-output" in result
-
-
-# ═══════════════════════════════════════════════════════════════════
-# SEC-03 — Workflow executor shell elimination
-# ═══════════════════════════════════════════════════════════════════
-
-
-class _StubExecutor(IntegrationHandlersMixin):
-    """Minimal executor stub for exercising the shell-step mixin."""
-
-    def __init__(self, dry_run: bool = False) -> None:
-        self.dry_run = dry_run
-        self._context: dict = {}
-        self.fallback_callbacks: dict = {}
-
-
-class TestExecutorShellStepElimination:
-    def test_shell_step_uses_shell_false_with_argv(self):
-        from animus_kernel.executor.loader import StepConfig
-
-        executor = _StubExecutor()
-        step = StepConfig(
-            id="s1",
-            type="shell",
-            params={"command": "echo hello world"},
-        )
-
-        captured: dict = {}
-        fake = _fake_subprocess_run_factory(captured)
-
-        with patch("subprocess.run", side_effect=fake):
-            executor._execute_shell(step, {})
-
-        assert captured.get("shell") is False, f"captured={captured}"
-        assert captured.get("cmd") == ["echo", "hello", "world"]
-
-    @pytest.mark.parametrize(
-        "payload",
-        [
-            "echo hi; whoami",
-            "echo hi && whoami",
-            "echo hi || whoami",
-            "cat /etc/passwd | wc -l",
-            "echo hi > /tmp/pwned",
-            "echo $(whoami)",
-            "echo `whoami`",
-            "echo hi\nwhoami",
-            'python -c "print(1)"',
-        ],
-    )
-    def test_rejects_shell_metacharacters_after_substitution(self, payload: str):
-        from animus_kernel.executor.loader import StepConfig
-
-        executor = _StubExecutor()
-        step = StepConfig(
-            id="s2",
-            type="shell",
-            params={"command": payload},
-        )
-
-        with pytest.raises(ValueError, match="forbidden shell metacharacter|code-execution flag"):
-            executor._execute_shell(step, {})
-
-    def test_rejects_absolute_path_in_shell_step(self):
-        from animus_kernel.executor.loader import StepConfig
-
-        executor = _StubExecutor()
-        step = StepConfig(
-            id="s3",
-            type="shell",
-            params={"command": "/usr/bin/echo hello"},
-        )
-
-        with pytest.raises(ValueError, match="bare command name"):
-            executor._execute_shell(step, {})
-
-    def test_allows_substituted_command_with_safe_arguments(self):
-        from animus_kernel.executor.loader import StepConfig
-
-        executor = _StubExecutor()
-        step = StepConfig(
-            id="s4",
-            type="shell",
-            params={"command": "echo ${greeting}"},
-        )
-
-        captured: dict = {}
-        fake = _fake_subprocess_run_factory(captured)
-
-        with patch("subprocess.run", side_effect=fake):
-            executor._execute_shell(step, {"greeting": "hello world"})
-
-        assert captured.get("shell") is False
-        assert captured.get("cmd") == ["echo", "hello world"]

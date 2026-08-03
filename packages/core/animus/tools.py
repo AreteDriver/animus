@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from animus.logging import get_logger
+from animus.network.client import GovernedClient
 
 logger = get_logger("tools")
 
@@ -1416,86 +1417,63 @@ def _tool_http_request(params: dict, policy: ToolPolicy | None = None) -> ToolRe
                 error=authz.reason,
             )
 
+    # Build headers
+    headers = params.get("headers", {}) or {}
+
+    # Apply auth
+    auth_type = params.get("auth_type", "none").lower()
+    auth_value = params.get("auth_value", "")
+    if auth_type == "bearer" and auth_value:
+        headers["Authorization"] = f"Bearer {auth_value}"
+    elif auth_type == "basic" and auth_value:
+        import base64
+
+        encoded = base64.b64encode(auth_value.encode()).decode()
+        headers["Authorization"] = f"Basic {encoded}"
+    elif auth_type == "api_key" and auth_value:
+        headers["X-API-Key"] = auth_value
+
+    # Build request body
+    body_str = params.get("body")
+    if body_str and method in ("POST", "PUT", "PATCH"):
+        if "Content-Type" not in headers:
+            headers["Content-Type"] = "application/json"
+
+    # The generic HTTP tool defaults to PUBLIC data.  Callers may override via
+    # the ``sensitivity`` parameter; the governed client rejects CONFIDENTIAL
+    # and SECRET destinations regardless.
+    sensitivity = params.get("sensitivity")
+
     try:
-        import urllib.parse
-        import urllib.request
-
-        # Validate URL scheme
-        parsed = urllib.parse.urlparse(url)
-        if parsed.scheme not in ("http", "https"):
-            return ToolResult(
-                tool_name="http_request",
-                success=False,
-                output=None,
-                error=f"Unsupported URL scheme: {parsed.scheme}",
-            )
-
-        # Build headers
-        headers = params.get("headers", {}) or {}
-
-        # Apply auth
-        auth_type = params.get("auth_type", "none").lower()
-        auth_value = params.get("auth_value", "")
-        if auth_type == "bearer" and auth_value:
-            headers["Authorization"] = f"Bearer {auth_value}"
-        elif auth_type == "basic" and auth_value:
-            import base64
-
-            encoded = base64.b64encode(auth_value.encode()).decode()
-            headers["Authorization"] = f"Basic {encoded}"
-        elif auth_type == "api_key" and auth_value:
-            headers["X-API-Key"] = auth_value
-
-        # Build request body
-        body_data = None
-        body_str = params.get("body")
-        if body_str and method in ("POST", "PUT", "PATCH"):
-            body_data = body_str.encode("utf-8")
-            if "Content-Type" not in headers:
-                headers["Content-Type"] = "application/json"
-
-        req = urllib.request.Request(url, data=body_data, headers=headers, method=method)
-
-        with urllib.request.urlopen(req, timeout=timeout) as response:
-            response_body = response.read().decode("utf-8", errors="replace")
-            status_code = response.status
-            response_headers = dict(response.headers)
-
-        # Truncate long responses
-        if len(response_body) > 50_000:
-            response_body = response_body[:50_000] + "\n... [truncated]"
-
-        output = f"HTTP {status_code}\n"
-        for hdr_key, hdr_val in response_headers.items():
-            output += f"{hdr_key}: {hdr_val}\n"
-        output += f"\n{response_body}"
-
-        return ToolResult(
-            tool_name="http_request",
-            success=200 <= status_code < 400,
-            output=output,
-            error=None if 200 <= status_code < 400 else f"HTTP {status_code}",
-        )
-
-    except urllib.error.HTTPError as e:
-        error_body = ""
-        try:
-            error_body = e.read().decode("utf-8", errors="replace")[:5000]
-        except Exception as read_err:
-            logger.debug("Failed to read HTTP error body: %s", read_err)
-        return ToolResult(
-            tool_name="http_request",
-            success=False,
-            output=error_body or None,
-            error=f"HTTP {e.code}: {e.reason}",
+        response = GovernedClient.request(
+            url,
+            method=method,
+            headers=headers,
+            body=body_str,
+            timeout=timeout,
+            sensitivity=sensitivity,
+            content=body_str,
         )
     except Exception as e:
+        logger.debug("http_request failed: %s", e)
         return ToolResult(
             tool_name="http_request",
             success=False,
             output=None,
             error=str(e),
         )
+
+    output = f"HTTP {response.status}\n"
+    for hdr_key, hdr_val in response.headers.items():
+        output += f"{hdr_key}: {hdr_val}\n"
+    output += f"\n{response.body}"
+
+    return ToolResult(
+        tool_name="http_request",
+        success=200 <= response.status < 400,
+        output=output,
+        error=None if 200 <= response.status < 400 else f"HTTP {response.status}",
+    )
 
 
 def _tool_web_search(params: dict, policy: ToolPolicy | None = None) -> ToolResult:
@@ -1521,13 +1499,18 @@ def _tool_web_search(params: dict, policy: ToolPolicy | None = None) -> ToolResu
 
     try:
         import urllib.parse
-        import urllib.request
 
         encoded_query = urllib.parse.quote_plus(query)
         url = f"https://api.duckduckgo.com/?q={encoded_query}&format=json&no_html=1"
 
-        with urllib.request.urlopen(url, timeout=10) as response:
-            data = json.loads(response.read().decode())
+        response = GovernedClient.request(
+            url,
+            method="GET",
+            timeout=10,
+            sensitivity="PUBLIC",
+            content=query,
+        )
+        data = json.loads(response.body)
 
         # Extract relevant information
         results = []
@@ -1558,6 +1541,7 @@ def _tool_web_search(params: dict, policy: ToolPolicy | None = None) -> ToolResu
             output="\n".join(results),
         )
     except Exception as e:
+        logger.debug("web_search failed: %s", e)
         return ToolResult(
             tool_name="web_search",
             success=False,
