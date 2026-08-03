@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,6 +12,7 @@ import pytest
 from animus.mcp_server import MCPDeploymentMode
 from animus.memory import Memory, MemoryType
 from animus.tools import (
+    ApprovalGate,
     DenyAllToolPolicy,
     Tool,
     ToolRegistry,
@@ -395,8 +397,12 @@ class TestMCPAuth:
         """With ANIMUS_MCP_API_KEY set, missing key is rejected."""
         from animus.mcp_server import _check_auth
 
-        with patch("animus.mcp_server._MCP_API_KEY", "secret123"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "secret123"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
             result = _check_auth("")
             assert result is not None
@@ -406,8 +412,12 @@ class TestMCPAuth:
         """Wrong key is rejected."""
         from animus.mcp_server import _check_auth
 
-        with patch("animus.mcp_server._MCP_API_KEY", "secret123"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "secret123"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
             result = _check_auth("wrong")
             assert result is not None
@@ -416,15 +426,23 @@ class TestMCPAuth:
         """Correct key passes."""
         from animus.mcp_server import _check_auth
 
-        with patch("animus.mcp_server._MCP_API_KEY", "secret123"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "secret123"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
             assert _check_auth("secret123") is None
 
     def test_remember_with_auth(self, tmp_path):
         """animus_remember blocks without valid key when auth is configured."""
-        with patch("animus.mcp_server._MCP_API_KEY", "testkey"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "testkey"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
             with patch("animus.mcp_server.AnimusConfig") as mock_config_cls:
                 mock_config = MagicMock()
@@ -477,8 +495,12 @@ class TestHarvestTool:
             assert "Harvest error" in result[0][0].text
 
     def test_harvest_auth_blocked(self, server, mock_memory):
-        with patch("animus.mcp_server._MCP_API_KEY", "secret"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "secret"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
             result = _run(server.call_tool("animus_harvest", {"target": "test/repo"}))
             assert "Authentication required" in result[0][0].text
@@ -486,8 +508,12 @@ class TestHarvestTool:
     def test_harvest_auth_passes(self, server, mock_memory):
         mock_result = MagicMock()
         mock_result.to_dict.return_value = {"repo": "ok"}
-        with patch("animus.mcp_server._MCP_API_KEY", "key123"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "key123"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
             with patch("animus.lugh.repos.harvest_repo", return_value=mock_result):
                 result = _run(
@@ -535,8 +561,12 @@ class TestWatchlistTools:
             assert "Watchlist error" in result[0][0].text
 
     def test_watchlist_add_auth_blocked(self, server):
-        with patch("animus.mcp_server._MCP_API_KEY", "secret"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "secret"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
             result = _run(server.call_tool("animus_watchlist_add", {"target": "test/repo"}))
             assert "Authentication required" in result[0][0].text
@@ -552,8 +582,12 @@ class TestWatchlistTools:
             assert "not found" in result[0][0].text
 
     def test_watchlist_remove_auth_blocked(self, server):
-        with patch("animus.mcp_server._MCP_API_KEY", "secret"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "secret"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
             result = _run(server.call_tool("animus_watchlist_remove", {"target": "test/repo"}))
             assert "Authentication required" in result[0][0].text
@@ -610,8 +644,12 @@ class TestWatchlistTools:
             assert "Watchlist scan failed" in result[0][0].text
 
     def test_watchlist_scan_auth_blocked(self, server):
-        with patch("animus.mcp_server._MCP_API_KEY", "secret"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "secret"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
             result = _run(server.call_tool("animus_watchlist_scan", {}))
             assert "Authentication required" in result[0][0].text
@@ -753,8 +791,12 @@ class TestSelfImproveTool:
             assert "Self-improve failed" in result[0][0].text
 
     def test_self_improve_auth_blocked(self, server, tmp_path):
-        with patch("animus.mcp_server._MCP_API_KEY", "secret"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "secret"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
             result = _run(
                 server.call_tool(
@@ -769,22 +811,34 @@ class TestWriteToolsAuth:
     """Test auth blocks on all write tools."""
 
     def test_create_task_auth(self, server):
-        with patch("animus.mcp_server._MCP_API_KEY", "authkey"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "authkey"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
             result = _run(server.call_tool("animus_create_task", {"description": "test"}))
             assert "Authentication required" in result[0][0].text
 
     def test_complete_task_auth(self, server):
-        with patch("animus.mcp_server._MCP_API_KEY", "authkey"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "authkey"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
             result = _run(server.call_tool("animus_complete_task", {"task_id": "t1"}))
             assert "Authentication required" in result[0][0].text
 
     def test_run_workflow_auth(self, server):
-        with patch("animus.mcp_server._MCP_API_KEY", "authkey"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "authkey"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
             result = _run(server.call_tool("animus_run_workflow", {"workflow_path": "/test.yaml"}))
             assert "Authentication required" in result[0][0].text
@@ -934,12 +988,14 @@ class TestArchitectTools:
             assert "No actionable findings" in text
 
     def test_architect_scan_auth_blocked(self, server, tmp_path):
-        with patch("animus.mcp_server._MCP_API_KEY", "secret"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "secret"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
-            result = _run(
-                server.call_tool("animus_architect_scan", {})
-            )
+            result = _run(server.call_tool("animus_architect_scan", {}))
             assert "Authentication required" in result[0][0].text
 
     def test_architect_list_proposals_empty(self, server, mock_config, mock_memory):
@@ -1553,12 +1609,16 @@ class TestMCPAuthHardening:
     @pytest.fixture
     def auth_server(self, tmp_path):
         """Create an MCP server in authenticated mode with a configured key."""
-        with patch("animus.mcp_server.AnimusConfig") as mock_config_cls, \
-             patch("animus.mcp_server.MemoryLayer") as mock_mem_cls, \
-             patch("animus.mcp_server.TaskTracker") as mock_tasks_cls, \
-             patch("animus.mcp_server._MCP_API_KEY", "supersecret"), \
-             patch("animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network):
-
+        with (
+            patch("animus.mcp_server.AnimusConfig") as mock_config_cls,
+            patch("animus.mcp_server.MemoryLayer") as mock_mem_cls,
+            patch("animus.mcp_server.TaskTracker") as mock_tasks_cls,
+            patch("animus.mcp_server._MCP_API_KEY", "supersecret"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
+        ):
             cfg = MagicMock()
             cfg.data_dir = tmp_path
             cfg.memory.backend = "json"
@@ -1567,17 +1627,19 @@ class TestMCPAuthHardening:
             mock_tasks_cls.return_value = MagicMock()
 
             from animus.mcp_server import create_mcp_server
+
             yield create_mcp_server()
 
     @pytest.fixture
     def local_server(self, tmp_path):
         """Create an MCP server in explicit local_stdio mode."""
-        with patch("animus.mcp_server.AnimusConfig") as mock_config_cls, \
-             patch("animus.mcp_server.MemoryLayer") as mock_mem_cls, \
-             patch("animus.mcp_server.TaskTracker") as mock_tasks_cls, \
-             patch("animus.mcp_server._MCP_API_KEY", "supersecret"), \
-             patch("animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.local_stdio):
-
+        with (
+            patch("animus.mcp_server.AnimusConfig") as mock_config_cls,
+            patch("animus.mcp_server.MemoryLayer") as mock_mem_cls,
+            patch("animus.mcp_server.TaskTracker") as mock_tasks_cls,
+            patch("animus.mcp_server._MCP_API_KEY", "supersecret"),
+            patch("animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.local_stdio),
+        ):
             cfg = MagicMock()
             cfg.data_dir = tmp_path
             cfg.memory.backend = "json"
@@ -1586,11 +1648,13 @@ class TestMCPAuthHardening:
             mock_tasks_cls.return_value = MagicMock()
 
             from animus.mcp_server import create_mcp_server
+
             yield create_mcp_server()
 
     def test_check_auth_uses_constant_time_comparison(self, monkeypatch):
         """_check_auth must compare keys with secrets.compare_digest."""
         from animus.mcp_server import _check_auth
+
         calls = []
 
         def _capture_compare(a, b):
@@ -1598,10 +1662,17 @@ class TestMCPAuthHardening:
             return False
 
         monkeypatch.setattr("secrets.compare_digest", _capture_compare)
-        with patch("animus.mcp_server._MCP_API_KEY", "secret123"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "secret123"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
-            with patch("animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network):
+            with patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ):
                 _check_auth("wrong")
 
         assert len(calls) == 1
@@ -1609,19 +1680,35 @@ class TestMCPAuthHardening:
 
     def test_check_auth_wrong_key_rejected(self):
         from animus.mcp_server import _check_auth
-        with patch("animus.mcp_server._MCP_API_KEY", "secret123"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "secret123"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
-            with patch("animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network):
+            with patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ):
                 assert _check_auth("wrong") is not None
                 assert "Invalid API key" in _check_auth("wrong")
 
     def test_check_auth_correct_key_allowed(self):
         from animus.mcp_server import _check_auth
-        with patch("animus.mcp_server._MCP_API_KEY", "secret123"), patch(
-            "animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network
+
+        with (
+            patch("animus.mcp_server._MCP_API_KEY", "secret123"),
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
         ):
-            with patch("animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network):
+            with patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ):
                 assert _check_auth("secret123") is None
 
     def test_no_auth_local_mode_only_when_explicitly_configured(self, local_server):
@@ -1655,45 +1742,54 @@ class TestMCPAuthHardening:
         assert "Invalid API key" in result[0][0].text
 
     def test_remote_without_auth_fails_startup(self, tmp_path):
-        with patch("animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.remote), \
-             patch("animus.mcp_server._MCP_API_KEY", None), \
-             patch("animus.mcp_server.AnimusConfig") as mock_config_cls, \
-             patch("animus.mcp_server.MemoryLayer"), \
-             patch("animus.mcp_server.TaskTracker"):
-
+        with (
+            patch("animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.remote),
+            patch("animus.mcp_server._MCP_API_KEY", None),
+            patch("animus.mcp_server.AnimusConfig") as mock_config_cls,
+            patch("animus.mcp_server.MemoryLayer"),
+            patch("animus.mcp_server.TaskTracker"),
+        ):
             cfg = MagicMock()
             cfg.data_dir = tmp_path
             mock_config_cls.load.return_value = cfg
 
             from animus.mcp_server import create_mcp_server
+
             with pytest.raises(RuntimeError, match="remote deployment requires"):
                 create_mcp_server()
 
     def test_authenticated_mode_with_empty_key_fails_startup(self, tmp_path):
-        with patch("animus.mcp_server._MCP_DEPLOYMENT_MODE", MCPDeploymentMode.authenticated_local_network), \
-             patch("animus.mcp_server._MCP_API_KEY", ""), \
-             patch("animus.mcp_server.AnimusConfig") as mock_config_cls, \
-             patch("animus.mcp_server.MemoryLayer"), \
-             patch("animus.mcp_server.TaskTracker"):
-
+        with (
+            patch(
+                "animus.mcp_server._MCP_DEPLOYMENT_MODE",
+                MCPDeploymentMode.authenticated_local_network,
+            ),
+            patch("animus.mcp_server._MCP_API_KEY", ""),
+            patch("animus.mcp_server.AnimusConfig") as mock_config_cls,
+            patch("animus.mcp_server.MemoryLayer"),
+            patch("animus.mcp_server.TaskTracker"),
+        ):
             cfg = MagicMock()
             cfg.data_dir = tmp_path
             mock_config_cls.load.return_value = cfg
 
             from animus.mcp_server import create_mcp_server
+
             with pytest.raises(RuntimeError, match="authenticated_local_network mode requires"):
                 create_mcp_server()
 
     def test_create_mcp_server_defaults_to_deny_all_policy(self, tmp_path):
-        with patch("animus.mcp_server.AnimusConfig") as mock_config_cls, \
-             patch("animus.mcp_server.MemoryLayer"), \
-             patch("animus.mcp_server.TaskTracker"):
-
+        with (
+            patch("animus.mcp_server.AnimusConfig") as mock_config_cls,
+            patch("animus.mcp_server.MemoryLayer"),
+            patch("animus.mcp_server.TaskTracker"),
+        ):
             cfg = MagicMock()
             cfg.data_dir = tmp_path
             mock_config_cls.load.return_value = cfg
 
             from animus.mcp_server import create_mcp_server
+
             server = create_mcp_server()
             assert isinstance(server.policy, DenyAllToolPolicy)
 
@@ -1705,15 +1801,17 @@ class TestMCPAuthHardening:
             write_roots=[str(workspace)],
             command_enabled=True,
         )
-        with patch("animus.mcp_server.AnimusConfig") as mock_config_cls, \
-             patch("animus.mcp_server.MemoryLayer"), \
-             patch("animus.mcp_server.TaskTracker"):
-
+        with (
+            patch("animus.mcp_server.AnimusConfig") as mock_config_cls,
+            patch("animus.mcp_server.MemoryLayer"),
+            patch("animus.mcp_server.TaskTracker"),
+        ):
             cfg = MagicMock()
             cfg.data_dir = tmp_path
             mock_config_cls.load.return_value = cfg
 
             from animus.mcp_server import create_mcp_server
+
             server = create_mcp_server(policy=policy)
             assert server.policy is policy
 
@@ -1741,29 +1839,35 @@ class TestMCPAuthHardening:
         result = _run(
             auth_server.call_tool(
                 "animus_remember",
-                {"content": "this payload is definitely larger than fifty bytes", "api_key": "supersecret"},
+                {
+                    "content": "this payload is definitely larger than fifty bytes",
+                    "api_key": "supersecret",
+                },
             )
         )
         assert "payload size" in result[0][0].text
         assert "exceeds" in result[0][0].text
 
     def test_concurrency_limit_configured(self, tmp_path):
-        with patch("animus.mcp_server.AnimusConfig") as mock_config_cls, \
-             patch("animus.mcp_server.MemoryLayer"), \
-             patch("animus.mcp_server.TaskTracker"), \
-             patch.dict("os.environ", {"ANIMUS_MCP_MAX_CONCURRENT_CALLS": "3"}, clear=False):
-
+        with (
+            patch("animus.mcp_server.AnimusConfig") as mock_config_cls,
+            patch("animus.mcp_server.MemoryLayer"),
+            patch("animus.mcp_server.TaskTracker"),
+            patch.dict("os.environ", {"ANIMUS_MCP_MAX_CONCURRENT_CALLS": "3"}, clear=False),
+        ):
             cfg = MagicMock()
             cfg.data_dir = tmp_path
             mock_config_cls.load.return_value = cfg
 
             from animus.mcp_server import create_mcp_server
+
             server = create_mcp_server()
             assert server._concurrency_semaphore is not None
             assert server._concurrency_semaphore._value == 3
 
     def test_mcp_audit_logs_without_secrets(self, auth_server, caplog):
         import logging
+
         mcp_logger = logging.getLogger("animus.mcp_server")
         old_propagate = mcp_logger.propagate
         mcp_logger.propagate = True
@@ -1804,7 +1908,7 @@ class TestMCPAuthHardening:
         assert result.success is False
         assert "not in write_roots" in result.error or "denied" in result.error.lower()
 
-    def test_execute_registry_with_approval_requests_approval(self):
+    def test_execute_registry_with_approval_requires_external_gate(self):
         from animus.mcp_server import _execute_registry_with_approval
 
         registry = ToolRegistry(policy=WorkspaceToolPolicy())
@@ -1822,6 +1926,52 @@ class TestMCPAuthHardening:
             )
         )
 
-        result = _execute_registry_with_approval(registry, "dangerous", {})
+        # Without an approval gate the helper must deny, not auto-approve.
+        result = _run(_execute_registry_with_approval(registry, "dangerous", {}))
+        assert result.success is False
+        assert "ApprovalGate" in result.error
+
+    def test_execute_registry_with_approval_allows_via_gate(self):
+        from animus.mcp_server import _execute_registry_with_approval
+
+        registry = ToolRegistry(policy=WorkspaceToolPolicy())
+
+        def handler(params: dict) -> ToolResult:
+            return ToolResult(tool_name="dangerous", success=True, output="ran")
+
+        registry.register(
+            Tool(
+                name="dangerous",
+                description="requires approval",
+                parameters={},
+                handler=handler,
+                requires_approval=True,
+            )
+        )
+
+        class AllowGate(ApprovalGate):
+            async def request_decision(
+                self,
+                approval_store,
+                tool_name,
+                params,
+                params_hash,
+                request_id,
+            ):
+                return approval_store.request_approval(
+                    tool_name=tool_name,
+                    params_hash=params_hash,
+                    requesting_actor="test",
+                    scope="test",
+                    expiry=datetime.now(timezone.utc) + timedelta(seconds=60),
+                    decision="allow",
+                    approver="external-gate",
+                    reason="Mock external approval",
+                )
+
+        gate = AllowGate()
+        result = _run(
+            _execute_registry_with_approval(registry, "dangerous", {}, approval_gate=gate)
+        )
         assert result.success is True
         assert result.output == "ran"

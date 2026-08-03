@@ -23,7 +23,13 @@ from animus_kernel.logger import get_logger
 
 logger = get_logger("tools")
 
-# Security config - initialized by create_tool_registry()
+# TODO(SEC-KERNEL-PARITY): Kernel still relies on this module-level mutable
+# ``_security_config`` instead of a registry-owned immutable ``ToolPolicy``.
+# Core completed SEC-00..SEC-04 with ``DenyAllToolPolicy``/``WorkspaceToolPolicy``,
+# registry-isolated policies, and ``ApprovalStore``/``ApprovalGate`` enforcement.
+# Kernel needs the same migration so its execution plane cannot be bypassed by
+# mutating global state.  Tracked in GitHub issue created from this TODO.
+# See: https://github.com/AreteDriver/animus/issues/124
 _security_config = None
 
 

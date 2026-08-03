@@ -203,7 +203,9 @@ class WorkspaceToolPolicy(ToolPolicy):
         try:
             resolved = self._resolve(path)
         except (OSError, ValueError):
-            return AuthorizationResult(allowed=False, reason=f"Access denied: invalid path '{path}'")
+            return AuthorizationResult(
+                allowed=False, reason=f"Access denied: invalid path '{path}'"
+            )
 
         blocked_reason = self._is_blocked(resolved)
         if blocked_reason:
@@ -245,7 +247,9 @@ class WorkspaceToolPolicy(ToolPolicy):
             return AuthorizationResult(allowed=False, reason="Command execution is disabled")
 
         if not argv:
-            return AuthorizationResult(allowed=False, reason="Command execution denied: empty command")
+            return AuthorizationResult(
+                allowed=False, reason="Command execution denied: empty command"
+            )
 
         command = " ".join(argv)
         normalized = re.sub(r"\s+", " ", command.strip())
@@ -264,7 +268,9 @@ class WorkspaceToolPolicy(ToolPolicy):
 
         for pattern in self.command_blocklist:
             if re.search(pattern, normalized, re.IGNORECASE):
-                return AuthorizationResult(allowed=False, reason="Command blocked by security policy")
+                return AuthorizationResult(
+                    allowed=False, reason="Command blocked by security policy"
+                )
 
         if self.command_allowlist:
             allowed = False
@@ -273,9 +279,7 @@ class WorkspaceToolPolicy(ToolPolicy):
                     allowed = True
                     break
             if not allowed:
-                return AuthorizationResult(
-                    allowed=False, reason="Command not in allowlist"
-                )
+                return AuthorizationResult(allowed=False, reason="Command not in allowlist")
 
         if self.write_roots:
             destructive_cmds = ("rm", "mv", "cp", "chmod", "chown")
@@ -484,6 +488,44 @@ class InMemoryApprovalStore(ApprovalStore):
         return len(expired_ids)
 
 
+class ApprovalGate(ABC):
+    """External authority that grants or denies approval for dangerous tools.
+
+    An approval gate is the bridge between the execution plane and a human
+    operator, ticketing system, or policy service.  The execution plane creates
+    a pending approval request, then awaits the gate's decision.  The gate is
+    responsible for producing an ``ApprovalDecision`` whose ``params_hash``
+    matches the logical parameters of the requested call.
+    """
+
+    @abstractmethod
+    async def request_decision(
+        self,
+        approval_store: ApprovalStore,
+        tool_name: str,
+        params: dict,
+        params_hash: str,
+        request_id: str,
+    ) -> ApprovalDecision:
+        """Return an ``ApprovalDecision`` from an external authority.
+
+        Implementations may block until a human/operator decision is available.
+        The returned decision must be an ``allow`` decision that matches
+        ``tool_name`` and ``params_hash``.
+
+        Args:
+            approval_store: Store backing the registry that created the pending
+                request.  The gate may record the final decision here.
+            tool_name: Name of the tool awaiting approval.
+            params: Logical parameters of the requested call (internal execution
+                keys already stripped).
+            params_hash: Canonical hash of ``params``.
+            request_id: Identifier of the pending request created by the caller;
+                useful for correlation with an external system.
+        """
+        ...
+
+
 # Internal execution-control parameters that must not reach the tool handler or
 # be included in the canonical parameter hash.
 _INTERNAL_PARAM_KEYS = {"_approval_id", "approval_id"}
@@ -536,6 +578,7 @@ def _canonical_params_hash(params: Any) -> str:
 # the registry default (DenyAllToolPolicy) is used, which makes missing policy
 # fail closed.
 
+
 def _policy_or_deny(policy: ToolPolicy | None) -> ToolPolicy:
     return policy if policy is not None else DenyAllToolPolicy()
 
@@ -551,17 +594,13 @@ def _validate_path(path: str, policy: ToolPolicy | None = None) -> tuple[bool, s
     return result.allowed, result.reason
 
 
-def _validate_write_path(
-    path: str, policy: ToolPolicy | None = None
-) -> tuple[bool, str | None]:
+def _validate_write_path(path: str, policy: ToolPolicy | None = None) -> tuple[bool, str | None]:
     """Validate a path for write operations (write_file, edit_file)."""
     result = _policy_or_deny(policy).authorize_write(path)
     return result.allowed, result.reason
 
 
-def _validate_command(
-    command: str, policy: ToolPolicy | None = None
-) -> tuple[bool, str | None]:
+def _validate_command(command: str, policy: ToolPolicy | None = None) -> tuple[bool, str | None]:
     """
     Validate a shell command against the supplied policy.
 
@@ -657,7 +696,9 @@ class ToolRegistry:
         # Session-scoped intent cache: intent string -> sorted list of (score, tool_name)
         self._intent_cache: dict[str, list[tuple[float, str]]] = {}
         self.policy = policy if policy is not None else DenyAllToolPolicy()
-        self.approval_store = approval_store if approval_store is not None else InMemoryApprovalStore()
+        self.approval_store = (
+            approval_store if approval_store is not None else InMemoryApprovalStore()
+        )
         logger.debug("ToolRegistry initialized")
 
     def request_approval(
@@ -984,9 +1025,7 @@ class ToolRegistry:
         # tool handler so they cannot leak into tool logic or the audit log.
         handler_params: Any
         if isinstance(params, dict):
-            handler_params = {
-                k: v for k, v in params.items() if k not in _INTERNAL_PARAM_KEYS
-            }
+            handler_params = {k: v for k, v in params.items() if k not in _INTERNAL_PARAM_KEYS}
         else:
             handler_params = params
 
@@ -998,9 +1037,7 @@ class ToolRegistry:
                 approval_id = params.get("_approval_id") or params.get("approval_id")
 
             if not approval_id:
-                logger.warning(
-                    f"Approval required but no approval_id provided for tool '{name}'"
-                )
+                logger.warning(f"Approval required but no approval_id provided for tool '{name}'")
                 return ToolResult(
                     tool_name=name,
                     success=False,
@@ -1010,9 +1047,7 @@ class ToolRegistry:
 
             decision = self.approval_store.lookup(approval_id)
             if decision is None:
-                logger.warning(
-                    f"Approval '{approval_id}' not found for tool '{name}'"
-                )
+                logger.warning(f"Approval '{approval_id}' not found for tool '{name}'")
                 return ToolResult(
                     tool_name=name,
                     success=False,
@@ -1021,13 +1056,9 @@ class ToolRegistry:
                 )
 
             params_hash = _canonical_params_hash(handler_params)
-            allowed, reason = self.approval_store.verify(
-                decision, tool.name, params_hash
-            )
+            allowed, reason = self.approval_store.verify(decision, tool.name, params_hash)
             if not allowed:
-                logger.warning(
-                    f"Approval verification failed for tool '{name}': {reason}"
-                )
+                logger.warning(f"Approval verification failed for tool '{name}': {reason}")
                 return ToolResult(
                     tool_name=name,
                     success=False,
@@ -1042,9 +1073,7 @@ class ToolRegistry:
             )
 
         try:
-            logger.debug(
-                f"Executing tool: {name} with param keys: {list(handler_params.keys())}"
-            )
+            logger.debug(f"Executing tool: {name} with param keys: {list(handler_params.keys())}")
             result = tool.handler(handler_params)
             logger.debug(f"Tool {name} completed: success={result.success}")
             return result

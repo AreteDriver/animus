@@ -31,11 +31,13 @@ from animus.memory.redaction import redact
 from animus.memory.types import Sensitivity
 from animus.tasks import TaskTracker
 from animus.tools import (
+    ApprovalGate,
     DenyAllToolPolicy,
     ToolPolicy,
     ToolRegistry,
     ToolResult,
     WorkspaceToolPolicy,
+    _canonical_params_hash,
     create_default_registry,
 )
 
@@ -167,8 +169,7 @@ def _audit_mcp_call(
 ) -> None:
     """Audit an MCP boundary call without recording secrets."""
     logger.info(
-        "MCP_AUDIT tool=%s caller=%s allowed=%s status=%s mode=%s "
-        "latency_ms=%.3f denial_reason=%s",
+        "MCP_AUDIT tool=%s caller=%s allowed=%s status=%s mode=%s latency_ms=%.3f denial_reason=%s",
         tool_name,
         caller_id,
         allowed,
@@ -189,24 +190,24 @@ def _validate_mcp_startup_config() -> None:
     """Fail closed on dangerous deployment and authentication combinations."""
     mode = _MCP_DEPLOYMENT_MODE
     if mode == MCPDeploymentMode.remote and _is_insecure_key(_MCP_API_KEY):
-        raise RuntimeError(
-            "MCP remote deployment requires a non-empty ANIMUS_MCP_API_KEY"
-        )
-    if mode == MCPDeploymentMode.authenticated_local_network and _is_insecure_key(
-        _MCP_API_KEY
-    ):
+        raise RuntimeError("MCP remote deployment requires a non-empty ANIMUS_MCP_API_KEY")
+    if mode == MCPDeploymentMode.authenticated_local_network and _is_insecure_key(_MCP_API_KEY):
         raise RuntimeError(
             "MCP authenticated_local_network mode requires a non-empty ANIMUS_MCP_API_KEY"
         )
 
 
-def _execute_registry_with_approval(
-    registry: ToolRegistry, tool_name: str, params: dict
+async def _execute_registry_with_approval(
+    registry: ToolRegistry,
+    tool_name: str,
+    params: dict,
+    approval_gate: ApprovalGate | None = None,
 ) -> ToolResult:
-    """Execute a registry tool, auto-requesting approval when required.
+    """Execute a registry tool, requiring an external approval gate when needed.
 
-    Centralizes the SEC-02 approval enforcement so MCP handlers cannot forget to
-    supply an ``_approval_id`` for dangerous tools.
+    Centralizes SEC-02 approval enforcement.  Dangerous tools never auto-approve;
+    the caller must supply an ``ApprovalGate`` that returns a matching ``allow``
+    decision from an external authority (human operator, ticket system, etc.).
     """
     tool = registry.get(tool_name)
     if tool is None:
@@ -217,11 +218,39 @@ def _execute_registry_with_approval(
             error=f"Tool '{tool_name}' not found",
         )
     if tool.requires_approval:
-        exec_params = {
-            k: v for k, v in params.items() if k not in {"_approval_id", "approval_id"}
-        }
-        approval_id = registry.request_approval(tool_name, exec_params)
-        params = {**exec_params, "_approval_id": approval_id}
+        exec_params = {k: v for k, v in params.items() if k not in {"_approval_id", "approval_id"}}
+        params_hash = _canonical_params_hash(exec_params)
+        # Create a placeholder request.  Default decision is deny so the store
+        # never contains an auto-granted approval.
+        pending_id = registry.request_approval(
+            tool_name,
+            exec_params,
+            decision="deny",
+            reason="Pending external approval from ApprovalGate",
+        )
+        if approval_gate is None:
+            return ToolResult(
+                tool_name=tool_name,
+                success=False,
+                output=None,
+                error="Approval required but no ApprovalGate configured",
+            )
+        decision = await approval_gate.request_decision(
+            registry.approval_store,
+            tool_name,
+            exec_params,
+            params_hash,
+            pending_id,
+        )
+        allowed, reason = registry.approval_store.verify(decision, tool_name, params_hash)
+        if not allowed:
+            return ToolResult(
+                tool_name=tool_name,
+                success=False,
+                output=None,
+                error=f"Approval denied: {reason}",
+            )
+        params = {**exec_params, "_approval_id": decision.request_id}
     return registry.execute(tool_name, params)
 
 
@@ -349,9 +378,7 @@ if FastMCP is not None:
             """Invoke a tool through the hardened MCP boundary."""
             return await self._secure_call_tool(name, arguments)
 
-        async def _secure_call_tool(
-            self, name: str, arguments: dict[str, Any]
-        ) -> Any:
+        async def _secure_call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
             """Enforce auth, scopes, size limits, concurrency, and audit logging."""
             mode = _MCP_DEPLOYMENT_MODE
             api_key = ""
@@ -390,9 +417,7 @@ if FastMCP is not None:
             denial_reason: str | None = None
             if auth_err is None and _MCP_ALLOWED_TOOLS is not None:
                 if name not in _MCP_ALLOWED_TOOLS:
-                    auth_err = (
-                        f"Access denied: tool '{name}' is not in the MCP allowlist."
-                    )
+                    auth_err = f"Access denied: tool '{name}' is not in the MCP allowlist."
                     denial_reason = "tool_not_allowed"
 
             if auth_err:
@@ -461,9 +486,7 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> GatedFastMCP:
         policy = DenyAllToolPolicy()
 
     max_request_size = int(os.environ.get("ANIMUS_MCP_MAX_REQUEST_SIZE", "0") or 0)
-    max_concurrent_calls = int(
-        os.environ.get("ANIMUS_MCP_MAX_CONCURRENT_CALLS", "0") or 0
-    )
+    max_concurrent_calls = int(os.environ.get("ANIMUS_MCP_MAX_CONCURRENT_CALLS", "0") or 0)
 
     config = AnimusConfig.load()
     config.ensure_dirs()
@@ -1666,7 +1689,6 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> GatedFastMCP:
         if auth_err:
             return auth_err
 
-
         if status == "pending":
             try:
                 from animus.memory import MemoryType
@@ -1801,7 +1823,6 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> GatedFastMCP:
         auth_err = _check_auth(api_key)
         if auth_err:
             return auth_err
-
 
         if status == "pending":
             try:
@@ -2248,7 +2269,9 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> GatedFastMCP:
             lines.append(f"**ID:** `{proposal.id}`")
             lines.append(f"**Title:** {proposal.title}")
             lines.append(f"**Problem:** {proposal.problem}")
-            lines.append(f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})")
+            lines.append(
+                f"**Confidence:** {proposal.confidence.value} ({proposal.confidence_score:.0%})"
+            )
             lines.append("**Recommendation:**")
             lines.append(proposal.recommendation)
             if proposal.potential_risks:
