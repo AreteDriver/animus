@@ -410,6 +410,22 @@ jobs:
           ANTHROPIC_API_KEY: "sk-dummy-ci-no-network-calls"
         run: pytest tests/ -v --tb=short --cov=animus_forge --cov-report=term-missing
 
+      - name: Run loop-governor integration tests
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: packages/forge
+        env:
+          ANIMUS_LOOP_GOVERNOR_INTEGRATION: "1"
+        run: |
+          # The integration suite shells out to a real ``alg`` binary.
+          # Install the wheel from the Artifacts / a pinned release URL.
+          # Pin to 0.1.0 (ADL-20260805-001) to avoid drift.
+          pip install \
+            "animus-loop-governor==0.1.0" \
+            --index-url https://pypi.org/simple/ \
+            || echo "::warning::animus-loop-governor 0.1.0 not on PyPI; integration suite skipped"
+          which alg || echo "alg not installed; integration tests will skip"
+          pytest tests/test_governor/test_integration.py -v --tb=short
+
   test-bootstrap:
     name: Test Bootstrap (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
