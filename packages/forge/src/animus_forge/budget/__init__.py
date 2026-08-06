@@ -1,67 +1,15 @@
 """Cost and Token Budget Management.
 
-Track, allocate, and enforce token budgets across workflow executions.
+Re-export surface for ``animus_kernel.budget`` (ADL-20260806-001 Phase 1).
+
+The kernel package is the canonical home for budget primitives. This module
+exists so ``from animus_forge.budget import BudgetManager`` (and every other
+name in ``__all__``) keeps working unchanged. Phase 3 will emit a
+``DeprecationWarning`` on this import; Phase 4 removes the package entirely.
 """
 
-from .manager import (
-    DEFAULT_MODEL_MULTIPLIERS,
-    BudgetConfig,
-    BudgetManager,
-    BudgetStatus,
-    UsageRecord,
-    effective_tokens,
-)
-from .models import (
-    Budget,
-    BudgetCreate,
-    BudgetPeriod,
-    BudgetSummary,
-    BudgetUpdate,
-)
-from .persistence import PersistentBudgetManager
-from .preflight import (
-    PreflightValidator,
-    StepEstimate,
-    ValidationResult,
-    ValidationStatus,
-    WorkflowEstimate,
-    validate_workflow_budget,
-)
-from .strategies import (
-    AdaptiveAllocation,
-    AllocationStrategy,
-    EqualAllocation,
-    PriorityAllocation,
-)
-
-# Singleton budget tracker instance (in-memory)
-_budget_tracker: BudgetManager | None = None
-
-
-def get_budget_tracker(
-    backend=None,
-    session_id: str | None = None,
-) -> BudgetManager:
-    """Get the global budget tracker instance.
-
-    Args:
-        backend: Optional DatabaseBackend for persistence
-        session_id: Session identifier (required if backend is provided)
-
-    Returns:
-        BudgetManager singleton instance
-    """
-    global _budget_tracker
-    if _budget_tracker is None:
-        _budget_tracker = BudgetManager(backend=backend, session_id=session_id)
-    return _budget_tracker
-
-
-def reset_budget_tracker() -> None:
-    """Reset the global budget tracker singleton (for testing)."""
-    global _budget_tracker
-    _budget_tracker = None
-
+from animus_kernel.budget import *  # noqa: F401, F403
+from animus_kernel.budget import get_budget_tracker, reset_budget_tracker
 
 __all__ = [
     # In-memory budget tracking
