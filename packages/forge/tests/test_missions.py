@@ -374,13 +374,17 @@ class TestTaskLedger:
     def test_mission_delete_cascades_to_tasks(self, ledger, sample_mission, sample_task):
         ledger.create_mission(sample_mission)
         ledger.create_task(sample_task)
-        # Enable FK enforcement for this test
-        with ledger._backend.transaction():
-            ledger._backend.execute("PRAGMA foreign_keys=ON")
-            ledger._backend.execute(
-                "DELETE FROM missions WHERE mission_id = ?",
-                (str(sample_mission.mission_id),),
-            )
+        # SQLite ignores PRAGMA foreign_keys inside a transaction (it must be
+        # set on the connection before any BEGIN). Toggle via a dedicated
+        # connection that does not autocommit. The pragma is connection-scoped
+        # and persists until the connection is closed, so re-enable after the
+        # transaction commits.
+        ledger._backend.execute("PRAGMA foreign_keys=ON")
+        ledger._backend.execute(
+            "DELETE FROM missions WHERE mission_id = ?",
+            (str(sample_mission.mission_id),),
+        )
+        ledger._backend.execute("PRAGMA foreign_keys=OFF")
         assert ledger.get_mission(sample_mission.mission_id) is None
         # Task should also be gone due to ON DELETE CASCADE
         assert ledger.get_task(sample_task.task_id) is None
