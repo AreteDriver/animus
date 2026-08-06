@@ -150,7 +150,10 @@ class TestDailyBudgetCheck:
             (today, "builder", 5, 6000, 0.50),
         )
 
-        with patch("animus_forge.db.get_task_store", return_value=store):
+        # Executor (since kernel/forge split) imports get_task_store from
+        # animus_kernel.db, not animus_forge.db. Patch the kernel module so
+        # the executor's runtime lookup sees our store.
+        with patch("animus_kernel.db.get_task_store", return_value=store):
             exceeded = executor._check_budget_exceeded(step, result)
         assert exceeded is True
         assert "Daily" in result.error
@@ -200,7 +203,7 @@ class TestDailyBudgetCheck:
             (today, "tester", 2, 5000, 0.20),
         )
 
-        with patch("animus_forge.db.get_task_store", return_value=store):
+        with patch("animus_kernel.db.get_task_store", return_value=store):
             exceeded = executor._check_budget_exceeded(step, result)
         assert exceeded is True
 

@@ -272,6 +272,10 @@ class TestSession1DoneCriteria:
         from animus_forge.workflow.executor import WorkflowExecutor
         from animus_forge.workflow.executor_results import ExecutionResult
         from animus_forge.workflow.loader import StepConfig
+        # Use the kernel-side BudgetManager so its BudgetStatus enum matches
+        # the one the executor compares against. The forge-side re-export
+        # predates the kernel/forge split and currently has a distinct enum.
+        from animus_kernel.budget import BudgetConfig, BudgetManager
 
         mgr = BudgetManager(BudgetConfig(total_budget=200_000))
         mgr.record_usage("prior", output_tokens=15_000, model="claude-opus-4-8")
