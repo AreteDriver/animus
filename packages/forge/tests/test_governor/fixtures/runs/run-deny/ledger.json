@@ -1,0 +1,30 @@
+{
+  "ledger_version": 1,
+  "run_id": "run-deny",
+  "task_id": "task-deny",
+  "contract_hash": "def456",
+  "phase": "implementation",
+  "current_goal": "Build feature X",
+  "completed": ["D1"],
+  "next_actions": ["A1"],
+  "blocked": [],
+  "assumptions": [],
+  "files_changed": ["src/x.py"],
+  "requirement_map": {"src/x.py": ["D1"]},
+  "acceptance_status": {
+    "A1": {"satisfied": false, "evidence_ids": [], "note": null}
+  },
+  "open_escalations": [],
+  "metrics": {
+    "iterations": 5,
+    "failed_attempts": {},
+    "commands_run": 3,
+    "files_changed_count": 1,
+    "acceptance_satisfied_count": 0,
+    "last_progress_at": "2026-08-05T11:00:00+00:00",
+    "drift_score": 0.05,
+    "stagnation_detected": false
+  },
+  "started_at": "2026-08-05T09:00:00+00:00",
+  "updated_at": "2026-08-05T11:00:00+00:00"
+}

@@ -1,0 +1,28 @@
+{
+  "ledger_version": 1,
+  "run_id": "run-stale",
+  "task_id": "task-stale",
+  "contract_hash": "old123",
+  "phase": "failed",
+  "current_goal": "Abandoned run",
+  "completed": [],
+  "next_actions": [],
+  "blocked": [],
+  "assumptions": [],
+  "files_changed": [],
+  "requirement_map": {},
+  "acceptance_status": {},
+  "open_escalations": [],
+  "metrics": {
+    "iterations": 1,
+    "failed_attempts": {"compile": 3},
+    "commands_run": 0,
+    "files_changed_count": 0,
+    "acceptance_satisfied_count": 0,
+    "last_progress_at": "2026-07-01T00:00:00+00:00",
+    "drift_score": 0.0,
+    "stagnation_detected": false
+  },
+  "started_at": "2026-07-01T00:00:00+00:00",
+  "updated_at": "2026-07-01T00:00:00+00:00"
+}

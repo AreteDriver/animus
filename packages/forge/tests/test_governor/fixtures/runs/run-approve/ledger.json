@@ -1,0 +1,30 @@
+{
+  "ledger_version": 1,
+  "run_id": "run-approve",
+  "task_id": "task-approve",
+  "contract_hash": "abc123",
+  "phase": "complete",
+  "current_goal": "Implementation complete",
+  "completed": ["D1", "A1"],
+  "next_actions": [],
+  "blocked": [],
+  "assumptions": [],
+  "files_changed": ["src/foo.py"],
+  "requirement_map": {"src/foo.py": ["D1"]},
+  "acceptance_status": {
+    "A1": {"satisfied": true, "evidence_ids": ["ev-1"], "note": null}
+  },
+  "open_escalations": [],
+  "metrics": {
+    "iterations": 3,
+    "failed_attempts": {},
+    "commands_run": 4,
+    "files_changed_count": 1,
+    "acceptance_satisfied_count": 1,
+    "last_progress_at": "2026-08-05T12:00:00+00:00",
+    "drift_score": 0.02,
+    "stagnation_detected": false
+  },
+  "started_at": "2026-08-05T10:00:00+00:00",
+  "updated_at": "2026-08-05T12:00:00+00:00"
+}

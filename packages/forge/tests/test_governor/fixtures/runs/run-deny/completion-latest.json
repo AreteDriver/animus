@@ -1,0 +1,9 @@
+{
+  "done": false,
+  "reasons": ["Missing evidence for 2 required commands"],
+  "missing_evidence": [
+    "command:LINT: cargo clippy -- -D warnings",
+    "command:TEST: cargo test --workspace"
+  ],
+  "blocking_findings": []
+}
