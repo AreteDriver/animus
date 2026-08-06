@@ -22,6 +22,7 @@ resolved on first use via :func:`shutil.which` and cached.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from collections.abc import Mapping
@@ -303,36 +304,48 @@ def _ensure_success(
         )
 
 
+_RUN_ID_PREFIX = re.compile(r"Createdrun(run-[A-Za-z0-9]+)")
+
+
 def _parse_run_id_from_start_stdout(stdout: str) -> str:
     """Extract the new run id from ``alg start`` output.
 
-    ``alg start`` prints two Rich-formatted lines:
+    ``alg start`` prints two pieces of information:
 
-    * line 1: ``Created run <bold>run-xxx</bold>``
-    * line 2: the bare run dir path
+    * ``Created run <id>`` — the canonical run id (no Rich markup)
+    * the absolute path of the run dir (Rich-formatted)
 
-    The run id is the leaf of line 2 (canonical, never contains Rich
-    markup). We strip Rich ANSI for safety.
+    Rich's ``Console`` soft-wraps long lines at the terminal width and
+    may also break the run id across multiple lines when the terminal
+    is narrow (e.g. CI runners, tmux panes with constrained width).
+    We therefore strip ANSI escapes, collapse all whitespace into
+    nothing, and search for the canonical ``Createdrun<id>`` marker.
+    The run-id format (``run-<hex>``) is unambiguous and survives any
+    soft-wrap pattern — including one that breaks the run id itself
+    across multiple lines.
     """
-    lines = [
-        _strip_rich(line)
-        for line in stdout.splitlines()
-        if line.strip()
-    ]
-    if len(lines) < 2:
+    cleaned = _strip_rich(stdout)
+    collapsed = re.sub(r"\s+", "", cleaned)
+    match = _RUN_ID_PREFIX.search(collapsed)
+    if match is None:
         raise ValueError(
-            "alg start emitted unexpected stdout; cannot parse run id"
+            "alg start emitted unexpected stdout; cannot parse run id. "
+            f"stdout was: {stdout!r}"
         )
-    second = lines[1].strip()
-    return Path(second).name
+    return match.group(1)
 
 
 def _strip_rich(line: str) -> str:
-    """Remove Rich ANSI escape sequences from a stdout line."""
-    # Strip ANSI CSI sequences (ESC [ ... letter).
-    import re
+    """Remove Rich decorations from a stdout line.
 
-    return re.sub(r"\x1b\[[0-9;]*m", "", line)
+    * ANSI CSI sequences (``ESC [ ... letter``).
+    * Rich markup tags (``[bold]text[/bold]`` -> ``text``).
+    """
+    # Strip ANSI CSI sequences (ESC [ ... letter).
+    cleaned = re.sub(r"\x1b\[[0-9;]*m", "", line)
+    # Strip Rich opening/closing markup tags like [bold] or [/bold].
+    cleaned = re.sub(r"\[/?[a-zA-Z][a-zA-Z0-9_]*\]", "", cleaned)
+    return cleaned
 
 
 __all__ = [

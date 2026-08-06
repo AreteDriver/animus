@@ -314,12 +314,33 @@ def test_start_strips_rich_ansi(
     assert run_id == "run-x"
 
 
-def test_start_missing_second_line_raises_value_error(
+def test_start_single_line_stdout_is_sufficient(
     tmp_path: Path, mock_subprocess_run: MagicMock, fake_alg_path: Path
 ) -> None:
-    """Single-line stdout is malformed — :class:`ValueError`."""
+    """The parser extracts the run id from the canonical ``Created run`` marker.
+
+    The path line is *advisory* (we use the marker directly, not the path
+    leaf), so a stdout containing only ``Created run <id>`` is sufficient.
+    This is intentional: even when the path line is too long to fit on a
+    narrow terminal and Rich wraps it across many lines, the parser
+    recovers by anchoring on the canonical marker.
+    """
     mock_subprocess_run.return_value = MagicMock(
         returncode=0, stdout="Created run run-x\n", stderr=""
+    )
+    client = GovernorClient(alg_binary=str(fake_alg_path))
+    run_id = client.start(
+        contract_path=tmp_path / "contract.yaml",
+        cwd=tmp_path,
+    )
+    assert run_id == "run-x"
+
+
+def test_start_empty_stdout_raises_value_error(
+    tmp_path: Path, mock_subprocess_run: MagicMock, fake_alg_path: Path
+) -> None:
+    mock_subprocess_run.return_value = MagicMock(
+        returncode=0, stdout="", stderr=""
     )
     client = GovernorClient(alg_binary=str(fake_alg_path))
     with pytest.raises(ValueError):
@@ -329,11 +350,79 @@ def test_start_missing_second_line_raises_value_error(
         )
 
 
-def test_start_empty_stdout_raises_value_error(
+def test_start_parses_wrapped_long_path(
     tmp_path: Path, mock_subprocess_run: MagicMock, fake_alg_path: Path
 ) -> None:
+    """Path line too long for the terminal — Rich soft-wraps onto many lines.
+
+    Regression: the parser used to take ``lines[1].name`` and only worked
+    by accident when the run id was shorter than the line width. When
+    the run id wrapped across multiple lines, only the first fragment
+    was returned. The fix anchors on the canonical ``Created run <id>``
+    marker; the path line is informational.
+    """
+    wrapped = (
+        "Created run \nrun-c442326cccf6\n/tmp/pytest-of-arete\n"
+        "/pytest-100/test_alg\n_start_creates_canon\n"
+        "ical0c76yhjxs/.animu\ns-loop-governor/runs\n/run-c442326cccf6\n"
+    )
     mock_subprocess_run.return_value = MagicMock(
-        returncode=0, stdout="", stderr=""
+        returncode=0, stdout=wrapped, stderr=""
+    )
+    client = GovernorClient(alg_binary=str(fake_alg_path))
+    run_id = client.start(
+        contract_path=tmp_path / "contract.yaml",
+        cwd=tmp_path,
+    )
+    assert run_id == "run-c442326cccf6"
+
+
+def test_start_strips_ansi_escapes(
+    tmp_path: Path, mock_subprocess_run: MagicMock, fake_alg_path: Path
+) -> None:
+    """Rich ANSI bold escapes around the run id are stripped."""
+    wrapped = (
+        "Created run \x1b[1mrun-abc123\x1b[0m\n"
+        "/tmp/.animus-loop-governor/runs/run-abc123\n"
+    )
+    mock_subprocess_run.return_value = MagicMock(
+        returncode=0, stdout=wrapped, stderr=""
+    )
+    client = GovernorClient(alg_binary=str(fake_alg_path))
+    run_id = client.start(
+        contract_path=tmp_path / "contract.yaml",
+        cwd=tmp_path,
+    )
+    assert run_id == "run-abc123"
+
+
+def test_start_strips_rich_markup_tags(
+    tmp_path: Path, mock_subprocess_run: MagicMock, fake_alg_path: Path
+) -> None:
+    """Rich markup tags (``[bold]...[/bold]``) are stripped, not just ANSI."""
+    wrapped = (
+        "Created run [bold]run-mno789[/bold]\n"
+        "/tmp/.animus-loop-governor/runs/run-mno789\n"
+    )
+    mock_subprocess_run.return_value = MagicMock(
+        returncode=0, stdout=wrapped, stderr=""
+    )
+    client = GovernorClient(alg_binary=str(fake_alg_path))
+    run_id = client.start(
+        contract_path=tmp_path / "contract.yaml",
+        cwd=tmp_path,
+    )
+    assert run_id == "run-mno789"
+
+
+def test_start_rejects_stdout_without_run_id_marker(
+    tmp_path: Path, mock_subprocess_run: MagicMock, fake_alg_path: Path
+) -> None:
+    """Stdout missing the ``Created run`` marker raises :class:`ValueError`."""
+    mock_subprocess_run.return_value = MagicMock(
+        returncode=0,
+        stdout="/tmp/.animus-loop-governor/runs/run-abc\n",
+        stderr="",
     )
     client = GovernorClient(alg_binary=str(fake_alg_path))
     with pytest.raises(ValueError):
