@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from animus_forge.budget import (
+from animus_kernel.budget import (
     DEFAULT_MODEL_MULTIPLIERS,
     BudgetConfig,
     BudgetManager,

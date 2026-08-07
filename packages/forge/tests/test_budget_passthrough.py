@@ -18,7 +18,7 @@ import pytest
 
 sys.path.insert(0, "src")
 
-from animus_forge.budget.manager import BudgetConfig, BudgetManager
+from animus_kernel.budget.manager import BudgetConfig, BudgetManager
 
 # =============================================================================
 # Fixtures
@@ -589,7 +589,7 @@ class TestPersistentBudget:
 
     def test_reset_budget_tracker_function(self):
         """reset_budget_tracker() clears the singleton."""
-        from animus_forge.budget import get_budget_tracker, reset_budget_tracker
+        from animus_kernel.budget import get_budget_tracker, reset_budget_tracker
 
         tracker = get_budget_tracker()
         tracker.record_usage("agent", 1000)

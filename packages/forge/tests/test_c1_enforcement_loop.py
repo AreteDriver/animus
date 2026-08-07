@@ -18,7 +18,7 @@ from unittest.mock import MagicMock
 import pytest
 from animus_types import Sensitivity
 
-from animus_forge.budget import BudgetConfig, BudgetManager
+from animus_kernel.budget import BudgetConfig, BudgetManager
 from animus_forge.network import EgressDeniedError
 from animus_forge.providers.base import (
     CompletionRequest,

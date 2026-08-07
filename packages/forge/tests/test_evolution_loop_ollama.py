@@ -54,7 +54,7 @@ def ollama_provider():
 
 @pytest.fixture()
 def budget_manager():
-    from animus_forge.budget.manager import BudgetConfig, BudgetManager
+    from animus_kernel.budget.manager import BudgetConfig, BudgetManager
 
     config = BudgetConfig(total_budget=50000)
     return BudgetManager(config=config)

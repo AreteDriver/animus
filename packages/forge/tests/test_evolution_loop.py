@@ -349,7 +349,7 @@ class TestBudgetEnforcement:
         assert loop._can_continue() is True
 
     def test_budget_exceeded_halts_loop(self, mock_provider, mock_budget, tmp_better, tmp_audit):
-        from animus_forge.budget.manager import BudgetStatus
+        from animus_kernel.budget.manager import BudgetStatus
 
         type(mock_budget).status = PropertyMock(return_value=BudgetStatus.EXCEEDED)
         loop = _make_loop(mock_provider, mock_budget, tmp_better, tmp_audit)
@@ -584,7 +584,7 @@ class TestB3ExperimentRunner:
     def _loop(self, runner=None):
         from unittest.mock import MagicMock
 
-        from animus_forge.budget.manager import BudgetConfig, BudgetManager
+        from animus_kernel.budget.manager import BudgetConfig, BudgetManager
         from animus_forge.coordination.evolution_loop import EvolutionLoop
 
         return EvolutionLoop(

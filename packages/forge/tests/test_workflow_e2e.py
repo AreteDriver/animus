@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from animus_forge.budget.manager import BudgetConfig, BudgetManager
+from animus_kernel.budget.manager import BudgetConfig, BudgetManager
 from animus_forge.workflow.executor import (
     StepConfig,
     StepStatus,

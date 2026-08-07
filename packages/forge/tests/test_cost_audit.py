@@ -12,8 +12,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from animus_forge.budget import UsageRecord
-from animus_forge.budget.cost_audit import (
+from animus_kernel.budget import UsageRecord
+from animus_kernel.budget.cost_audit import (
     DEFAULT_RATIO_THRESHOLD,
     DEFAULT_SIGMA_THRESHOLD,
     CostAuditReport,

@@ -6,7 +6,7 @@ import pytest
 
 sys.path.insert(0, "src")
 
-from animus_forge.budget import (
+from animus_kernel.budget import (
     AdaptiveAllocation,
     BudgetConfig,
     BudgetManager,
@@ -14,8 +14,8 @@ from animus_forge.budget import (
     PriorityAllocation,
     UsageRecord,
 )
-from animus_forge.budget.manager import BudgetStatus
-from animus_forge.budget.strategies import ReservePoolAllocation, get_strategy
+from animus_kernel.budget.manager import BudgetStatus
+from animus_kernel.budget.strategies import ReservePoolAllocation, get_strategy
 
 
 class TestBudgetConfig:

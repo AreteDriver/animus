@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from animus_forge.budget.manager import BudgetConfig, BudgetManager
+from animus_kernel.budget.manager import BudgetConfig, BudgetManager
 from animus_forge.coordination.consciousness_bridge import (
     _DEFAULT_PRINCIPLES,
     BudgetExhausted,

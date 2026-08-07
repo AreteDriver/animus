@@ -113,6 +113,17 @@ filterwarnings = [
     # contain a literal colon. The '.' after "Security" matches the real ": ".
     "ignore:Security. SECRET_KEY is using insecure default:UserWarning",
     "ignore:Security. DATABASE_URL is using default SQLite path:UserWarning",
+    # ADL-20260806-001 Phase 3: animus_forge.budget is deprecated; the
+    # canonical home is animus_kernel.budget. Promote the deprecation to
+    # an error so any consumer still importing it (their tests, downstream
+    # packages) sees a hard failure pointing at the migration target.
+    "error:animus_forge\\.budget is deprecated:DeprecationWarning",
+    "error:animus_forge\\.budget\\.manager is deprecated:DeprecationWarning",
+    "error:animus_forge\\.budget\\.models is deprecated:DeprecationWarning",
+    "error:animus_forge\\.budget\\.persistence is deprecated:DeprecationWarning",
+    "error:animus_forge\\.budget\\.preflight is deprecated:DeprecationWarning",
+    "error:animus_forge\\.budget\\.strategies is deprecated:DeprecationWarning",
+    "error:animus_forge\\.budget\\.cost_audit is deprecated:DeprecationWarning",
 ]
 
 [tool.coverage.run]

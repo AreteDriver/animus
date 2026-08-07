@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import threading
 
-from animus_forge.budget import BudgetConfig, BudgetManager
+from animus_kernel.budget import BudgetConfig, BudgetManager
 
 
 class TestReservationAccounting:

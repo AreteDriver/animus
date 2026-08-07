@@ -19,7 +19,7 @@ import pytest
 
 sys.path.insert(0, "src")
 
-from animus_forge.budget.manager import BudgetConfig, BudgetManager
+from animus_kernel.budget.manager import BudgetConfig, BudgetManager
 
 # =============================================================================
 # Fixtures

@@ -6,7 +6,7 @@ import pytest
 
 sys.path.insert(0, "src")
 
-from animus_forge.budget import (
+from animus_kernel.budget import (
     BudgetConfig,
     BudgetManager,
     PreflightValidator,
