@@ -21,7 +21,7 @@ def list_budgets(
     """List all budgets with optional filtering."""
     verify_auth(authorization)
 
-    from animus_forge.budget import BudgetPeriod
+    from animus_kernel.budget import BudgetPeriod
 
     period_enum = None
     if period:
@@ -65,7 +65,7 @@ def create_budget(
     """Create a new budget."""
     verify_auth(authorization)
 
-    from animus_forge.budget import BudgetCreate, BudgetPeriod
+    from animus_kernel.budget import BudgetCreate, BudgetPeriod
 
     try:
         period = BudgetPeriod(request.period)
@@ -104,7 +104,7 @@ def update_budget(
     """Update a budget."""
     verify_auth(authorization)
 
-    from animus_forge.budget import BudgetPeriod, BudgetUpdate
+    from animus_kernel.budget import BudgetPeriod, BudgetUpdate
 
     period = None
     if request.period is not None:

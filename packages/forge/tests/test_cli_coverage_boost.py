@@ -30,7 +30,7 @@ class TestBudgetStatus:
         }
 
         with (
-            patch("animus_forge.budget.BudgetManager", return_value=mock_manager),
+            patch("animus_kernel.budget.BudgetManager", return_value=mock_manager),
             patch("animus_forge.cli.commands.budget.console"),
         ):
             budget_status(json_output=False)
@@ -40,7 +40,7 @@ class TestBudgetStatus:
         from animus_forge.cli.commands.budget import budget_status
 
         with (
-            patch("animus_forge.budget.BudgetManager", side_effect=RuntimeError("no db")),
+            patch("animus_kernel.budget.BudgetManager", side_effect=RuntimeError("no db")),
             patch("animus_forge.cli.commands.budget.console"),
             pytest.raises(Exit),
         ):
@@ -59,7 +59,7 @@ class TestBudgetStatus:
         }
 
         with (
-            patch("animus_forge.budget.BudgetManager", return_value=mock_manager),
+            patch("animus_kernel.budget.BudgetManager", return_value=mock_manager),
             patch("animus_forge.cli.commands.budget.console"),
         ):
             budget_status(json_output=True)
@@ -76,7 +76,7 @@ class TestBudgetHistory:
         from animus_forge.cli.commands.budget import budget_history
 
         with (
-            patch("animus_forge.budget.BudgetManager", side_effect=RuntimeError("no db")),
+            patch("animus_kernel.budget.BudgetManager", side_effect=RuntimeError("no db")),
             patch("animus_forge.cli.commands.budget.console"),
             pytest.raises(Exit),
         ):
@@ -97,7 +97,7 @@ class TestBudgetHistory:
         mock_manager.get_usage_history.return_value = [mock_record]
 
         with (
-            patch("animus_forge.budget.BudgetManager", return_value=mock_manager),
+            patch("animus_kernel.budget.BudgetManager", return_value=mock_manager),
             patch("animus_forge.cli.commands.budget.console"),
         ):
             budget_history(agent=None, limit=20, json_output=True)
@@ -113,7 +113,7 @@ class TestBudgetHistory:
         mock_manager.get_usage_history.return_value = []
 
         with (
-            patch("animus_forge.budget.BudgetManager", return_value=mock_manager),
+            patch("animus_kernel.budget.BudgetManager", return_value=mock_manager),
             patch("animus_forge.cli.commands.budget.console"),
         ):
             budget_history(agent=None, limit=20, json_output=False)
@@ -166,7 +166,7 @@ class TestBudgetReset:
         from animus_forge.cli.commands.budget import budget_reset
 
         with (
-            patch("animus_forge.budget.BudgetManager", side_effect=RuntimeError("no db")),
+            patch("animus_kernel.budget.BudgetManager", side_effect=RuntimeError("no db")),
             patch("animus_forge.cli.commands.budget.console"),
             pytest.raises(Exit),
         ):

@@ -20,7 +20,7 @@ console = Console()
 def get_workflow_engine() -> WorkflowEngineAdapter:
     """Lazy import workflow engine with real managers for production use."""
     try:
-        from animus_forge.budget import BudgetManager
+        from animus_kernel.budget import BudgetManager
         from animus_forge.orchestrator import WorkflowEngineAdapter
         from animus_forge.state.checkpoint import CheckpointManager
 
@@ -58,7 +58,7 @@ def get_workflow_executor(dry_run: bool = False) -> WorkflowExecutor:
         from animus_kernel.executor.arete_hooks import get_arete_hooks
         from animus_kernel.executor.executor import WorkflowExecutor
 
-        from animus_forge.budget import BudgetManager
+        from animus_kernel.budget import BudgetManager
         from animus_forge.state.checkpoint import CheckpointManager
 
         checkpoint_mgr = CheckpointManager()
@@ -115,7 +115,7 @@ def get_supervisor():
         # Optional: budget manager
         budget_mgr = None
         try:
-            from animus_forge.budget import BudgetManager
+            from animus_kernel.budget import BudgetManager
 
             budget_mgr = BudgetManager()
         except Exception:

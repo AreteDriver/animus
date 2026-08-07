@@ -95,7 +95,7 @@ async def lifespan(app: FastAPI):
     # Initialize managers with shared backend
     from animus_kernel.executor import WorkflowVersionManager
 
-    from animus_forge.budget import PersistentBudgetManager
+    from animus_kernel.budget import PersistentBudgetManager
     from animus_forge.executions import ExecutionManager
     from animus_forge.jobs import JobManager
     from animus_forge.mcp import MCPConnectorManager
@@ -261,7 +261,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize consciousness bridge (optional)
     try:
-        from animus_forge.budget.manager import BudgetManager as _TokenBudgetManager
+        from animus_kernel.budget.manager import BudgetManager as _TokenBudgetManager
         from animus_forge.coordination.consciousness_bridge import (
             ConsciousnessBridge,
             ConsciousnessConfig,

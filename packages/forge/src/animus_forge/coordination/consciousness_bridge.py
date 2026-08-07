@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from animus_forge.budget.manager import BudgetManager, BudgetStatus
+from animus_kernel.budget.manager import BudgetManager, BudgetStatus
 
 if TYPE_CHECKING:
     from animus_forge.providers.base import Provider

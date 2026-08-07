@@ -19,7 +19,7 @@ def budget_status(
 ):
     """Show current budget status."""
     try:
-        from animus_forge.budget import BudgetManager
+        from animus_kernel.budget import BudgetManager
 
         manager = BudgetManager()
         stats = manager.get_stats()
@@ -59,7 +59,7 @@ def budget_history(
 ):
     """Show budget usage history."""
     try:
-        from animus_forge.budget import BudgetManager
+        from animus_kernel.budget import BudgetManager
 
         manager = BudgetManager()
         history = manager.get_usage_history(agent)[:limit]
@@ -145,7 +145,7 @@ def budget_reset(
             raise typer.Abort()
 
     try:
-        from animus_forge.budget import BudgetManager
+        from animus_kernel.budget import BudgetManager
 
         manager = BudgetManager()
         manager.reset()

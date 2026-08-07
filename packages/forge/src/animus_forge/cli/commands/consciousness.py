@@ -14,7 +14,7 @@ console = Console()
 
 def _get_bridge():
     """Lazy-load a ConsciousnessBridge for CLI use."""
-    from animus_forge.budget.manager import BudgetManager
+    from animus_kernel.budget.manager import BudgetManager
     from animus_forge.coordination.consciousness_bridge import (
         ConsciousnessBridge,
         ConsciousnessConfig,

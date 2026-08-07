@@ -220,7 +220,7 @@ class TestGetSupervisor:
 
         from animus_forge.cli.helpers import get_supervisor
 
-        with patch("animus_forge.budget.BudgetManager", side_effect=ImportError):
+        with patch("animus_kernel.budget.BudgetManager", side_effect=ImportError):
             sup = get_supervisor()
 
         assert sup is not None

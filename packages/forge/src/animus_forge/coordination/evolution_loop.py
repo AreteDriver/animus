@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
-from animus_forge.budget.manager import BudgetManager, BudgetStatus
+from animus_kernel.budget.manager import BudgetManager, BudgetStatus
 from animus_forge.coordination.identity_anchor import IdentityAnchor
 
 if TYPE_CHECKING:
