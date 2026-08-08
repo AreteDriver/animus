@@ -1,6 +1,8 @@
 # Installation
 
 > Install Animus packages independently. Each solves one problem and can be used on its own.
+>
+> Updated 2026-08-08: Pages site deploy activated (see ADL-20260808-001).
 
 ---
 
