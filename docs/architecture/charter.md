@@ -9,7 +9,9 @@
 
 ## Purpose
 
-Build a **Mind-class AI exocortex** — a persistent, self-improving personal intelligence system that operates across sessions with memory, planning, and autonomous execution capabilities. Animus is the flagship project of the portfolio and serves as the substrate for all other AI tooling.
+Build a **Mind-class AI operating environment** — a persistent, self-improving personal intelligence system that operates across sessions with memory, planning, and autonomous execution capabilities. Animus is the flagship project of the portfolio and serves as the substrate for all other AI tooling.
+
+*Internally, this operating environment is anchored in the philosophical frame of an exocortex — an external cognitive system that augments biological intelligence via persistent memory, task tracking, and preference learning across sessions and devices. The public surface uses "operating environment"; the internal anchor retains the philosophical frame (see `BRANDING.md`).*
 
 ## Scope
 

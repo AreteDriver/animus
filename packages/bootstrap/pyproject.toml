@@ -12,7 +12,7 @@ requires-python = ">=3.12"
 authors = [
     {name = "AreteDriver"},
 ]
-keywords = ["ai", "personal-ai", "ollama", "self-improving", "local-first", "exocortex"]
+keywords = ["ai", "personal-ai", "ollama", "self-improving", "local-first"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",

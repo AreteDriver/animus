@@ -1,7 +1,7 @@
 # Animus — Bootstrap, Interface & UX Vision
 
 **Status:** Canonical assessment · Created 2026-06-14 · Owner: ARETE
-**Scope:** Bootstrap mechanism, every user-facing surface, honest UX audit, and the roadmap to make Animus feel like a true exocortex.
+**Scope:** Bootstrap mechanism, every user-facing surface, honest UX audit, and the roadmap to make Animus feel like a true operating environment.
 
 ---
 
@@ -189,7 +189,7 @@ React 19 + Vite + TypeScript. Built as a true PWA with service worker, manifest,
 - Share target for rapid capture from any mobile app
 - Responsive CSS with safe-area insets for notched phones
 
-**Verdict:** The most "modern" interface, but it's *thin*. Four views is not enough for a daily exocortex. No memory browsing, no tool invocation UI, no calendar view, no task management, no workflow trigger, no decision support, no settings. It feels like a chat app with a capture button, not a cognitive layer.
+**Verdict:** The most "modern" interface, but it's *thin*. Four views is not enough for a daily operating environment. No memory browsing, no tool invocation UI, no calendar view, no task management, no workflow trigger, no decision support, no settings. It feels like a chat app with a capture button, not a cognitive layer.
 
 ### 2.5 MCP Server
 
@@ -200,7 +200,7 @@ Invisible to the eye, but critical. Provides 10 tools to Claude Code:
 - `animus_brief` (context briefing)
 - `animus_run_workflow` (trigger Forge pipelines)
 
-**Verdict:** Correctly designed. The integration is ambient — Claude Code sessions automatically have Animus memory without opening a separate window. This is the *closest* the system gets to true exocortex behavior: present without being opened.
+**Verdict:** Correctly designed. The integration is ambient — Claude Code sessions automatically have Animus memory without opening a separate window. This is the *closest* the system gets to true operating-environment behavior: present without being opened.
 
 ### 2.6 Gateway Channels
 
@@ -238,9 +238,9 @@ Functional, multi-surface, architecturally sound — but not cohesive, not ambie
 
 ## 4. Interaction Model Analysis
 
-### 4.1 The exocortex concept
+### 4.1 The operating-environment concept
 
-An exocortex is not an app you open. It is a layer that:
+The Animus operating environment is not an app you open. It is a layer that:
 
 1. **Surrounds** you — present on all devices, always available, ambient.
 2. **Remembers** — accumulates context across years, surfaces it without being asked.
@@ -259,7 +259,7 @@ Today's Animus is **pull-oriented**:
 
 Even the proactive engine fits this model: it runs checks in the background, then *pushes a notification* — which the user pulls open to read.
 
-This is fundamentally a **messaging app** paradigm. It's not wrong, but it's insufficient for an exocortex.
+This is fundamentally a **messaging app** paradigm. It's not wrong, but it's insufficient for an operating environment.
 
 ### 4.3 Target model: "Layer that surrounds"
 
@@ -443,7 +443,7 @@ How do we know we've arrived?
 | Average interaction time | ≤ 15 seconds | Unless explicitly in deep-work mode |
 | Proactive suggestion acceptance rate | ≥ 40% | User acts on or approves surfaced suggestions |
 | Cross-device session continuity | ≥ 90% | Context successfully handoff without user manually transferring |
-| User-reported "exocortex feeling" | ≥ 4.0 / 5.0 | Quarterly subjective survey (1 = "just an app", 5 = "part of my mind") |
+| User-reported "operating-environment feeling" | ≥ 4.0 / 5.0 | Quarterly subjective survey (1 = "just an app", 5 = "part of my mind") |
 | Accessibility (Lighthouse) | ≥ 95 | PWA and dashboard |
 | Visual consistency score | ≥ 9/10 | Third-party blind comparison: "do these screens belong to the same app?" |
 | Onboarding completion rate | ≥ 80% | Of users who start install, finish first meaningful interaction |

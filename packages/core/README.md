@@ -1,6 +1,6 @@
 # Animus Core
 
-Personal AI exocortex with persistent memory, multi-model cognitive layer, and MCP server.
+Personal AI operating environment with persistent memory, multi-model cognitive layer, and MCP server.
 
 ## Features
 

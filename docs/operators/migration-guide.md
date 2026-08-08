@@ -117,7 +117,7 @@ git remote add origin git@github.com:your-org/animus-private.git
 cat > README.md << 'EOF'
 # Animus Private
 
-Owner-specific data, secrets, and PII for the Animus exocortex.
+Owner-specific data, secrets, and PII for the Animus personal operating environment.
 
 This repo is **never** to be made public.
 

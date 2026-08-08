@@ -105,7 +105,7 @@ ruff check packages/ && ruff format --check packages/
 ```
 animus/
 ├── packages/
-│   ├── core/                # Animus Core — exocortex, identity, memory, CLI
+│   ├── core/                # Animus Core — operating environment, identity, memory, CLI
 │   ├── forge/               # Animus Forge — multi-agent orchestration
 │   ├── quorum/              # Animus Quorum — coordination protocol
 │   └── bootstrap/           # Animus Bootstrap — install daemon, wizard, dashboard

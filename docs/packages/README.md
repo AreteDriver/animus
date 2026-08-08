@@ -30,7 +30,7 @@
 
 | Package | Import | Purpose | Tests | Coverage |
 |---|---|---|---|---|
-| [Core](core/README.md) | `import animus` | Personal AI exocortex — memory, CLI, integrations | 2,865 | 97% |
+| [Core](core/README.md) | `import animus` | Personal AI operating environment — memory, CLI, integrations | 2,865 | 97% |
 | [Forge](forge/README.md) | `import animus_forge` | Multi-agent workflow orchestration | 10,304 | 97% |
 | [Bootstrap](bootstrap/README.md) | `import animus_bootstrap` | Install daemon, wizard, dashboard | 2,048 | 97% |
 | [Quorum](quorum/README.md) | `import convergent` | Decentralized agent coordination | 961 | 97% |

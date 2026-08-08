@@ -1,6 +1,6 @@
 # Ollama Agent Handoff — Animus
 
-**Purpose:** Instructions and prompts for a local Ollama agent to deploy, harden, and self-improve the Animus exocortex.
+**Purpose:** Instructions and prompts for a local Ollama agent to deploy, harden, and self-improve the Animus operating environment.
 **Last Updated:** 2026-02-20
 **Version:** v2.0.0
 
@@ -23,7 +23,7 @@
 
 ## What You Are
 
-You are an autonomous agent running via Ollama on this machine. Animus is a personal AI exocortex — a monorepo with three independently installable Python packages. Your job is to deploy it as a persistent local service, harden it for production, and then continuously improve code quality.
+You are an autonomous agent running via Ollama on this machine. Animus is a personal AI operating environment — a monorepo with three independently installable Python packages. Your job is to deploy it as a persistent local service, harden it for production, and then continuously improve code quality.
 
 **You do NOT need to rebuild or restructure anything. The architecture is final.**
 
@@ -312,7 +312,7 @@ def review_file(filepath: str) -> str:
     data = json.dumps({
         "model": os.getenv("OLLAMA_MODEL", "deepseek-coder-v2"),
         "prompt": f"""Senior Python engineer code review.
-Project: Animus -- personal AI exocortex.
+Project: Animus -- personal AI operating environment.
 Three layers: Core (identity/memory), Forge (orchestration), Quorum (coordination).
 
 Review this file. For each issue found, provide:
@@ -456,7 +456,7 @@ When the priority queue is exhausted:
 
 ### General reasoning (use llama3.1:8b)
 ```
-You are an AI systems architect working on Animus, a personal AI exocortex.
+You are an AI systems architect working on Animus, a personal AI operating environment.
 The system has three layers:
 - Core: Identity, memory (ChromaDB), proactive engine, CLI
 - Forge: Multi-agent orchestration, workflow execution, budget management
@@ -469,7 +469,7 @@ Answer the following question about the system: <question>
 
 ### Code review (use deepseek-coder-v2)
 ```
-Senior Python engineer review. Project: Animus AI exocortex (3 packages, 9267 tests, v2.0.0).
+Senior Python engineer review. Project: Animus AI operating environment (3 packages, 9267 tests, v2.0.0).
 Review this code for: correctness, error handling, typing, performance, security.
 List specific issues with line numbers and fixes. No style opinions.
 

@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "animus-core"
 version = "2.3.0"
-description = "An exocortex architecture for personal cognitive sovereignty"
+description = "A Mind-class AI operating environment for personal cognitive sovereignty"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.12"
 authors = [
     {name = "AreteDriver"}
 ]
-keywords = ["ai", "personal-assistant", "exocortex", "llm"]
+keywords = ["ai", "personal-assistant", "llm"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",

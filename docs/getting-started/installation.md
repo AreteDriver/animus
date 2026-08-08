@@ -10,7 +10,7 @@
 
 | Package | Python | Notes |
 |---|---|---|
-| Core | ≥3.10 | Exocortex engine |
+| Core | ≥3.10 | Operating environment engine |
 | Forge | ≥3.12 | Orchestration (heavier deps) |
 | Bootstrap | ≥3.11 | Daemon + dashboard |
 | Quorum | ≥3.10 | Coordination protocol |

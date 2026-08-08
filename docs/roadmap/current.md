@@ -1,6 +1,6 @@
 # Animus Roadmap
 
-**Project**: Animus — Personal AI exocortex / Mind-class system
+**Project**: Animus — Personal AI operating environment / Mind-class system
 **Classification**: Flagship
 **Version**: 2.3.0 (core), mixed across packages (see [Build Truth](#build-truth))
 **Last updated**: 2026-06-29
@@ -34,7 +34,7 @@
 
 ### What Works
 
-- **Core exocortex**: CLI (`python -m animus`), memory tiers (SQLite/ChromaDB), identity, proactive tasks
+- **Core engine**: CLI (`python -m animus`), memory tiers (SQLite/ChromaDB), identity, proactive tasks
 - **Bootstrap**: Install daemon, onboarding wizard, FastAPI+HTMX dashboard (`localhost:7700`), Ollama health checks
 - **Forge**: Multi-agent YAML workflows, 10 archetypes, token budgets, checkpoint/resume, SQLite state, adversarial test harness, governance plane
 - **Quorum**: Rust intent graph + Python bindings, stigmergy coordination, signal bus, triumvirate voting

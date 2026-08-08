@@ -80,7 +80,7 @@ class MemoryManager:
 |---------|----------|------------|
 | SQLite FTS5 | Default, zero-infra | `memory.backend = "sqlite"` |
 | ChromaDB | Vector similarity search | `memory.backend = "chromadb"` |
-| Animus Core | Full exocortex memory | `memory.backend = "animus"` |
+| Animus Core | Full operating environment memory | `memory.backend = "animus"` |
 
 **Memory injection pipeline:**
 ```

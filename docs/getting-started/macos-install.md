@@ -51,7 +51,7 @@ pip install -e packages/types/
 # Install the kernel (includes Head REPL)
 pip install -e packages/kernel/
 
-# Optional: install core for full exocortex features
+# Optional: install core for full operating environment features
 pip install -e packages/core/
 
 # Optional: install bootstrap for daemon + dashboard

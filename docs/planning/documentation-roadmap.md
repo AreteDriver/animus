@@ -94,7 +94,7 @@ docs/
 ├── getting-started/
 │   ├── quickstart.md                  # From root README quickstart section
 │   ├── installation.md                # Per-package install instructions
-│   └── concepts.md                    # Mental models: exocortex, forge, quorum, kernel
+│   └── concepts.md                    # Mental models: operating environment, forge, quorum, kernel
 ├── architecture/
 │   ├── overview.md                    # Merge of docs/ARCHITECTURE.md + CANON.md
 │   ├── packages.md                    # Dependency map + package purpose
@@ -133,7 +133,7 @@ docs/
 │   ├── monitoring.md                  # From METRICS/ + forge monitoring docs
 │   └── troubleshooting.md             # From RECOVERY.md + ISSUES.md
 ├── reference/
-│   ├── glossary.md                    # Domain terms (exocortex, forge, crucible, etc.)
+│   ├── glossary.md                    # Domain terms (operating environment, forge, crucible, etc.)
 │   ├── faq.md                         # Merge of common questions
 │   ├── changelog.md                   # Single source: root CHANGELOG.md → here
 │   ├── security.md                    # Merge SECURITY.md + THREAT_MODEL.md + SECURITY_LAYER.md

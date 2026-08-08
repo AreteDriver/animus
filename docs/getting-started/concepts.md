@@ -4,9 +4,9 @@
 
 ---
 
-## Exocortex
+## Operating Environment
 
-An **exocortex** is an external cognitive system that augments your biological brain. Animus stores memories, tracks tasks, learns your preferences, and persists context across sessions, devices, and years. It is not a chatbot — it is a persistent intelligence layer that accumulates knowledge about you over time.
+The Animus operating environment is a persistent intelligence layer that augments how you work. It stores memories, tracks tasks, learns your preferences, and persists context across sessions, devices, and years. It is not a chatbot — it is a personal AI system that accumulates knowledge about you over time.
 
 ## Forge
 

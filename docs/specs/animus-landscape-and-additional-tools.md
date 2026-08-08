@@ -19,7 +19,7 @@ CATEGORY A — Agent Orchestration Frameworks
 LangChain / LangGraph, CrewAI, AutoGen, Semantic Kernel
 → Animus Forge overlaps here
 
-CATEGORY B — Personal AI Assistants / Exocortex
+CATEGORY B — Personal AI Assistants / Operating Environments
 OpenClaw, ai.com, Freysa, EXO
 → Animus Core overlaps here
 

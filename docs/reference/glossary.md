@@ -14,13 +14,15 @@
 
 **Contracts** — Canonical JSON schemas that define data structures across Animus subsystems. 20+ schemas in `packages/contracts/`.
 
-**Core** — The personal AI exocortex package (`animus`). Handles memory, CLI, integrations, and the cognitive layer.
+**Core** — The personal AI operating environment package (`animus`). Handles memory, CLI, integrations, and the cognitive layer.
 
 **Crucible** — The universal transformation framework for navigating change. Phase detection, failure taxonomy, active/receptive polarity.
 
 ## E
 
-**Exocortex** — An external cognitive system that augments biological intelligence. Persistent memory, task tracking, preference learning across sessions and devices.
+**Internal philosophical frame** — *Internal anchor; not used in public positioning.* The agent's self-model and constitutional principles are anchored in the philosophical framing of an external cognitive system that augments biological intelligence (persistent memory, task tracking, preference learning across sessions and devices). This term appears in agent identity files, internal code self-references, and architectural body text. See `BRANDING.md` for the public/private split.
+
+**Operating Environment** — The public-facing framing for Animus. A Mind-class AI operating environment you own: persistent memory, multi-agent orchestration, and autonomous improvement. This is the canonical external surface; the internal philosophical frame (see above) is what informs agent identity and decisions internally.
 
 ## F
 

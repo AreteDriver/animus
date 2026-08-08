@@ -125,7 +125,7 @@ Animus dashboard ←→ PWA ←→ CLI (three islands; state doesn't transfer)
 Portfolio updates ←→ Discord/Slack (operator copies/pastes manually)
 ```
 
-**The bottleneck:** The only seamless transport is MCP server ↔ memory. Everything else requires the operator to *carry* context. This is the opposite of an exocortex.
+**The bottleneck:** The only seamless transport is MCP server ↔ memory. Everything else requires the operator to *carry* context. This is the opposite of an operating environment.
 
 **Lean prescription:** Don't build more transport mechanisms. Make the *existing* ones disappear.
 

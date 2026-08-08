@@ -106,7 +106,7 @@ Without usage data, these are educated guesses based on tool description + likel
 ### Bucket A — Almost certainly active workhorses
 
 Tools that are core to daily operation:
-- `recall_memory`, `store_memory` — exocortex foundation
+- `recall_memory`, `store_memory` — operating environment foundation
 - `read_file`, `write_file` / `file_read`, `file_write` — table stakes
 - `web_search`, `web_fetch` — table stakes
 - `task_create`, `task_list`, `task_complete` — daily task management
