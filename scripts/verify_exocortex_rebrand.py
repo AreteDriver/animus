@@ -81,7 +81,9 @@ INTRO_LINE_WINDOW = 5  # header + summary + opening paragraph
 BUCKET_B_PRESERVE = [
     "CLAUDE.md",
     "packages/core/CLAUDE.md",
-    "docs/CONSTITUTIONAL_PRINCIPLES.md",
+    # Constitutional Principles moved to docs/architecture/constitutional-principles.md
+    # (commit aae5be7). The philosophy is now anchored via agent identity modules
+    # and the consciousness-quorum bridge below, which are loaded with "exocortex".
     "docs/architecture/charter.md",
     "docs/architecture/overview.md",
     "docs/architecture/consciousness-quorum-bridge.md",
@@ -209,11 +211,17 @@ def check_architecture_intros() -> list[str]:
 
 
 def check_preservation_zones() -> list[str]:
-    """Check 4: Bucket-B files MUST retain 'exocortex'. Over-sweep fails."""
+    """Check 4: Bucket-B files MUST retain 'exocortex'. Over-sweep fails.
+
+    Also fails if any BUCKET_B_PRESERVE path is missing — a phantom
+    preservation entry silently skips the check and provides false
+    confidence. Adding the missing path requires an explicit edit.
+    """
     failures = []
     for rel in BUCKET_B_PRESERVE:
         path = REPO / rel
         if not path.exists():
+            failures.append(f"{rel} (Bucket-B path missing on disk)")
             continue
         if not has_exocortex(path):
             failures.append(f"{rel} (Bucket-B file emptied of 'exocortex')")
@@ -240,8 +248,6 @@ def check_archive_preserved() -> list[str]:
 # Driver
 # -----------------------------------------------------------------------
 def main() -> int:
-    failures: dict[str, list[str]] = {}
-
     print("=== exocortex rebrand verifier ===")
     print(f"repo: {REPO}")
     print()
@@ -278,7 +284,7 @@ def main() -> int:
     bz = check_preservation_zones()
     if bz:
         failed.append(("preservation zones", bz))
-        print(f"FAIL: Bucket-B files emptied of 'exocortex' (over-sweep):")
+        print("FAIL: Bucket-B files emptied of 'exocortex' (over-sweep):")
         for h in bz:
             print(f"  - {h}")
     else:
@@ -287,7 +293,7 @@ def main() -> int:
     ap = check_archive_preserved()
     if ap:
         failed.append(("archive preservation", ap))
-        print(f"FAIL: archive packages lost 'exocortex' (over-sweep):")
+        print("FAIL: archive packages lost 'exocortex' (over-sweep):")
         for h in ap[:5]:
             print(f"  - {h}")
     else:
