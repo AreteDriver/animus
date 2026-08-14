@@ -191,7 +191,7 @@ class HeadToolOrchestrator:
         Returns:
             Tool result as a string (max 8000 chars).
         """
-        logger.info("Tool call: %s(%s)", name, json.dumps(arguments))
+        logger.info("Tool call: %s(keys=%s)", name, ", ".join(arguments.keys()))
 
         # Forge tools first
         if name in self._forge._tools:

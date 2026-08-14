@@ -140,7 +140,7 @@ class ContainerManager:
         os.close(cidfile_fd)
 
         cmd = self._build_command(payload_path, cidfile=cidfile_path)
-        logger.info("Container task async: %s", " ".join(cmd))
+        logger.info("Container task async: %s", " ".join(self._safe_cmd_for_log(cmd)))
 
         try:
             process = await asyncio.create_subprocess_exec(
@@ -230,10 +230,33 @@ class ContainerManager:
         ]
         return [c for c in cmd if c]
 
+    @staticmethod
+    def _safe_cmd_for_log(cmd: list[str]) -> list[str]:
+        """Return a copy of ``cmd`` with ``-e`` / ``--env`` values masked."""
+        safe: list[str] = []
+        skip_next = False
+        for arg in cmd:
+            if skip_next:
+                if "=" in arg:
+                    key, _ = arg.split("=", 1)
+                    safe.append(f"{key}=[REDACTED]")
+                else:
+                    safe.append(f"{arg}=[REDACTED]")
+                skip_next = False
+            elif arg in ("-e", "--env"):
+                safe.append(arg)
+                skip_next = True
+            elif arg.startswith("--env="):
+                key, _ = arg.split("=", 1)
+                safe.append(f"{key}=[REDACTED]")
+            else:
+                safe.append(arg)
+        return safe
+
     def _run_container_sync(self, payload_path: str) -> dict[str, Any]:
         """Run container synchronously and parse the result."""
         cmd = self._build_command(payload_path)
-        logger.info("Container task: %s", " ".join(cmd))
+        logger.info("Container task: %s", " ".join(self._safe_cmd_for_log(cmd)))
         try:
             result = subprocess.run(
                 cmd,
