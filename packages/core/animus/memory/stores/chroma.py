@@ -366,7 +366,7 @@ class ChromaMemoryStore(MemoryStore):
                 if len(memories) >= limit:
                     break
 
-            logger.debug(f"Search '{query[:30]}...' found {len(memories)} results")
+            logger.debug("Search found %d results", len(memories))
             return memories
 
         except Exception as e:

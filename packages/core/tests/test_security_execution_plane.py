@@ -680,6 +680,6 @@ class TestMemoryLayerLogsRawSecrets:
             mem.remember(
                 content=f"API key: {secret}", memory_type=Sensitivity.PUBLIC, tags=["test"]
             )
-        # The log line should contain the secret before redaction; this test
-        # documents that behavior so a future fix can turn it into a negative.
-        assert secret in caplog.text
+        # SEC-08: raw secret must not appear in INFO logs. The content is
+        # redacted for storage, but the log must use safe metadata only.
+        assert secret not in caplog.text
