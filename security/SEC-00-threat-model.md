@@ -65,7 +65,7 @@ Each test asserts the **pre-fix vulnerable behavior** so that it fails today and
 
 ## 5. Security Reconciliation (current canonical state)
 
-**Last reconciled:** 2026-08-13
+**Last reconciled:** 2026-08-13 (SEC-06 non-memory fix at `19bfcfa`)
 **Reconciliation basis:** direct code inspection of current `main` + independent oracle-based verification + `test_security_execution_plane.py` + focused regression tests.
 
 | ID | Historical claim | Current status | Evidence | Confidence |
@@ -75,15 +75,20 @@ Each test asserts the **pre-fix vulnerable behavior** so that it fails today and
 | **SEC-03** | MCP server no security policy | **FIXED** | `create_default_registry()` receives explicit security policy | HIGH |
 | **SEC-04** | `shell=True` in kernel registry | **FIXED** | `ForgeToolRegistry._handle_run_command` uses `subprocess.run(argv, shell=False)` with `shlex.split()` + injection char rejection + interpreter defense (commit `9b0ac6f`) | HIGH |
 | **SEC-05** | `shell=True` in Head orchestrator | **FIXED** | `HeadToolOrchestrator._handle_run_shell` uses `subprocess.run(argv, shell=False)` with identical defense stack (commit `f0b210a`) | HIGH |
-| **SEC-06** | Unredacted secrets in logs (17 files) | **PARTIALLY SUPERSEDED** | Memory-layer portion (layer.py, durable.py, local.py, chroma.py) superseded by SEC-08 fix (commit `7b24d6c`). Remaining non-memory paths (tools.py, mcp_server.py, kernel tools_core.py, head tool_orchestrator.py, Forge containers.py) remain **UNRECONCILED** — not independently verified on current `main`. | HIGH (memory); LOW (non-memory) |
+| **SEC-06** | Unredacted secrets in logs (17 files) | **PARTIALLY FIXED / PARTIALLY SUPERSEDED** | Memory-layer portion superseded by SEC-08 fix (commit `7b24d6c`). Non-memory normal-operation paths fixed at commit `19bfcfa`:
+- `tool_orchestrator.py`: INFO log no longer emits full argument JSON.
+- `tools_core.py`: DEBUG log no longer emits full param dict.
+- `containers.py`: INFO log masks `-e`/`--env` values before emitting.
+27 focused adversarial regression tests pass (14 kernel + 13 forge).
+Remaining non-memory paths (audit log in `tools/registry.py`, error-path exception logs) remain **INVESTIGATION LEADS** — not independently verified. | HIGH |
 | **SEC-07** | HTTP tool bypasses egress | **FIXED** | `_tool_http_request` enforces `policy.authorize_network()` before outbound request (part of SEC-05 integration) | HIGH |
 | **SEC-08** | Memory layer logs raw content | **FIXED** (commit `7b24d6c`) | `remember()` no longer logs content previews; search() across all 3 stores no longer logs raw queries. 28 focused adversarial regression tests pass. | HIGH |
 | **SEC-09** | Container silently falls back to process | **NOT_APPLICABLE** | No container execution exists in current architecture. `Sandbox` uses `tempfile.mkdtemp()` + `shutil.copytree()` + direct `subprocess.run()` with sanitized env. | HIGH |
 
 ### Remaining uncertainty
 
-- **SEC-06 (non-memory):** Historical commit `65d82c8` claimed fixes across tools, MCP, kernel, and Forge logging. These paths were not independently revalidated in the SEC-08 session. Default disposition is **UNRECONCILED**.
-- **Exception-logging paths:** Four `logger.debug(f"... failed: {e}")` calls in `layer.py` (entity linking/cleanup during remember/forget/import/consolidation) are **INVESTIGATION LEADS**. They are error paths with external-service exceptions, not the normal operational flow.
+- **Audit log in `tools/registry.py`:** `_emit_audit` logs structured JSON of tool arguments. It strips `content` keys but does not redact other credential-like keys (`api_key`, `token`, `secret`, etc.). This is a **DESIGN DECISION** — audit logs intentionally record tool invocations, but the sanitization gap should be closed with a `_redact_nested` or schema-aware filter. Not addressed in this slice.
+- **Exception-logging paths:** Four `logger.debug(f"... failed: {e}")` calls in `layer.py` (entity linking/cleanup during remember/forget/import/consolidation) and similar patterns in `tools.py`, `tools_core.py`, `mcp_server.py`, and `containers.py` are **INVESTIGATION LEADS**. They are error paths where `str(e)` from external services could theoretically contain secrets. Not addressed in this slice.
 
 ### Reachable Critical/High findings
 
