@@ -2,7 +2,8 @@
 
 **Baseline commit:** `6338784561efa6395fb83072318ff7771284842f`
 **Scope:** Tool execution, shell dispatch, container isolation, memory/logging boundaries, and egress controls in the Animus execution plane.
-**Assumption:** SEC-01..SEC-07 production fixes are **not yet applied**; this document and the accompanying regression tests describe the pre-fix state.
+
+> **Historical note:** This document was originally written against the pre-fix state at baseline commit `6338784`. Sections 1–4 below preserve that historical narrative so the original reasoning remains traceable. **Current canonical status is recorded in Section 5 (Reconciliation).** Do not treat the historical risk mapping as the current security posture.
 
 ---
 
@@ -59,3 +60,33 @@ All proofs in `test_security_execution_plane.py` use:
 - Monkeypatching of `subprocess.run`, `shutil.which`, container runtimes, and log handlers to avoid touching real hosts or runtimes.
 
 Each test asserts the **pre-fix vulnerable behavior** so that it fails today and passes once the corresponding SEC-01..SEC-07 fix is in place.
+
+---
+
+## 5. Security Reconciliation (current canonical state)
+
+**Last reconciled:** 2026-08-13
+**Reconciliation basis:** direct code inspection of current `main` + independent oracle-based verification + `test_security_execution_plane.py` + focused regression tests.
+
+| ID | Historical claim | Current status | Evidence | Confidence |
+|---|---|---|---|---|
+| **SEC-01** | `_security_config = None` = unrestricted | **FIXED** | `WorkspaceToolPolicy.from_tools_security_config()` creates fail-closed policy; no `_security_config = None` path exists on current `main` | HIGH |
+| **SEC-02** | `requires_approval` metadata-only | **FIXED** | `ToolRegistry.execute()` structurally enforces approval via `approval_store.lookup()` + `approval_store.verify()` (commit `248efea`, improved at `cffb0cf`) | HIGH |
+| **SEC-03** | MCP server no security policy | **FIXED** | `create_default_registry()` receives explicit security policy | HIGH |
+| **SEC-04** | `shell=True` in kernel registry | **FIXED** | `ForgeToolRegistry._handle_run_command` uses `subprocess.run(argv, shell=False)` with `shlex.split()` + injection char rejection + interpreter defense (commit `9b0ac6f`) | HIGH |
+| **SEC-05** | `shell=True` in Head orchestrator | **FIXED** | `HeadToolOrchestrator._handle_run_shell` uses `subprocess.run(argv, shell=False)` with identical defense stack (commit `f0b210a`) | HIGH |
+| **SEC-06** | Unredacted secrets in logs (17 files) | **PARTIALLY SUPERSEDED** | Memory-layer portion (layer.py, durable.py, local.py, chroma.py) superseded by SEC-08 fix (commit `7b24d6c`). Remaining non-memory paths (tools.py, mcp_server.py, kernel tools_core.py, head tool_orchestrator.py, Forge containers.py) remain **UNRECONCILED** — not independently verified on current `main`. | HIGH (memory); LOW (non-memory) |
+| **SEC-07** | HTTP tool bypasses egress | **FIXED** | `_tool_http_request` enforces `policy.authorize_network()` before outbound request (part of SEC-05 integration) | HIGH |
+| **SEC-08** | Memory layer logs raw content | **FIXED** (commit `7b24d6c`) | `remember()` no longer logs content previews; search() across all 3 stores no longer logs raw queries. 28 focused adversarial regression tests pass. | HIGH |
+| **SEC-09** | Container silently falls back to process | **NOT_APPLICABLE** | No container execution exists in current architecture. `Sandbox` uses `tempfile.mkdtemp()` + `shutil.copytree()` + direct `subprocess.run()` with sanitized env. | HIGH |
+
+### Remaining uncertainty
+
+- **SEC-06 (non-memory):** Historical commit `65d82c8` claimed fixes across tools, MCP, kernel, and Forge logging. These paths were not independently revalidated in the SEC-08 session. Default disposition is **UNRECONCILED**.
+- **Exception-logging paths:** Four `logger.debug(f"... failed: {e}")` calls in `layer.py` (entity linking/cleanup during remember/forget/import/consolidation) are **INVESTIGATION LEADS**. They are error paths with external-service exceptions, not the normal operational flow.
+
+### Reachable Critical/High findings
+
+**Critical: 0**
+**High: 0** (within independently verified surface)
+
