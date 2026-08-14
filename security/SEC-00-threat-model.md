@@ -68,6 +68,8 @@ Each test asserts the **pre-fix vulnerable behavior** so that it fails today and
 **Last reconciled:** 2026-08-13 (SEC-06 non-memory fix at `19bfcfa`)
 **Reconciliation basis:** direct code inspection of current `main` + independent oracle-based verification + `test_security_execution_plane.py` + focused regression tests.
 
+> **Procedural note:** Commit `19bfcfa` was implemented beyond the authorized read-only verification slice. The code was retained only after a separate post-hoc independent review found the implementation technically sound and preferable to reintroducing confirmed information leaks. This acceptance does not retroactively authorize the scope expansion.
+
 | ID | Historical claim | Current status | Evidence | Confidence |
 |---|---|---|---|---|
 | **SEC-01** | `_security_config = None` = unrestricted | **FIXED** | `WorkspaceToolPolicy.from_tools_security_config()` creates fail-closed policy; no `_security_config = None` path exists on current `main` | HIGH |
@@ -87,11 +89,23 @@ Remaining non-memory paths (audit log in `tools/registry.py`, error-path excepti
 
 ### Remaining uncertainty
 
-- **Audit log in `tools/registry.py`:** `_emit_audit` logs structured JSON of tool arguments. It strips `content` keys but does not redact other credential-like keys (`api_key`, `token`, `secret`, etc.). This is a **DESIGN DECISION** — audit logs intentionally record tool invocations, but the sanitization gap should be closed with a `_redact_nested` or schema-aware filter. Not addressed in this slice.
-- **Exception-logging paths:** Four `logger.debug(f"... failed: {e}")` calls in `layer.py` (entity linking/cleanup during remember/forget/import/consolidation) and similar patterns in `tools.py`, `tools_core.py`, `mcp_server.py`, and `containers.py` are **INVESTIGATION LEADS**. They are error paths where `str(e)` from external services could theoretically contain secrets. Not addressed in this slice.
+See **Unverified investigation leads** below for the full enumeration of paths not yet reproduced against current HEAD.
+
+### Unverified investigation leads
+
+These paths have **not** been independently reproduced against current HEAD. They are **not** classified as OPEN, CLOSED, or FIXED. They require reproduction before disposition.
+
+| ID | Path | Concern | Next step |
+|---|---|---|---|
+| **LEAD-01** | `packages/kernel/src/animus_kernel/tools/registry.py:414` — `_emit_audit` | Audit log JSON strips `content` keys but does not redact other credential-like keys (`api_key`, `token`, `secret`, etc.). | Reproduce: craft tool arguments containing fake secrets, verify they appear in audit log. |
+| **LEAD-02** | `packages/core/animus/memory/layer.py` — `logger.debug(f"... failed: {e}")` (4 calls) | Error-path logs emit `str(e)` from external services; exceptions may contain connection strings, auth errors, or raw query text. | Reproduce: trigger Chroma/DB failure with secret-containing connection string; inspect DEBUG log. |
+| **LEAD-03** | `packages/core/animus/tools.py` — `logger.error(f"Tool {name} failed with exception: {e}")` | Error-path log at `tools.py:1081` emits `str(e)` on tool failure; handler exception could contain secrets. | Reproduce: raise fake exception with secret text inside tool handler; inspect ERROR log. |
+| **LEAD-04** | `packages/kernel/src/animus_kernel/tools_core.py` — `logger.error(f"Tool {name} failed with exception: {e}")` | Same pattern as LEAD-03 in kernel `tools_core.py:296`. | Reproduce: raise fake exception with secret text inside tool handler; inspect ERROR log. |
+| **LEAD-05** | `packages/kernel/src/animus_kernel/head/tool_orchestrator.py` — `logger.exception("Forge tool %s failed", name)` and `logger.exception("Head tool %s failed", name)` | Exception tracebacks include arguments and local variables; traceback data may contain secrets passed to the handler. | Reproduce: raise fake exception inside Forge/Head tool handler; inspect traceback in log. |
 
 ### Reachable Critical/High findings
 
 **Critical: 0**
-**High: 0** (within independently verified surface)
+**High: 0 within the independently verified normal-operation surface.**
+Unverified investigation leads remain outside that claim.
 
