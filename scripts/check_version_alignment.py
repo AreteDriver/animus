@@ -50,10 +50,10 @@ class SimpleVersion:
     def __str__(self) -> str:
         return self.raw
 
-    def __lt__(self, other: "SimpleVersion") -> bool:
+    def __lt__(self, other: SimpleVersion) -> bool:
         return self.parts < other.parts
 
-    def __le__(self, other: "SimpleVersion") -> bool:
+    def __le__(self, other: SimpleVersion) -> bool:
         return self.parts <= other.parts
 
     def __eq__(self, other: object) -> bool:
@@ -64,10 +64,10 @@ class SimpleVersion:
     def __ne__(self, other: object) -> bool:
         return not self == other
 
-    def __gt__(self, other: "SimpleVersion") -> bool:
+    def __gt__(self, other: SimpleVersion) -> bool:
         return self.parts > other.parts
 
-    def __ge__(self, other: "SimpleVersion") -> bool:
+    def __ge__(self, other: SimpleVersion) -> bool:
         return self.parts >= other.parts
 
 
@@ -172,7 +172,8 @@ def main() -> int:
             if not spec_str:
                 warnings_.append(
                     f"{name}: dependency '{dep_name}' has no version specifier "
-                    f"(recommend pinning to >={sibling_version}, <{SiblingVersion.next_major(sibling_version)})"
+                    f"(recommend pinning to >={sibling_version}, "
+                    f"<{SiblingVersion.next_major(sibling_version)})"
                 )
                 continue
 
