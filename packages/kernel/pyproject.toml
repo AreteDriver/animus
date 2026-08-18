@@ -33,6 +33,7 @@ dependencies = [
     "psycopg2-binary >=2.9",
     "jsonschema >=4.17",
     "pyyaml >=6.0",
+    "apscheduler >=3.11,<4",
 ]
 
 [project.optional-dependencies]
