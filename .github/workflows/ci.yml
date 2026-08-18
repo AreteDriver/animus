@@ -245,7 +245,7 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-kernel-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: pip install -e packages/types/ -e "packages/kernel/[dev]"
+        run: pip install -e packages/types/ -e "packages/core/[api]" -e "packages/kernel/[dev]"
 
       - name: Test with coverage
         run: pytest packages/kernel/tests/ -v --tb=short --cov=animus_kernel --cov-report=term-missing --cov-report=xml
@@ -286,7 +286,7 @@ jobs:
         # animus-types is a sibling pip-installable package and is not
         # published to PyPI — pip resolves it from the local path when
         # both -e targets are part of the same install transaction.
-        run: pip install -e packages/types/ -e "packages/core/[dev,api]"
+        run: pip install -e packages/types/ -e packages/kernel/ -e "packages/core/[dev,api,postgres,mcp]"
 
       - name: Test with coverage
         run: pytest packages/core/tests/ -v --tb=short --cov=animus --cov-report=term-missing
@@ -402,10 +402,6 @@ jobs:
       - name: Test with coverage
         working-directory: packages/forge
         env:
-          # animus_forge.api_state imports the OpenAI client at
-          # module-load time; pytest collection fails without a key.
-          # Dummy values are sufficient — the suite does not make
-          # real network calls.
           OPENAI_API_KEY: "sk-dummy-ci-no-network-calls"
           ANTHROPIC_API_KEY: "sk-dummy-ci-no-network-calls"
         run: pytest tests/ -v --tb=short --cov=animus_forge --cov-report=term-missing
@@ -433,7 +429,7 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-bootstrap-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: pip install -e "packages/bootstrap/[dev]"
+        run: pip install -e "packages/bootstrap/[dev,push]"
 
       - name: Test with coverage
         run: pytest packages/bootstrap/tests/ -v --tb=short --cov=animus_bootstrap --cov-report=term-missing
@@ -548,7 +544,8 @@ jobs:
       - name: Build multi-arch kernel image
         uses: docker/build-push-action@v6
         with:
-          context: packages/kernel
+          context: .
+          file: packages/kernel/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
           tags: animus-kernel:ci
@@ -613,9 +610,6 @@ jobs:
   security:
     name: Security
     runs-on: ubuntu-latest
-    # gitleaks-action@v2 calls /repos/:owner/:repo/pulls/:id/commits on PR
-    # events, which requires pull-requests: read. Without this, the action
-    # fails with 403 "Resource not accessible by integration".
     permissions:
       contents: read
       pull-requests: read
