@@ -61,8 +61,6 @@ class TestContainerModeSilentFallback:
         process_submits: list = []
         container_submits: list = []
 
-        original_submit = pool._executor.submit if pool._executor else None
-
         import concurrent.futures
 
         def _capture_submit(fn, *args, **kwargs):
