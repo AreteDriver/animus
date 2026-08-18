@@ -259,7 +259,7 @@ jobs:
         run: pytest packages/kernel/tests/ -v --tb=short --cov=animus_kernel --cov-report=term-missing --cov-report=xml
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@ad3126e4f63f4c42e9f548cce398fb82e6d4c260  # v5.5.1
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7  # v5.5.1
         with:
           files: ./coverage.xml
           fail_ci_if_error: false
@@ -465,7 +465,7 @@ jobs:
           PYTHONPATH: packages/bootstrap/src
 
   test-database:
-    name: Test Database (PostgreSQL ${ matrix.postgres-version })
+    name: Test Database (PostgreSQL ${{ matrix.postgres-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -473,7 +473,7 @@ jobs:
         postgres-version: ["14", "15", "16"]
     services:
       postgres:
-        image: postgres:${ matrix.postgres-version }
+        image: postgres:${{ matrix.postgres-version }}
         env:
           POSTGRES_PASSWORD: testpass
           POSTGRES_DB: animus_test
