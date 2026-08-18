@@ -30,8 +30,15 @@ except (OSError, ValueError):
     pass  # Some environments don't support RLIMIT_AS
 
 
+@pytest.fixture(scope="session")
+def _gc_counter():
+    """Track completed tests without retaining test objects."""
+    return iter(range(1, 1_000_000_000))
+
+
 @pytest.fixture(autouse=True)
-def _force_gc():
-    """Force garbage collection after every test to prevent memory accumulation."""
+def _periodic_gc(_gc_counter):
+    """Collect cycles periodically without imposing a full GC on every test."""
     yield
-    gc.collect()
+    if next(_gc_counter) % 100 == 0:
+        gc.collect()

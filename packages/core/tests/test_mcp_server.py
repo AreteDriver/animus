@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from datetime import datetime, timedelta, timezone
+from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -62,6 +63,30 @@ def _patch_nested_asyncio_run():
         return _original_run(coro, **kwargs)
 
     return patch("asyncio.run", side_effect=_smart_run)
+
+
+def _patch_forge_modules(*, provider_factory=None, orchestrator_cls=None):
+    """Provide the optional Forge boundary without installing Forge in Core tests."""
+    forge = ModuleType("animus_forge")
+    forge.__path__ = []
+    agents = ModuleType("animus_forge.agents")
+    agents.__path__ = []
+    self_improve = ModuleType("animus_forge.self_improve")
+    self_improve.__path__ = []
+    provider_wrapper = ModuleType("animus_forge.agents.provider_wrapper")
+    orchestrator = ModuleType("animus_forge.self_improve.orchestrator")
+    provider_wrapper.create_agent_provider = provider_factory or MagicMock()
+    orchestrator.SelfImproveOrchestrator = orchestrator_cls or MagicMock()
+    return patch.dict(
+        "sys.modules",
+        {
+            "animus_forge": forge,
+            "animus_forge.agents": agents,
+            "animus_forge.agents.provider_wrapper": provider_wrapper,
+            "animus_forge.self_improve": self_improve,
+            "animus_forge.self_improve.orchestrator": orchestrator,
+        },
+    )
 
 
 def _make_memory(content: str, tags: list[str] | None = None) -> Memory:
@@ -671,9 +696,8 @@ class TestSelfImproveTool:
             assert "Forge not installed" in result[0][0].text
 
     def test_self_improve_provider_error(self, server, tmp_path):
-        with patch(
-            "animus_forge.agents.provider_wrapper.create_agent_provider",
-            side_effect=ValueError("bad provider"),
+        with _patch_forge_modules(
+            provider_factory=MagicMock(side_effect=ValueError("bad provider")),
         ):
             result = _run(
                 server.call_tool(
@@ -705,13 +729,9 @@ class TestSelfImproveTool:
         mock_orch.run = mock_run
 
         with (
-            patch(
-                "animus_forge.agents.provider_wrapper.create_agent_provider",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "animus_forge.self_improve.orchestrator.SelfImproveOrchestrator",
-                return_value=mock_orch,
+            _patch_forge_modules(
+                provider_factory=MagicMock(return_value=MagicMock()),
+                orchestrator_cls=MagicMock(return_value=mock_orch),
             ),
             _patch_nested_asyncio_run(),
         ):
@@ -743,13 +763,9 @@ class TestSelfImproveTool:
         mock_orch.run = mock_run
 
         with (
-            patch(
-                "animus_forge.agents.provider_wrapper.create_agent_provider",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "animus_forge.self_improve.orchestrator.SelfImproveOrchestrator",
-                return_value=mock_orch,
+            _patch_forge_modules(
+                provider_factory=MagicMock(return_value=MagicMock()),
+                orchestrator_cls=MagicMock(return_value=mock_orch),
             ),
             _patch_nested_asyncio_run(),
         ):
@@ -772,13 +788,9 @@ class TestSelfImproveTool:
         mock_orch.run = mock_run
 
         with (
-            patch(
-                "animus_forge.agents.provider_wrapper.create_agent_provider",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "animus_forge.self_improve.orchestrator.SelfImproveOrchestrator",
-                return_value=mock_orch,
+            _patch_forge_modules(
+                provider_factory=MagicMock(return_value=MagicMock()),
+                orchestrator_cls=MagicMock(return_value=mock_orch),
             ),
             _patch_nested_asyncio_run(),
         ):
