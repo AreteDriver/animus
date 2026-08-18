@@ -107,8 +107,8 @@ def _make_fake_pywebpush(*, auth_header: bool = True) -> types.ModuleType:
                     return types.SimpleNamespace(status_code=201)
         except urllib.error.HTTPError as exc:
             if exc.code == 410:
-                raise WebPushException("gone", 410)
-            raise WebPushException(str(exc), exc.code)
+                raise WebPushException("gone", 410) from exc
+            raise WebPushException(str(exc), exc.code) from exc
         return types.SimpleNamespace(status_code=201)
 
     fake.WebPushException = WebPushException  # type: ignore[attr-defined]
@@ -182,7 +182,10 @@ class TestPushE2E:
             {
                 "endpoint": endpoint,
                 "keys": {
-                    "p256dh": "BOrvLCh7aN4U8bZ3vVjQv8X1s2t3u4v5w6x7y8z9a0b1c2d3e4f5g6h7i8j9k0l1m2n3o4p5q6r7s8t9u0v1w2x3y4z5a6b7c8d9e0f1",
+                    "p256dh": (
+                        "BOrvLCh7aN4U8bZ3vVjQv8X1s2t3u4v5w6x7y8z9a0b1c2d3e4f5g6h7i8j9"
+                        "k0l1m2n3o4p5q6r7s8t9u0v1w2x3y4z5a6b7c8d9e0f1"
+                    ),
                     "auth": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
                 },
             }
