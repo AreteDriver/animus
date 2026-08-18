@@ -21,7 +21,7 @@ removed `animus_forge.budget` compatibility package.
 
 - File-affinity branch run: 8,730 passed, 15 skipped, 8 expected failures,
   294 failed, and 12 setup errors in 5 minutes 38 seconds.
-- Exact quarantined node IDs: 307. Twenty-five dashboard cases alternate
+- Exact quarantined node IDs: 310. Dashboard cases alternate
   between XFAIL and XPASS under the same file-affinity topology, so they remain
   ledgered as explicit flaky debt rather than being silently ignored.
 - Measured production-suite coverage with the ledger active: 88.90%; the gate
