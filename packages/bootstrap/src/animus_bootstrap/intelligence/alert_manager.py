@@ -55,7 +55,10 @@ class AlertManager:
                 alerts.append(
                     {
                         "type": "error_rate",
-                        "message": f"Error rate {error_rate}/min exceeds threshold {self._error_rate_max}/min",
+                        "message": (
+                            f"Error rate {error_rate}/min exceeds threshold "
+                            f"{self._error_rate_max}/min"
+                        ),
                         "severity": "critical"
                         if error_rate >= self._error_rate_max * 2
                         else "warning",
@@ -72,7 +75,10 @@ class AlertManager:
                 alerts.append(
                     {
                         "type": "tool_failure_rate",
-                        "message": f"Tool failure rate {fail_rate}/min exceeds threshold {self._tool_failure_rate_max}/min",
+                        "message": (
+                            f"Tool failure rate {fail_rate}/min exceeds threshold "
+                            f"{self._tool_failure_rate_max}/min"
+                        ),
                         "severity": "critical"
                         if fail_rate >= self._tool_failure_rate_max * 2
                         else "warning",
