@@ -28,12 +28,12 @@ dependencies = [
     "pydantic-settings >=2.0",
     "rich >=13.0",
     "httpx >=0.27",
-    "typer >=0.12",
-    "sqlalchemy >=2.0",
-    "psycopg2-binary >=2.9",
-    "jsonschema >=4.17",
-    "pyyaml >=6.0",
-    "apscheduler >=3.11,<4",
+    "typer>=0.12",
+    "sqlalchemy>=2.0",
+    "psycopg2-binary>=2.9",
+    "jsonschema>=4.17",
+    "pyyaml>=6.0",
+    "apscheduler>=3.11,<4",
 ]
 
 [project.optional-dependencies]
@@ -59,15 +59,15 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4"]
 ignore = ["E501", "B904", "B008"]
-per-file-ignores = {
-    "src/animus_kernel/head/repl.py" = ["F841"],
-    "src/animus_kernel/intelligence/cross_workflow_memory.py" = ["I001"],
-    "src/animus_kernel/memory/cross_workflow.py" = ["I001"],
-    "src/animus_kernel/providers/base.py" = ["I001"],
-    "src/animus_kernel/sandbox/analyzer.py" = ["F841"],
-    "tests/**" = ["B007", "B017"],
-    "tests/test_sec06_non_memory_logging.py" = ["I001"],
-}
+
+[tool.ruff.lint.per-file-ignores]
+"src/animus_kernel/head/repl.py" = ["F841"]
+"src/animus_kernel/intelligence/cross_workflow_memory.py" = ["I001"]
+"src/animus_kernel/memory/cross_workflow.py" = ["I001"]
+"src/animus_kernel/providers/base.py" = ["I001"]
+"src/animus_kernel/sandbox/analyzer.py" = ["F841"]
+"tests/**" = ["B007", "B017"]
+"tests/test_sec06_non_memory_logging.py" = ["I001"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
