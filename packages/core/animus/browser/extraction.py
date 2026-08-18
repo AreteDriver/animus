@@ -99,7 +99,7 @@ class ExtractionPipeline:
         # Excessive repetition
         lines = text.splitlines()
         if lines:
-            unique = len(set(l.strip() for l in lines if l.strip()))
+            unique = len(set(line.strip() for line in lines if line.strip()))
             if unique / len(lines) < 0.3:
                 return True
         return False
