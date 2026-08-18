@@ -22,15 +22,19 @@ from animus_forge.providers.base import (
 
 class TestAnthropicProviderInit:
     def test_init_without_package(self):
-        with patch.dict("sys.modules", {"anthropic": None}):
-            # Force reimport
-            import importlib
+        import importlib
 
-            from animus_forge.providers import anthropic_provider
+        from animus_forge.providers import anthropic_provider
 
+        try:
+            with patch.dict("sys.modules", {"anthropic": None}):
+                importlib.reload(anthropic_provider)
+                provider = anthropic_provider.AnthropicProvider(api_key="test")
+                assert provider.is_configured() is False
+        finally:
+            # Reload after the simulated missing dependency so this test cannot
+            # leak ``anthropic = None`` into another file on the same worker.
             importlib.reload(anthropic_provider)
-            provider = anthropic_provider.AnthropicProvider(api_key="test")
-            assert provider.is_configured() is False
 
     def test_init_with_api_key(self):
         from animus_forge.providers.anthropic_provider import AnthropicProvider
