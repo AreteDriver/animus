@@ -404,6 +404,10 @@ jobs:
       - name: Test with coverage
         working-directory: packages/forge
         env:
+          # animus_forge.api_state imports the OpenAI client at
+          # module-load time; pytest collection fails without a key.
+          # Dummy values are sufficient — the suite does not make
+          # real network calls.
           OPENAI_API_KEY: "sk-dummy-ci-no-network-calls"
           ANTHROPIC_API_KEY: "sk-dummy-ci-no-network-calls"
         run: pytest tests/ -v --tb=short --cov=animus_forge --cov-report=term-missing
@@ -554,6 +558,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Load amd64 kernel image for container smoke tests
+        run: docker buildx build --platform linux/amd64 --load -t animus-kernel:ci -f packages/kernel/Dockerfile .
+
       - name: Test import inside container (amd64)
         run: docker run --rm --platform linux/amd64 animus-kernel:ci python -c "import animus_kernel; print('OK amd64')"
 
@@ -612,6 +619,9 @@ jobs:
   security:
     name: Security
     runs-on: ubuntu-latest
+    # gitleaks-action@v2 calls /repos/:owner/:repo/pulls/:id/commits on PR
+    # events, which requires pull-requests: read. Without this, the action
+    # fails with 403 "Resource not accessible by integration".
     permissions:
       contents: read
       pull-requests: read
