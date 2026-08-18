@@ -221,7 +221,9 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-kernel-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: pip install -e packages/types/ -e "packages/kernel/[dev]"
+        run: |
+          pip install -e packages/types/ -e "packages/kernel/[dev]"
+          pip install -e "packages/core/[api]"
 
       - name: Test with coverage
         run: pytest packages/kernel/tests/ -v --tb=short --cov=animus_kernel --cov-report=term-missing --cov-report=xml
@@ -558,7 +560,7 @@ jobs:
         run: docker run --rm --platform linux/amd64 animus-kernel:ci python -c "import animus_kernel; print('OK amd64')"
 
       - name: Test CLI inside container (amd64)
-        run: docker run --rm --platform linux/amd64 animus-kernel:ci python -m animus_kernel --help
+        run: docker run --rm --platform linux/amd64 animus-kernel:ci animus-kernel --help
 
   sbom:
     name: Generate SBOMs

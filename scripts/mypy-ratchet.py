@@ -23,16 +23,19 @@ BASELINE_FILE = Path(__file__).with_name(".mypy-baseline.json")
 
 
 def run_mypy(directory: str) -> tuple[int, str]:
-    import shutil
-
-    mypy = shutil.which("mypy") or "mypy"
     result = subprocess.run(
-        [mypy, directory, "--ignore-missing-imports", "--no-error-summary"],
+        [sys.executable, "-m", "mypy", directory, "--ignore-missing-imports", "--no-error-summary"],
         capture_output=True,
         text=True,
     )
     output = result.stdout + result.stderr
-    return output.count(": error:"), output
+    error_count = output.count(": error:")
+    if result.returncode != 0 and error_count == 0:
+        raise RuntimeError(
+            f"mypy failed without producing a type-error report for {directory} "
+            f"(exit {result.returncode}):\n{output.strip()}"
+        )
+    return error_count, output
 
 
 def main(argv: list[str]) -> int:
@@ -47,7 +50,11 @@ def main(argv: list[str]) -> int:
     if not argv or argv[0] == "--init":
         # Re-baseline current error counts
         for pkg, cfg in baseline.items():
-            count, _ = run_mypy(str(cfg["directory"]))
+            try:
+                count, _ = run_mypy(str(cfg["directory"]))
+            except RuntimeError as exc:
+                print(f"[ERROR] {exc}", file=sys.stderr)
+                return 2
             cfg["allowed"] = count  # type: ignore[assignment]
         with BASELINE_FILE.open("w") as fh:
             json.dump(baseline, fh, indent=2)
@@ -55,6 +62,7 @@ def main(argv: list[str]) -> int:
         return 0
 
     failed = False
+    infrastructure_failed = False
     for pkg in argv:
         cfg = baseline.get(pkg)
         if cfg is None:
@@ -62,7 +70,12 @@ def main(argv: list[str]) -> int:
             continue
         allowed = int(cfg["allowed"])
         directory = str(cfg["directory"])
-        actual, report = run_mypy(directory)
+        try:
+            actual, report = run_mypy(directory)
+        except RuntimeError as exc:
+            print(f"[ERROR] {pkg}: {exc}", file=sys.stderr)
+            infrastructure_failed = True
+            continue
         report_path = Path("packages") / pkg / "mypy-report.txt"
         report_path.write_text(report, encoding="utf-8")
         delta = actual - allowed
@@ -75,6 +88,8 @@ def main(argv: list[str]) -> int:
         else:
             print(f"[PASS] {pkg}: {actual} errors (allowed {allowed}, {delta or 'at limit'})")
 
+    if infrastructure_failed:
+        return 2
     return 1 if failed else 0
 
 

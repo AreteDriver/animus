@@ -26,6 +26,7 @@ from animus_bootstrap.intelligence.proactive.checks.morning_brief import (
 )
 from animus_bootstrap.intelligence.proactive.checks.tasks import (
     get_task_nudge_check,
+    set_task_store,
     task_nudge_checker,
 )
 from animus_bootstrap.intelligence.proactive.engine import NudgeRecord
@@ -558,6 +559,7 @@ class TestBuiltinChecks:
 
     @pytest.mark.asyncio()
     async def test_task_nudge_checker_returns_none(self) -> None:
+        set_task_store(None)
         result = await task_nudge_checker()
         assert result is None
 

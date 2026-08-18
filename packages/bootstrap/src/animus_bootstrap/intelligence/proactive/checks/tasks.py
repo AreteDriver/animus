@@ -8,7 +8,7 @@ from animus_bootstrap.intelligence.proactive.engine import ProactiveCheck
 _task_store = None
 
 
-def set_task_store(store: object) -> None:
+def set_task_store(store: object | None) -> None:
     """Wire the persistent task store for nudge checks."""
     global _task_store  # noqa: PLW0603
     _task_store = store
