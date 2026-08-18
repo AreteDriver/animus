@@ -15,7 +15,7 @@ from animus_kernel.sandbox.pr_manager import PRManager, PRStatus, PullRequest
 
 def _init_git_repo(path: Path) -> None:
     """Initialize a minimal git repo for testing."""
-    subprocess.run(["git", "init"], cwd=str(path), capture_output=True, check=True)
+    subprocess.run(["git", "init", "-b", "main"], cwd=str(path), capture_output=True, check=True)
     subprocess.run(
         ["git", "config", "user.email", "test@example.com"],
         cwd=str(path),
