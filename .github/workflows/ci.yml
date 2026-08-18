@@ -396,7 +396,9 @@ jobs:
           # real network calls.
           OPENAI_API_KEY: "sk-dummy-ci-no-network-calls"
           ANTHROPIC_API_KEY: "sk-dummy-ci-no-network-calls"
-        run: pytest tests/ -v --tb=short --cov=animus_forge --cov-report=term-missing
+        # Keep tests from the same file on one worker so module-scoped state is
+        # preserved while the runner's two cores provide a bounded wall time.
+        run: pytest tests/ -n 2 --dist loadfile -v --tb=short --cov=animus_forge --cov-report=term-missing
 
       - name: Run loop-governor integration tests
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
