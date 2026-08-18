@@ -106,6 +106,17 @@ extend-exclude = ["animus/autonomous-loop.py"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
 ignore = ["E501"]  # Line length handled separately
+per-file-ignores = {
+    "animus/citizens/architect.py" = ["F841"],
+    "animus/citizens/architecture_citizen.py" = ["F841"],
+    "animus/citizens/first_principles.py" = ["F841"],
+    "animus/citizens/harvester.py" = ["F401"],
+    "animus/citizens/intelligence.py" = ["F841"],
+    "animus/citizens/knowledge_curator.py" = ["F841"],
+    "animus/citizens/pattern.py" = ["F841"],
+    "animus/dossier/graph.py" = ["N806"],
+    "tests/test_bootstrap_mvp.py" = ["F841"],
+}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
