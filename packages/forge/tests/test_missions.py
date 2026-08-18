@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from decimal import Decimal
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
 from animus_forge.missions.domain import (
-    Artifact,
     CitizenOutput,
     Mission,
     MissionStatus,
@@ -25,7 +23,6 @@ from animus_forge.missions.transitions import (
     transition,
 )
 from animus_forge.state.backends import SQLiteBackend
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
