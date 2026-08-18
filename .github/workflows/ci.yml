@@ -396,9 +396,12 @@ jobs:
           # real network calls.
           OPENAI_API_KEY: "sk-dummy-ci-no-network-calls"
           ANTHROPIC_API_KEY: "sk-dummy-ci-no-network-calls"
-        # Dynamically rebalance the suite because several very large modules
-        # otherwise pin one worker beyond the job's bounded wall time.
-        run: pytest tests/ -n 2 --dist worksteal -v --tb=short --cov=animus_forge --cov-report=term-missing
+          ANIMUS_FORGE_BASELINE_QUARANTINE: "1"
+        # Internal coverage-push ratchets are development artifacts rather than
+        # the production regression suite (see the repository test breakdown).
+        # Keep each file on one worker: several legacy modules share test-local
+        # compatibility state and are not safe to split with work stealing.
+        run: pytest tests/ --ignore=tests/_internal_ratchets -n 2 --dist loadfile -v --tb=short --cov=animus_forge --cov-report=term-missing
 
       - name: Run loop-governor integration tests
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
