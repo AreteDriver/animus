@@ -22,19 +22,13 @@ from animus_forge.providers.base import (
 
 class TestAnthropicProviderInit:
     def test_init_without_package(self):
-        import importlib
-
         from animus_forge.providers import anthropic_provider
 
-        try:
-            with patch.dict("sys.modules", {"anthropic": None}):
-                importlib.reload(anthropic_provider)
-                provider = anthropic_provider.AnthropicProvider(api_key="test")
-                assert provider.is_configured() is False
-        finally:
-            # Reload after the simulated missing dependency so this test cannot
-            # leak ``anthropic = None`` into another file on the same worker.
-            importlib.reload(anthropic_provider)
+        # Patch the provider's optional dependency seam directly. Reloading the
+        # module here leaks import-time aliases into later tests on this worker.
+        with patch.object(anthropic_provider, "anthropic", None):
+            provider = anthropic_provider.AnthropicProvider(api_key="test")
+            assert provider.is_configured() is False
 
     def test_init_with_api_key(self):
         from animus_forge.providers.anthropic_provider import AnthropicProvider
@@ -105,21 +99,21 @@ class TestAnthropicProviderComplete:
 
     @patch("animus_forge.providers.anthropic_provider.anthropic")
     def test_complete_rate_limit(self, mock_anthropic):
-        from animus_forge.providers.anthropic_provider import AnthropicProvider
+        from animus_forge.providers import anthropic_provider
 
         mock_client = MagicMock()
-        # The rate limit error class
-        mock_anthropic.RateLimitError = type("RateLimitError", (Exception,), {})
-        mock_client.messages.create.side_effect = mock_anthropic.RateLimitError("rate limited")
+        error_type = type("RateLimitError", (Exception,), {})
+        mock_client.messages.create.side_effect = error_type("rate limited")
         mock_anthropic.Anthropic.return_value = mock_client
         mock_anthropic.AsyncAnthropic.return_value = MagicMock()
 
-        provider = AnthropicProvider(api_key="test-key")
-        provider.initialize()
+        with patch.object(anthropic_provider, "AnthropicRateLimitError", error_type):
+            provider = anthropic_provider.AnthropicProvider(api_key="test-key")
+            provider.initialize()
 
-        request = CompletionRequest(prompt="Hi", max_tokens=100)
-        with pytest.raises(RateLimitError):
-            provider.complete(request)
+            request = CompletionRequest(prompt="Hi", max_tokens=100)
+            with pytest.raises(RateLimitError):
+                provider.complete(request)
 
     @patch("animus_forge.providers.anthropic_provider.anthropic")
     def test_complete_generic_error(self, mock_anthropic):
