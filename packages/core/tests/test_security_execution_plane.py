@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import socket
 import subprocess
 import sys
 import threading
@@ -634,7 +635,14 @@ class TestGovernedClientSSRFBlocks:
         try:
             host, port = server.server_address
             url = f"http://localhost:{port}/"
-            result = GovernedClient.request(url, timeout=5, allow_loopback=True)
+            real_getaddrinfo = socket.getaddrinfo
+
+            def _ipv4_localhost(host, *args, **kwargs):
+                target = "127.0.0.1" if host == "localhost" else host
+                return real_getaddrinfo(target, *args, **kwargs)
+
+            with patch("animus.network.client.socket.getaddrinfo", side_effect=_ipv4_localhost):
+                result = GovernedClient.request(url, timeout=5, allow_loopback=True)
             assert result.status == 200
             assert "mock-server-ok" in result.body
         finally:

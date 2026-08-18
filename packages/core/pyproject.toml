@@ -69,7 +69,7 @@ sync = [
     "websockets>=12.0",
     "zeroconf>=0.131.0",
 ]
-mcp = ["mcp>=1.0.0"]
+mcp = ["mcp>=1.0.0,<2"]
 postgres = [
     "sqlalchemy>=2.0",
     "psycopg[binary]>=3.1",

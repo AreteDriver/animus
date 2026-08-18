@@ -546,7 +546,7 @@ intelligence = [
     "croniter>=1.4.0",          # Cron expression parsing
 ]
 mcp = [
-    "mcp>=1.0.0",               # MCP SDK for tool bridge
+    "mcp>=1.0.0,<2",             # MCP SDK 1.x API used by the tool bridge
 ]
 chromadb = [
     "chromadb>=0.4.0",          # Vector memory backend

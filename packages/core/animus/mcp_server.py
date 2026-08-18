@@ -478,7 +478,7 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> GatedFastMCP:
             create an unrestricted registry.
     """
     if FastMCP is None:
-        raise ImportError("MCP server requires the mcp SDK. Install with: pip install 'mcp>=1.0.0'")
+        raise ImportError("MCP server requires mcp SDK 1.x. Install with: pip install 'mcp>=1,<2'")
 
     _validate_mcp_startup_config()
 

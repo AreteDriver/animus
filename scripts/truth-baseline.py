@@ -619,7 +619,7 @@ def check_version_alignment(cfg: dict[str, Any]) -> CheckResult:
     if sem_versions:
         msg_parts.append(f"versions: {sem_versions}")
     if unique and len(unique) > 1:
-        msg_parts.append(f"mismatched: {unique}")
+        msg_parts.append(f"mismatched: {sorted(unique)}")
     if errors:
         msg_parts.append(f"errors: {errors}")
 
@@ -752,7 +752,9 @@ def main() -> None:
             print(f"      → {r['message']}")
     print(f"{'-' * 60}")
     print(
-        f"Summary: {ok}/{total} passed  ({report.summary['fail']} fail, {report.summary['error']} error, {report.summary['skip']} skip)"
+        f"Summary: {ok}/{total} passed  "
+        f"({report.summary['fail']} fail, {report.summary['error']} error, "
+        f"{report.summary['skip']} skip)"
     )
     print(f"Output: {out_path}")
 

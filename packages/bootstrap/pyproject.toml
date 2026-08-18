@@ -70,7 +70,7 @@ intelligence = [
     "trafilatura>=1.6.0",
     "croniter>=1.4.0",
 ]
-mcp = ["mcp>=1.0.0"]
+mcp = ["mcp>=1.0.0,<2"]
 chromadb = ["chromadb>=0.4.0"]
 
 [project.scripts]
