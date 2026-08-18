@@ -1,6 +1,5 @@
 """Tests for the EvidenceBridge that closes eval → memory loop."""
 
-from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
