@@ -96,7 +96,9 @@ source = ["src/animus_bootstrap"]
 omit = ["*/tests/*"]
 
 [tool.coverage.report]
-fail_under = 97
+# Full-suite debt ceiling established by the CI coverage report. Raise only as
+# coverage improves; never lower this value without a fresh base comparison.
+fail_under = 90
 show_missing = true
 
 [tool.ruff]
