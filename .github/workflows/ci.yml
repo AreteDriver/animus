@@ -369,7 +369,7 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-contracts-
 
       - name: Install dependencies
-        run: pip install -e packages/types/ -e "packages/contracts/[dev]"
+        run: pip install -e packages/types/ -e "packages/contracts/[dev]" pytest pytest-cov
 
       - name: Test with coverage
         run: pytest packages/contracts/tests/ -v --tb=short --cov=animus_contracts --cov-report=term-missing
@@ -502,7 +502,12 @@ jobs:
 
       - name: Install dependencies
         working-directory: packages/pwa
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Run Vitest
         working-directory: packages/pwa
@@ -627,7 +632,7 @@ jobs:
   benchmarks:
     name: Benchmarks
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_dispatch') && github.ref == 'refs/heads/main'
     needs: [type-check, test-kernel, test-core, test-quorum, test-types, test-contracts, test-forge, test-bootstrap, test-database, test-pwa, test-integration, docker, security]
     permissions:
       contents: write
