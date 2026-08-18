@@ -20,15 +20,11 @@ ADR-007 §Test matrix + Build spec §16.
 
 from __future__ import annotations
 
-import os
 import socket
 import uuid
-from collections.abc import Iterator
 from pathlib import Path
-from typing import Protocol
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Test prefix helpers
@@ -173,7 +169,7 @@ class FakeSystemd:
         # systemd merges drop-ins on top of the base unit file; the
         # fake mirrors that ordering so callers can rely on the
         # same precedence they'd see against ``systemctl show``.
-        for filename, content in self._drop_ins.get(unit, {}).items():
+        for _filename, content in self._drop_ins.get(unit, {}).items():
             for line in content.splitlines():
                 if "=" not in line:
                     continue

@@ -162,9 +162,7 @@ class RunLedger(_StrictModel):
     assumptions: list[str] = Field(default_factory=list)
     files_changed: list[str] = Field(default_factory=list)
     requirement_map: dict[str, list[str]] = Field(default_factory=dict)
-    acceptance_status: dict[str, AcceptanceState] = Field(
-        default_factory=dict
-    )
+    acceptance_status: dict[str, AcceptanceState] = Field(default_factory=dict)
     open_escalations: list[str] = Field(default_factory=list)
     metrics: RunMetrics = Field(default_factory=RunMetrics)
     started_at: datetime | None = None

@@ -9,8 +9,6 @@ Process-classification provenance rules:
 
 from __future__ import annotations
 
-import pytest
-
 from animus_bootstrap.lifecycle import (
     ClassificationInput,
     ProcessClassification,
@@ -18,12 +16,11 @@ from animus_bootstrap.lifecycle import (
     default_provenance_threshold,
 )
 from animus_bootstrap.lifecycle.classification import (
-    PROOF_EXECUTABLE,
     PROOF_CMDLINE,
-    PROOF_UID,
+    PROOF_EXECUTABLE,
     PROOF_STARTTIME,
+    PROOF_UID,
 )
-
 
 # ---------------------------------------------------------------------------
 # Test #14 — Unknown never killable, never auto-classified higher
@@ -71,9 +68,7 @@ def test_unknown_is_report_only_no_kill_authority() -> None:
     enforce the rule. This test asserts that the data shape
     contains no kill authority.
     """
-    res = classify_process(
-        ClassificationInput(pid=9999, executable="/usr/bin/python3")
-    )
+    res = classify_process(ClassificationInput(pid=9999, executable="/usr/bin/python3"))
     assert res.classification == ProcessClassification.UNKNOWN
     assert not hasattr(res, "allow_kill")
 

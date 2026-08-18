@@ -37,9 +37,7 @@ def _task(mission_id: str = "m-1") -> Task:
     )
 
 
-def _context(
-    repository: Path | None, *, governor_run_id: str | None = None
-) -> TaskContext:
+def _context(repository: Path | None, *, governor_run_id: str | None = None) -> TaskContext:
     extras: dict[str, object] = {}
     if governor_run_id is not None:
         extras["governor_run_id"] = governor_run_id
@@ -97,9 +95,7 @@ def test_verify_approved_returns_completed(
     populate_runs_root("run-x", files={})
     # ``populate_runs_root`` returns ``tmp_path``; the actual run dir
     # is at ``tmp_path / .animus-loop-governor / runs / run-x``.
-    run_dir_path = (
-        tmp_path / ".animus-loop-governor" / "runs" / "run-x"
-    )
+    run_dir_path = tmp_path / ".animus-loop-governor" / "runs" / "run-x"
     from shutil import copyfile
 
     copyfile(
@@ -129,14 +125,11 @@ def test_verify_approved_with_required_action_returns_needs_repair(
 ) -> None:
     """rc 0 + watchdog ``required_action`` → ``status='needs_repair'``."""
     populate_runs_root("run-w")
-    run_dir_path = (
-        tmp_path / ".animus-loop-governor" / "runs" / "run-w"
-    )
+    run_dir_path = tmp_path / ".animus-loop-governor" / "runs" / "run-w"
     from shutil import copyfile
 
     copyfile(
-        Path(__file__).parent
-        / "fixtures/runs/run-watchdog-halt/watchdog-latest.json",
+        Path(__file__).parent / "fixtures/runs/run-watchdog-halt/watchdog-latest.json",
         run_dir_path / "watchdog-latest.json",
     )
 
@@ -151,9 +144,7 @@ def test_verify_approved_with_required_action_returns_needs_repair(
     output = citizen.run(task, context)
     assert output.status == "needs_repair"
     assert output.follow_up_tasks
-    assert any(
-        r.get("type") == "watchdog" for r in output.risks
-    )
+    assert any(r.get("type") == "watchdog" for r in output.risks)
 
 
 # ---------------------------------------------------------------------------
@@ -169,9 +160,7 @@ def test_verify_denied_returns_needs_repair(
 ) -> None:
     """rc 3 (denial) → ``status='needs_repair'`` with explicit reasons."""
     populate_runs_root("run-deny")
-    run_dir_path = (
-        tmp_path / ".animus-loop-governor" / "runs" / "run-deny"
-    )
+    run_dir_path = tmp_path / ".animus-loop-governor" / "runs" / "run-deny"
     from shutil import copyfile
 
     copyfile(
@@ -220,9 +209,7 @@ def test_alg_missing_returns_failed(
     citizen = GovernorVerifierCitizen(client=fake_client)
     output = citizen.run(_task(), _context(repository=tmp_path))
     assert output.status == "failed"
-    assert any(
-        r.get("type") == "governor_error" for r in output.risks
-    )
+    assert any(r.get("type") == "governor_error" for r in output.risks)
 
 
 def test_timeout_returns_failed(
@@ -231,9 +218,7 @@ def test_timeout_returns_failed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``GovernorTimeoutError`` → ``status='failed'``."""
-    fake_client.set_error(
-        "verify", GovernorTimeoutError("slow", timeout=30.0)
-    )
+    fake_client.set_error("verify", GovernorTimeoutError("slow", timeout=30.0))
     monkeypatch.setattr(
         "animus_forge.governor.adapter._resolve_run_id_for_task",
         lambda ctx: "run-x",
@@ -249,9 +234,7 @@ def test_unexpected_governor_error_returns_failed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Generic :class:`GovernorError` → ``status='failed'``."""
-    fake_client.set_error(
-        "verify", GovernorError("oops", exit_code=99, subcommand="verify")
-    )
+    fake_client.set_error("verify", GovernorError("oops", exit_code=99, subcommand="verify"))
     monkeypatch.setattr(
         "animus_forge.governor.adapter._resolve_run_id_for_task",
         lambda ctx: "run-x",
@@ -274,14 +257,13 @@ def test_citizen_role_and_capabilities() -> None:
     assert citizen.can_approve is False
     assert "verify" in citizen.capabilities
 
+
 # ---------------------------------------------------------------------------
 # RunStateReader direct coverage (push adapter coverage above 97%)
 # ---------------------------------------------------------------------------
 
 
-def test_run_state_reader_read_completion(
-    tmp_path: Path, populate_runs_root: Callable
-) -> None:
+def test_run_state_reader_read_completion(tmp_path: Path, populate_runs_root: Callable) -> None:
     """``read_completion`` parses a valid ``completion-latest.json``."""
     from animus_forge.governor.adapter import RunStateReader
     from animus_forge.governor.protocol import CompletionDecision
@@ -333,9 +315,7 @@ def test_run_state_reader_read_completion_corrupt_raises(
     from animus_forge.governor.adapter import RunStateReader
     from animus_forge.governor.errors import RunStateInvalidError
 
-    populate_runs_root(
-        "run-corrupt", files={"completion-latest.json": "{not json"}
-    )
+    populate_runs_root("run-corrupt", files={"completion-latest.json": "{not json"})
     reader = RunStateReader()
     with pytest.raises(RunStateInvalidError):
         reader.read_completion(tmp_path, "run-corrupt")

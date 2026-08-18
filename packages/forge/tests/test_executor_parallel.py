@@ -10,6 +10,7 @@ import pytest
 sys.path.insert(0, "src")
 
 from animus_kernel.budget import BudgetConfig, BudgetManager
+
 from animus_forge.state import CheckpointManager
 from animus_forge.workflow import StepConfig, WorkflowConfig, WorkflowExecutor
 

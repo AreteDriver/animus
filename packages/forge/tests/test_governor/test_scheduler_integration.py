@@ -209,9 +209,7 @@ def test_ready_to_running_is_a_valid_transition() -> None:
     """``READY → RUNNING`` is allowed by the state machine."""
     from animus_forge.missions.transitions import ALLOWED_MISSION_TRANSITIONS
 
-    assert MissionStatus.RUNNING in ALLOWED_MISSION_TRANSITIONS[
-        MissionStatus.READY
-    ]
+    assert MissionStatus.RUNNING in ALLOWED_MISSION_TRANSITIONS[MissionStatus.READY]
 
 
 def test_failed_is_terminal_no_implicit_recovery() -> None:
@@ -242,9 +240,7 @@ def test_preparation_failure_keeps_mission_runnable(
     """
     from animus_forge.governor.errors import ContractRejectedError
 
-    fake_client.set_error(
-        "start", ContractRejectedError("bad contract", exit_code=2)
-    )
+    fake_client.set_error("start", ContractRejectedError("bad contract", exit_code=2))
     adapter = GovernorAdapter(
         client=fake_client,
         run_id_resolver=_resolver_from_ledger(ledger),
@@ -264,6 +260,7 @@ def test_preparation_failure_keeps_mission_runnable(
     assert current is not None
     assert current.status == MissionStatus.READY
     assert "governor_run" not in current.metadata
+
 
 # ---------------------------------------------------------------------------
 # MissionScheduler._start_ready_mission — READY → RUNNING gating
@@ -357,9 +354,7 @@ async def test_start_ready_mission_keeps_ready_on_adapter_failure(
     """``ensure_run`` raises → mission stays READY for the next tick."""
     from animus_forge.governor.errors import ContractRejectedError
 
-    fake_client.set_error(
-        "start", ContractRejectedError("bad", exit_code=2)
-    )
+    fake_client.set_error("start", ContractRejectedError("bad", exit_code=2))
     adapter = GovernorAdapter(
         client=fake_client,
         run_id_resolver=_resolver_from_ledger(ledger),
@@ -433,11 +428,7 @@ async def test_start_ready_mission_uses_resolver_when_no_explicit_path(
     scheduler = _build_scheduler(ledger, governor_adapter=adapter)
 
     # Write the in-repo default contract.
-    default = (
-        Path(ready_mission.repository)
-        / ".animus-loop-governor"
-        / "contract.yaml"
-    )
+    default = Path(ready_mission.repository) / ".animus-loop-governor" / "contract.yaml"
     default.parent.mkdir(parents=True, exist_ok=True)
     default.write_text("requirements: []\n")
 

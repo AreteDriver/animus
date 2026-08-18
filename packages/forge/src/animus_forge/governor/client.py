@@ -71,11 +71,7 @@ def _sanitized_environment(
     only legitimate way to extend the env (no shell injection
     surface).
     """
-    safe = {
-        key: value
-        for key, value in os.environ.items()
-        if key in SAFE_ENV_KEYS
-    }
+    safe = {key: value for key, value in os.environ.items() if key in SAFE_ENV_KEYS}
     if extra:
         safe.update(extra)
     return safe
@@ -106,9 +102,7 @@ class GovernorClient:
         default_timeout: float = DEFAULT_TIMEOUT_SECONDS,
         env_extra: Mapping[str, str] | None = None,
     ) -> None:
-        self._explicit_binary = (
-            str(alg_binary) if alg_binary is not None else None
-        )
+        self._explicit_binary = str(alg_binary) if alg_binary is not None else None
         self._resolved_binary: str | None = None
         self._default_timeout = default_timeout
         self._env_extra = dict(env_extra) if env_extra else {}
@@ -135,15 +129,11 @@ class GovernorClient:
         """
         if self._explicit_binary is not None:
             if not Path(self._explicit_binary).is_file():
-                raise AlgNotFoundError(
-                    f"alg binary not found at {self._explicit_binary}"
-                )
+                raise AlgNotFoundError(f"alg binary not found at {self._explicit_binary}")
             return self._explicit_binary
         located = shutil.which("alg")
         if located is None:
-            raise AlgNotFoundError(
-                "`alg` not on PATH; install animus_loop_governor wheel"
-            )
+            raise AlgNotFoundError("`alg` not on PATH; install animus_loop_governor wheel")
         return located
 
     def _run(
@@ -163,9 +153,7 @@ class GovernorClient:
             raise ValueError("args must include at least one element")
         binary = self.binary  # raises AlgNotFoundError on miss
         cmd = [binary, *args]
-        effective_timeout = (
-            timeout if timeout is not None else self._default_timeout
-        )
+        effective_timeout = timeout if timeout is not None else self._default_timeout
         env = _sanitized_environment(self._env_extra)
         try:
             result = subprocess.run(
@@ -179,19 +167,14 @@ class GovernorClient:
                 check=False,
             )
         except FileNotFoundError as exc:
-            raise AlgNotFoundError(
-                f"alg binary not found at {binary}"
-            ) from exc
+            raise AlgNotFoundError(f"alg binary not found at {binary}") from exc
         except subprocess.TimeoutExpired as exc:
             raise GovernorTimeoutError(
-                f"alg {' '.join(args)} timed out after "
-                f"{effective_timeout}s",
+                f"alg {' '.join(args)} timed out after {effective_timeout}s",
                 timeout=effective_timeout,
             ) from exc
         except PermissionError as exc:
-            raise AlgNotFoundError(
-                f"alg binary at {binary} is not executable"
-            ) from exc
+            raise AlgNotFoundError(f"alg binary at {binary} is not executable") from exc
 
         # Truncate captured output to the documented bound before
         # any caller parses it.
@@ -329,8 +312,7 @@ def _parse_run_id_from_start_stdout(stdout: str) -> str:
     match = _RUN_ID_PREFIX.search(collapsed)
     if match is None:
         raise ValueError(
-            "alg start emitted unexpected stdout; cannot parse run id. "
-            f"stdout was: {stdout!r}"
+            f"alg start emitted unexpected stdout; cannot parse run id. stdout was: {stdout!r}"
         )
     return match.group(1)
 

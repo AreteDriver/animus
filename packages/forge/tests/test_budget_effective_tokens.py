@@ -9,7 +9,6 @@ a single cost axis.
 from __future__ import annotations
 
 import pytest
-
 from animus_kernel.budget import (
     DEFAULT_MODEL_MULTIPLIERS,
     BudgetConfig,
@@ -269,13 +268,14 @@ class TestSession1DoneCriteria:
         assert mgr.status.value == "exceeded"
 
     def test_executor_halts_on_effective_token_overspend(self):
-        from animus_forge.workflow.executor import WorkflowExecutor
-        from animus_forge.workflow.executor_results import ExecutionResult
-        from animus_forge.workflow.loader import StepConfig
         # Use the kernel-side BudgetManager so its BudgetStatus enum matches
         # the one the executor compares against. The forge-side re-export
         # predates the kernel/forge split and currently has a distinct enum.
         from animus_kernel.budget import BudgetConfig, BudgetManager
+
+        from animus_forge.workflow.executor import WorkflowExecutor
+        from animus_forge.workflow.executor_results import ExecutionResult
+        from animus_forge.workflow.loader import StepConfig
 
         mgr = BudgetManager(BudgetConfig(total_budget=200_000))
         mgr.record_usage("prior", output_tokens=15_000, model="claude-opus-4-8")

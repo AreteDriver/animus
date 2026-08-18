@@ -10,8 +10,6 @@ Profile switching behavior:
 
 from __future__ import annotations
 
-import pytest
-
 from animus_bootstrap.lifecycle.profile import (
     ProfileConfig,
     ProfileMode,
@@ -95,14 +93,9 @@ def test_failed_switch_rolls_back() -> None:
     assert result.rollback
     # The rollback removed the new drop-in that the switcher wrote
     # just before the daemon-reload call.
-    assert (
-        "20-profile-desktop-login.conf"
-        not in backend.drop_in_files("animus.service")
-    )
+    assert "20-profile-desktop-login.conf" not in backend.drop_in_files("animus.service")
     # The prior drop-in is still present.
-    assert "20-profile-development-local.conf" in backend.drop_in_files(
-        "animus.service"
-    )
+    assert "20-profile-development-local.conf" in backend.drop_in_files("animus.service")
 
 
 def test_continuous_node_requires_user_consent() -> None:

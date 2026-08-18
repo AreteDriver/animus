@@ -75,9 +75,7 @@ def map_exit_code(
         raise GovernorError(text, exit_code=3, subcommand=subcommand)
 
     if 4 <= returncode < 99:
-        raise GovernorError(
-            text, exit_code=returncode, subcommand=subcommand
-        )
+        raise GovernorError(text, exit_code=returncode, subcommand=subcommand)
 
     raise RuntimeError(
         f"alg {subcommand} returned impossible exit code "

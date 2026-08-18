@@ -9,17 +9,9 @@ package source — checking that ``pgrep`` and ``pkill`` are never
 from __future__ import annotations
 
 import ast
-import re
 from pathlib import Path
 
-import pytest
-
-PACKAGE_ROOT = (
-    Path(__file__).resolve().parents[2]
-    / "src"
-    / "animus_bootstrap"
-    / "lifecycle"
-)
+PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "src" / "animus_bootstrap" / "lifecycle"
 
 
 def _walk_sources() -> list[Path]:
@@ -49,9 +41,7 @@ def test_no_pgrep_called_in_lifecycle_module() -> None:
     """No source file in the lifecycle package calls pgrep."""
     for path in _walk_sources():
         calls = _calls_in_module(path)
-        assert "pgrep" not in calls, (
-            f"pgrep() called in {path}"
-        )
+        assert "pgrep" not in calls, f"pgrep() called in {path}"
 
 
 def test_no_kill_signal_called_in_lifecycle_module() -> None:
@@ -71,8 +61,10 @@ def test_no_pkill_called_in_lifecycle_module() -> None:
 
 def test_classification_has_no_kill_authority() -> None:
     """The ClassificationResult dataclass must not have a kill-authority field."""
-    from animus_bootstrap.lifecycle.classification import ClassificationResult
     from dataclasses import fields
+
+    from animus_bootstrap.lifecycle.classification import ClassificationResult
+
     field_names = {f.name for f in fields(ClassificationResult)}
     assert "allow_kill" not in field_names
     assert "kill_authority" not in field_names

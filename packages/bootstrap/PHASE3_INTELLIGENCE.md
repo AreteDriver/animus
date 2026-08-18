@@ -53,10 +53,12 @@ memory after the response.
 @dataclass
 class MemoryContext:
     """Injected into LLM prompt alongside the conversation."""
-    episodic: list[str]      # Recent relevant conversations
-    semantic: list[str]      # Knowledge graph facts
-    procedural: list[str]    # How-to snippets
-    user_prefs: dict         # Learned preferences
+
+    episodic: list[str]  # Recent relevant conversations
+    semantic: list[str]  # Knowledge graph facts
+    procedural: list[str]  # How-to snippets
+    user_prefs: dict  # Learned preferences
+
 
 class MemoryManager:
     """Bridges bootstrap gateway with Animus Core memory layer."""
@@ -104,18 +106,22 @@ dispatches them, collects results, and feeds them back for a final response.
 @dataclass
 class ToolDefinition:
     """A callable tool the LLM can invoke."""
+
     name: str
     description: str
-    parameters: dict         # JSON Schema
-    handler: Callable        # async def handler(**kwargs) -> str
+    parameters: dict  # JSON Schema
+    handler: Callable  # async def handler(**kwargs) -> str
+
 
 @dataclass
 class ToolResult:
     """Result of executing a tool."""
+
     tool_name: str
     success: bool
     output: str
     duration_ms: float
+
 
 class ToolExecutor:
     """Manages tool registration and execution."""
@@ -184,11 +190,13 @@ sends messages unprompted when it has something useful to say.
 @dataclass
 class ProactiveCheck:
     """A scheduled check that may produce a nudge."""
+
     name: str
-    schedule: str            # cron expression or interval ("every 30m")
-    checker: Callable        # async def() -> str | None (None = nothing to say)
-    channels: list[str]      # Which channels to nudge on
-    priority: str            # "low" | "normal" | "high"
+    schedule: str  # cron expression or interval ("every 30m")
+    checker: Callable  # async def() -> str | None (None = nothing to say)
+    channels: list[str]  # Which channels to nudge on
+    priority: str  # "low" | "normal" | "high"
+
 
 class ProactiveEngine:
     """Runs scheduled checks and sends nudges."""
@@ -248,27 +256,31 @@ fire conditions, conditions gate actions.
 @dataclass
 class AutomationRule:
     """A trigger → condition → action pipeline."""
+
     id: str
     name: str
     enabled: bool
-    trigger: TriggerConfig       # What starts the rule
+    trigger: TriggerConfig  # What starts the rule
     conditions: list[Condition]  # All must be true
     actions: list[ActionConfig]  # Execute in order
-    cooldown_seconds: int        # Min time between firings
+    cooldown_seconds: int  # Min time between firings
+
 
 @dataclass
 class TriggerConfig:
-    type: str                    # "message" | "schedule" | "webhook" | "event"
+    type: str  # "message" | "schedule" | "webhook" | "event"
     params: dict
+
 
 @dataclass
 class Condition:
-    type: str                    # "contains" | "from_channel" | "time_range" | "regex"
+    type: str  # "contains" | "from_channel" | "time_range" | "regex"
     params: dict
+
 
 @dataclass
 class ActionConfig:
-    type: str                    # "reply" | "forward" | "run_tool" | "store_memory" | "webhook"
+    type: str  # "reply" | "forward" | "run_tool" | "store_memory" | "webhook"
     params: dict
 ```
 
@@ -499,6 +511,7 @@ class AnimusMemoryBackend:
 
     def __init__(self):
         from animus.memory import MemoryManager as CoreMemory
+
         self._core = CoreMemory()
 ```
 

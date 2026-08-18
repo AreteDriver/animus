@@ -28,8 +28,8 @@ restart loop. A flaky daemon will cycle the target.
 
 **Mitigation**: explicit `Restart=no` on the daemon's drop-in for
 `development-local`, `Restart=on-failure` for the others. Already
-encoded in the templates — verified at
-[`packages/bootstrap/src/animus_bootstrap/lifecycle/profile.py:227-252`](../../packages/bootstrap/src/animus_bootstrap/lifecycle/profile.py#L227).
+encoded in the templates — verified in
+[`packages/bootstrap/src/animus_bootstrap/lifecycle/profile.py`](../../packages/bootstrap/src/animus_bootstrap/lifecycle/profile.py).
 **Status**: closed.
 
 ### 1.2 `profile.json` is read by both the daemon and the dashboard — no authoritative lock

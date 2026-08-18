@@ -94,9 +94,7 @@ def compute_compatibility_key(
         revision=revision,
         worktree=str(worktree) if worktree else None,
     )
-    mission_key = MissionKey(
-        mission_id=str(mission_id), contract_digest=contract_digest
-    )
+    mission_key = MissionKey(mission_id=str(mission_id), contract_digest=contract_digest)
     return CompatibilityKey(
         repository=repo_key,
         mission=mission_key,
@@ -228,21 +226,15 @@ class GovernorAdapter:
 
         ledger = _read_ledger_or_none(path)
         if ledger is None:
-            raise RunUnusableError(
-                f"Known run {run_id} at {path} has no parseable ledger"
-            )
+            raise RunUnusableError(f"Known run {run_id} at {path} has no parseable ledger")
         if ledger.phase in {"complete", "failed", "aborted"}:
-            raise RunUnusableError(
-                f"Known run {run_id} is in terminal phase {ledger.phase}"
-            )
+            raise RunUnusableError(f"Known run {run_id} is in terminal phase {ledger.phase}")
 
         receipt = _read_receipt_or_none(path)
         if receipt is None:
             # No receipt yet but the run exists and is not terminal —
             # treat as partially initialised and reject.
-            raise RunUnusableError(
-                f"Known run {run_id} is partially initialised"
-            )
+            raise RunUnusableError(f"Known run {run_id} is partially initialised")
         if not _receipt_matches(receipt, compat):
             if mission_mismatch_is_fatal:
                 raise RunUnusableError(
@@ -318,9 +310,7 @@ def _persist_receipt(run_path: Path, receipt: GovernorRun) -> None:
     run_path.mkdir(parents=True, exist_ok=True)
     target = run_path / RECEIPT_FILENAME
     tmp = target.with_suffix(target.suffix + ".tmp")
-    tmp.write_text(
-        receipt.model_dump_json(indent=2), encoding="utf-8"
-    )
+    tmp.write_text(receipt.model_dump_json(indent=2), encoding="utf-8")
     tmp.replace(target)
 
 
@@ -353,9 +343,7 @@ def _read_receipt_or_none(run_path: Path) -> GovernorRun | None:
     try:
         data = json.loads(target.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise RunStateInvalidError(
-            f"Receipt at {target} is corrupt: {exc}"
-        ) from exc
+        raise RunStateInvalidError(f"Receipt at {target} is corrupt: {exc}") from exc
     return GovernorRun.model_validate(data)
 
 
@@ -367,15 +355,11 @@ def _read_ledger_or_none(run_path: Path) -> RunLedger | None:
     try:
         data = json.loads(target.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise RunStateInvalidError(
-            f"Ledger at {target} is corrupt: {exc}"
-        ) from exc
+        raise RunStateInvalidError(f"Ledger at {target} is corrupt: {exc}") from exc
     return RunLedger.model_validate(data)
 
 
-def _receipt_matches(
-    receipt: GovernorRun, compat: CompatibilityKey
-) -> bool:
+def _receipt_matches(receipt: GovernorRun, compat: CompatibilityKey) -> bool:
     """Strict equality check between receipt and requested key."""
     return receipt.compatibility == compat
 
@@ -449,14 +433,10 @@ class GovernorVerifierCitizen(Citizen):
                 risks=[
                     {
                         "type": "no_repository",
-                        "repository": (
-                            str(repository) if repository else None
-                        ),
+                        "repository": (str(repository) if repository else None),
                     }
                 ],
-                follow_up_tasks=[
-                    "repair: ensure context.repository is a valid path"
-                ],
+                follow_up_tasks=["repair: ensure context.repository is a valid path"],
                 confidence=0.0,
             )
 
@@ -471,9 +451,7 @@ class GovernorVerifierCitizen(Citizen):
                         "repository": str(repository),
                     }
                 ],
-                follow_up_tasks=[
-                    "repair: ensure mission has gone through ensure_run()"
-                ],
+                follow_up_tasks=["repair: ensure mission has gone through ensure_run()"],
                 confidence=0.0,
             )
 
@@ -486,9 +464,7 @@ class GovernorVerifierCitizen(Citizen):
                 status="failed",
                 summary=f"Governor verifier error: {exc}",
                 risks=[{"type": "governor_error", "detail": str(exc)}],
-                follow_up_tasks=[
-                    f"repair: inspect .animus-loop-governor/runs/{run_id}"
-                ],
+                follow_up_tasks=[f"repair: inspect .animus-loop-governor/runs/{run_id}"],
                 confidence=0.0,
             )
 
@@ -497,9 +473,7 @@ class GovernorVerifierCitizen(Citizen):
         if watchdog is not None and watchdog.required_action:
             return CitizenOutput(
                 status="needs_repair",
-                summary=(
-                    f"Watchdog requires action: {watchdog.required_action}"
-                ),
+                summary=(f"Watchdog requires action: {watchdog.required_action}"),
                 risks=[
                     {
                         "type": "watchdog",
@@ -519,9 +493,7 @@ class GovernorVerifierCitizen(Citizen):
             confidence=1.0,
         )
 
-    def _on_denial(
-        self, *, repository: Path, run_id: str
-    ) -> CitizenOutput:
+    def _on_denial(self, *, repository: Path, run_id: str) -> CitizenOutput:
         """Map a VerifyDeniedError to a needs_repair citizen output."""
         decision = self._reader.read_completion(repository, run_id)
         reasons = "; ".join(decision.reasons)
@@ -542,14 +514,8 @@ class GovernorVerifierCitizen(Citizen):
                 }
             ],
             follow_up_tasks=[
-                *(
-                    f"repair: provide {item}"
-                    for item in decision.missing_evidence
-                ),
-                *(
-                    f"repair: address finding: {finding}"
-                    for finding in decision.blocking_findings
-                ),
+                *(f"repair: provide {item}" for item in decision.missing_evidence),
+                *(f"repair: address finding: {finding}" for finding in decision.blocking_findings),
             ],
             confidence=1.0,
         )
@@ -576,14 +542,10 @@ class RunStateReader:
     subprocess mocking: the reader is purely a JSON file loader.
     """
 
-    def read_completion(
-        self, repository: Path, run_id: str
-    ) -> CompletionDecision:
+    def read_completion(self, repository: Path, run_id: str) -> CompletionDecision:
         path = run_dir(repository, run_id) / "completion-latest.json"
         if not path.is_file():
-            raise RunStateInvalidError(
-                f"completion-latest.json missing at {path}"
-            )
+            raise RunStateInvalidError(f"completion-latest.json missing at {path}")
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
@@ -592,9 +554,7 @@ class RunStateReader:
             ) from exc
         return CompletionDecision.model_validate(data)
 
-    def read_watchdog(
-        self, repository: Path, run_id: str
-    ) -> WatchdogReport | None:
+    def read_watchdog(self, repository: Path, run_id: str) -> WatchdogReport | None:
         """``None`` if no watchdog report exists yet (not an error)."""
         path = run_dir(repository, run_id) / "watchdog-latest.json"
         if not path.is_file():
@@ -602,9 +562,7 @@ class RunStateReader:
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
-            raise RunStateInvalidError(
-                f"watchdog-latest.json at {path} is corrupt: {exc}"
-            ) from exc
+            raise RunStateInvalidError(f"watchdog-latest.json at {path} is corrupt: {exc}") from exc
         return WatchdogReport.model_validate(data)
 
 

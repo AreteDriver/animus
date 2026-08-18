@@ -6,8 +6,8 @@ Run: pytest tests/test_benchmarks.py --benchmark-only
 import asyncio
 
 import pytest
-
 from animus_kernel.budget import BudgetConfig, BudgetManager
+
 from animus_forge.cache.backends import MemoryCache
 from animus_forge.db import TaskStore
 from animus_forge.skills import SkillLibrary

@@ -124,9 +124,7 @@ def test_find_active_run_empty_runs(tmp_path: Path) -> None:
     assert find_active_run(tmp_path) is None
 
 
-def test_find_active_run_returns_most_recent(
-    tmp_path: Path, populate_runs_root
-) -> None:
+def test_find_active_run_returns_most_recent(tmp_path: Path, populate_runs_root) -> None:
     import time
 
     populate_runs_root("run-old")
@@ -245,6 +243,7 @@ def test_governor_run_extra_ignored() -> None:
     payload["future_field"] = "ignored"
     GovernorRun.model_validate(payload)  # no raise
 
+
 # ---------------------------------------------------------------------------
 # Direct coverage for adapter module-level helpers
 # ---------------------------------------------------------------------------
@@ -290,9 +289,7 @@ def test_run_state_reader_watchdog_corrupt_raises(tmp_path: Path) -> None:
 
     run_path = tmp_path / ".animus-loop-governor" / "runs" / "run-w"
     run_path.mkdir(parents=True)
-    (run_path / "watchdog-latest.json").write_text(
-        "{not valid json", encoding="utf-8"
-    )
+    (run_path / "watchdog-latest.json").write_text("{not valid json", encoding="utf-8")
     reader = RunStateReader()
     with pytest.raises(RunStateInvalidError):
         reader.read_watchdog(tmp_path, "run-w")

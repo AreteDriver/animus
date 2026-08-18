@@ -6,7 +6,7 @@ health contract. No subprocess calls, no live runtime.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -15,11 +15,8 @@ from animus_bootstrap.lifecycle import (
     HealthSnapshot,
     HealthState,
     ServiceHealth,
-    classify_process,
     derive_health_state,
 )
-from animus_bootstrap.lifecycle.classification import ClassificationInput
-
 
 # ---------------------------------------------------------------------------
 # derive_health_state — ADR-007 walkthroughs and additional cases
@@ -31,9 +28,7 @@ def _daemon(active: bool | None = True) -> ServiceHealth:
 
 
 def _forge(active: bool | None = True) -> ServiceHealth:
-    return ServiceHealth(
-        unit="animus-forge.service", is_active=active, is_required=False
-    )
+    return ServiceHealth(unit="animus-forge.service", is_active=active, is_required=False)
 
 
 def test_offline_when_target_inactive() -> None:
@@ -92,7 +87,7 @@ def test_unknown_when_only_target_state_missing() -> None:
     """Partial info: target state None, snapshot present and HEALTHY."""
     snap = HealthSnapshot(
         schema_version="1",
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         state=HealthState.HEALTHY,
         active_citizens=1,
         open_jobs=0,
@@ -117,7 +112,7 @@ def test_health_probe_503_propagates_degraded() -> None:
     """
     snap = HealthSnapshot(
         schema_version="1",
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         state=HealthState.DEGRADED,
         active_citizens=0,
         open_jobs=0,
@@ -137,7 +132,7 @@ def test_health_probe_failed_propagates_failed() -> None:
     """Test #7 inverse — /healthz returning FAILED propagates."""
     snap = HealthSnapshot(
         schema_version="1",
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         state=HealthState.FAILED,
         active_citizens=0,
         open_jobs=0,
@@ -155,7 +150,7 @@ def test_health_probe_failed_propagates_failed() -> None:
 def test_stopping_state_propagates() -> None:
     snap = HealthSnapshot(
         schema_version="1",
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         state=HealthState.STOPPING,
         active_citizens=0,
         open_jobs=0,
@@ -173,7 +168,7 @@ def test_stopping_state_propagates() -> None:
 def test_starting_state_propagates() -> None:
     snap = HealthSnapshot(
         schema_version="1",
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         state=HealthState.STARTING,
         active_citizens=0,
         open_jobs=0,
@@ -278,13 +273,14 @@ def test_health_contract_rejects_bad_state() -> None:
 
 def test_desired_state_is_separate_from_observed() -> None:
     """The ProfileConfig never includes observed fields like linger_enabled."""
-    from animus_bootstrap.lifecycle import ProfileConfig, ProfileMode, save_profile, load_profile
+    from animus_bootstrap.lifecycle import ProfileConfig, ProfileMode, load_profile, save_profile
 
     profile = ProfileConfig(mode=ProfileMode.DEVELOPMENT_LOCAL)
     assert "linger_enabled" not in profile.to_dict()
     assert "runtime_target_active" not in profile.to_dict()
     # Round-trip
     import tempfile
+
     with tempfile.NamedTemporaryFile(suffix=".json") as f:
         save_profile(Path_for(f.name), profile)  # type: ignore[name-defined]
         loaded = load_profile(Path_for(f.name))  # type: ignore[name-defined]
@@ -293,4 +289,5 @@ def test_desired_state_is_separate_from_observed() -> None:
 
 def Path_for(name):  # tiny shim for the test above
     from pathlib import Path
+
     return Path(name)

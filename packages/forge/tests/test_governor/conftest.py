@@ -195,7 +195,5 @@ def mock_subprocess_run(monkeypatch: pytest.MonkeyPatch) -> Callable[..., MagicM
     """Patch :func:`subprocess.run`; return the mock for assertions."""
     mock = MagicMock()
     mock.return_value = MagicMock(returncode=0, stdout="", stderr="")
-    monkeypatch.setattr(
-        "animus_forge.governor.client.subprocess.run", mock
-    )
+    monkeypatch.setattr("animus_forge.governor.client.subprocess.run", mock)
     return mock

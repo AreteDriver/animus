@@ -32,16 +32,16 @@ import json
 import logging
 import os
 import tempfile
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Iterable, Protocol
+from typing import Protocol
 
 logger = logging.getLogger("animus_bootstrap.lifecycle.profile")
 
 
-class ProfileMode(str, Enum):
+class ProfileMode(str, Enum):  # noqa: UP042 - preserve profile serialization behavior
     """The three deployment profiles.
 
     String values are persisted in ``profile.json`` and match the
@@ -93,7 +93,7 @@ class ProfileConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, object]) -> "ProfileConfig":
+    def from_dict(cls, data: dict[str, object]) -> ProfileConfig:
         if not isinstance(data, dict):
             raise ValueError("profile.json must be a JSON object")
         version = data.get("schema_version", "1")
@@ -156,29 +156,21 @@ class SwitchBackend(Protocol):
     touching the live user manager.
     """
 
-    def is_target_active(self, target: str) -> bool:
-        ...
+    def is_target_active(self, target: str) -> bool: ...
 
-    def daemon_reload(self) -> None:
-        ...
+    def daemon_reload(self) -> None: ...
 
-    def add_wants(self, host_target: str, runtime_target: str) -> None:
-        ...
+    def add_wants(self, host_target: str, runtime_target: str) -> None: ...
 
-    def remove_wants(self, host_target: str, runtime_target: str) -> None:
-        ...
+    def remove_wants(self, host_target: str, runtime_target: str) -> None: ...
 
-    def show(self, unit: str, properties: Iterable[str]) -> dict[str, str]:
-        ...
+    def show(self, unit: str, properties: Iterable[str]) -> dict[str, str]: ...
 
-    def write_drop_in(self, unit: str, filename: str, content: str) -> None:
-        ...
+    def write_drop_in(self, unit: str, filename: str, content: str) -> None: ...
 
-    def remove_drop_in(self, unit: str, filename: str) -> None:
-        ...
+    def remove_drop_in(self, unit: str, filename: str) -> None: ...
 
-    def list_drop_ins(self, unit: str) -> list[str]:
-        ...
+    def list_drop_ins(self, unit: str) -> list[str]: ...
 
 
 @dataclass
@@ -255,7 +247,7 @@ class ProfileSwitcher:
     def _drop_in_for(self, mode: ProfileMode) -> str:
         """Render the canonical drop-in content for a profile."""
         values = self._drop_in_templates[mode]
-        lines = [f"[Service]\nKillMode=control-group"]
+        lines = ["[Service]\nKillMode=control-group"]
         for key, value in values.items():
             lines.append(f"{key}={value}")
         # Preserve the no-Delegate rule regardless of profile.
@@ -376,8 +368,7 @@ class ProfileSwitcher:
                 )
             if show_svc.get("Delegate") != "no":
                 raise ProfileSwitchError(
-                    f"verification failed: Delegate={show_svc.get('Delegate')!r} "
-                    f"expected 'no'"
+                    f"verification failed: Delegate={show_svc.get('Delegate')!r} expected 'no'"
                 )
             steps.append("verification passed")
 

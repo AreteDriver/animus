@@ -6,10 +6,7 @@ ports) leave no live artifacts after the test session ends.
 
 from __future__ import annotations
 
-import os
 import socket
-
-import pytest
 
 from tests.test_runtime_lifecycle.conftest import FakeSystemd
 
@@ -33,6 +30,7 @@ def test_fake_systemd_does_not_touch_live_systemd() -> None:
 
 def test_temp_port_is_unique() -> None:
     """Two consecutive temp_port allocations return different ports."""
+
     # This relies on the conftest fixture; we reimplement here to
     # avoid fixture order coupling.
     def alloc() -> int:

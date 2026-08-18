@@ -140,9 +140,12 @@ def test_alg_compile_produces_normalized_contract(
         [
             alg_binary,
             "compile",
-            "--request", str(request_path),
-            "--draft", str(minimal_contract),
-            "--output", str(output),
+            "--request",
+            str(request_path),
+            "--draft",
+            str(minimal_contract),
+            "--output",
+            str(output),
         ],
         capture_output=True,
         text=True,
@@ -165,8 +168,10 @@ def test_alg_start_creates_canonical_run_dir(
         [
             alg_binary,
             "start",
-            "--contract", str(minimal_contract),
-            "--root", str(git_smoke_repo),
+            "--contract",
+            str(minimal_contract),
+            "--root",
+            str(git_smoke_repo),
         ],
         capture_output=True,
         text=True,
@@ -190,9 +195,7 @@ def test_alg_start_creates_canonical_run_dir(
     # Ledger parses as the adapter's Pydantic mirror.
     from animus_forge.governor.protocol import RunLedger
 
-    ledger = RunLedger.model_validate_json(
-        (runs_root / "ledger.json").read_text(encoding="utf-8")
-    )
+    ledger = RunLedger.model_validate_json((runs_root / "ledger.json").read_text(encoding="utf-8"))
     assert ledger.run_id == run_id
     assert ledger.phase == "contracted"
 
@@ -220,9 +223,7 @@ def test_ensure_run_round_trip_with_real_cli(
     assert receipt.repository == git_smoke_repo
     assert receipt.compatibility.mission.mission_id == "integration-mission-001"
 
-    run_dir = (
-        git_smoke_repo / ".animus-loop-governor" / "runs" / receipt.run_id
-    )
+    run_dir = git_smoke_repo / ".animus-loop-governor" / "runs" / receipt.run_id
     assert run_dir.is_dir()
 
 
@@ -269,8 +270,10 @@ def test_alg_verify_denied_raises_verify_denied(
         [
             alg_binary,
             "start",
-            "--contract", str(minimal_contract),
-            "--root", str(git_smoke_repo),
+            "--contract",
+            str(minimal_contract),
+            "--root",
+            str(git_smoke_repo),
         ],
         capture_output=True,
         text=True,
@@ -288,11 +291,7 @@ def test_alg_verify_denied_raises_verify_denied(
 
     # completion-latest.json must exist with done=false.
     completion_path = (
-        git_smoke_repo
-        / ".animus-loop-governor"
-        / "runs"
-        / run_id
-        / "completion-latest.json"
+        git_smoke_repo / ".animus-loop-governor" / "runs" / run_id / "completion-latest.json"
     )
     assert completion_path.is_file()
     payload = json.loads(completion_path.read_text(encoding="utf-8"))

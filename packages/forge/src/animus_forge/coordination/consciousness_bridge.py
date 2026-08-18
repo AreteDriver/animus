@@ -17,9 +17,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field
-
 from animus_kernel.budget.manager import BudgetManager, BudgetStatus
+from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from animus_forge.providers.base import Provider
@@ -29,7 +28,6 @@ logger = logging.getLogger(__name__)
 # Quorum imports are optional — bridge degrades gracefully
 HAS_QUORUM = False
 try:
-    from animus_quorum.intent import Intent, InterfaceKind, InterfaceSpec
     from animus_quorum.versioning import VersionedGraph
 
     HAS_QUORUM = True

@@ -218,9 +218,7 @@ def test_filesystem_hint_terminated_rejected(
 # ---------------------------------------------------------------------------
 
 
-def test_no_existing_run_invokes_start(
-    tmp_path: Path, fake_client: GovernorClient
-) -> None:
+def test_no_existing_run_invokes_start(tmp_path: Path, fake_client: GovernorClient) -> None:
     """No hint, no known id → ``alg start`` is called once."""
     fake_client.set_response("start", "run-newly-created")
     adapter = GovernorAdapter(client=fake_client)
@@ -234,9 +232,7 @@ def test_no_existing_run_invokes_start(
     assert fake_client.calls[0].method == "start"
 
 
-def test_new_run_persists_receipt(
-    tmp_path: Path, fake_client: GovernorClient
-) -> None:
+def test_new_run_persists_receipt(tmp_path: Path, fake_client: GovernorClient) -> None:
     """A freshly started run has its receipt written to disk."""
     fake_client.set_response("start", "run-persisted")
     adapter = GovernorAdapter(client=fake_client)
@@ -246,11 +242,7 @@ def test_new_run_persists_receipt(
         contract_path=tmp_path / "contract.yaml",
     )
     receipt_file = (
-        tmp_path
-        / ".animus-loop-governor"
-        / "runs"
-        / "run-persisted"
-        / "adapter-receipt.json"
+        tmp_path / ".animus-loop-governor" / "runs" / "run-persisted" / "adapter-receipt.json"
     )
     assert receipt_file.is_file()
 
@@ -275,9 +267,7 @@ def test_restart_reuses_persisted_run(
     assert not fake_client.calls
 
 
-def test_concurrent_callers_dedup_via_resolver(
-    tmp_path: Path, fake_client: GovernorClient
-) -> None:
+def test_concurrent_callers_dedup_via_resolver(tmp_path: Path, fake_client: GovernorClient) -> None:
     """A resolver that returns a stable id forces every caller to reuse it.
 
     Simulates two scheduler workers picking up the same mission — the
@@ -301,9 +291,7 @@ def test_concurrent_callers_dedup_via_resolver(
         repository=tmp_path,
         contract_path=tmp_path / "contract.yaml",
         started_at="2026-08-05T09:00:00+00:00",
-        compatibility=compute_compatibility_key(
-            repository=tmp_path, mission_id="mission-001"
-        ),
+        compatibility=compute_compatibility_key(repository=tmp_path, mission_id="mission-001"),
     )
     _persist_receipt(run_path, receipt)
 
@@ -382,9 +370,7 @@ def test_compute_compatibility_key_rejects_degenerate_inputs() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_missing_alg_propagates(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_missing_alg_propagates(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """``alg`` not on PATH → :class:`AlgNotFoundError` from ensure_run."""
     monkeypatch.setenv("PATH", "")
     client = GovernorClient(alg_binary=None)
@@ -395,6 +381,7 @@ def test_missing_alg_propagates(
             mission_id="mission-001",
             contract_path=tmp_path / "contract.yaml",
         )
+
 
 # ---------------------------------------------------------------------------
 # Coverage-closing tests: corrupt ledger / corrupt receipt / known run
@@ -431,9 +418,7 @@ def test_known_run_id_with_corrupt_ledger_rejected(
         started_at="2026-08-05T10:00:00+00:00",
         compatibility=compat,
     )
-    (runs / "adapter-receipt.json").write_text(
-        receipt.model_dump_json(), encoding="utf-8"
-    )
+    (runs / "adapter-receipt.json").write_text(receipt.model_dump_json(), encoding="utf-8")
 
     from animus_forge.governor.adapter import GovernorAdapter
 
@@ -447,9 +432,7 @@ def test_known_run_id_with_corrupt_ledger_rejected(
         )
 
 
-def test_known_run_id_with_no_ledger_rejected(
-    tmp_path: Path, fake_client: GovernorClient
-) -> None:
+def test_known_run_id_with_no_ledger_rejected(tmp_path: Path, fake_client: GovernorClient) -> None:
     """A known run that exists but has no parseable ledger is rejected."""
     from animus_forge.governor.errors import RunUnusableError
     from animus_forge.governor.models import (
@@ -477,9 +460,7 @@ def test_known_run_id_with_no_ledger_rejected(
         started_at="2026-08-05T10:01:00+00:00",
         compatibility=compat,
     )
-    (runs / "adapter-receipt.json").write_text(
-        receipt.model_dump_json(), encoding="utf-8"
-    )
+    (runs / "adapter-receipt.json").write_text(receipt.model_dump_json(), encoding="utf-8")
 
     from animus_forge.governor.adapter import GovernorAdapter
 
@@ -493,9 +474,7 @@ def test_known_run_id_with_no_ledger_rejected(
         )
 
 
-def test_known_run_id_corrupt_receipt_rejected(
-    tmp_path: Path, fake_client: GovernorClient
-) -> None:
+def test_known_run_id_corrupt_receipt_rejected(tmp_path: Path, fake_client: GovernorClient) -> None:
     """A known run with a corrupt ``adapter-receipt.json`` is rejected."""
     from animus_forge.governor.errors import RunStateInvalidError
 
@@ -507,9 +486,7 @@ def test_known_run_id_corrupt_receipt_rejected(
         '{"run_id":"' + run_id + '","task_id":"t","contract_hash":"h","phase":"contracted"}',
         encoding="utf-8",
     )
-    (runs / "adapter-receipt.json").write_text(
-        "{not json", encoding="utf-8"
-    )
+    (runs / "adapter-receipt.json").write_text("{not json", encoding="utf-8")
 
     from animus_forge.governor.adapter import GovernorAdapter
 

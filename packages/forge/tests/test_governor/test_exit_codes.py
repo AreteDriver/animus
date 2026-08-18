@@ -22,9 +22,7 @@ def _expect_success() -> None:
 def test_exit_0_returns_none() -> None:
     """rc 0 is the success path — no exception."""
     assert map_exit_code(returncode=0, stderr="", subcommand="verify") is None
-    assert (
-        map_exit_code(returncode=0, stderr="noise", subcommand="start") is None
-    )
+    assert map_exit_code(returncode=0, stderr="noise", subcommand="start") is None
 
 
 def test_exit_1_permission_sniff() -> None:
@@ -72,9 +70,7 @@ def test_exit_2_compile() -> None:
 def test_exit_2_other_subcommand_is_generic() -> None:
     """rc 2 + non-compile subcommand → :class:`GovernorError`."""
     with pytest.raises(GovernorError):
-        map_exit_code(
-            returncode=2, stderr="bad", subcommand="verify"
-        )
+        map_exit_code(returncode=2, stderr="bad", subcommand="verify")
 
 
 def test_exit_3_verify() -> None:
@@ -90,17 +86,13 @@ def test_exit_3_verify() -> None:
 def test_exit_3_other_subcommand_is_generic() -> None:
     """rc 3 outside ``verify`` → :class:`GovernorError`."""
     with pytest.raises(GovernorError):
-        map_exit_code(
-            returncode=3, stderr="bad", subcommand="start"
-        )
+        map_exit_code(returncode=3, stderr="bad", subcommand="start")
 
 
 def test_exit_4_unknown_maps_to_generic() -> None:
     """Unexpected non-zero rc → :class:`GovernorError` with that rc."""
     with pytest.raises(GovernorError) as excinfo:
-        map_exit_code(
-            returncode=4, stderr="???", subcommand="verify"
-        )
+        map_exit_code(returncode=4, stderr="???", subcommand="verify")
     assert excinfo.value.exit_code == 4
 
 

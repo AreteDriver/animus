@@ -6,11 +6,6 @@
 
 from __future__ import annotations
 
-import pytest
-
-from animus_bootstrap.lifecycle.profile import PROFILE_TARGET_BINDINGS
-
-
 # The runtime target's required + wanted set, derived from the
 # canonical unit block in ADR-007 §3. We assert statically that
 # the documented exclusions are in fact excluded.

@@ -11,7 +11,6 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import pytest
-
 from animus_kernel.budget import UsageRecord
 from animus_kernel.budget.cost_audit import (
     DEFAULT_RATIO_THRESHOLD,

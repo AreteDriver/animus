@@ -18,12 +18,13 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
+    from animus_kernel.budget.manager import BudgetManager
+
     from animus_forge.agents.agent_config import AgentConfig
     from animus_forge.agents.convergence import DelegationConvergenceChecker
     from animus_forge.agents.message_bus import AgentMessageBus
     from animus_forge.agents.process_registry import ProcessRegistry
     from animus_forge.agents.subagent_manager import SubAgentManager
-    from animus_kernel.budget.manager import BudgetManager
     from animus_forge.providers.base import BaseProvider
     from animus_forge.skills.library import SkillLibrary
     from animus_forge.state.backends import DatabaseBackend

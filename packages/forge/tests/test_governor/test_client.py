@@ -200,9 +200,7 @@ def test_run_truncates_oversized_stdout(
 ) -> None:
     """stdout exceeding ``MAX_OUTPUT_BYTES`` is truncated."""
     huge = "A" * (MAX_OUTPUT_BYTES * 2)
-    mock_subprocess_run.return_value = MagicMock(
-        returncode=0, stdout=huge, stderr=""
-    )
+    mock_subprocess_run.return_value = MagicMock(returncode=0, stdout=huge, stderr="")
     client = GovernorClient(alg_binary=str(fake_alg_path))
     result = client._run(["status", "x"], cwd=tmp_path, timeout=None)
     assert len(result.stdout) == MAX_OUTPUT_BYTES
@@ -212,9 +210,7 @@ def test_run_truncates_oversized_stderr(
     tmp_path: Path, mock_subprocess_run: MagicMock, fake_alg_path: Path
 ) -> None:
     huge = "B" * (MAX_OUTPUT_BYTES * 2)
-    mock_subprocess_run.return_value = MagicMock(
-        returncode=0, stdout="", stderr=huge
-    )
+    mock_subprocess_run.return_value = MagicMock(returncode=0, stdout="", stderr=huge)
     client = GovernorClient(alg_binary=str(fake_alg_path))
     # Exit 1 + huge stderr → GovernorError with truncated stderr
     mock_subprocess_run.return_value.returncode = 1
@@ -279,10 +275,7 @@ def test_start_parses_two_line_output(
     run_dir_path = tmp_path / ".animus-loop-governor" / "runs" / "run-abc"
     mock_subprocess_run.return_value = MagicMock(
         returncode=0,
-        stdout=(
-            "Created run [bold]run-abc[/bold]\n"
-            f"{run_dir_path}\n"
-        ),
+        stdout=(f"Created run [bold]run-abc[/bold]\n{run_dir_path}\n"),
         stderr="",
     )
     client = GovernorClient(alg_binary=str(fake_alg_path))
@@ -300,10 +293,7 @@ def test_start_strips_rich_ansi(
     run_dir_path = tmp_path / ".animus-loop-governor" / "runs" / "run-x"
     mock_subprocess_run.return_value = MagicMock(
         returncode=0,
-        stdout=(
-            "\x1b[1mCreated run run-x\x1b[0m\n"
-            f"{run_dir_path}\n"
-        ),
+        stdout=(f"\x1b[1mCreated run run-x\x1b[0m\n{run_dir_path}\n"),
         stderr="",
     )
     client = GovernorClient(alg_binary=str(fake_alg_path))
@@ -339,9 +329,7 @@ def test_start_single_line_stdout_is_sufficient(
 def test_start_empty_stdout_raises_value_error(
     tmp_path: Path, mock_subprocess_run: MagicMock, fake_alg_path: Path
 ) -> None:
-    mock_subprocess_run.return_value = MagicMock(
-        returncode=0, stdout="", stderr=""
-    )
+    mock_subprocess_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
     client = GovernorClient(alg_binary=str(fake_alg_path))
     with pytest.raises(ValueError):
         client.start(
@@ -366,9 +354,7 @@ def test_start_parses_wrapped_long_path(
         "/pytest-100/test_alg\n_start_creates_canon\n"
         "ical0c76yhjxs/.animu\ns-loop-governor/runs\n/run-c442326cccf6\n"
     )
-    mock_subprocess_run.return_value = MagicMock(
-        returncode=0, stdout=wrapped, stderr=""
-    )
+    mock_subprocess_run.return_value = MagicMock(returncode=0, stdout=wrapped, stderr="")
     client = GovernorClient(alg_binary=str(fake_alg_path))
     run_id = client.start(
         contract_path=tmp_path / "contract.yaml",
@@ -381,13 +367,8 @@ def test_start_strips_ansi_escapes(
     tmp_path: Path, mock_subprocess_run: MagicMock, fake_alg_path: Path
 ) -> None:
     """Rich ANSI bold escapes around the run id are stripped."""
-    wrapped = (
-        "Created run \x1b[1mrun-abc123\x1b[0m\n"
-        "/tmp/.animus-loop-governor/runs/run-abc123\n"
-    )
-    mock_subprocess_run.return_value = MagicMock(
-        returncode=0, stdout=wrapped, stderr=""
-    )
+    wrapped = "Created run \x1b[1mrun-abc123\x1b[0m\n/tmp/.animus-loop-governor/runs/run-abc123\n"
+    mock_subprocess_run.return_value = MagicMock(returncode=0, stdout=wrapped, stderr="")
     client = GovernorClient(alg_binary=str(fake_alg_path))
     run_id = client.start(
         contract_path=tmp_path / "contract.yaml",
@@ -400,13 +381,8 @@ def test_start_strips_rich_markup_tags(
     tmp_path: Path, mock_subprocess_run: MagicMock, fake_alg_path: Path
 ) -> None:
     """Rich markup tags (``[bold]...[/bold]``) are stripped, not just ANSI."""
-    wrapped = (
-        "Created run [bold]run-mno789[/bold]\n"
-        "/tmp/.animus-loop-governor/runs/run-mno789\n"
-    )
-    mock_subprocess_run.return_value = MagicMock(
-        returncode=0, stdout=wrapped, stderr=""
-    )
+    wrapped = "Created run [bold]run-mno789[/bold]\n/tmp/.animus-loop-governor/runs/run-mno789\n"
+    mock_subprocess_run.return_value = MagicMock(returncode=0, stdout=wrapped, stderr="")
     client = GovernorClient(alg_binary=str(fake_alg_path))
     run_id = client.start(
         contract_path=tmp_path / "contract.yaml",
@@ -461,9 +437,7 @@ def test_start_with_explicit_run_id(
 def test_compile_exit_2_raises_contract_rejected(
     tmp_path: Path, mock_subprocess_run: MagicMock, fake_alg_path: Path
 ) -> None:
-    mock_subprocess_run.return_value = MagicMock(
-        returncode=2, stdout="", stderr="bad requirement"
-    )
+    mock_subprocess_run.return_value = MagicMock(returncode=2, stdout="", stderr="bad requirement")
     client = GovernorClient(alg_binary=str(fake_alg_path))
     with pytest.raises(ContractRejectedError):
         client.compile(
@@ -489,9 +463,7 @@ def test_compile_unexpected_exit_crashes(
     tmp_path: Path, mock_subprocess_run: MagicMock, fake_alg_path: Path
 ) -> None:
     """Unmapped exit code (rc=99) on a successful path is a bug."""
-    mock_subprocess_run.return_value = MagicMock(
-        returncode=99, stdout="", stderr="???"
-    )
+    mock_subprocess_run.return_value = MagicMock(returncode=99, stdout="", stderr="???")
     client = GovernorClient(alg_binary=str(fake_alg_path))
     with pytest.raises(RuntimeError):
         client.compile(

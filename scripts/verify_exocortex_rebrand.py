@@ -17,6 +17,7 @@ Returns 0 on PASS, non-zero on any leak.
 Run from repo root:
     python3 scripts/verify_exocortex_rebrand.py
 """
+
 from __future__ import annotations
 
 import re

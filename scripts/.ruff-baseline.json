@@ -1,0 +1,9 @@
+{
+  "bootstrap": {"directory": "packages/bootstrap", "lint": 15, "format": 3},
+  "contracts": {"directory": "packages/contracts", "lint": 0, "format": 0},
+  "core": {"directory": "packages/core", "lint": 37, "format": 3},
+  "forge": {"directory": "packages/forge", "lint": 39, "format": 46},
+  "kernel": {"directory": "packages/kernel", "lint": 10, "format": 1},
+  "quorum": {"directory": "packages/quorum", "lint": 2, "format": 1},
+  "types": {"directory": "packages/types", "lint": 10, "format": 0}
+}

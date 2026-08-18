@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from animus_kernel.budget.manager import BudgetConfig, BudgetManager
+
 from animus_forge.coordination.evolution_loop import EvolutionConfig, EvolutionLoop
 from animus_forge.providers.ollama_provider import OllamaProvider
 

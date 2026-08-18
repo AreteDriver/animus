@@ -12,14 +12,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Literal
 
 logger = logging.getLogger("animus_bootstrap.lifecycle.health")
 
 
-class HealthState(str, Enum):
+class HealthState(str, Enum):  # noqa: UP042 - preserve API enum string behavior
     """Seven-state health enum, per ADR-007.
 
     Distinct from the systemd ``ActiveState`` (``active`` / ``inactive``
@@ -48,7 +48,7 @@ class ServiceHealth:
 
     unit: str
     is_active: bool | None  # None = unknown
-    is_required: bool       # True for the daemon; False for optional
+    is_required: bool  # True for the daemon; False for optional
     health_probe_ok: bool | None = None  # None = no probe data
 
 
@@ -106,7 +106,7 @@ class HealthContract:
             raise ValueError("last_heartbeat_age_seconds must be >= 0")
         return HealthSnapshot(
             schema_version=self.schema_version,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             state=state,
             active_citizens=active_citizens,
             open_jobs=open_jobs,
@@ -126,8 +126,7 @@ class HealthContract:
         version = payload.get("schema_version")
         if version != self.schema_version:
             raise ValueError(
-                f"unsupported schema_version: {version!r} "
-                f"(expected {self.schema_version!r})"
+                f"unsupported schema_version: {version!r} (expected {self.schema_version!r})"
             )
         ts_raw = payload.get("timestamp")
         if not isinstance(ts_raw, str):
@@ -147,13 +146,8 @@ class HealthContract:
         if not isinstance(open_jobs, int) or open_jobs < 0:
             raise ValueError("open_jobs must be a non-negative int")
         last_heartbeat = payload.get("last_heartbeat_age_seconds")
-        if (
-            not isinstance(last_heartbeat, (int, float))
-            or last_heartbeat < 0
-        ):
-            raise ValueError(
-                "last_heartbeat_age_seconds must be a non-negative number"
-            )
+        if not isinstance(last_heartbeat, (int, float)) or last_heartbeat < 0:
+            raise ValueError("last_heartbeat_age_seconds must be a non-negative number")
         detail = payload.get("detail") or {}
         if not isinstance(detail, dict):
             raise ValueError("detail must be a dict")

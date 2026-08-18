@@ -78,6 +78,7 @@ def test_partof_without_wants_does_not_start() -> None:
         current=ProfileConfig(mode=ProfileMode.DEVELOPMENT_LOCAL),
         target_mode=ProfileMode.DESKTOP_LOGIN,
     )
+    assert result.success, result.error
     # The switch calls add_wants on the *host target*, not on the
     # individual service. This proves the harness did not invoke
     # PartOf= as a start trigger.
@@ -154,7 +155,6 @@ def test_tray_killing_does_not_affect_runtime() -> None:
     """
     # The runtime target's Requires= is just the daemon. The tray is
     # in Wants= only.
-    bindings = {m.value: t for m, t in PROFILE_TARGET_BINDINGS.items()}
     # The static assertion: the tray is in the runtime target's
     # Wants= set, not Requires=.
     # (This is enforced by the canonical unit block.)

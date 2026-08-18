@@ -22,15 +22,14 @@ function is JSON-serializable so the dashboard can render it.
 from __future__ import annotations
 
 import logging
-import os
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Iterable, Mapping
 
 logger = logging.getLogger("animus_bootstrap.lifecycle.classification")
 
 
-class ProcessClassification(str, Enum):
+class ProcessClassification(str, Enum):  # noqa: UP042 - preserve persisted enum string behavior
     """External-facing process classification.
 
     The string values are what the dashboard API and the cleanup CLI
@@ -152,9 +151,7 @@ def _build_evidences(inp: ClassificationInput) -> list[ProcessEvidence]:
     if inp.start_time is not None:
         evs.append(ProcessEvidence(PROOF_STARTTIME, str(inp.start_time)))
     if inp.environment_instance_id:
-        evs.append(
-            ProcessEvidence(PROOF_INSTANCE_ID, inp.environment_instance_id)
-        )
+        evs.append(ProcessEvidence(PROOF_INSTANCE_ID, inp.environment_instance_id))
     if inp.ppid is not None:
         evs.append(ProcessEvidence(PROOF_PARENT_HISTORY, f"ppid={inp.ppid}"))
     return evs
@@ -215,19 +212,17 @@ def classify_process(inp: ClassificationInput) -> ClassificationResult:
             return ClassificationResult(
                 classification=ProcessClassification.ORPHANED,
                 proofs=evidences,
-                reason=(
-                    f"registry identity + {len(good)} independent proofs"
-                ),
+                reason=(f"registry identity + {len(good)} independent proofs"),
             )
 
     # Rule 3: Recoverable
-    if (
-        inp.registry_identity
-        and inp.unit_active is False
-        and _uid_matches(inp)
-    ):
+    if inp.registry_identity and inp.unit_active is False and _uid_matches(inp):
         reliable = [
-            e for e in evidences if e.reliable and e.kind in (
+            e
+            for e in evidences
+            if e.reliable
+            and e.kind
+            in (
                 PROOF_EXECUTABLE,
                 PROOF_CMDLINE,
                 PROOF_STARTTIME,

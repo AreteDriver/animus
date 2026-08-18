@@ -585,6 +585,7 @@ class TestB3ExperimentRunner:
         from unittest.mock import MagicMock
 
         from animus_kernel.budget.manager import BudgetConfig, BudgetManager
+
         from animus_forge.coordination.evolution_loop import EvolutionLoop
 
         return EvolutionLoop(

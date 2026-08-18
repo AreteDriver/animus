@@ -103,9 +103,7 @@ class MissionScheduler:
         # absent, ``_start_ready_mission`` is a no-op and missions
         # enter RUNNING without external preparation (legacy mode).
         self._governor = governor_adapter
-        self._contract_resolver = (
-            contract_resolver or _MissionContractResolver()
-        )
+        self._contract_resolver = contract_resolver or _MissionContractResolver()
         self.dispatcher = AtomicDispatcher(
             ledger=ledger,
             lease_manager=lease_manager,
@@ -451,7 +449,11 @@ class MissionScheduler:
         if not mission:
             return
 
-        if mission.status in (MissionStatus.COMPLETED, MissionStatus.FAILED, MissionStatus.CANCELLED):
+        if mission.status in (
+            MissionStatus.COMPLETED,
+            MissionStatus.FAILED,
+            MissionStatus.CANCELLED,
+        ):
             return
 
         if any_failed:
@@ -533,16 +535,12 @@ class MissionScheduler:
         if self._governor is None:
             # No adapter wired → legacy path: promote the first
             # READY mission directly. Existing tests depend on this.
-            for mission in self.ledger.list_missions(
-                status=MissionStatus.READY, limit=1
-            ):
+            for mission in self.ledger.list_missions(status=MissionStatus.READY, limit=1):
                 self._promote_to_running(mission)
             return
 
         prepared = False
-        for mission in self.ledger.list_missions(
-            status=MissionStatus.READY, limit=1
-        ):
+        for mission in self.ledger.list_missions(status=MissionStatus.READY, limit=1):
             if await self._prepare_mission(mission):
                 prepared = True
             break  # one promotion per tick to keep diffs small
@@ -582,8 +580,7 @@ class MissionScheduler:
             )
         except Exception as exc:  # noqa: BLE001 — outer fault boundary
             logger.warning(
-                "Governor preparation failed for mission %s: %s; "
-                "staying READY for retry",
+                "Governor preparation failed for mission %s: %s; staying READY for retry",
                 mission.mission_id,
                 exc,
             )
@@ -605,9 +602,7 @@ class MissionScheduler:
     def _promote_to_running(self, mission: Mission) -> None:
         """Transition READY → RUNNING; ignore if already moved."""
         try:
-            self.ledger.transition_mission(
-                mission.mission_id, MissionStatus.RUNNING
-            )
+            self.ledger.transition_mission(mission.mission_id, MissionStatus.RUNNING)
         except Exception:
             # Another worker raced us, or the mission was cancelled.
             # Both are non-fatal — the next tick will pick up the
@@ -644,9 +639,7 @@ class _MissionContractResolver:
        the mission stays READY.
     """
 
-    def resolve(
-        self, mission: Mission, repository: Path
-    ) -> Path | None:
+    def resolve(self, mission: Mission, repository: Path) -> Path | None:
         explicit = mission.metadata.get("contract_path")
         if isinstance(explicit, str) and explicit:
             return Path(explicit)
