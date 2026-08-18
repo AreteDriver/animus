@@ -632,7 +632,7 @@ jobs:
   benchmarks:
     name: Benchmarks
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push' || github.event_dispatch') && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     needs: [type-check, test-kernel, test-core, test-quorum, test-types, test-contracts, test-forge, test-bootstrap, test-database, test-pwa, test-integration, docker, security]
     permissions:
       contents: write
