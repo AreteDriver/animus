@@ -8,7 +8,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from animus_forge.citizens import CitizenCommissioner
-from animus_forge.citizens.mission import MissionConfig
 from animus_forge.citizens.research_citizen import ResearchCitizen
 from animus_forge.citizens.store import MissionStore
 from animus_forge.state.backends import SQLiteBackend
