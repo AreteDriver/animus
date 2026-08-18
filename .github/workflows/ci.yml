@@ -245,10 +245,12 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-kernel-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: pip install -e packages/types/ -e "packages/core/[api]" -e "packages/kernel/[dev]"
+        run: pip install -e packages/types/ -e "packages/kernel/[dev]" fastapi
 
       - name: Test with coverage
         run: pytest packages/kernel/tests/ -v --tb=short --cov=animus_kernel --cov-report=term-missing --cov-report=xml
+        env:
+          PYTHONPATH: packages/core
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
