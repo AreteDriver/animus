@@ -355,7 +355,7 @@ class AnimusDaemon:
                     return
 
             # Dispatch to appropriate handler
-            result = await self._dispatch_event(event)
+            await self._dispatch_event(event)
             self.stats["events_processed"] += 1
 
             if event.event_type == EventType.SCHEDULED:
