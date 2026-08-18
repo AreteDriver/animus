@@ -22,6 +22,7 @@ import time
 # ---------------------------------------------------------------------------
 from contextlib import asynccontextmanager
 from decimal import Decimal
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -128,8 +129,21 @@ class FakeContainerManager(ContainerManager):
     def is_available(self) -> bool:
         return True
 
-    def run_task(self, **kwargs) -> dict:
-        task_id = kwargs.get("task_id", "unknown")
+    def run_task(
+        self,
+        task_id: str,
+        mission_id: str,
+        citizen_role: str,
+        description: str,
+        context_json: dict[str, Any],
+    ) -> dict[str, Any]:
+        kwargs = {
+            "task_id": task_id,
+            "mission_id": mission_id,
+            "citizen_role": citizen_role,
+            "description": description,
+            "context_json": context_json,
+        }
         self.calls.append(kwargs)
         self.running[task_id] = True
         time.sleep(self.sleep_seconds)
@@ -144,8 +158,21 @@ class FakeContainerManager(ContainerManager):
             "confidence": 0.9,
         }
 
-    async def run_task_async(self, **kwargs) -> ContainerTask:
-        task_id = kwargs.get("task_id", "unknown")
+    async def run_task_async(
+        self,
+        task_id: str,
+        mission_id: str,
+        citizen_role: str,
+        description: str,
+        context_json: dict[str, Any],
+    ) -> ContainerTask:
+        kwargs = {
+            "task_id": task_id,
+            "mission_id": mission_id,
+            "citizen_role": citizen_role,
+            "description": description,
+            "context_json": context_json,
+        }
         self.calls.append(kwargs)
         self.running[task_id] = True
         process = FakeContainerProcess(self, task_id, self.sleep_seconds)
