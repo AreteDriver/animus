@@ -225,7 +225,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -e packages/types/ -e "packages/kernel/[dev]"
-          pip install -e "packages/core/[api]"
+          pip install --no-deps -e packages/core/
+          pip install fastapi cryptography
 
       - name: Test with coverage
         run: pytest packages/kernel/tests/ -v --tb=short --cov=animus_kernel --cov-report=term-missing --cov-report=xml
