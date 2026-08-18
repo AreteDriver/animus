@@ -288,7 +288,7 @@ class ToolRegistry:
             )
 
         try:
-            logger.debug(f"Executing tool: {name} with params: {params}")
+            logger.debug(f"Executing tool: {name} with param keys: {list(params.keys())}")
             result = tool.handler(params)
             logger.debug(f"Tool {name} completed: success={result.success}")
             return result

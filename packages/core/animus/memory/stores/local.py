@@ -98,7 +98,7 @@ class LocalMemoryStore(MemoryStore):
             if len(results) >= limit:
                 break
 
-        logger.debug(f"Search '{query}' found {len(results)} results")
+        logger.debug("Search found %d results", len(results))
         return results
 
     def delete(self, memory_id: str) -> bool:

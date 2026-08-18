@@ -305,7 +305,7 @@ class DurableMemoryStore(MemoryStore):
                 if len(results) >= limit:
                     break
 
-        logger.debug(f"Search '{query}' found {len(results)} durable results")
+        logger.debug("Search found %d durable results", len(results))
         return results
 
     def list_all(self, memory_type: MemoryType | None = None) -> list[Memory]:

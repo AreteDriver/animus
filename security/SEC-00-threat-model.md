@@ -2,7 +2,8 @@
 
 **Baseline commit:** `6338784561efa6395fb83072318ff7771284842f`
 **Scope:** Tool execution, shell dispatch, container isolation, memory/logging boundaries, and egress controls in the Animus execution plane.
-**Assumption:** SEC-01..SEC-07 production fixes are **not yet applied**; this document and the accompanying regression tests describe the pre-fix state.
+
+> **Historical note:** This document was originally written against the pre-fix state at baseline commit `6338784`. Sections 1–4 below preserve that historical narrative so the original reasoning remains traceable. **Current canonical status is recorded in Section 5 (Reconciliation).** Do not treat the historical risk mapping as the current security posture.
 
 ---
 
@@ -59,3 +60,52 @@ All proofs in `test_security_execution_plane.py` use:
 - Monkeypatching of `subprocess.run`, `shutil.which`, container runtimes, and log handlers to avoid touching real hosts or runtimes.
 
 Each test asserts the **pre-fix vulnerable behavior** so that it fails today and passes once the corresponding SEC-01..SEC-07 fix is in place.
+
+---
+
+## 5. Security Reconciliation (current canonical state)
+
+**Last reconciled:** 2026-08-13 (SEC-06 non-memory fix at `19bfcfa`)
+**Reconciliation basis:** direct code inspection of current `main` + independent oracle-based verification + `test_security_execution_plane.py` + focused regression tests.
+
+> **Procedural note:** Commit `19bfcfa` was implemented beyond the authorized read-only verification slice. The code was retained only after a separate post-hoc independent review found the implementation technically sound and preferable to reintroducing confirmed information leaks. This acceptance does not retroactively authorize the scope expansion.
+
+| ID | Historical claim | Current status | Evidence | Confidence |
+|---|---|---|---|---|
+| **SEC-01** | `_security_config = None` = unrestricted | **FIXED** | `WorkspaceToolPolicy.from_tools_security_config()` creates fail-closed policy; no `_security_config = None` path exists on current `main` | HIGH |
+| **SEC-02** | `requires_approval` metadata-only | **FIXED** | `ToolRegistry.execute()` structurally enforces approval via `approval_store.lookup()` + `approval_store.verify()` (commit `248efea`, improved at `cffb0cf`) | HIGH |
+| **SEC-03** | MCP server no security policy | **FIXED** | `create_default_registry()` receives explicit security policy | HIGH |
+| **SEC-04** | `shell=True` in kernel registry | **FIXED** | `ForgeToolRegistry._handle_run_command` uses `subprocess.run(argv, shell=False)` with `shlex.split()` + injection char rejection + interpreter defense (commit `9b0ac6f`) | HIGH |
+| **SEC-05** | `shell=True` in Head orchestrator | **FIXED** | `HeadToolOrchestrator._handle_run_shell` uses `subprocess.run(argv, shell=False)` with identical defense stack (commit `f0b210a`) | HIGH |
+| **SEC-06** | Unredacted secrets in logs (17 files) | **PARTIALLY FIXED / PARTIALLY SUPERSEDED** | Memory-layer portion superseded by SEC-08 fix (commit `7b24d6c`). Non-memory normal-operation paths fixed at commit `19bfcfa`:
+- `tool_orchestrator.py`: INFO log no longer emits full argument JSON.
+- `tools_core.py`: DEBUG log no longer emits full param dict.
+- `containers.py`: INFO log masks `-e`/`--env` values before emitting.
+27 focused adversarial regression tests pass (14 kernel + 13 forge).
+Remaining non-memory paths (audit log in `tools/registry.py`, error-path exception logs) remain **INVESTIGATION LEADS** — not independently verified. | HIGH |
+| **SEC-07** | HTTP tool bypasses egress | **FIXED** | `_tool_http_request` enforces `policy.authorize_network()` before outbound request (part of SEC-05 integration) | HIGH |
+| **SEC-08** | Memory layer logs raw content | **FIXED** (commit `7b24d6c`) | `remember()` no longer logs content previews; search() across all 3 stores no longer logs raw queries. 28 focused adversarial regression tests pass. | HIGH |
+| **SEC-09** | Container silently falls back to process | **NOT_APPLICABLE** | No container execution exists in current architecture. `Sandbox` uses `tempfile.mkdtemp()` + `shutil.copytree()` + direct `subprocess.run()` with sanitized env. | HIGH |
+
+### Remaining uncertainty
+
+See **Unverified investigation leads** below for the full enumeration of paths not yet reproduced against current HEAD.
+
+### Unverified investigation leads
+
+These paths have **not** been independently reproduced against current HEAD. They are **not** classified as OPEN, CLOSED, or FIXED. They require reproduction before disposition.
+
+| ID | Path | Concern | Next step |
+|---|---|---|---|
+| **LEAD-01** | `packages/kernel/src/animus_kernel/tools/registry.py:414` — `_emit_audit` | Audit log JSON strips `content` keys but does not redact other credential-like keys (`api_key`, `token`, `secret`, etc.). | Reproduce: craft tool arguments containing fake secrets, verify they appear in audit log. |
+| **LEAD-02** | `packages/core/animus/memory/layer.py` — `logger.debug(f"... failed: {e}")` (4 calls) | Error-path logs emit `str(e)` from external services; exceptions may contain connection strings, auth errors, or raw query text. | Reproduce: trigger Chroma/DB failure with secret-containing connection string; inspect DEBUG log. |
+| **LEAD-03** | `packages/core/animus/tools.py` — `logger.error(f"Tool {name} failed with exception: {e}")` | Error-path log at `tools.py:1081` emits `str(e)` on tool failure; handler exception could contain secrets. | Reproduce: raise fake exception with secret text inside tool handler; inspect ERROR log. |
+| **LEAD-04** | `packages/kernel/src/animus_kernel/tools_core.py` — `logger.error(f"Tool {name} failed with exception: {e}")` | Same pattern as LEAD-03 in kernel `tools_core.py:296`. | Reproduce: raise fake exception with secret text inside tool handler; inspect ERROR log. |
+| **LEAD-05** | `packages/kernel/src/animus_kernel/head/tool_orchestrator.py` — `logger.exception("Forge tool %s failed", name)` and `logger.exception("Head tool %s failed", name)` | Exception tracebacks include arguments and local variables; traceback data may contain secrets passed to the handler. | Reproduce: raise fake exception inside Forge/Head tool handler; inspect traceback in log. |
+
+### Reachable Critical/High findings
+
+**Critical: 0**
+**High: 0 within the independently verified normal-operation surface.**
+Unverified investigation leads remain outside that claim.
+

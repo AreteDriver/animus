@@ -140,7 +140,13 @@ class MemoryLayer:
         )
 
         self.store.store(memory)
-        logger.info(f"Remembered {memory_type.value} memory: {content[:50]}...")
+        # SEC-08: do not emit any content text in logs; use safe metadata only.
+        logger.info(
+            "Remembered %s memory (id=%s, redactions=%d)",
+            memory_type.value,
+            memory.id,
+            combined_metadata.get("_redaction_count", 0),
+        )
 
         # Link entities mentioned in the content to this memory
         if self.entity_memory:
