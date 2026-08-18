@@ -15,7 +15,6 @@ and ``subprocess.run``.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -24,7 +23,6 @@ import pytest
 from animus_forge.missions.domain import TaskContext
 from animus_forge.scheduler.containers import ContainerConfig, ContainerManager
 from animus_forge.scheduler.worker_pool import CitizenWorkerPool, PoolConfig
-
 
 # ═══════════════════════════════════════════════════════════════════
 # Helpers
