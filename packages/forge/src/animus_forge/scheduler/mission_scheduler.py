@@ -356,8 +356,14 @@ class MissionScheduler:
             )
             return
 
+        # Worker/container supervisors attach private transport metadata for
+        # lifecycle decisions.  It is not part of the strict CitizenOutput
+        # contract and must not turn an otherwise valid result into a failure.
+        output_payload = {
+            key: value for key, value in result_dict.items() if not key.startswith("_")
+        }
         try:
-            output = CitizenOutput(**result_dict)
+            output = CitizenOutput(**output_payload)
         except Exception as exc:
             logger.error("Failed to parse CitizenOutput for task %s: %s", task_id_str, exc)
             output = CitizenOutput(
