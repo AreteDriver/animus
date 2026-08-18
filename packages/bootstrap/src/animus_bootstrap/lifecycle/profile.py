@@ -144,6 +144,7 @@ def save_profile(path: Path, profile: ProfileConfig) -> None:
         try:
             os.unlink(tmp_name)
         except OSError:
+            # The temporary file may already have been replaced or removed.
             pass
         raise
 
@@ -156,21 +157,29 @@ class SwitchBackend(Protocol):
     touching the live user manager.
     """
 
-    def is_target_active(self, target: str) -> bool: ...
+    def is_target_active(self, target: str) -> bool:
+        raise NotImplementedError
 
-    def daemon_reload(self) -> None: ...
+    def daemon_reload(self) -> None:
+        raise NotImplementedError
 
-    def add_wants(self, host_target: str, runtime_target: str) -> None: ...
+    def add_wants(self, host_target: str, runtime_target: str) -> None:
+        raise NotImplementedError
 
-    def remove_wants(self, host_target: str, runtime_target: str) -> None: ...
+    def remove_wants(self, host_target: str, runtime_target: str) -> None:
+        raise NotImplementedError
 
-    def show(self, unit: str, properties: Iterable[str]) -> dict[str, str]: ...
+    def show(self, unit: str, properties: Iterable[str]) -> dict[str, str]:
+        raise NotImplementedError
 
-    def write_drop_in(self, unit: str, filename: str, content: str) -> None: ...
+    def write_drop_in(self, unit: str, filename: str, content: str) -> None:
+        raise NotImplementedError
 
-    def remove_drop_in(self, unit: str, filename: str) -> None: ...
+    def remove_drop_in(self, unit: str, filename: str) -> None:
+        raise NotImplementedError
 
-    def list_drop_ins(self, unit: str) -> list[str]: ...
+    def list_drop_ins(self, unit: str) -> list[str]:
+        raise NotImplementedError
 
 
 @dataclass

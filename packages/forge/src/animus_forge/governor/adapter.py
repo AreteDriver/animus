@@ -63,7 +63,6 @@ logger = logging.getLogger(__name__)
 
 ADAPTER_VERSION = "0.1.0"
 DEFAULT_POLICY_VERSION = 1
-DEFAULT_COMPAT_TIMEOUT_SECONDS = 120.0
 
 
 # ---------------------------------------------------------------------------

@@ -36,6 +36,7 @@ class FakeGovernorClient(GovernorClient):
     """
 
     def __init__(self) -> None:  # noqa: D401 — test double
+        super().__init__(alg_binary="/fake/alg")
         self.calls: list[CallRecord] = []
         self.responses: dict[str, Any] = {}
         self.errors: dict[str, BaseException] = {}

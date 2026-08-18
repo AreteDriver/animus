@@ -37,19 +37,14 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 try:
-    from animus_bootstrap.intelligence.memory_backends.chromadb_backend import (
-        HAS_CHROMADB as CHROMADB_AVAILABLE,
-    )
-    from animus_bootstrap.intelligence.memory_backends.chromadb_backend import (
-        ChromaDBMemoryBackend,
-    )
+    from animus_bootstrap.intelligence.memory_backends import chromadb_backend
 
-    HAS_CHROMADB = CHROMADB_AVAILABLE
+    ChromaDBMemoryBackend = chromadb_backend.ChromaDBMemoryBackend
 except (ImportError, RuntimeError):
-    HAS_CHROMADB = False
+    chromadb_backend = None  # type: ignore[assignment]
 
 skip_no_chromadb = pytest.mark.skipif(
-    not HAS_CHROMADB,
+    chromadb_backend is None or not chromadb_backend.HAS_CHROMADB,
     reason="chromadb not installed — skipping ChromaDB benchmarks",
 )
 

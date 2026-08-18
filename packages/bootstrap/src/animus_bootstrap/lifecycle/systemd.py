@@ -117,11 +117,11 @@ class SystemdInvoker(Protocol):
 
     def show(self, unit: str) -> str:
         """Return the raw output of ``systemctl --user show <unit>``."""
-        ...
+        raise NotImplementedError
 
     def list_drop_ins(self, unit: str) -> list[str]:
         """Return the list of drop-in filenames under ``<unit>.d/``."""
-        ...
+        raise NotImplementedError
 
 
 # Properties of interest. The full list is in `man systemctl`; this
