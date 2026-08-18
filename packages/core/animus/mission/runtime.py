@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any, Protocol
 
 from animus.logging import get_logger
+from animus.mission.order import MissionOrder
 
 logger = get_logger("mission.runtime")
 
