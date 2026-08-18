@@ -22,7 +22,7 @@ from pathlib import Path
 BASELINE_FILE = Path(__file__).with_name(".mypy-baseline.json")
 
 
-def count_errors(directory: str) -> int:
+def run_mypy(directory: str) -> tuple[int, str]:
     import shutil
 
     mypy = shutil.which("mypy") or "mypy"
@@ -31,8 +31,8 @@ def count_errors(directory: str) -> int:
         capture_output=True,
         text=True,
     )
-    # mypy returns 0 even when there are errors; we count ``error:`` lines
-    return result.stdout.count(": error:") + result.stderr.count(": error:")
+    output = result.stdout + result.stderr
+    return output.count(": error:"), output
 
 
 def main(argv: list[str]) -> int:
@@ -47,7 +47,8 @@ def main(argv: list[str]) -> int:
     if not argv or argv[0] == "--init":
         # Re-baseline current error counts
         for pkg, cfg in baseline.items():
-            cfg["allowed"] = count_errors(str(cfg["directory"]))  # type: ignore[assignment]
+            count, _ = run_mypy(str(cfg["directory"]))
+            cfg["allowed"] = count  # type: ignore[assignment]
         with BASELINE_FILE.open("w") as fh:
             json.dump(baseline, fh, indent=2)
         print("Re-baselined mypy error counts.")
@@ -61,7 +62,9 @@ def main(argv: list[str]) -> int:
             continue
         allowed = int(cfg["allowed"])
         directory = str(cfg["directory"])
-        actual = count_errors(directory)
+        actual, report = run_mypy(directory)
+        report_path = Path("packages") / pkg / "mypy-report.txt"
+        report_path.write_text(report, encoding="utf-8")
         delta = actual - allowed
         if actual > allowed:
             print(

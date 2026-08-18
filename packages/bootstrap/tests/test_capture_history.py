@@ -28,7 +28,12 @@ def restore_state() -> Iterator[None]:
 
 @pytest.fixture()
 def client() -> TestClient:
-    return TestClient(app)
+    test_client = TestClient(app)
+    test_client.get("/health")
+    token = test_client.cookies.get("animus_csrf")
+    assert token is not None
+    test_client.headers["X-CSRF-Token"] = token
+    return test_client
 
 
 # ------------------------------------------------------------------

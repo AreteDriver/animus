@@ -58,6 +58,7 @@ class TestSensitivityEnum:
             "animus_types.egress",
             "animus_types.entity",
             "animus_types.event",
+            "animus_types.exceptions",
             "animus_types.forecast",
             "animus_types.hypothesis",
             "animus_types.lesson",

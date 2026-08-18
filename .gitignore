@@ -42,6 +42,7 @@ coverage.json
 *.py,cover
 .hypothesis/
 .pytest_cache/
+mypy-report.txt
 
 # Virtual environments
 venv/

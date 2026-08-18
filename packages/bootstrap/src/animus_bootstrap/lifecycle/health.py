@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Literal
 
@@ -106,7 +106,7 @@ class HealthContract:
             raise ValueError("last_heartbeat_age_seconds must be >= 0")
         return HealthSnapshot(
             schema_version=self.schema_version,
-            timestamp=datetime.now(UTC),
+            timestamp=datetime.now(timezone.utc),  # noqa: UP017 - mypy baseline targets Python 3.10
             state=state,
             active_citizens=active_citizens,
             open_jobs=open_jobs,

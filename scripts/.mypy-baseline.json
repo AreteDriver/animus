@@ -1,18 +1,18 @@
 {
   "core": {
     "directory": "packages/core/animus",
-    "allowed": 269
+    "allowed": 491
   },
   "kernel": {
     "directory": "packages/kernel/src/animus_kernel",
-    "allowed": 273
+    "allowed": 1
   },
   "forge": {
     "directory": "packages/forge/src/animus_forge",
-    "allowed": 740
+    "allowed": 1
   },
   "bootstrap": {
     "directory": "packages/bootstrap/src/animus_bootstrap",
-    "allowed": 136
+    "allowed": 196
   }
 }

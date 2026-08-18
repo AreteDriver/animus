@@ -97,7 +97,7 @@ class ProfileConfig:
         if not isinstance(data, dict):
             raise ValueError("profile.json must be a JSON object")
         version = data.get("schema_version", "1")
-        if version != "1":
+        if not isinstance(version, str) or version != "1":
             raise ValueError(f"unsupported schema_version: {version!r}")
         try:
             mode = ProfileMode(data.get("mode", "development-local"))

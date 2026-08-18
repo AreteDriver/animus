@@ -15,6 +15,7 @@ from animus_bootstrap.config.schema import (
     ApiSection,
     ForgeSection,
     GatewaySection,
+    IdentitySection,
     IntelligenceSection,
     ProactiveSection,
     ServicesSection,
@@ -49,6 +50,7 @@ def _make_config(
     """Build an AnimusConfig tuned for Forge integration tests."""
     return AnimusConfig(
         animus=AnimusSection(data_dir=data_dir),
+        identity=IdentitySection(identity_dir=f"{data_dir}/identity"),
         api=ApiSection(anthropic_key=""),
         forge=ForgeSection(
             enabled=forge_enabled,

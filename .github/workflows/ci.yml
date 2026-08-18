@@ -181,39 +181,7 @@ jobs:
           pip install -e "packages/core/[dev]"
           pip install -e "packages/forge/[dev]"
           pip install -e "packages/bootstrap/[dev]"
-          pip install mypy
-
-      - name: Run mypy on core
-        run: |
-          mypy packages/core/animus/ \
-            --ignore-missing-imports \
-            --warn-return-any \
-            --warn-unused-configs \
-            --pretty
-
-      - name: Run mypy on kernel
-        run: |
-          mypy packages/kernel/src/animus_kernel/ \
-            --ignore-missing-imports \
-            --warn-return-any \
-            --warn-unused-configs \
-            --pretty
-
-      - name: Run mypy on forge
-        run: |
-          mypy packages/forge/src/animus_forge/ \
-            --ignore-missing-imports \
-            --warn-return-any \
-            --warn-unused-configs \
-            --pretty
-
-      - name: Run mypy on bootstrap
-        run: |
-          mypy packages/bootstrap/src/animus_bootstrap/ \
-            --ignore-missing-imports \
-            --warn-return-any \
-            --warn-unused-configs \
-            --pretty
+          pip install mypy==1.18.2
 
       - name: Mypy ratchet
         run: python3 scripts/mypy-ratchet.py core kernel forge bootstrap
@@ -294,10 +262,13 @@ jobs:
         # animus-types is a sibling pip-installable package and is not
         # published to PyPI — pip resolves it from the local path when
         # both -e targets are part of the same install transaction.
-        run: pip install -e packages/types/ -e "packages/core/[dev,api]"
+        run: |
+          pip install -e packages/types/ -e "packages/kernel/[dev]"
+          pip install -e "packages/core/[dev,api,postgres,mcp]"
 
       - name: Test with coverage
-        run: pytest packages/core/tests/ -v --tb=short --cov=animus --cov-report=term-missing
+        working-directory: packages/core
+        run: pytest tests/ --cov=animus --cov-report=term-missing
         env:
           ANIMUS_SKIP_INTEGRATION_TESTS: "1"
 
@@ -329,10 +300,12 @@ jobs:
         run: python -c "from animus_quorum._core import IntentGraph; from animus_quorum.rust_backend import HAS_RUST; assert HAS_RUST"
 
       - name: Native backend tests
-        run: pytest packages/quorum/tests/test_rust_backend.py -q --tb=short
+        working-directory: packages/quorum
+        run: pytest tests/test_rust_backend.py -q --tb=short
 
       - name: Test with coverage
-        run: PYTHONPATH=packages/quorum/python pytest packages/quorum/tests/ -v --tb=short
+        working-directory: packages/quorum
+        run: PYTHONPATH=python pytest tests/ -v --tb=short
 
   test-types:
     name: Test Types
@@ -457,10 +430,11 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-bootstrap-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: pip install -e "packages/bootstrap/[dev]"
+        run: pip install -e "packages/bootstrap/[dev,push]"
 
       - name: Test with coverage
-        run: pytest packages/bootstrap/tests/ -v --tb=short --cov=animus_bootstrap --cov-report=term-missing
+        working-directory: packages/bootstrap
+        run: pytest tests/ -v --tb=short --cov=animus_bootstrap --cov-report=term-missing
         env:
           PYTHONPATH: packages/bootstrap/src
 
@@ -546,8 +520,12 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -e packages/types/
+          pip install -e "packages/quorum/[dev]"
           pip install -e "packages/kernel/[dev]"
+          pip install -e "packages/core/[dev,api,postgres,mcp]"
           pip install -e "packages/contracts/[dev]"
+          pip install -e "packages/forge/[dev]"
+          pip install -e "packages/bootstrap/[dev]"
 
       - name: Run integration tests
         run: pytest tests/integration/ -v --tb=short
@@ -564,11 +542,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db  # v3.6.1
 
-      - name: Build multi-arch kernel image
+      - name: Build kernel image
         uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75  # v6.9.0
         with:
-          context: packages/kernel
-          platforms: linux/amd64,linux/arm64
+          context: .
+          file: packages/kernel/Dockerfile
+          platforms: linux/amd64
+          load: true
           push: false
           tags: animus-kernel:ci
           cache-from: type=gha

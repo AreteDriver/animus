@@ -80,11 +80,7 @@ def _mock_installer(*, running: bool = True, os_name: str = "linux") -> MagicMoc
 def _template_dir() -> Path:
     """Resolve the dashboard templates directory."""
     return (
-        Path(__file__).resolve().parent.parent
-        / "src"
-        / "animus_bootstrap"
-        / "dashboard"
-        / "templates"
+        Path(__file__).resolve().parents[2] / "src" / "animus_bootstrap" / "dashboard" / "templates"
     )
 
 
@@ -1071,6 +1067,8 @@ class TestApprovalCallback:
             _pending_approvals,
             dashboard_approval_callback,
         )
+
+        _pending_approvals.clear()
 
         async def run():
             # Patch wait_for to always timeout
