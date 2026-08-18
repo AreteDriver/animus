@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any
 
 from animus_forge.citizens.base import Citizen
 from animus_forge.missions.domain import CitizenOutput, Task, TaskContext

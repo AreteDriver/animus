@@ -50,6 +50,7 @@ steps:
     type: ollama
     depends_on:
       - analyze_structure
+      - read_code
     params:
       prompt: >
         Given this structure analysis:
@@ -68,8 +69,6 @@ steps:
         You are a code reviewer. Focus on correctness, security,
         and maintainability. Be direct and specific.
       estimated_tokens: 3000
-    depends_on:
-      - read_code
     outputs:
       - review_findings
 

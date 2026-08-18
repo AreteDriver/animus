@@ -10,7 +10,6 @@ No real LLM provider is required.  The citizens use deterministic logic.
 from __future__ import annotations
 
 from decimal import Decimal
-from uuid import UUID
 
 import pytest
 

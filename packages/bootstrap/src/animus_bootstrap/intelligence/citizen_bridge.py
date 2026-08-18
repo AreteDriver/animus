@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -65,12 +66,18 @@ class CitizenBridge:
         {
             "name": "architect",
             "display_name": "Architect",
-            "description": "Observes codebase, conversations, and evaluations to produce evidence-backed improvement proposals.",
+            "description": (
+                "Observes codebase, conversations, and evaluations to produce "
+                "evidence-backed improvement proposals."
+            ),
         },
         {
             "name": "conversation_designer",
             "display_name": "Conversation Designer",
-            "description": "Detects correction loops, vague requests, and repeated prompts in conversation logs.",
+            "description": (
+                "Detects correction loops, vague requests, and repeated prompts "
+                "in conversation logs."
+            ),
         },
         {
             "name": "knowledge_curator",
@@ -337,7 +344,10 @@ class CitizenBridge:
         if proposal.status != "approved":
             return {
                 "success": False,
-                "error": f"Proposal status is '{proposal.status}', must be 'approved' to commission",
+                "error": (
+                    f"Proposal status is '{proposal.status}', "
+                    "must be 'approved' to commission"
+                ),
             }
 
         if not self._check_core():

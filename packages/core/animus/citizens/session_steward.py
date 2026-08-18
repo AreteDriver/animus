@@ -20,7 +20,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from animus.citizens.proposal import (
     EvidenceItem,
@@ -205,8 +205,6 @@ class SessionStewardCitizen:
         per_session: dict[str, list[TelemetryEvent]] = {}
         for sid in session_ids:
             per_session[sid] = controller.get_telemetry(sid)
-
-        stats = controller.get_summary_stats()
 
         # Run heuristics
         patterns.extend(self._h1_timer_waste(per_session, wrapup_events))

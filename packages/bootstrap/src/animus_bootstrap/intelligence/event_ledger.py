@@ -197,7 +197,8 @@ class EventLedger:
         try:
             with sqlite3.connect(str(self._db_path)) as conn:
                 cursor = conn.execute(
-                    "SELECT timestamp, type, source, payload FROM events ORDER BY timestamp DESC LIMIT ?",
+                    "SELECT timestamp, type, source, payload FROM events "
+                    "ORDER BY timestamp DESC LIMIT ?",
                     (self._max,),
                 )
                 rows = cursor.fetchall()

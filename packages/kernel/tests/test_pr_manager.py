@@ -15,7 +15,7 @@ from animus_kernel.sandbox.pr_manager import PRManager, PRStatus, PullRequest
 
 def _init_git_repo(path: Path) -> None:
     """Initialize a minimal git repo for testing."""
-    subprocess.run(["git", "init"], cwd=str(path), capture_output=True, check=True)
+    subprocess.run(["git", "init", "-b", "main"], cwd=str(path), capture_output=True, check=True)
     subprocess.run(
         ["git", "config", "user.email", "test@example.com"],
         cwd=str(path),
@@ -55,7 +55,7 @@ class TestPRManager:
             _init_git_repo(repo)
 
             manager = PRManager(repo, default_branch="main")
-            branch = manager.create_branch("commit-test")
+            manager.create_branch("commit-test")
 
             (repo / "new.py").write_text("print('hello')")
             commit_hash = manager.commit_changes(["new.py"], "add new file")

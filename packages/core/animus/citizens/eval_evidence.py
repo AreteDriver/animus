@@ -78,8 +78,8 @@ def query_eval_runs(
     if _eval_db_available is False:
         return []
 
-    EvalStore = _try_import_eval_store()
-    if EvalStore is None:
+    eval_store_cls = _try_import_eval_store()
+    if eval_store_cls is None:
         _eval_db_available = False
         return []
 
@@ -88,7 +88,7 @@ def query_eval_runs(
         if backend is None:
             _eval_db_available = False
             return []
-        store = EvalStore(backend)
+        store = eval_store_cls(backend)
         runs = store.query_runs(suite_name=suite_name, limit=limit)
         _eval_db_available = True
         # Normalize to plain dicts
@@ -123,8 +123,8 @@ def get_suite_trend(suite_name: str, days: int = 30, db_path: str = "") -> list[
     if _eval_db_available is False:
         return []
 
-    EvalStore = _try_import_eval_store()
-    if EvalStore is None:
+    eval_store_cls = _try_import_eval_store()
+    if eval_store_cls is None:
         _eval_db_available = False
         return []
 
@@ -133,7 +133,7 @@ def get_suite_trend(suite_name: str, days: int = 30, db_path: str = "") -> list[
         if backend is None:
             _eval_db_available = False
             return []
-        store = EvalStore(backend)
+        store = eval_store_cls(backend)
         trend = store.get_suite_trend(suite_name=suite_name, days=days)
         _eval_db_available = True
         return [t if isinstance(t, dict) else t.to_dict() for t in trend]

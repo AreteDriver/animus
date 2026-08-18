@@ -8,7 +8,7 @@ Idle intervals are right-skewed to mirror natural reading pauses.
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from animus.browser.emulation.timing import TimingEmulator

@@ -27,7 +27,6 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-
 _DEFAULT_CORE_PATH = Path("~/projects/animus/packages/core").expanduser()
 
 

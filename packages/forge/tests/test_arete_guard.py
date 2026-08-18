@@ -1,9 +1,5 @@
 """Tests for AreteGuard and eval baseline regression detection."""
 
-import os
-from datetime import datetime
-from unittest.mock import MagicMock
-
 import pytest
 
 from animus_forge.evaluation.base import EvalCase, EvalResult, EvalStatus, EvalSuite
@@ -89,7 +85,7 @@ class TestAreteGuard:
         assert guard.check("wf-1") is True
 
     def test_passing_evidence_allows_execution(self, eval_store):
-        run_id = eval_store.record_run(
+        eval_store.record_run(
             "suite_a",
             _make_suite_result(0.8),
             agent_role="research_citizen",

@@ -9,13 +9,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /build
 
-# Copy package source
-COPY . /build/
+# Copy package sources needed for local monorepo dependencies.
+COPY packages/types /build/types
+COPY packages/kernel /build/kernel
 
-# Build and install the wheel
+# Build and install local wheels in dependency order.
 RUN pip install --no-cache-dir build \
-    && python -m build . \
-    && pip install --no-cache-dir dist/*.whl
+    && python -m build /build/types \
+    && pip install --no-cache-dir /build/types/dist/*.whl \
+    && python -m build /build/kernel \
+    && pip install --no-cache-dir /build/kernel/dist/*.whl
 
 # Clean up build artifacts
 RUN rm -rf /build

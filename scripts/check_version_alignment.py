@@ -18,11 +18,85 @@ import sys
 from pathlib import Path
 
 import tomllib
-from packaging.specifiers import SpecifierSet
-from packaging.version import Version
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PACKAGES_DIR = REPO_ROOT / "packages"
+
+
+class SimpleVersion:
+    """Minimal semantic version parser for local package alignment checks."""
+
+    def __init__(self, value: str) -> None:
+        self.raw = value
+        parts = value.split(".")
+        if not parts:
+            raise ValueError(f"Unsupported version '{value}'")
+        numeric_parts: list[int] = []
+        for part in parts[:3]:
+            digits = ""
+            for character in part:
+                if character.isdigit():
+                    digits += character
+                else:
+                    break
+            if digits == "":
+                raise ValueError(f"Unsupported version '{value}'")
+            numeric_parts.append(int(digits))
+        while len(numeric_parts) < 3:
+            numeric_parts.append(0)
+        self.parts = tuple(numeric_parts)
+        self.major = self.parts[0]
+
+    def __str__(self) -> str:
+        return self.raw
+
+    def __lt__(self, other: SimpleVersion) -> bool:
+        return self.parts < other.parts
+
+    def __le__(self, other: SimpleVersion) -> bool:
+        return self.parts <= other.parts
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SimpleVersion):
+            return False
+        return self.parts == other.parts
+
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
+    def __gt__(self, other: SimpleVersion) -> bool:
+        return self.parts > other.parts
+
+    def __ge__(self, other: SimpleVersion) -> bool:
+        return self.parts >= other.parts
+
+
+def _specifier_contains(specifier_string: str, version: SimpleVersion) -> bool:
+    """Evaluate a small subset of PEP 440 specifiers used in this monorepo."""
+
+    for raw_specifier in specifier_string.split(","):
+        specifier = raw_specifier.strip()
+        if not specifier:
+            continue
+        for operator in ("==", "!=", "<=", ">=", "<", ">"):
+            if specifier.startswith(operator):
+                expected = SimpleVersion(specifier[len(operator) :].strip())
+                if operator == "==" and not version == expected:
+                    return False
+                if operator == "!=" and not version != expected:
+                    return False
+                if operator == "<=" and not version <= expected:
+                    return False
+                if operator == ">=" and not version >= expected:
+                    return False
+                if operator == "<" and not version < expected:
+                    return False
+                if operator == ">" and not version > expected:
+                    return False
+                break
+        else:
+            raise ValueError(f"Unsupported specifier '{specifier}'")
+    return True
 
 
 def _extract_version_spec(dep: str) -> tuple[str, str]:
@@ -43,7 +117,7 @@ def _extract_version_spec(dep: str) -> tuple[str, str]:
 
 def main() -> int:
     # Collect all local packages
-    local_packages: dict[str, Version] = {}
+    local_packages: dict[str, SimpleVersion] = {}
     pyproject_paths: dict[str, Path] = {}
 
     for pkg_dir in PACKAGES_DIR.iterdir():
@@ -67,7 +141,7 @@ def main() -> int:
         if not name or not version:
             continue
 
-        local_packages[name] = Version(version)
+        local_packages[name] = SimpleVersion(version)
         pyproject_paths[name] = pp
 
     if not local_packages:
@@ -98,17 +172,18 @@ def main() -> int:
             if not spec_str:
                 warnings_.append(
                     f"{name}: dependency '{dep_name}' has no version specifier "
-                    f"(recommend pinning to >={sibling_version}, <{SiblingVersion.next_major(sibling_version)})"
+                    f"(recommend pinning to >={sibling_version}, "
+                    f"<{SiblingVersion.next_major(sibling_version)})"
                 )
                 continue
 
             try:
-                spec = SpecifierSet(spec_str)
+                contains_version = _specifier_contains(spec_str, sibling_version)
             except Exception as exc:
                 violations.append(f"{name}: invalid specifier '{spec_str}' for '{dep_name}': {exc}")
                 continue
 
-            if not spec.contains(sibling_version):
+            if not contains_version:
                 violations.append(
                     f"{name} ({version}) depends on {dep_name} {spec_str}, "
                     f"but local {dep_name} is {sibling_version}"
@@ -143,8 +218,8 @@ class SiblingVersion:
     """Helper to compute next major for warning messages."""
 
     @staticmethod
-    def next_major(v: Version) -> Version:
-        return Version(f"{v.major + 1}.0.0")
+    def next_major(version: SimpleVersion) -> SimpleVersion:
+        return SimpleVersion(f"{version.major + 1}.0.0")
 
 
 if __name__ == "__main__":

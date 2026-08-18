@@ -181,6 +181,11 @@ def generate() -> None:
 
             # Fix imports: replace 'from .common_schema import X' with 'from .common import X'
             cleaned = cleaned.replace("from .common_schema import", "from .common import")
+            unresolved_common_names = sorted(
+                name
+                for name in common_model_classes
+                if re.search(rf"\b{name}\b", cleaned) and f"import {name}" not in cleaned
+            )
 
             # Clean header
             header_end = 0
@@ -196,6 +201,18 @@ def generate() -> None:
                 + "\n".join(cleaned.splitlines()[header_end:])
                 + "\n"
             )
+            if unresolved_common_names:
+                import_block = (
+                    "from animus_types.common import (\n"
+                    + "\n".join(f"    {name}," for name in unresolved_common_names)
+                    + "\n)\n\n"
+                )
+                insert_after = "from __future__ import annotations\n\n"
+                final_source = final_source.replace(
+                    insert_after,
+                    insert_after + import_block,
+                    1,
+                )
 
             outputs[module] = final_source
 

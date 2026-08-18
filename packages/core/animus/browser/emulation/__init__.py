@@ -30,8 +30,6 @@ class EmulationLayer:
 
     async def run(self, tab: Any) -> None:
         """Execute a full emulation pass on *tab*."""
-        import asyncio
-
         await self.timing.initial_delay()
         await self.scroll.traverse_page(tab, self.timing)
         await self.mouse.wander(tab, self.timing)

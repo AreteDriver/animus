@@ -9,13 +9,14 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        exclude: ^PORTFOLIO_MANIFEST\.yaml$
       - id: check-json
       - id: check-toml
       - id: check-added-large-files
         args: [--maxkb=1024]
       - id: check-merge-conflict
       - id: detect-private-key
-        exclude: ^docs/cookbook/
+        exclude: ^(docs/cookbook/|packages/bootstrap/tests/test_push\.py|packages/core/tests/test_redaction\.py)
       - id: mixed-line-ending
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
