@@ -3341,6 +3341,12 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> GatedFastMCP:
         source_type: str = "auto",
         run_research_guild: bool = False,
         store_outputs: bool = True,
+        list_limit: int = 25,
+        individual_artifacts: bool = False,
+        artifact_dir: str = "",
+        batch_size: int = 10,
+        fetch_captions: bool = True,
+        overwrite_artifacts: bool = False,
         api_key: str = "",
     ) -> str:
         """Run the full Media pipeline: Harvest → Ogma Synthesize → MechanismCard → (conditional RG).
@@ -3357,6 +3363,12 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> GatedFastMCP:
             source_type: "auto" | "youtube_playlist" | "youtube_channel" | "podcast".
             run_research_guild: Force full RG downstream regardless of gap.
             store_outputs: Whether to store all outputs in memory.
+            list_limit: Max source items; use 0 for the complete playlist.
+            individual_artifacts: Write one resumable Markdown artifact per item.
+            artifact_dir: Optional artifact output directory.
+            batch_size: Number of individual artifacts per checkpoint.
+            fetch_captions: Fetch transcript evidence for individual artifacts.
+            overwrite_artifacts: Rebuild already synthesized artifacts.
             api_key: API key (required if ANIMUS_MCP_API_KEY is set).
         """
         auth_err = _check_auth(api_key)
@@ -3374,11 +3386,33 @@ def create_mcp_server(policy: ToolPolicy | None = None) -> GatedFastMCP:
             codebase_path=resolved_path,
         )
 
+        if individual_artifacts:
+            artifact_report = orchestrator.run_individual_artifacts(
+                url=url,
+                source_type=source_type,
+                artifact_dir=artifact_dir or None,
+                list_limit=list_limit,
+                batch_size=batch_size,
+                fetch_captions=fetch_captions,
+                overwrite=overwrite_artifacts,
+            )
+            return "\n".join(
+                [
+                    "# Individual Media Artifact Report",
+                    "",
+                    artifact_report.summary(),
+                    f"**Artifact directory:** {artifact_report.artifact_dir}",
+                    f"**Index:** {artifact_report.index_path}",
+                    f"**Duration:** {artifact_report.duration_seconds:.1f}s",
+                ]
+            )
+
         report = orchestrator.run(
             url=url,
             source_type=source_type,
             run_research_guild=run_research_guild,
             store_outputs=store_outputs,
+            list_limit=list_limit,
         )
 
         lines = ["# Media Pipeline Report", ""]

@@ -17,6 +17,7 @@ from animus.citizens.media import (
     MediaPipelineReport,
     MediaSynthesizer,
 )
+from animus.citizens.media_artifacts import MediaArtifactWriter
 from animus.citizens.pattern import PatternCard, PatternCitizen
 from animus.citizens.proposal import ImprovementProposal
 from animus.lugh.sources.base import SourceItem
@@ -157,7 +158,7 @@ class TestMediaSynthesizer:
                 tags=["ml"],
             ),
         ]
-        result = ms.synthesize_corpus(items)
+        ms.synthesize_corpus(items)
         assert mock_synthesize.called
         call_args = mock_synthesize.call_args
         corpus_item = call_args[1]["item"] if "item" in call_args[1] else call_args[0][0]
@@ -189,6 +190,127 @@ class TestMediaPipelineOrchestrator:
         assert report.mechanisms == []
         assert len(report.stages) == 1
         assert report.stages[0].citizen_name == "MediaHarvester"
+
+    def test_individual_artifacts_checkpoint_and_resume(self, tmp_path):
+        orchestrator = MediaPipelineOrchestrator(memory_layer=None, codebase_path=".")
+        items = [
+            SourceItem(
+                source_id="youtube:playlist:PLabc",
+                item_id="vid1",
+                title="Video One",
+                url="https://youtube.com/watch?v=vid1",
+                published=datetime.now(),
+                summary="evidence preview",
+                raw_text="grounded transcript",
+            ),
+            SourceItem(
+                source_id="youtube:playlist:PLabc",
+                item_id="vid2",
+                title="Video Two",
+                url="https://youtube.com/watch?v=vid2",
+                published=datetime.now(),
+                summary="title only",
+                raw_text="",
+            ),
+        ]
+        synthesis = OgmaOutput(
+            title="Video One",
+            source_id="youtube:playlist:PLabc",
+            item_id="vid1",
+            date=datetime.now().date(),
+            concept="A useful mechanism.",
+            novelty="A new application.",
+            animus_gap="NONE",
+            animus_gap_notes="No overlap.",
+            weaknesses="Limited evidence.",
+            proposal="Build a focused integration.",
+            roi_value="Useful learning",
+            roi_effort="moderate",
+            roi_priority="Validate now",
+            risks="Scope creep.",
+            confidence=0.7,
+            confidence_justification="Transcript evidence.",
+            sources_cited=["https://youtube.com/watch?v=vid1"],
+        )
+
+        with patch.object(
+            orchestrator.harvester, "ingest_playlist", return_value=items
+        ) as mock_ingest:
+            with patch.object(
+                orchestrator.synthesizer, "synthesize_single", return_value=synthesis
+            ):
+                report = orchestrator.run_individual_artifacts(
+                    url="https://youtube.com/playlist?list=PLabc",
+                    source_type="youtube_playlist",
+                    artifact_dir=tmp_path,
+                    batch_size=1,
+                    fetch_captions=False,
+                )
+
+        assert mock_ingest.call_args.kwargs["fetch_captions"] is False
+
+        assert report.items_discovered == 2
+        assert report.artifacts_written == 2
+        assert report.syntheses_succeeded == 1
+        assert report.captions_missing == 1
+        assert report.index_path == tmp_path / "INDEX.md"
+        assert (tmp_path / "items" / "vid1.md").exists()
+        assert "analysis_status: synthesized" in (tmp_path / "items" / "vid1.md").read_text()
+        assert "analysis_status: synthesis-failed" in (tmp_path / "items" / "vid2.md").read_text()
+
+        writer = MediaArtifactWriter(tmp_path)
+        assert writer.is_complete(items[0]) is True
+        assert writer.is_complete(items[1]) is False
+        curated_text = (
+            (tmp_path / "items" / "vid1.md")
+            .read_text()
+            .replace("analysis_status: synthesized", "analysis_status: curated")
+        )
+        (tmp_path / "items" / "vid1.md").write_text(curated_text)
+        assert writer.is_complete(items[0]) is True
+        assert writer.describe_existing(items[0], 1).analysis_status == "curated"
+
+    def test_individual_artifacts_hydrates_captions_inside_batch(self, tmp_path):
+        orchestrator = MediaPipelineOrchestrator(memory_layer=None, codebase_path=".")
+        item = SourceItem(
+            source_id="youtube:playlist:PLabc",
+            item_id="vid1",
+            title="Video One",
+            url="https://youtube.com/watch?v=vid1",
+            published=None,
+            summary="Video One",
+            raw_text="",
+        )
+        hydrated = SourceItem(
+            source_id=item.source_id,
+            item_id=item.item_id,
+            title=item.title,
+            url=item.url,
+            published=None,
+            summary="caption evidence",
+            raw_text="caption evidence",
+        )
+        with patch.object(orchestrator.harvester, "ingest_playlist", return_value=[item]):
+            with patch.object(
+                orchestrator.harvester, "hydrate_youtube_captions", return_value=hydrated
+            ) as mock_hydrate:
+                report = orchestrator.run_individual_artifacts(
+                    url="https://youtube.com/playlist?list=PLabc",
+                    source_type="youtube_playlist",
+                    artifact_dir=tmp_path,
+                    fetch_captions=True,
+                    synthesize=False,
+                )
+        mock_hydrate.assert_called_once_with(item)
+        assert report.artifacts[0].has_captions is True
+        assert report.artifacts[0].transcript_chars == len("caption evidence")
+
+    def test_individual_artifacts_validates_bounds(self, tmp_path):
+        orchestrator = MediaPipelineOrchestrator(memory_layer=None, codebase_path=".")
+        with pytest.raises(ValueError, match="list_limit"):
+            orchestrator.run_individual_artifacts("source", artifact_dir=tmp_path, list_limit=-1)
+        with pytest.raises(ValueError, match="batch_size"):
+            orchestrator.run_individual_artifacts("source", artifact_dir=tmp_path, batch_size=0)
 
     @patch("animus.ogma.read.synthesize")
     def test_none_gate_no_downstream(self, mock_synthesize):

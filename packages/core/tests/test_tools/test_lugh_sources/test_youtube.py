@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -148,6 +149,19 @@ class TestYouTubeSource:
         idx = seen_cmds[0].index("--print")
         assert "%(upload_date)s" in seen_cmds[0][idx + 1]
 
+    def test_zero_limit_fetches_full_collection(self, monkeypatch):
+        monkeypatch.setattr("animus.lugh.sources.youtube.shutil.which", lambda _: "/usr/bin/yt-dlp")
+        seen_cmds: list[list[str]] = []
+
+        def fake_run(cmd, *, timeout):
+            seen_cmds.append(cmd)
+            return "a\tA\t20260101\n"
+
+        monkeypatch.setattr("animus.lugh.sources.youtube._run", fake_run)
+        src = YouTubeSource(playlist_url="https://youtube.com/playlist?list=PLall")
+        assert len(list(src.fetch(limit=0))) == 1
+        assert "--playlist-end" not in seen_cmds[0]
+
     def test_fetch_published_none_when_yt_dlp_emits_na(self, monkeypatch):
         monkeypatch.setattr("animus.lugh.sources.youtube.shutil.which", lambda _: "/usr/bin/yt-dlp")
         monkeypatch.setattr(
@@ -229,6 +243,39 @@ class TestFetchCaptions:
         src = YouTubeSource(channel="@x", raw_dir=tmp_path)
         out = src._fetch_captions("vid1")
         assert "memory gap." in out
+
+    def test_hydrate_captions_returns_updated_copy(self, tmp_path: Path, monkeypatch):
+        from animus.lugh.sources.base import SourceItem
+
+        item = SourceItem(
+            source_id="youtube:playlist:PLx",
+            item_id="vid1",
+            title="Video",
+            url="https://youtube.com/watch?v=vid1",
+            published=None,
+            summary="Video",
+            raw_text="",
+            metadata={"has_captions": False},
+        )
+        src = YouTubeSource(raw_dir=tmp_path)
+        monkeypatch.setattr(src, "_fetch_captions", lambda _: "grounded transcript")
+        hydrated = src.hydrate_captions(item)
+        assert hydrated is not item
+        assert hydrated.raw_text == "grounded transcript"
+        assert hydrated.summary == "grounded transcript"
+        assert hydrated.metadata["has_captions"] is True
+        assert item.raw_text == ""
+
+
+class TestRun:
+    def test_timeout_preserves_partial_stdout(self, monkeypatch):
+        def timeout(*args, **kwargs):
+            raise subprocess.TimeoutExpired(args[0], kwargs["timeout"], output=b"vid\tTitle\tNA\n")
+
+        monkeypatch.setattr(subprocess, "run", timeout)
+        from animus.lugh.sources.youtube import _run
+
+        assert _run(["yt-dlp"], timeout=1) == "vid\tTitle\tNA\n"
 
 
 # -- defaults + probe -------------------------------------------------------

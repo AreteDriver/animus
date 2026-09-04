@@ -28,6 +28,10 @@ from typing import TYPE_CHECKING, Any
 from animus.citizens.abstraction import MechanismCard
 from animus.citizens.architecture_citizen import ArchitectureCitizen, GapAnalysis
 from animus.citizens.first_principles import FirstPrinciplesCitizen, PrincipleCard
+from animus.citizens.media_artifacts import (
+    MediaArtifactCollectionReport,
+    MediaArtifactWriter,
+)
 from animus.citizens.pattern import PatternCard, PatternCitizen
 from animus.citizens.proposal import ImprovementProposal
 from animus.citizens.research_guild import StageResult
@@ -132,6 +136,10 @@ class MediaHarvester:
             raw_text=text,
             tags=["media", "text"],
         )
+
+    def hydrate_youtube_captions(self, item: SourceItem) -> SourceItem:
+        """Populate caption evidence after a fast metadata discovery pass."""
+        return YouTubeSource(fetch_captions=True).hydrate_captions(item)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -616,9 +624,99 @@ class MediaPipelineOrchestrator:
         logger.info("MediaPipeline complete: %s", report.summary())
         return report
 
+    def run_individual_artifacts(
+        self,
+        url: str,
+        source_type: str = "auto",
+        artifact_dir: Path | str | None = None,
+        model: ModelInterface | None = None,
+        list_limit: int = 0,
+        batch_size: int = 10,
+        fetch_captions: bool = True,
+        synthesize: bool = True,
+        overwrite: bool = False,
+    ) -> MediaArtifactCollectionReport:
+        """Harvest a media collection into one resumable artifact per item.
+
+        A ``list_limit`` of zero requests the complete collection. Items are
+        checkpointed to ``INDEX.md`` after each bounded batch, so interruption
+        cannot discard completed work. Existing synthesized artifacts are
+        skipped unless ``overwrite`` is true.
+        """
+        if list_limit < 0:
+            raise ValueError("list_limit must be zero (unbounded) or positive")
+        if batch_size < 1:
+            raise ValueError("batch_size must be at least 1")
+
+        start = time.time()
+        destination = (
+            Path(artifact_dir).expanduser()
+            if artifact_dir
+            else Path("~/.animus/harvest/media").expanduser() / self._source_slug(url)
+        )
+        writer = MediaArtifactWriter(destination)
+        report = MediaArtifactCollectionReport(source_url=url, artifact_dir=writer.artifact_dir)
+        # Discover metadata first. Caption hydration happens per item below so
+        # every bounded batch can be checkpointed before the next download.
+        items = self._harstep(url, source_type, list_limit, fetch_captions=False)
+        report.items_discovered = len(items)
+
+        for batch_start in range(0, len(items), batch_size):
+            batch = items[batch_start : batch_start + batch_size]
+            for offset, item in enumerate(batch, start=batch_start + 1):
+                if not overwrite and writer.is_complete(item):
+                    report.artifacts.append(writer.describe_existing(item, offset))
+                    continue
+
+                if fetch_captions and item.source_id.startswith("youtube:"):
+                    item = self.harvester.hydrate_youtube_captions(item)
+
+                synthesis = None
+                error = ""
+                if synthesize and not item.raw_text:
+                    error = "No captions were available; transcript-grounded analysis was not attempted."
+                elif synthesize:
+                    try:
+                        synthesis = self.synthesizer.synthesize_single(
+                            item, model=model, repo_root=self.codebase_path
+                        )
+                        if synthesis is None:
+                            error = "Ogma relevance gating skipped this item."
+                    except Exception as exc:
+                        error = f"Ogma synthesis failed: {exc}"
+
+                report.artifacts.append(
+                    writer.write_item(
+                        item=item,
+                        ordinal=offset,
+                        synthesis=synthesis,
+                        error=error,
+                    )
+                )
+
+            report.duration_seconds = time.time() - start
+            report.index_path = writer.write_index(report)
+            logger.info(
+                "Media artifact checkpoint: %d/%d items",
+                len(report.artifacts),
+                report.items_discovered,
+            )
+
+        if not items:
+            report.index_path = writer.write_index(report)
+        report.duration_seconds = time.time() - start
+        logger.info("Media artifact collection complete: %s", report.summary())
+        return report
+
     # -- step helpers ------------------------------------------------------
 
-    def _harstep(self, url: str, source_type: str, list_limit: int) -> list[SourceItem]:
+    def _harstep(
+        self,
+        url: str,
+        source_type: str,
+        list_limit: int,
+        fetch_captions: bool = True,
+    ) -> list[SourceItem]:
         """Harvest items from the given URL."""
         st = source_type.lower()
         if st == "auto":
@@ -630,15 +728,30 @@ class MediaPipelineOrchestrator:
                 st = "text"
 
         if st == "youtube_playlist":
-            return self.harvester.ingest_playlist(url, list_limit=list_limit)
+            return self.harvester.ingest_playlist(
+                url, fetch_captions=fetch_captions, list_limit=list_limit
+            )
         elif st == "youtube_channel":
             # Extract channel handle from URL or use as-is
-            return self.harvester.ingest_channel(url, list_limit=list_limit)
+            return self.harvester.ingest_channel(
+                url, fetch_captions=fetch_captions, list_limit=list_limit
+            )
         elif st == "text":
             return [self.harvester.ingest_text(url, identifier="manual", title="Manual input")]
         else:
             logger.warning("Unsupported source_type: %s", source_type)
             return []
+
+    @staticmethod
+    def _source_slug(url: str) -> str:
+        """Return a filesystem-safe stable source identifier."""
+        import re
+
+        playlist = re.search(r"[?&]list=([A-Za-z0-9_-]+)", url)
+        if playlist:
+            return f"youtube-playlist-{playlist.group(1)}"
+        slug = re.sub(r"[^A-Za-z0-9_-]+", "-", url).strip("-")
+        return slug[:100] or "media-source"
 
     def _synthstep(
         self,

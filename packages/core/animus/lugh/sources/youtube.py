@@ -23,7 +23,7 @@ import re
 import shutil
 import subprocess
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 YT_DLP_BIN = "yt-dlp"
 LIST_TIMEOUT_SECONDS = 60
+FULL_LIST_TIMEOUT_SECONDS = 600
 CAPTION_TIMEOUT_SECONDS = 120
 DEFAULT_LIST_LIMIT = 25
 DEFAULT_RAW_DIR = Path("~/.animus/lugh_raw/youtube").expanduser()
@@ -170,16 +171,19 @@ class YouTubeSource:
         channel ``/videos`` tab.
         """
         url = self._list_url()
-        cmd = [
-            YT_DLP_BIN,
-            "--playlist-end",
-            str(max(1, limit)),
-            "--skip-download",
-            "--print",
-            "%(id)s\t%(title)s\t%(upload_date)s",
-            url,
-        ]
-        out = _run(cmd, timeout=LIST_TIMEOUT_SECONDS)
+        cmd = [YT_DLP_BIN]
+        if limit > 0:
+            cmd.extend(["--playlist-end", str(limit)])
+        cmd.extend(
+            [
+                "--skip-download",
+                "--print",
+                "%(id)s\t%(title)s\t%(upload_date)s",
+                url,
+            ]
+        )
+        timeout = FULL_LIST_TIMEOUT_SECONDS if limit == 0 else LIST_TIMEOUT_SECONDS
+        out = _run(cmd, timeout=timeout)
         rows: list[tuple[str, str, datetime | None]] = []
         for line in (out or "").splitlines():
             parts = line.split("\t")
@@ -252,6 +256,18 @@ class YouTubeSource:
                 return cleaned
         return ""
 
+    def hydrate_captions(self, item: SourceItem) -> SourceItem:
+        """Return a copy of a discovered item populated with caption evidence."""
+        transcript = self._fetch_captions(item.item_id)
+        metadata = dict(item.metadata)
+        metadata["has_captions"] = bool(transcript)
+        return replace(
+            item,
+            raw_text=transcript,
+            summary=_truncate(transcript, SUMMARY_CHARS) if transcript else item.summary,
+            metadata=metadata,
+        )
+
 
 def default_youtube_sources() -> list[YouTubeSource]:
     """Seed channel list — verified handles (2026-05-11).
@@ -290,8 +306,6 @@ def probe_playlist(playlist_url: str) -> dict:
 
     Returns ``{ok, video_count, sample_titles, error}``. Does not raise.
     """
-    if not _yt_dlp_available():
-        return {"ok": False, "video_count": 0, "sample_titles": [], "error": "yt-dlp not installed"}
     if not playlist_url or "list=" not in playlist_url:
         return {
             "ok": False,
@@ -299,6 +313,8 @@ def probe_playlist(playlist_url: str) -> dict:
             "sample_titles": [],
             "error": "not a valid playlist URL",
         }
+    if not _yt_dlp_available():
+        return {"ok": False, "video_count": 0, "sample_titles": [], "error": "yt-dlp not installed"}
     src = YouTubeSource(playlist_url=playlist_url, fetch_captions=False, list_limit=3)
     rows = src._list_videos(3)
     return {
@@ -315,9 +331,10 @@ def playlist_to_source_items(
     list_limit: int = DEFAULT_LIST_LIMIT,
     tags: list[str] | None = None,
 ) -> list[SourceItem]:
-    """Harvest all videos from a YouTube playlist as a list of SourceItems.
+    """Harvest videos from a YouTube playlist as a list of SourceItems.
 
-    Convenience wrapper over ``YouTubeSource`` with ``playlist_url`` set.
+    ``list_limit=0`` removes the yt-dlp playlist bound and harvests the full
+    playlist. Positive values retain the bounded historical behavior.
     """
     src = YouTubeSource(
         playlist_url=playlist_url,
@@ -349,9 +366,12 @@ def _run(cmd: list[str], *, timeout: int) -> str | None:
     except FileNotFoundError:
         logger.warning("command not found: %s", cmd[0])
         return None
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as exc:
         logger.warning("timeout after %ds: %s", timeout, " ".join(cmd[:3]))
-        return None
+        partial = exc.stdout
+        if isinstance(partial, bytes):
+            return partial.decode(errors="replace")
+        return partial
     except OSError as e:
         logger.warning("subprocess error on %s: %s", cmd[0], e)
         return None
