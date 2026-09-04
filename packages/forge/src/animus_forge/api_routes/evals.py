@@ -6,8 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, Header
 
-from animus_forge import api_state as state
-from animus_forge.api_errors import AUTH_RESPONSES, CRUD_RESPONSES, bad_request, not_found
+from animus_forge.api_errors import AUTH_RESPONSES, bad_request, not_found
 from animus_forge.api_routes.auth import verify_auth
 from animus_forge.evaluation.store import get_eval_store
 

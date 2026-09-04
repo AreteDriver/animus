@@ -679,13 +679,11 @@ class TestFullPipeline:
         """E11 — a red-team probe disguised as a suggestion fails at ANALYZING
         and never reaches _apply_changes."""
         from animus_forge.self_improve.analyzer import (
-            CodebaseAnalyzer,
             ImprovementCategory,
             ImprovementSuggestion,
         )
 
-        # Create an analyzer that returns a probe-shaped suggestion
-        analyzer = CodebaseAnalyzer(codebase_path=codebase)
+        # Create a probe-shaped suggestion
         probe_suggestion = ImprovementSuggestion(
             id="probe-1",
             category=ImprovementCategory.CODE_QUALITY,

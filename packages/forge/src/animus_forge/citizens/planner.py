@@ -12,7 +12,7 @@ The planner never modifies code.  It produces a structured plan with:
 
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from animus_forge.citizens.base import Citizen
 from animus_forge.missions.domain import CitizenOutput, Task, TaskContext, TaskStatus

@@ -16,8 +16,15 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from animus_forge.missions.domain import Artifact, Checkpoint, Mission, MissionStatus, Task, TaskStatus
-from animus_forge.missions.transitions import TransitionError, transition
+from animus_forge.missions.domain import (
+    Artifact,
+    Checkpoint,
+    Mission,
+    MissionStatus,
+    Task,
+    TaskStatus,
+)
+from animus_forge.missions.transitions import transition
 
 if TYPE_CHECKING:
     from animus_forge.state.backends import DatabaseBackend
@@ -390,7 +397,6 @@ class MissionLedger:
 
     @staticmethod
     def _mission_to_row(mission: Mission) -> tuple:
-        from decimal import Decimal
 
         return (
             str(mission.mission_id),

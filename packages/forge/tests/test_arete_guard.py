@@ -1,8 +1,5 @@
 """Tests for AreteGuard and eval baseline regression detection."""
 
-import os
-from datetime import datetime
-from unittest.mock import MagicMock
 
 import pytest
 

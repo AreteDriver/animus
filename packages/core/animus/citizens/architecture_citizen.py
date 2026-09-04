@@ -271,9 +271,6 @@ class ArchitectureCitizen:
                 limit=50,
             )
             for mem in results:
-                content = (
-                    mem.get("content", "") if hasattr(mem, "get") else getattr(mem, "content", "")
-                )
                 meta = (
                     mem.get("metadata", {}) if hasattr(mem, "get") else getattr(mem, "metadata", {})
                 )

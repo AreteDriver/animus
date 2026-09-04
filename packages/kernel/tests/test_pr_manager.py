@@ -55,7 +55,7 @@ class TestPRManager:
             _init_git_repo(repo)
 
             manager = PRManager(repo, default_branch="main")
-            branch = manager.create_branch("commit-test")
+            manager.create_branch("commit-test")
 
             (repo / "new.py").write_text("print('hello')")
             commit_hash = manager.commit_changes(["new.py"], "add new file")

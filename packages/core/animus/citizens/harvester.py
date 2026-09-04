@@ -334,7 +334,7 @@ class HarvesterCitizen:
         """
         report = HarvestReport()
         try:
-            from animus.lugh.watchlist import get_watchlist, run_watchlist_scan
+            from animus.lugh.watchlist import get_watchlist
         except ImportError:
             logger.warning("Lugh watchlist module not available")
             report.errors.append("Lugh watchlist not installed")

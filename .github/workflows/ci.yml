@@ -245,13 +245,15 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-kernel-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: pip install -e packages/types/ -e "packages/kernel/[dev]"
+        run: pip install -e packages/types/ -e "packages/kernel/[dev]" fastapi
 
       - name: Test with coverage
         run: pytest packages/kernel/tests/ -v --tb=short --cov=animus_kernel --cov-report=term-missing --cov-report=xml
+        env:
+          PYTHONPATH: packages/core
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@ad3126e4f63f4c42e9f548cce398fb82e6d4c260  # v5.5.1
+        uses: codecov/codecov-action@v5
         with:
           files: ./coverage.xml
           fail_ci_if_error: false
@@ -286,7 +288,7 @@ jobs:
         # animus-types is a sibling pip-installable package and is not
         # published to PyPI — pip resolves it from the local path when
         # both -e targets are part of the same install transaction.
-        run: pip install -e packages/types/ -e "packages/core/[dev,api]"
+        run: pip install -e packages/types/ -e packages/kernel/ -e "packages/core/[dev,api,postgres,mcp]"
 
       - name: Test with coverage
         run: pytest packages/core/tests/ -v --tb=short --cov=animus --cov-report=term-missing
@@ -369,7 +371,7 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-contracts-
 
       - name: Install dependencies
-        run: pip install -e "packages/contracts/[dev]"
+        run: pip install -e packages/types/ -e "packages/contracts/[dev]" pytest pytest-cov
 
       - name: Test with coverage
         run: pytest packages/contracts/tests/ -v --tb=short --cov=animus_contracts --cov-report=term-missing
@@ -433,7 +435,7 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-bootstrap-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: pip install -e "packages/bootstrap/[dev]"
+        run: pip install -e "packages/bootstrap/[dev,push]"
 
       - name: Test with coverage
         run: pytest packages/bootstrap/tests/ -v --tb=short --cov=animus_bootstrap --cov-report=term-missing
@@ -441,7 +443,7 @@ jobs:
           PYTHONPATH: packages/bootstrap/src
 
   test-database:
-    name: Test Database (PostgreSQL ${ matrix.postgres-version })
+    name: Test Database (PostgreSQL ${{ matrix.postgres-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -449,7 +451,7 @@ jobs:
         postgres-version: ["14", "15", "16"]
     services:
       postgres:
-        image: postgres:${ matrix.postgres-version }
+        image: postgres:${{ matrix.postgres-version }}
         env:
           POSTGRES_PASSWORD: testpass
           POSTGRES_DB: animus_test
@@ -489,7 +491,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673c0b81f2ad1477f6a8  # v4
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
 
@@ -502,7 +504,12 @@ jobs:
 
       - name: Install dependencies
         working-directory: packages/pwa
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Run Vitest
         working-directory: packages/pwa
@@ -535,15 +542,16 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@8b30df9d033bf30582b8504e1f5c1275d3b41d61  # v3.3.0
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@988b5a0280414a5210132054a6c801aca2759e3d  # v3.6.1
+        uses: docker/setup-buildx-action@v3
 
       - name: Build multi-arch kernel image
-        uses: docker/build-push-action@4f58f7924f5cfc5316c7fba6f4e67c4d484fbc37  # v6.9.0
+        uses: docker/build-push-action@v6
         with:
-          context: packages/kernel
+          context: .
+          file: packages/kernel/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
           tags: animus-kernel:ci

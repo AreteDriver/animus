@@ -408,9 +408,6 @@ class KnowledgeCuratorCitizen:
         if not all_md_files:
             return observations
 
-        # Build a map of file paths to their names
-        file_names = {f: f.name for f in all_md_files}
-
         # Scan all markdown files for internal links
         referenced: set[Path] = set()
         for md_file in all_md_files:

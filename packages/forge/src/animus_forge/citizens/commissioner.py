@@ -12,7 +12,6 @@ from typing import Any
 
 from animus_forge.citizens.mission import MissionConfig, MissionRecord, MissionState
 from animus_forge.citizens.research_citizen import ResearchCitizen
-from animus_forge.citizens.store import MissionStore
 
 logger = logging.getLogger(__name__)
 

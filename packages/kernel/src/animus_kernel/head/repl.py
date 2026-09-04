@@ -821,7 +821,6 @@ class HeadREPL:
         recs = hw.recommended_models
 
         # Filter to installed models
-        installed_set = {m.split(":")[0] for m in installed}
         installed_full = set(installed)
         candidates: list[str] = []
         for r in recs:

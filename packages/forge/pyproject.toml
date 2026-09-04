@@ -37,6 +37,7 @@ dependencies = [
     "pydantic>=2.12.0,<3",
     "pydantic-settings>=2.13.0,<3",
     "python-dotenv>=1.0.0,<2",
+    "requests>=2.32.0,<3",
     "aiofiles>=25.1.0,<26",
     "apscheduler>=3.11.0,<4",
     "urllib3>=2.6.0,<3",
@@ -98,6 +99,13 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP"]
 ignore = ["E501", "UP042", "UP046", "UP047"]  # UP042: StrEnum, UP046/UP047: PEP 695 generics
+
+[tool.ruff.lint.per-file-ignores]
+"src/animus_forge/api.py" = ["I001"]
+"src/animus_forge/coordination/consciousness_bridge.py" = ["F401"]
+"src/animus_forge/missions/store.py" = ["F401", "I001"]
+"tests/test_sec06_non_memory_logging.py" = ["I001"]
+"tests/test_self_improve_engine.py" = ["F841"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

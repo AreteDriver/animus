@@ -798,14 +798,12 @@ class IntelligenceCitizen:
                 "Rotate exposed credentials immediately. Review secret storage practices "
                 "and implement pre-commit hooks (e.g., gitleaks) to prevent future leakage."
             )
-            severity = "critical"
         elif high_secrets:
             problem = f"{len(high_secrets)} high-severity secret(s) detected in {report.source}"
             recommendation = (
                 "Audit and remove exposed credentials. Consider using secret management "
                 "solutions (e.g., HashiCorp Vault, AWS Secrets Manager)."
             )
-            severity = "high"
         elif report.extracted.credit_cards:
             problem = (
                 f"{len(report.extracted.credit_cards)} credit card number(s) in {report.source}"
@@ -813,11 +811,9 @@ class IntelligenceCitizen:
             recommendation = (
                 "Remove payment card data from source immediately. PCI compliance violation risk."
             )
-            severity = "critical"
         elif report.extracted.aws_keys:
             problem = f"{len(report.extracted.aws_keys)} AWS key(s) in {report.source}"
             recommendation = "Rotate AWS credentials and audit IAM policies."
-            severity = "high"
         else:
             # No actionable security findings — skip proposal
             logger.info("No critical security findings — no proposal generated")

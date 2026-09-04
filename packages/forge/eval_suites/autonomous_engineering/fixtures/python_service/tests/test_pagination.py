@@ -6,7 +6,6 @@ One test intentionally fails because of the off-by-one bug in ``paginate``.
 from __future__ import annotations
 
 import pytest
-
 from python_service.pagination import paginate
 
 

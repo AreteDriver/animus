@@ -560,7 +560,6 @@ class ArchitectCitizen:
 
         # Pick the most relevant observation
         top_obs = sorted_obs[0] if sorted_obs else None
-        top_ptype = top_obs.context.get("pattern_type", "") if top_obs else ""
         is_structural = _structural_priority(top_obs) >= 2 if top_obs else False
 
         if report.technical_debt_items:

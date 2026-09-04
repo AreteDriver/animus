@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 # Quorum imports are optional — bridge degrades gracefully
 HAS_QUORUM = False
 try:
-    from animus_quorum.intent import Intent, InterfaceKind, InterfaceSpec
     from animus_quorum.versioning import VersionedGraph
 
     HAS_QUORUM = True

@@ -7,6 +7,19 @@ from typing import Any
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, conint, constr
 
+from animus_types.common import (
+    ArtifactType,
+    CognitiveRole,
+    EpistemicStatus,
+    LifecycleStatus,
+    Presentation,
+    SecurityClass,
+    StorageTier,
+    SubjectDomain,
+    Tag,
+    WorkflowStatus,
+)
+
 
 class ObjectVersion(BaseModel):
     model_config = ConfigDict(

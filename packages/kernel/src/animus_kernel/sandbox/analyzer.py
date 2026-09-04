@@ -384,11 +384,6 @@ class CodebaseAnalyzer:
             tree = ast.parse(content)
         except SyntaxError:
             return suggestions
-
-        # Track function-level contexts for nested loop detection
-        function_loops: dict[str, list[tuple[int, int]]] = {}
-        current_function: str | None = None
-
         class PerfVisitor(ast.NodeVisitor):
             def __init__(self):
                 self.loop_depth = 0

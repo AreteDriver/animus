@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
-
 import pytest
 
 from animus_forge.citizens.builder import BuilderCitizen
@@ -14,9 +12,7 @@ from animus_forge.missions.domain import (
     Mission,
     Task,
     TaskContext,
-    TaskStatus,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

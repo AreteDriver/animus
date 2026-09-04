@@ -132,19 +132,19 @@ class GraphAnalyzer:
 
     def get_stats(self) -> GraphStats:
         """Overall network statistics."""
-        G = self._graph
-        n = G.number_of_nodes()
+        graph = self._graph
+        n = graph.number_of_nodes()
         if n == 0:
             return GraphStats()
 
-        degrees = [d for _, d in G.degree()]
-        weighted_degrees = [d for _, d in G.degree(weight="weight")]
+        degrees = [d for _, d in graph.degree()]
+        weighted_degrees = [d for _, d in graph.degree(weight="weight")]
 
         return GraphStats(
             node_count=n,
-            edge_count=G.number_of_edges(),
-            density=self.nx.density(G),
-            components=self.nx.number_connected_components(G),
+            edge_count=graph.number_of_edges(),
+            density=self.nx.density(graph),
+            components=self.nx.number_connected_components(graph),
             avg_degree=sum(degrees) / n,
             avg_weighted_degree=sum(weighted_degrees) / n,
         )
@@ -172,29 +172,29 @@ class GraphAnalyzer:
                 f"Invalid metric '{metric}'. Must be one of: {', '.join(sorted(VALID_METRICS))}"
             )
 
-        G = self._get_subgraph(entity_type)
-        if G.number_of_nodes() == 0:
+        graph = self._get_subgraph(entity_type)
+        if graph.number_of_nodes() == 0:
             return []
 
         # Compute requested centrality
         if metric == "degree":
-            scores = self.nx.degree_centrality(G)
+            scores = self.nx.degree_centrality(graph)
         elif metric == "betweenness":
-            scores = self.nx.betweenness_centrality(G, weight="weight")
+            scores = self.nx.betweenness_centrality(graph, weight="weight")
         elif metric == "closeness":
-            scores = self.nx.closeness_centrality(G, distance="weight")
+            scores = self.nx.closeness_centrality(graph, distance="weight")
         else:  # eigenvector
             try:
-                scores = self.nx.eigenvector_centrality(G, weight="weight", max_iter=1000)
+                scores = self.nx.eigenvector_centrality(graph, weight="weight", max_iter=1000)
             except self.nx.PowerIterationFailedConvergence:
-                scores = {n: 0.0 for n in G.nodes()}
+                scores = {n: 0.0 for n in graph.nodes()}
 
-        degrees = dict(G.degree())
-        weighted_degrees = dict(G.degree(weight="weight"))
+        degrees = dict(graph.degree())
+        weighted_degrees = dict(graph.degree(weight="weight"))
 
         results = []
         for node_id, score in sorted(scores.items(), key=lambda x: x[1], reverse=True)[:limit]:
-            attrs = G.nodes[node_id]
+            attrs = graph.nodes[node_id]
             nm = NodeMetrics(
                 entity_id=node_id,
                 name=attrs.get("name", ""),
@@ -216,23 +216,23 @@ class GraphAnalyzer:
         Returns:
             List of communities sorted by size descending
         """
-        G = self._graph
-        if G.number_of_nodes() == 0:
+        graph = self._graph
+        if graph.number_of_nodes() == 0:
             return []
 
-        communities = self.nx.community.louvain_communities(G, weight="weight", seed=42)
+        communities = self.nx.community.louvain_communities(graph, weight="weight", seed=42)
 
         results = []
         for idx, members in enumerate(communities):
             if len(members) < min_size:
                 continue
 
-            sub = G.subgraph(members)
+            sub = graph.subgraph(members)
             density = self.nx.density(sub)
 
             member_list = []
             for nid in sorted(members):
-                attrs = G.nodes[nid]
+                attrs = graph.nodes[nid]
                 member_list.append(
                     {
                         "entity_id": nid,
@@ -259,17 +259,17 @@ class GraphAnalyzer:
         Returns:
             PathResult or None if no path exists
         """
-        G = self._graph
-        if source_id not in G or target_id not in G:
+        graph = self._graph
+        if source_id not in graph or target_id not in graph:
             return None
 
         # Invert weights: high co-occurrence = short distance
-        G_inv = G.copy()
-        for u, v, data in G_inv.edges(data=True):
+        inverse_graph = graph.copy()
+        for u, v, data in inverse_graph.edges(data=True):
             data["distance"] = 1.0 / max(data["weight"], 0.001)
 
         try:
-            path_nodes = self.nx.shortest_path(G_inv, source_id, target_id, weight="distance")
+            path_nodes = self.nx.shortest_path(inverse_graph, source_id, target_id, weight="distance")
         except self.nx.NetworkXNoPath:
             return None
 
@@ -278,7 +278,7 @@ class GraphAnalyzer:
         total_weight = 0
 
         for nid in path_nodes:
-            attrs = G.nodes[nid]
+            attrs = graph.nodes[nid]
             nodes.append(
                 {
                     "entity_id": nid,
@@ -289,7 +289,7 @@ class GraphAnalyzer:
 
         for i in range(len(path_nodes) - 1):
             u, v = path_nodes[i], path_nodes[i + 1]
-            w = G[u][v]["weight"]
+            w = graph[u][v]["weight"]
             total_weight += w
             edges.append({"source": u, "target": v, "weight": w})
 
@@ -316,8 +316,8 @@ class GraphAnalyzer:
         Returns:
             List of neighbor dicts with name, type, weight, hop distance
         """
-        G = self._graph
-        if entity_id not in G:
+        graph = self._graph
+        if entity_id not in graph:
             return []
 
         visited = {entity_id}
@@ -327,12 +327,12 @@ class GraphAnalyzer:
         for hop in range(hops):
             next_frontier = set()
             for node in frontier:
-                for neighbor in G.neighbors(node):
+                for neighbor in graph.neighbors(node):
                     if neighbor in visited:
                         continue
-                    weight = G[node][neighbor]["weight"]
+                    weight = graph[node][neighbor]["weight"]
                     if weight >= min_weight:
-                        attrs = G.nodes[neighbor]
+                        attrs = graph.nodes[neighbor]
                         results.append(
                             {
                                 "entity_id": neighbor,
@@ -358,13 +358,13 @@ class GraphAnalyzer:
         Returns:
             Dict with "nodes" and "edges" lists
         """
-        G = self._graph
-        valid_ids = [eid for eid in entity_ids if eid in G]
+        graph = self._graph
+        valid_ids = [eid for eid in entity_ids if eid in graph]
 
         if not valid_ids:
             return {"nodes": [], "edges": []}
 
-        sub = G.subgraph(valid_ids)
+        sub = graph.subgraph(valid_ids)
 
         nodes = []
         for nid in sub.nodes():

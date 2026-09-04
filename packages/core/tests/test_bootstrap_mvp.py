@@ -472,7 +472,7 @@ class TestBootstrapLoop:
             data_dir=data_dir,
         )
 
-        loop.run_cycle(files=["packages/core/animus/__init__.py"])
+        result = loop.run_cycle(files=["packages/core/animus/__init__.py"])
 
         # Check memory contains the reflection
         memories = memory.recall("bootstrap", memory_type=MemoryType.PROCEDURAL)
@@ -718,7 +718,7 @@ class TestBootstrapLoopProposalQueue:
         )
 
         # Run a cycle — citizens may generate proposals
-        result = loop.run_cycle(files=["packages/core/animus/__init__.py"])
+        loop.run_cycle(files=["packages/core/animus/__init__.py"])
 
         # Check queue has at least the proposals submitted by citizens
         stats = loop.proposal_queue.stats()

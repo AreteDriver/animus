@@ -150,8 +150,8 @@ async def lifespan(app: FastAPI):
 
         # Use live provider if available, else mock evaluator for safety
         try:
-            from animus_forge.providers import get_provider
             from animus_forge.evaluation.base import ProviderEvaluator
+            from animus_forge.providers import get_provider
 
             provider = get_provider()
             evaluator = ProviderEvaluator(provider=provider)

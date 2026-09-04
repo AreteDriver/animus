@@ -140,8 +140,9 @@ def assert_egress_allowed(endpoint: str, request: CompletionRequest) -> None:
     credentials (content-aware DLP), so a secret-bearing body mis-tagged as
     PUBLIC is blocked rather than trusted on its tag alone (roadmap A4).
     """
-    from animus_kernel.network import EgressDeniedError, is_egress_allowed
     from animus_types.secrets import scan_for_secrets
+
+    from animus_kernel.network import EgressDeniedError, is_egress_allowed
 
     content = request.scannable_text()
     if is_egress_allowed(endpoint, sensitivity=request.sensitivity, content=content):

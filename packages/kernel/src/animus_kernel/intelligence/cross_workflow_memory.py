@@ -15,8 +15,9 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
-from animus_kernel.state.memory import AgentMemory, MemoryEntry
 from animus_types import Sensitivity
+
+from animus_kernel.state.memory import AgentMemory, MemoryEntry
 
 # Tier ladder for max-sensitivity comparison
 _TIER_ORDER = {

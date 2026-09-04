@@ -1200,11 +1200,20 @@ class TestModelSwap:
     """Tests for HeadREPL._swap_model without requiring live Ollama."""
 
     @pytest.fixture
-    def mock_repl(self, tmp_path):
+    def mock_repl(self, tmp_path, monkeypatch):
         """Build a HeadREPL with a mocked Ollama provider."""
         from animus_kernel.head.checkpoint import HeadCheckpointStore
         from animus_kernel.head.repl import HeadREPL
 
+        class ConstructorProvider:
+            def __init__(self, model):
+                self.model = model
+                self.base_url = "http://localhost:11434"
+
+            def is_configured(self):
+                return True
+
+        monkeypatch.setattr("animus_kernel.head.repl.OllamaProvider", ConstructorProvider)
         repl = HeadREPL(
             model="qwen2.5:32b",
             project_root=tmp_path,
