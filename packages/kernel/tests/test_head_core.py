@@ -9,6 +9,7 @@ from __future__ import annotations
 import tempfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -1205,13 +1206,23 @@ class TestModelSwap:
         from animus_kernel.head.checkpoint import HeadCheckpointStore
         from animus_kernel.head.repl import HeadREPL
 
-        repl = HeadREPL(
-            model="qwen2.5:32b",
-            project_root=tmp_path,
-            memory_dir=tmp_path / "memory",
-            checkpoint_store=HeadCheckpointStore(db_path=tmp_path / "head.db"),
-        )
-        return repl
+        with (
+            patch(
+                "animus_kernel.head.repl.OllamaProvider.is_configured",
+                return_value=True,
+            ),
+            patch(
+                "animus_kernel.head.context_manager.Path.home",
+                return_value=tmp_path,
+            ),
+        ):
+            repl = HeadREPL(
+                model="qwen2.5:32b",
+                project_root=tmp_path,
+                memory_dir=tmp_path / "memory",
+                checkpoint_store=HeadCheckpointStore(db_path=tmp_path / "head.db"),
+            )
+            yield repl
 
     def _mock_provider(self, repl, installed, running=None):
         """Replace the Ollama provider with a lightweight stub."""

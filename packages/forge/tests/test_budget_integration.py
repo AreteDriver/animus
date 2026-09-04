@@ -19,7 +19,7 @@ import pytest
 
 sys.path.insert(0, "src")
 
-from animus_forge.budget.manager import BudgetConfig, BudgetManager
+from animus_kernel.budget.manager import BudgetConfig, BudgetManager
 
 # =============================================================================
 # Fixtures
@@ -137,7 +137,7 @@ class TestDailyLimitWithPersistence:
         step = StepConfig(id="s1", type="claude_code", params={"estimated_tokens": 100})
         result = ExecutionResult(workflow_name="wf-daily")
 
-        with patch("animus_forge.db.get_task_store", return_value=store):
+        with patch("animus_kernel.db.get_task_store", return_value=store):
             exceeded = executor._check_budget_exceeded(step, result)
         assert exceeded is True
         assert "Daily" in result.error

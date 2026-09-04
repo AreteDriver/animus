@@ -290,8 +290,6 @@ def probe_playlist(playlist_url: str) -> dict:
 
     Returns ``{ok, video_count, sample_titles, error}``. Does not raise.
     """
-    if not _yt_dlp_available():
-        return {"ok": False, "video_count": 0, "sample_titles": [], "error": "yt-dlp not installed"}
     if not playlist_url or "list=" not in playlist_url:
         return {
             "ok": False,
@@ -299,6 +297,8 @@ def probe_playlist(playlist_url: str) -> dict:
             "sample_titles": [],
             "error": "not a valid playlist URL",
         }
+    if not _yt_dlp_available():
+        return {"ok": False, "video_count": 0, "sample_titles": [], "error": "yt-dlp not installed"}
     src = YouTubeSource(playlist_url=playlist_url, fetch_captions=False, list_limit=3)
     rows = src._list_videos(3)
     return {

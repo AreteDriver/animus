@@ -29,7 +29,12 @@ def _clean_approvals() -> None:
 @pytest.fixture()
 def client() -> TestClient:
     """TestClient for the dashboard app."""
-    return TestClient(app)
+    test_client = TestClient(app)
+    test_client.get("/health")
+    token = test_client.cookies.get("animus_csrf")
+    assert token is not None
+    test_client.headers["X-CSRF-Token"] = token
+    return test_client
 
 
 # ------------------------------------------------------------------

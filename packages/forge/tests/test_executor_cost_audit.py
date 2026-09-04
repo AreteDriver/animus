@@ -12,8 +12,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+from animus_kernel.budget import BudgetConfig, BudgetManager, UsageRecord
 
-from animus_forge.budget import BudgetConfig, BudgetManager, UsageRecord
 from animus_forge.workflow.executor_cost_audit import CostAuditHandlerMixin
 from animus_forge.workflow.loader import StepConfig
 

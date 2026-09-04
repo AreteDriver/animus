@@ -74,6 +74,7 @@ def _mock_httpx_async_client(status_code: int = 200) -> MagicMock:
 @pytest.fixture()
 def client() -> TestClient:
     """TestClient with all routers' external deps patched."""
+    app.state.runtime = None
     return TestClient(app)
 
 

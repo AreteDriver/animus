@@ -10,10 +10,18 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from animus_forge.missions.domain import CitizenOutput, MissionStatus, Task, TaskContext, TaskStatus
+from animus_forge.missions.domain import (
+    CitizenOutput,
+    Mission,
+    MissionStatus,
+    Task,
+    TaskContext,
+    TaskStatus,
+)
 from animus_forge.missions.store import MissionLedger
 from animus_forge.scheduler.atomic_dispatch import AtomicDispatcher
 from animus_forge.scheduler.cost_enforcer import CostEnforcer
@@ -80,6 +88,8 @@ class MissionScheduler:
         metrics: SchedulerMetrics | None = None,
         *,
         config: SchedulerConfig | None = None,
+        governor_adapter: Any | None = None,
+        contract_resolver: Any | None = None,
     ):
         self.ledger = ledger
         self.lease = lease_manager
@@ -88,6 +98,12 @@ class MissionScheduler:
         self.workspace = workspace
         self.metrics = metrics
         self.config = config or SchedulerConfig()
+        # ``animus_forge.governor.GovernorAdapter`` is the seam for
+        # the Animus Loop Governor. The adapter is optional — when
+        # absent, ``_start_ready_mission`` is a no-op and missions
+        # enter RUNNING without external preparation (legacy mode).
+        self._governor = governor_adapter
+        self._contract_resolver = contract_resolver or _MissionContractResolver()
         self.dispatcher = AtomicDispatcher(
             ledger=ledger,
             lease_manager=lease_manager,
@@ -189,6 +205,14 @@ class MissionScheduler:
         if active_missions >= self.config.max_concurrent_missions:
             logger.debug("Active mission limit reached (%d)", active_missions)
             return 0
+
+        # 1a. Promote READY missions to RUNNING (gated on
+        # Governor preparation when the adapter is wired). A
+        # mission that fails preparation stays in READY and will
+        # be retried on a subsequent tick — the user-chosen
+        # semantics: no BLOCKED status exists in the enum, so
+        # staying READY is the supported default.
+        await self._start_ready_mission()
 
         # 2. Get running missions and find their ready tasks
         running = self.ledger.list_missions(status=MissionStatus.RUNNING)
@@ -332,8 +356,14 @@ class MissionScheduler:
             )
             return
 
+        # Worker/container supervisors attach private transport metadata for
+        # lifecycle decisions.  It is not part of the strict CitizenOutput
+        # contract and must not turn an otherwise valid result into a failure.
+        output_payload = {
+            key: value for key, value in result_dict.items() if not key.startswith("_")
+        }
         try:
-            output = CitizenOutput(**result_dict)
+            output = CitizenOutput(**output_payload)
         except Exception as exc:
             logger.error("Failed to parse CitizenOutput for task %s: %s", task_id_str, exc)
             output = CitizenOutput(
@@ -425,7 +455,11 @@ class MissionScheduler:
         if not mission:
             return
 
-        if mission.status in (MissionStatus.COMPLETED, MissionStatus.FAILED, MissionStatus.CANCELLED):
+        if mission.status in (
+            MissionStatus.COMPLETED,
+            MissionStatus.FAILED,
+            MissionStatus.CANCELLED,
+        ):
             return
 
         if any_failed:
@@ -481,3 +515,139 @@ class MissionScheduler:
         result = snap.to_dict()
         result["isolation"] = self.pool.isolation_status()
         return result
+
+    # ------------------------------------------------------------------
+    # READY → RUNNING promotion (Governor-prepared mission lifecycle)
+    # ------------------------------------------------------------------
+
+    async def _start_ready_mission(self) -> None:
+        """Promote one READY mission to RUNNING.
+
+        Per ADL-20260805-001: a mission may not enter RUNNING until
+        its repository has a valid Governor run. The adapter
+        (``animus_forge.governor.GovernorAdapter``) is the single
+        seam for that invariant. When the adapter is not wired
+        (``self._governor is None``) the scheduler skips preparation
+        and transitions directly — preserving legacy behaviour for
+        callers that have not opted into Governor governance.
+
+        On preparation failure the mission **stays** in READY. The
+        user-chosen semantics: there is no BLOCKED mission status in
+        the enum, and silent failure would violate the ADL's
+        fail-loud principle. The next tick retries with the same
+        adapter. Persistent failure is visible via the metric
+        counters and the log.
+        """
+        if self._governor is None:
+            # No adapter wired → legacy path: promote the first
+            # READY mission directly. Existing tests depend on this.
+            for mission in self.ledger.list_missions(status=MissionStatus.READY, limit=1):
+                self._promote_to_running(mission)
+            return
+
+        prepared = False
+        for mission in self.ledger.list_missions(status=MissionStatus.READY, limit=1):
+            if await self._prepare_mission(mission):
+                prepared = True
+            break  # one promotion per tick to keep diffs small
+
+        if not prepared:
+            return
+
+    async def _prepare_mission(self, mission: Mission) -> bool:
+        """Prepare one mission's repository via the Governor adapter.
+
+        Returns ``True`` if the mission transitioned to RUNNING;
+        ``False`` if preparation failed (mission stays READY).
+        """
+        repository = Path(mission.repository) if mission.repository else None
+        if repository is None or not repository.is_dir():
+            logger.warning(
+                "Mission %s has invalid repository %r; staying READY",
+                mission.mission_id,
+                mission.repository,
+            )
+            return False
+
+        contract_path = self._contract_resolver.resolve(mission, repository)
+        if contract_path is None:
+            logger.warning(
+                "Mission %s has no contract path; staying READY",
+                mission.mission_id,
+            )
+            return False
+
+        try:
+            receipt = self._governor.ensure_run(
+                repository=repository,
+                mission_id=mission.mission_id,
+                contract_path=contract_path,
+                known_run_id=self._known_run_id_for(mission),
+            )
+        except Exception as exc:  # noqa: BLE001 — outer fault boundary
+            logger.warning(
+                "Governor preparation failed for mission %s: %s; staying READY for retry",
+                mission.mission_id,
+                exc,
+            )
+            return False
+
+        # Persist the receipt to mission metadata and transition.
+        # The transition is *after* the metadata write so a crashed
+        # scheduler can re-discover the run id on the next tick.
+        mission.metadata["governor_run"] = receipt.model_dump(mode="json")
+        self.ledger.update_mission(mission)
+        self._promote_to_running(mission)
+        logger.info(
+            "Mission %s promoted READY → RUNNING (governor run %s)",
+            mission.mission_id,
+            receipt.run_id,
+        )
+        return True
+
+    def _promote_to_running(self, mission: Mission) -> None:
+        """Transition READY → RUNNING; ignore if already moved."""
+        try:
+            self.ledger.transition_mission(mission.mission_id, MissionStatus.RUNNING)
+        except Exception:
+            # Another worker raced us, or the mission was cancelled.
+            # Both are non-fatal — the next tick will pick up the
+            # winner.
+            logger.debug(
+                "Mission %s promotion skipped (already moved)",
+                mission.mission_id,
+                exc_info=True,
+            )
+
+    def _known_run_id_for(self, mission: Mission) -> str | None:
+        """Read the persisted Governor run id from mission metadata."""
+        receipt = mission.metadata.get("governor_run")
+        if not isinstance(receipt, dict):
+            return None
+        run_id = receipt.get("run_id")
+        return run_id if isinstance(run_id, str) else None
+
+
+# ---------------------------------------------------------------------------
+# Contract path resolver — defaults; production overrides via constructor
+# ---------------------------------------------------------------------------
+
+
+class _MissionContractResolver:
+    """Resolve a contract YAML path for a mission.
+
+    Resolution order:
+
+    1. ``mission.metadata["contract_path"]`` — explicit override.
+    2. ``<repository>/.animus-loop-governor/contract.yaml`` —
+       in-repo convention.
+    3. ``None`` — caller treats this as a configuration error and
+       the mission stays READY.
+    """
+
+    def resolve(self, mission: Mission, repository: Path) -> Path | None:
+        explicit = mission.metadata.get("contract_path")
+        if isinstance(explicit, str) and explicit:
+            return Path(explicit)
+        default = repository / ".animus-loop-governor" / "contract.yaml"
+        return default if default.is_file() else None

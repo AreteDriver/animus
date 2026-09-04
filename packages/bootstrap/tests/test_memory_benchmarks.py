@@ -10,6 +10,7 @@ Run with:
 from __future__ import annotations
 
 import asyncio
+from itertools import cycle
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -36,16 +37,14 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 try:
-    from animus_bootstrap.intelligence.memory_backends.chromadb_backend import (
-        ChromaDBMemoryBackend,
-    )
+    from animus_bootstrap.intelligence.memory_backends import chromadb_backend
 
-    HAS_CHROMADB = True
+    ChromaDBMemoryBackend = chromadb_backend.ChromaDBMemoryBackend
 except (ImportError, RuntimeError):
-    HAS_CHROMADB = False
+    chromadb_backend = None  # type: ignore[assignment]
 
 skip_no_chromadb = pytest.mark.skipif(
-    not HAS_CHROMADB,
+    chromadb_backend is None or not chromadb_backend.HAS_CHROMADB,
     reason="chromadb not installed — skipping ChromaDB benchmarks",
 )
 
@@ -116,7 +115,7 @@ class TestSQLiteBenchmarks:
         """Benchmark: insert 100 memories into SQLite."""
         backend = SQLiteMemoryBackend(tmp_path / "store_bench.db")
 
-        counter = iter(range(NUM_MEMORIES))
+        counter = cycle(range(NUM_MEMORIES))
 
         def store_one() -> str:
             idx = next(counter)
@@ -130,7 +129,7 @@ class TestSQLiteBenchmarks:
         """Benchmark: search across 100 stored memories in SQLite."""
         backend, _ids = _seed_sqlite(tmp_path)
 
-        query_iter = iter(SEARCH_QUERIES * 20)  # 100 queries
+        query_iter = cycle(SEARCH_QUERIES)
 
         def search_one() -> list[dict]:
             q = next(query_iter)
@@ -142,7 +141,7 @@ class TestSQLiteBenchmarks:
     def test_delete(self, tmp_path: Path, benchmark: BenchmarkFixture) -> None:
         """Benchmark: delete 50 memories from SQLite."""
         backend, ids = _seed_sqlite(tmp_path)
-        delete_ids = iter(ids[:NUM_DELETES])
+        delete_ids = cycle(ids[:NUM_DELETES])
 
         def delete_one() -> bool:
             mid = next(delete_ids)
@@ -175,7 +174,7 @@ class TestChromaDBBenchmarks:
         """Benchmark: insert 100 memories into ChromaDB."""
         backend = ChromaDBMemoryBackend()
 
-        counter = iter(range(NUM_MEMORIES))
+        counter = cycle(range(NUM_MEMORIES))
 
         def store_one() -> str:
             idx = next(counter)
@@ -189,7 +188,7 @@ class TestChromaDBBenchmarks:
         """Benchmark: search across 100 stored memories in ChromaDB."""
         backend, _ids = _seed_chromadb()
 
-        query_iter = iter(SEARCH_QUERIES * 20)
+        query_iter = cycle(SEARCH_QUERIES)
 
         def search_one() -> list[dict]:
             q = next(query_iter)
@@ -201,7 +200,7 @@ class TestChromaDBBenchmarks:
     def test_delete(self, benchmark: BenchmarkFixture) -> None:
         """Benchmark: delete 50 memories from ChromaDB."""
         backend, ids = _seed_chromadb()
-        delete_ids = iter(ids[:NUM_DELETES])
+        delete_ids = cycle(ids[:NUM_DELETES])
 
         def delete_one() -> bool:
             mid = next(delete_ids)

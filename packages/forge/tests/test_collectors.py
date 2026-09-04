@@ -301,7 +301,7 @@ class TestAPIClientMetricsCollector:
 class TestBudgetMetricsCollector:
     """Tests for BudgetMetricsCollector."""
 
-    @patch("animus_forge.budget.get_budget_tracker")
+    @patch("animus_kernel.budget.get_budget_tracker")
     def test_collect(self, mock_get_tracker):
         mock_tracker = MagicMock()
         mock_tracker.get_stats.return_value = {
@@ -322,7 +322,7 @@ class TestBudgetMetricsCollector:
         assert counters["budget_spent"] == 45.0
         assert result.metadata["utilization_pct"] == 45.0
 
-    @patch("animus_forge.budget.get_budget_tracker")
+    @patch("animus_kernel.budget.get_budget_tracker")
     def test_collect_with_history(self, mock_get_tracker):
         mock_tracker = MagicMock()
         mock_tracker.get_stats.return_value = {
@@ -341,7 +341,7 @@ class TestBudgetMetricsCollector:
         assert "history" in result.data
         mock_tracker.get_usage_history.assert_called_once()
 
-    @patch("animus_forge.budget.get_budget_tracker")
+    @patch("animus_kernel.budget.get_budget_tracker")
     def test_collect_zero_budget(self, mock_get_tracker):
         mock_tracker = MagicMock()
         mock_tracker.get_stats.return_value = {

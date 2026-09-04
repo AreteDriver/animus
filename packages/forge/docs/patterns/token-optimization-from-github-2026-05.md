@@ -10,7 +10,7 @@ This doc is the Forge roadmap for adopting the lift-able pieces. Each pattern: *
 
 `ET = m × (1.0·I + 0.1·C + 4.0·O)` — input × 1.0, cache-read × 0.1, output × 4.0, scaled by a per-model tier multiplier `m`. Lets a single number rank workflows across Haiku/Sonnet/Opus and across input/cache/output mixes.
 
-**Forge today:** [`src/animus_forge/budget/manager.py`](../../src/animus_forge/budget/manager.py) — `effective_tokens()`, `UsageRecord` carries `input_tokens` / `output_tokens` / `cache_read_tokens` / `model`; `BudgetManager.total_effective_tokens()` + `.effective_tokens_by_agent()`. `BudgetConfig.model_multipliers` overrides the default Haiku 0.08 / Sonnet 1.0 / Opus 5.0 table.
+**Forge today:** [`packages/kernel/src/animus_kernel/budget/manager.py`](../../../kernel/src/animus_kernel/budget/manager.py) — `effective_tokens()`, `UsageRecord` carries `input_tokens` / `output_tokens` / `cache_read_tokens` / `model`; `BudgetManager.total_effective_tokens()` + `.effective_tokens_by_agent()`. `BudgetConfig.model_multipliers` overrides the default Haiku 0.08 / Sonnet 1.0 / Opus 5.0 table.
 
 **Status:** shipped in [PR #41](https://github.com/AreteDriver/animus/pull/41). Follow-on: surface ET on the dashboard (`/dashboard/budget`) and in `dashboard/stats` so workflows can be ranked on it.
 

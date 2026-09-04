@@ -290,7 +290,7 @@ class TestGetBridge:
         with (
             patch("animus_forge.agents.create_agent_provider", return_value=mock_provider),
             patch("animus_forge.config.get_settings", return_value=mock_settings),
-            patch("animus_forge.budget.manager.BudgetManager"),
+            patch("animus_kernel.budget.manager.BudgetManager"),
             patch("animus_forge.coordination.consciousness_bridge.ConsciousnessBridge"),
             patch("animus_forge.coordination.consciousness_bridge.ConsciousnessConfig"),
         ):
@@ -316,7 +316,7 @@ class TestGetBridge:
         with (
             patch("animus_forge.agents.create_agent_provider", side_effect=mock_create),
             patch("animus_forge.config.get_settings", return_value=mock_settings),
-            patch("animus_forge.budget.manager.BudgetManager"),
+            patch("animus_kernel.budget.manager.BudgetManager"),
             patch("animus_forge.coordination.consciousness_bridge.ConsciousnessBridge"),
             patch("animus_forge.coordination.consciousness_bridge.ConsciousnessConfig"),
         ):

@@ -13,7 +13,7 @@
 
 ## Executive Summary
 
-Animus is an open-source framework for building a **personal AI** — one that persists, learns, and serves a single user by design. Unlike cloud AI assistants that forget everything between sessions, Animus implements a local-first exocortex with persistent memory, cross-device sync, and guardrailed self-learning.
+Animus is an open-source framework for building a **personal AI** — one that persists, learns, and serves a single user by design. Unlike cloud AI assistants that forget everything between sessions, Animus implements a local-first operating environment with persistent memory, cross-device sync, and guardrailed self-learning.
 
 **By the numbers:**
 

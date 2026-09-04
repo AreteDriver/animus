@@ -12,7 +12,7 @@ requires-python = ">=3.12"
 authors = [
     { name = "AreteDriver" },
 ]
-keywords = ["json-schema", "contracts", "animus", "ai", "exocortex"]
+keywords = ["json-schema", "contracts", "animus", "ai"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

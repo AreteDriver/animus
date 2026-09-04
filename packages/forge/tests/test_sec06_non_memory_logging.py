@@ -15,7 +15,6 @@ import pytest
 
 from animus_forge.scheduler.containers import ContainerConfig, ContainerManager
 
-
 # ---------------------------------------------------------------------------
 # Adversarial secret shapes (same corpus as SEC-08)
 # ---------------------------------------------------------------------------

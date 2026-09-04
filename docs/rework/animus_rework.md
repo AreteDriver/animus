@@ -10,7 +10,7 @@
 
 Animus is a three-layer personal AI architecture:
 
-- **Core** — exocortex UI, identity anchor, signed memory
+- **Core** — operating environment UI, identity anchor, signed memory
 - **Forge** — orchestration engine (formerly Gorgon)
 - **Quorum** — stigmergic coordination protocol (formerly Convergent)
 
@@ -26,7 +26,7 @@ The symptom is that Animus has been a named project for months and produced zero
 
 ### 1.3 The repositioning
 
-Animus becomes **the private reference implementation of the Arete primitive stack.** Every primitive (P1-P7 from the pattern-reuse playbook) ships in Animus first. Your personal exocortex is how you dogfood the studio's shared infrastructure.
+Animus becomes **the private reference implementation of the Arete primitive stack.** Every primitive (P1-P7 from the pattern-reuse playbook) ships in Animus first. Your personal operating environment is how you dogfood the studio's shared infrastructure.
 
 This reframes the question. You are not building a personal AI system and also building a venture studio. You are building the venture studio's infrastructure and running the first instance of it on yourself. Animus is v0.1 of everything.
 
@@ -34,7 +34,7 @@ That framing removes the hardware dependency immediately. If Animus is the refer
 
 ### 1.4 The spine
 
-**Animus v0.1 is a signed-memory exocortex with budgeted Claude access and an identity anchor.** One model. No local inference. No triumvirate. Append-only log. Running in a month.
+**Animus v0.1 is a signed-memory operating environment with budgeted Claude access and an identity anchor.** One model. No local inference. No triumvirate. Append-only log. Running in a month.
 
 Everything beyond that is v2.
 
@@ -206,7 +206,7 @@ The extraction happens in v0.2. v0.1 keeps everything in one repo for velocity.
 
 ### 2.7 Risk: scope creep during build
 
-The biggest risk to v0.1 is you, during the build. The triumvirate is interesting. Stigmergic coordination is interesting. The philosophy of the exocortex is interesting. None of them ship v0.1.
+The biggest risk to v0.1 is you, during the build. The triumvirate is interesting. Stigmergic coordination is interesting. The philosophy of the operating environment is interesting. None of them ship v0.1.
 
 Mitigation: Put a physical reminder somewhere you work that says "v0.1 is the whole point." When a v0.2 idea arrives, write it down and keep moving. The ideas are not going anywhere. The shipped system is the only thing that enables the ideas to matter.
 

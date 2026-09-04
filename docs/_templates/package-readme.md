@@ -48,7 +48,7 @@ result = obj.do_something()
 
 ## Part of the Animus Monorepo
 
-- [Animus Core](https://github.com/your-org/animus/tree/main/packages/core) — exocortex engine
+- [Animus Core](https://github.com/your-org/animus/tree/main/packages/core) — operating environment engine
 - [Animus Forge](https://github.com/your-org/animus/tree/main/packages/forge) — orchestration
 - [Animus Quorum](https://pypi.org/project/convergentAI/) — coordination protocol
 - [Animus Bootstrap](https://github.com/your-org/animus/tree/main/packages/bootstrap) — system daemon

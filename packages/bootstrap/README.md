@@ -180,7 +180,7 @@ Forge appears as a status card in the dashboard now. Full integration in Phase 2
 
 ## Relationship to Animus Ecosystem
 
-- **Animus Core** — The exocortex engine (identity, memory, CLI)
+- **Animus Core** — The operating environment engine (identity, memory, CLI)
 - **Animus Forge** — Multi-agent orchestration engine (connects at wizard Step 4)
 - **Animus Quorum** — Coordination protocol (coming in Phase 3)
 - **Animus Bootstrap** — This package. The install/setup/dashboard layer.

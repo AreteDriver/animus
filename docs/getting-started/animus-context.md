@@ -3,7 +3,7 @@
 > ⚠️ **Review needed**: This document was last updated before 2026-04-01. Contents may be outdated.
 
 
-> This file is the system context for Animus, your personal AI exocortex.
+> This file is the system context for Animus, your personal AI operating environment.
 > Feed this as the system prompt to your local LLM via Ollama.
 > Update regularly as projects and priorities evolve.
 > Last updated: 2026-02-15
@@ -64,7 +64,7 @@ ARETE is building a three-layer open-source AI system. Each layer is an independ
 
 ```
 ┌──────────────────────────────────┐
-│            ANIMUS                │  Personal AI exocortex
+│            ANIMUS                │  Personal AI operating environment
 │   Identity · Memory · Interface  │  github.com/your-org/Animus
 ├──────────────────────────────────┤
 │            GORGON                │  Multi-agent orchestration
@@ -79,7 +79,7 @@ ARETE is building a three-layer open-source AI system. Each layer is an independ
 ```
 
 ### Animus (this system)
-- Exocortex architecture for personal cognitive sovereignty
+- Operating environment architecture for personal cognitive sovereignty
 - Four layers: Core (identity), Memory (episodic/semantic/procedural), Cognitive (reasoning + Gorgon), Interface (desktop/mobile/wearable)
 - Status: Architecture defined, scaffolding in progress
 - Principles: persistence, sovereignty, loyalty, portability, growth, safety

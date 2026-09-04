@@ -676,7 +676,7 @@ class TestDoCommand:
 class TestBudgetSubcommands:
     """Tests for budget subcommands."""
 
-    @patch("animus_forge.budget.BudgetManager")
+    @patch("animus_kernel.budget.BudgetManager")
     def test_budget_status(self, mock_manager_class):
         """Budget status shows current usage."""
         mock_manager = MagicMock()
@@ -695,7 +695,7 @@ class TestBudgetSubcommands:
         assert "100,000" in result.output
         assert "25,000" in result.output
 
-    @patch("animus_forge.budget.BudgetManager")
+    @patch("animus_kernel.budget.BudgetManager")
     def test_budget_status_json(self, mock_manager_class):
         """Budget status outputs JSON."""
         mock_manager = MagicMock()
@@ -713,7 +713,7 @@ class TestBudgetSubcommands:
         data = json.loads(result.output)
         assert data["total_budget"] == 100000
 
-    @patch("animus_forge.budget.BudgetManager")
+    @patch("animus_kernel.budget.BudgetManager")
     def test_budget_history(self, mock_manager_class):
         """Budget history shows usage records."""
         mock_manager = MagicMock()
@@ -730,7 +730,7 @@ class TestBudgetSubcommands:
         assert result.exit_code == 0
         assert "planner" in result.output
 
-    @patch("animus_forge.budget.BudgetManager")
+    @patch("animus_kernel.budget.BudgetManager")
     def test_budget_reset_requires_confirm(self, mock_manager_class):
         """Budget reset requires confirmation."""
         mock_manager = MagicMock()
@@ -741,7 +741,7 @@ class TestBudgetSubcommands:
         assert result.exit_code == 1
         mock_manager.reset.assert_not_called()
 
-    @patch("animus_forge.budget.BudgetManager")
+    @patch("animus_kernel.budget.BudgetManager")
     def test_budget_reset_with_force(self, mock_manager_class):
         """Budget reset skips confirmation with --force."""
         mock_manager = MagicMock()

@@ -1,0 +1,28 @@
+{
+  "ledger_version": 1,
+  "run_id": "run-watchdog-halt",
+  "task_id": "task-watchdog",
+  "contract_hash": "ghi789",
+  "phase": "review",
+  "current_goal": "Watchdog requires action",
+  "completed": ["D1"],
+  "next_actions": [],
+  "blocked": [],
+  "assumptions": [],
+  "files_changed": ["src/x.py"],
+  "requirement_map": {"src/x.py": ["D1"]},
+  "acceptance_status": {},
+  "open_escalations": [],
+  "metrics": {
+    "iterations": 12,
+    "failed_attempts": {},
+    "commands_run": 8,
+    "files_changed_count": 2,
+    "acceptance_satisfied_count": 0,
+    "last_progress_at": "2026-08-05T08:00:00+00:00",
+    "drift_score": 0.65,
+    "stagnation_detected": true
+  },
+  "started_at": "2026-08-05T07:00:00+00:00",
+  "updated_at": "2026-08-05T08:00:00+00:00"
+}

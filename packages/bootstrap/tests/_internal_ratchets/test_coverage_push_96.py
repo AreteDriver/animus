@@ -494,10 +494,20 @@ class TestIdentityPageRoutes:
 
     @pytest.fixture()
     def identity_app(self) -> FastAPI:
+        from fastapi.templating import Jinja2Templates
+
         from animus_bootstrap.dashboard.routers.identity_page import router
 
         _app = FastAPI()
         _app.include_router(router)
+        template_dir = (
+            Path(__file__).resolve().parents[2]
+            / "src"
+            / "animus_bootstrap"
+            / "dashboard"
+            / "templates"
+        )
+        _app.state.templates = Jinja2Templates(directory=str(template_dir))
         return _app
 
     def test_edit_form_no_manager(self, identity_app: FastAPI) -> None:
@@ -601,7 +611,7 @@ class TestHomePageComponents:
         _app = FastAPI()
         _app.include_router(router)
         tpl_dir = (
-            Path(__file__).resolve().parent.parent
+            Path(__file__).resolve().parents[2]
             / "src"
             / "animus_bootstrap"
             / "dashboard"

@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from decimal import Decimal
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
 from animus_forge.missions.domain import (
-    Artifact,
     CitizenOutput,
     Mission,
     MissionStatus,
@@ -25,7 +23,6 @@ from animus_forge.missions.transitions import (
     transition,
 )
 from animus_forge.state.backends import SQLiteBackend
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -251,17 +248,13 @@ class TestMissionLedger:
 
     def test_transition_mission(self, ledger, sample_mission):
         ledger.create_mission(sample_mission)
-        updated = ledger.transition_mission(
-            sample_mission.mission_id, MissionStatus.READY
-        )
+        updated = ledger.transition_mission(sample_mission.mission_id, MissionStatus.READY)
         assert updated.status == MissionStatus.READY
 
     def test_invalid_transition_raises(self, ledger, sample_mission):
         ledger.create_mission(sample_mission)
         with pytest.raises(TransitionError):
-            ledger.transition_mission(
-                sample_mission.mission_id, MissionStatus.COMPLETED
-            )
+            ledger.transition_mission(sample_mission.mission_id, MissionStatus.COMPLETED)
 
     def test_transition_missing_mission_raises(self, ledger):
         with pytest.raises(ValueError, match="Mission not found"):
@@ -280,9 +273,7 @@ class TestMissionLedger:
         assert proposed[0].objective == sample_mission.objective
 
     def test_list_missions_default_order(self, ledger):
-        m_low = Mission(
-            repository="r", objective="low", priority=10, status=MissionStatus.PROPOSED
-        )
+        m_low = Mission(repository="r", objective="low", priority=10, status=MissionStatus.PROPOSED)
         m_high = Mission(
             repository="r", objective="high", priority=90, status=MissionStatus.PROPOSED
         )
@@ -317,9 +308,7 @@ class TestTaskLedger:
     def test_transition_task(self, ledger, sample_mission, sample_task):
         ledger.create_mission(sample_mission)
         ledger.create_task(sample_task)
-        updated = ledger.transition_task(
-            sample_task.task_id, TaskStatus.READY
-        )
+        updated = ledger.transition_task(sample_task.task_id, TaskStatus.READY)
         assert updated.status == TaskStatus.READY
 
     def test_task_dependencies(self, ledger, sample_mission):
@@ -374,13 +363,17 @@ class TestTaskLedger:
     def test_mission_delete_cascades_to_tasks(self, ledger, sample_mission, sample_task):
         ledger.create_mission(sample_mission)
         ledger.create_task(sample_task)
-        # Enable FK enforcement for this test
-        with ledger._backend.transaction():
-            ledger._backend.execute("PRAGMA foreign_keys=ON")
-            ledger._backend.execute(
-                "DELETE FROM missions WHERE mission_id = ?",
-                (str(sample_mission.mission_id),),
-            )
+        # SQLite ignores PRAGMA foreign_keys inside a transaction (it must be
+        # set on the connection before any BEGIN). Toggle via a dedicated
+        # connection that does not autocommit. The pragma is connection-scoped
+        # and persists until the connection is closed, so re-enable after the
+        # transaction commits.
+        ledger._backend.execute("PRAGMA foreign_keys=ON")
+        ledger._backend.execute(
+            "DELETE FROM missions WHERE mission_id = ?",
+            (str(sample_mission.mission_id),),
+        )
+        ledger._backend.execute("PRAGMA foreign_keys=OFF")
         assert ledger.get_mission(sample_mission.mission_id) is None
         # Task should also be gone due to ON DELETE CASCADE
         assert ledger.get_task(sample_task.task_id) is None

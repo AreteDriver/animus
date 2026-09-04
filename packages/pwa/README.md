@@ -52,7 +52,7 @@ npm run build
 
 ## Part of the Animus Monorepo
 
-- [Animus Core](https://github.com/AreteDriver/animus/tree/main/packages/core) — exocortex engine
+- [Animus Core](https://github.com/AreteDriver/animus/tree/main/packages/core) — operating environment engine
 - [Animus Forge](https://github.com/AreteDriver/animus/tree/main/packages/forge) — multi-agent orchestration
 - [Animus Bootstrap](https://github.com/AreteDriver/animus/tree/main/packages/bootstrap) — system daemon and dashboard
 

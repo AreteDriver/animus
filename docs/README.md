@@ -1,6 +1,6 @@
 # Animus Documentation
 
-> **What is Animus?** A Mind-class AI exocortex — persistent memory, multi-agent orchestration, and autonomous improvement.
+> **What is Animus?** A Mind-class AI operating environment — persistent memory, multi-agent orchestration, and autonomous improvement.
 > **Version**: 2.3.0 (migrating to v2.1 baseline) · **Tests**: 16,178+ · **License**: MIT
 
 ---
@@ -25,7 +25,7 @@ New here? Start with one of these paths based on your goal:
 
 - [Quickstart](getting-started/quickstart.md) — Install, configure, and run in under 10 minutes
 - [Installation](getting-started/installation.md) — Per-package install instructions
-- [Concepts](getting-started/concepts.md) — Core mental models: exocortex, forge, quorum, kernel
+- [Concepts](getting-started/concepts.md) — Core mental models: operating environment, forge, quorum, kernel
 
 ### Architecture
 
@@ -38,7 +38,7 @@ New here? Start with one of these paths based on your goal:
 
 Each package has its own documentation lane:
 
-- [Core](packages/core/README.md) — Personal AI exocortex (`import animus`)
+- [Core](packages/core/README.md) — Personal AI operating environment (`import animus`)
 - [Forge](packages/forge/README.md) — Multi-agent orchestration (`import animus_forge`)
 - [Bootstrap](packages/bootstrap/README.md) — System daemon and onboarding (`import animus_bootstrap`)
 - [Quorum](packages/quorum/README.md) — Agent coordination protocol (`import animus_quorum`)

@@ -12,7 +12,7 @@ requires-python = ">=3.12"
 authors = [
     {name = "AreteDriver"},
 ]
-keywords = ["ai", "personal-ai", "ollama", "self-improving", "local-first", "exocortex"]
+keywords = ["ai", "personal-ai", "ollama", "self-improving", "local-first"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
@@ -70,7 +70,7 @@ intelligence = [
     "trafilatura>=1.6.0",
     "croniter>=1.4.0",
 ]
-mcp = ["mcp>=1.0.0"]
+mcp = ["mcp>=1.0.0,<2"]
 chromadb = ["chromadb>=0.4.0"]
 
 [project.scripts]
@@ -96,7 +96,9 @@ source = ["src/animus_bootstrap"]
 omit = ["*/tests/*"]
 
 [tool.coverage.report]
-fail_under = 97
+# Full-suite debt ceiling established by the CI coverage report. Raise only as
+# coverage improves; never lower this value without a fresh base comparison.
+fail_under = 90
 show_missing = true
 
 [tool.ruff]

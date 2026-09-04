@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import json
 import time
 
 # ---------------------------------------------------------------------------
@@ -21,6 +22,7 @@ import time
 # ---------------------------------------------------------------------------
 from contextlib import asynccontextmanager
 from decimal import Decimal
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -35,7 +37,7 @@ from animus_forge.missions.domain import (
     TaskStatus,
 )
 from animus_forge.missions.store import MissionLedger
-from animus_forge.scheduler.containers import ContainerManager
+from animus_forge.scheduler.containers import ContainerManager, ContainerTask
 from animus_forge.scheduler.cost_enforcer import CostEnforcer
 from animus_forge.scheduler.lease import LeaseManager
 from animus_forge.scheduler.metrics import SchedulerMetrics
@@ -121,12 +123,27 @@ class FakeContainerManager(ContainerManager):
         self.calls: list[dict] = []
         self.running: dict[str, bool] = {}
         self.completed: dict[str, bool] = {}
+        self.killed: dict[str, bool] = {}
+        self.processes: dict[str, FakeContainerProcess] = {}
 
     def is_available(self) -> bool:
         return True
 
-    def run_task(self, **kwargs) -> dict:
-        task_id = kwargs.get("task_id", "unknown")
+    def run_task(
+        self,
+        task_id: str,
+        mission_id: str,
+        citizen_role: str,
+        description: str,
+        context_json: dict[str, Any],
+    ) -> dict[str, Any]:
+        kwargs = {
+            "task_id": task_id,
+            "mission_id": mission_id,
+            "citizen_role": citizen_role,
+            "description": description,
+            "context_json": context_json,
+        }
         self.calls.append(kwargs)
         self.running[task_id] = True
         time.sleep(self.sleep_seconds)
@@ -140,6 +157,69 @@ class FakeContainerManager(ContainerManager):
             "risks": [],
             "confidence": 0.9,
         }
+
+    async def run_task_async(
+        self,
+        task_id: str,
+        mission_id: str,
+        citizen_role: str,
+        description: str,
+        context_json: dict[str, Any],
+    ) -> ContainerTask:
+        kwargs = {
+            "task_id": task_id,
+            "mission_id": mission_id,
+            "citizen_role": citizen_role,
+            "description": description,
+            "context_json": context_json,
+        }
+        self.calls.append(kwargs)
+        self.running[task_id] = True
+        process = FakeContainerProcess(self, task_id, self.sleep_seconds)
+        self.processes[task_id] = process
+        return ContainerTask(container_id=task_id, process=process)
+
+    async def kill_container(self, container_id: str) -> bool:
+        process = self.processes.get(container_id)
+        if process is None:
+            return False
+        self.killed[container_id] = True
+        self.running[container_id] = False
+        process.kill()
+        return True
+
+
+class FakeContainerProcess:
+    """Minimal asyncio subprocess double controlled by FakeContainerManager."""
+
+    def __init__(self, manager: FakeContainerManager, task_id: str, delay: float):
+        self.manager = manager
+        self.task_id = task_id
+        self.delay = delay
+        self.returncode: int | None = None
+        self._killed = asyncio.Event()
+
+    async def communicate(self) -> tuple[bytes, bytes]:
+        try:
+            await asyncio.wait_for(self._killed.wait(), timeout=self.delay)
+        except TimeoutError:
+            self.returncode = 0
+            self.manager.running[self.task_id] = False
+            self.manager.completed[self.task_id] = True
+            payload = {
+                "status": "completed",
+                "summary": "mock container completed",
+                "changed_files": [],
+                "evidence": [],
+                "risks": [],
+                "confidence": 0.9,
+            }
+            return json.dumps(payload).encode(), b""
+        return b"", b"killed"
+
+    def kill(self) -> None:
+        self.returncode = -9
+        self._killed.set()
 
 
 @pytest.fixture()
@@ -297,16 +377,14 @@ async def test_dispatch_atomicity_rollback_leaves_task_eligible(
 
         active = lease_manager.get_active_leases()
         active_for_task = [lease for lease in active if lease.task_id == str(sample_task.task_id)]
-        assert len(active_for_task) == 0, "orphan active lease remains after partial dispatch failure"
+        assert len(active_for_task) == 0, (
+            "orphan active lease remains after partial dispatch failure"
+        )
 
 
 @pytest.mark.asyncio()
-async def test_kill_slot_does_not_terminate_container_task(slow_container_pool, lease_manager):
-    """Current defect: kill_slot clears bookkeeping but the underlying work continues.
-
-    This test documents the current behavior so it can be flipped to assert
-    termination once RUN-03 is implemented.
-    """
+async def test_kill_slot_terminates_container_task(slow_container_pool, lease_manager):
+    """kill_slot terminates the underlying container task and clears bookkeeping."""
     pool = slow_container_pool
     container = pool._test_container
     await pool.start()
@@ -333,13 +411,9 @@ async def test_kill_slot_does_not_terminate_container_task(slow_container_pool, 
     assert killed is True
     assert pool.active_count() == 0
 
-    # Current behavior: the container work is still running after kill_slot returns.
-    assert not container.completed.get("t-kill", False), "kill_slot unexpectedly terminated the task"
-
-    # Wait for the natural completion to prove the task was not killed.
-    await asyncio.sleep(2.5)
-    assert container.completed.get("t-kill", False), "test setup did not run task long enough"
-
+    await asyncio.sleep(0.1)
+    assert container.killed.get("t-kill", False)
+    assert not container.completed.get("t-kill", False)
     await pool.stop()
 
 
@@ -382,7 +456,9 @@ async def test_pool_stop_start_cycle_restores_recovery(
 
 
 @pytest.mark.asyncio()
-@pytest.mark.xfail(reason="RUN-00 defect #8: cost recorded without actual provider/model/token usage")
+@pytest.mark.xfail(
+    reason="RUN-00 defect #8: cost recorded without actual provider/model/token usage"
+)
 async def test_recorded_cost_reflects_actual_usage(
     ledger, lease_manager, worker_pool, cost_enforcer, metrics, sample_mission, sample_task
 ):
@@ -428,8 +504,12 @@ def test_concurrent_tasks_can_oversubscribe_budget(cost_enforcer):
     cap = Decimal("1.00")
 
     # Mission has $1.00 cap. Two tasks each reserve $0.60 arrive "concurrently".
-    ok1, _ = cost_enforcer.can_start_task(mission_id, estimated_cost=Decimal("0.60"), mission_cap=cap)
-    ok2, _ = cost_enforcer.can_start_task(mission_id, estimated_cost=Decimal("0.60"), mission_cap=cap)
+    ok1, _ = cost_enforcer.can_start_task(
+        mission_id, estimated_cost=Decimal("0.60"), mission_cap=cap
+    )
+    ok2, _ = cost_enforcer.can_start_task(
+        mission_id, estimated_cost=Decimal("0.60"), mission_cap=cap
+    )
 
     # Without reservations, both are approved even though their combined
     # estimated cost ($1.20) exceeds the cap.
@@ -506,7 +586,9 @@ async def test_cancelled_required_task_allows_completion(
         await asyncio.sleep(3.5)
 
         mission = ledger.get_mission(sample_mission.mission_id)
-        assert mission.status != MissionStatus.COMPLETED, "mission completed despite cancelled required task"
+        assert mission.status != MissionStatus.COMPLETED, (
+            "mission completed despite cancelled required task"
+        )
 
 
 @pytest.mark.asyncio()
@@ -572,7 +654,9 @@ async def test_retry_does_not_create_distinct_attempt_id(
             summary="forced failure",
             risks=[{"severity": "high", "description": "forced"}],
         )
-        await MissionScheduler._process_result(scheduler, task_id, fail_output.model_dump(mode="json"))
+        await MissionScheduler._process_result(
+            scheduler, task_id, fail_output.model_dump(mode="json")
+        )
 
     async with managed_scheduler(scheduler):
         with patch.object(scheduler, "_process_result", side_effect=fake_fail_result):
@@ -678,7 +762,9 @@ async def test_duplicate_result_records_cost_twice(
             summary="duplicate result",
             confidence=0.9,
         )
-        await scheduler._process_result(str(sample_task.task_id), completed_output.model_dump(mode="json"))
+        await scheduler._process_result(
+            str(sample_task.task_id), completed_output.model_dump(mode="json")
+        )
 
         rows = cost_enforcer._backend.fetchall(
             "SELECT * FROM cost_events WHERE mission_id = ? AND task_id = ?",
@@ -728,4 +814,6 @@ async def test_two_schedulers_maintain_single_active_lease(
 
             active = lease_manager.get_active_leases()
             task_leases = [lease for lease in active if lease.task_id == str(sample_task.task_id)]
-            assert len(task_leases) <= 1, f"race allowed {len(task_leases)} active leases for one task"
+            assert len(task_leases) <= 1, (
+                f"race allowed {len(task_leases)} active leases for one task"
+            )

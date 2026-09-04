@@ -93,9 +93,9 @@ async def lifespan(app: FastAPI):
         raise
 
     # Initialize managers with shared backend
+    from animus_kernel.budget import PersistentBudgetManager
     from animus_kernel.executor import WorkflowVersionManager
 
-    from animus_forge.budget import PersistentBudgetManager
     from animus_forge.executions import ExecutionManager
     from animus_forge.jobs import JobManager
     from animus_forge.mcp import MCPConnectorManager
@@ -150,8 +150,8 @@ async def lifespan(app: FastAPI):
 
         # Use live provider if available, else mock evaluator for safety
         try:
-            from animus_forge.providers import get_provider
             from animus_forge.evaluation.base import ProviderEvaluator
+            from animus_forge.providers import get_provider
 
             provider = get_provider()
             evaluator = ProviderEvaluator(provider=provider)
@@ -203,7 +203,11 @@ async def lifespan(app: FastAPI):
         container_cfg = ContainerConfig(image=os.getenv("ANIMUS_CITIZEN_IMAGE", "python:3.12-slim"))
         container_mgr = ContainerManager(container_cfg)
         pool_cfg = PoolConfig(max_workers=4)
-        if container_mgr.is_available() and os.getenv("ANIMUS_CONTAINER_MODE", "").lower() in ("1", "true", "yes"):
+        if container_mgr.is_available() and os.getenv("ANIMUS_CONTAINER_MODE", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        ):
             pool_cfg.isolation_mode = "container"
             logger.info("Container isolation enabled for citizen workers")
         else:
@@ -261,7 +265,8 @@ async def lifespan(app: FastAPI):
 
     # Initialize consciousness bridge (optional)
     try:
-        from animus_forge.budget.manager import BudgetManager as _TokenBudgetManager
+        from animus_kernel.budget.manager import BudgetManager as _TokenBudgetManager
+
         from animus_forge.coordination.consciousness_bridge import (
             ConsciousnessBridge,
             ConsciousnessConfig,

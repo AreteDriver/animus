@@ -1,6 +1,6 @@
 # Animus Personal Roadmap — Optimizing for One User
 
-> **Status:** Operating doctrine for evolving animus as a personal exocortex.
+> **Status:** Operating doctrine for evolving animus as a personal operating environment.
 > **Owner:** ARETE (sole user, by design).
 > **Authored:** 2026-05-15 after a session that re-grounded animus as "best possible tool for one person" rather than "framework chasing public adoption."
 

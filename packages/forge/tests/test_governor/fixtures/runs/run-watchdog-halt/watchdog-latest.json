@@ -1,0 +1,21 @@
+{
+  "drift_score": 0.65,
+  "stagnation": true,
+  "findings": [
+    {
+      "code": "drift.sustained",
+      "severity": "error",
+      "message": "Drift score above threshold for 5 consecutive ticks",
+      "evidence": {"ticks_above": 5, "threshold": 0.5},
+      "score": 0.65
+    },
+    {
+      "code": "progress.stagnant",
+      "severity": "halt",
+      "message": "No new completed requirements in last 3 iterations",
+      "evidence": {"iterations_without_progress": 3},
+      "score": 0.9
+    }
+  ],
+  "required_action": "repair: revert to last green iteration before continuing"
+}

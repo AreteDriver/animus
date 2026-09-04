@@ -399,7 +399,7 @@ memboot/
   - Local: sentence-transformers (if installed) — fully offline
   - API: OpenAI embeddings or Anthropic (if key available)
   - Fallback: TF-IDF with sklearn — works with zero API keys
-- **MCP server mode** is the killer feature. Your memory becomes a tool any agent can use. This is the bridge between memboot (standalone tool) and Animus Core (full exocortex).
+- **MCP server mode** is the killer feature. Your memory becomes a tool any agent can use. This is the bridge between memboot (standalone tool) and Animus Core (full operating environment).
 - **Chunking respects code structure** — splits on function/class boundaries, not arbitrary token counts.
 
 ### Monetization

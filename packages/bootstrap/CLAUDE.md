@@ -64,9 +64,14 @@ bootstrap/
 │   │   │       └── verdict_sync.py
 │   │   └── automations/         # Trigger/condition/action pipeline (SQLite)
 │   ├── personas/                 # PersonaEngine, VoiceConfig, KnowledgeDomainRouter
+│   ├── lifecycle/                # Runtime lifecycle foundation (Phase 6, ADR-007/008)
+│   │   ├── classification.py     # ProcessClassification (4-state) + provenance rules
+│   │   ├── health.py             # HealthState (7-state) + HealthContract (schema_version=1)
+│   │   ├── profile.py            # ProfileSwitcher (atomic 16-step transaction)
+│   │   └── systemd.py            # SystemdStateReader (typed systemctl --user show wrapper)
 │   ├── installer.py             # One-command install
 │   └── wizard.py                # Rich-based setup wizard (8 steps)
-├── tests/                        # 49 test modules
+├── tests/                        # 49 test modules (incl. tests/test_runtime_lifecycle/)
 └── pyproject.toml
 ```
 
@@ -152,3 +157,11 @@ curl http://localhost:7700/health
 - Do NOT call sync DB from async — use `asyncio.to_thread()`
 - Do NOT bypass sandbox for config changes — always backup first
 - Do NOT hardcode config paths — use `ConfigManager`
+
+### Runtime Lifecycle (Phase 6)
+- Do NOT call `pgrep`/`pkill`/`kill` from `animus_bootstrap.lifecycle` — classification is registry+`/proc` only, and a name match is never authority
+- Do NOT claim `Orphaned` from `/proc` data alone — registry identity is required first
+- Do NOT enable user lingering silently — observe `loginctl show-user` and report
+- Do NOT modify the live Animus runtime from a test — the harness in `tests/test_runtime_lifecycle/conftest.py` uses a `FakeSystemd` that records calls without touching `systemctl --user`
+- Profile switch is atomic: drop-ins → daemon-reload → add/remove wants → verify → `profile.json`. Roll back on any failure.
+- `KillMode=control-group` + `Delegate=no` + `PartOf=animus-runtime.target` on every service unit — these are non-negotiable

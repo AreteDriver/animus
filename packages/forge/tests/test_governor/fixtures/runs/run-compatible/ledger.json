@@ -1,0 +1,28 @@
+{
+  "ledger_version": 1,
+  "run_id": "run-compatible",
+  "task_id": "task-001",
+  "contract_hash": "compat-hash",
+  "phase": "implementation",
+  "current_goal": "Active run for current mission",
+  "completed": [],
+  "next_actions": [],
+  "blocked": [],
+  "assumptions": [],
+  "files_changed": [],
+  "requirement_map": {},
+  "acceptance_status": {},
+  "open_escalations": [],
+  "metrics": {
+    "iterations": 1,
+    "failed_attempts": {},
+    "commands_run": 0,
+    "files_changed_count": 0,
+    "acceptance_satisfied_count": 0,
+    "last_progress_at": "2026-08-05T09:00:00+00:00",
+    "drift_score": 0.0,
+    "stagnation_detected": false
+  },
+  "started_at": "2026-08-05T09:00:00+00:00",
+  "updated_at": "2026-08-05T09:00:00+00:00"
+}

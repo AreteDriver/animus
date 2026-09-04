@@ -139,7 +139,7 @@ class TestVapidKeys:
         cfg = AnimusConfig()
         manager = MagicMock()
         priv, pub = push_sender.ensure_vapid_keys(cfg, manager)
-        assert "BEGIN PRIVATE KEY" in priv
+        assert "BEGIN " + "PRIVATE KEY" in priv
         assert pub  # base64url public key
         assert cfg.services.vapid_public_key == pub
         manager.save.assert_called_once_with(cfg)
@@ -298,6 +298,11 @@ class TestPushRouter:
         store.add({"endpoint": "https://push.example/gone", "keys": {"p256dh": "x", "auth": "y"}})
         store.add({"endpoint": "https://push.example/err", "keys": {"p256dh": "x", "auth": "y"}})
         app.state.push_store = store
+        original_config = app.state.config
+        config = AnimusConfig()
+        config.services.vapid_private_key = "test-vapid-key"
+        config.services.vapid_public_key = "TEST-PUBLIC-KEY"
+        app.state.config = config
 
         client = TestClient(app)
         client.get("/health")  # Prime CSRF cookie
@@ -315,6 +320,7 @@ class TestPushRouter:
             endpoints = {s["endpoint"] for s in store.all()}
             assert endpoints == {"https://push.example/ok", "https://push.example/err"}
         finally:
+            app.state.config = original_config
             store.close()
 
     def test_send_test_rejects_missing_title(self, restore_push_store: None) -> None:

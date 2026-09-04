@@ -25,7 +25,7 @@ supported_profiles:
     python_floor: ">=3.12"
     install: "pip install animus-kernel"
   - id: core-only
-    name: Core exocortex
+    name: Core engine
     python_floor: ">=3.12"
     install: "pip install animus-core"
   - id: forge-only

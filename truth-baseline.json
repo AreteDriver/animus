@@ -1,6 +1,6 @@
 {
   "project": "animus",
-  "timestamp": "2026-07-31T09:38:42.129879+00:00",
+  "timestamp": "2026-08-18T06:01:06.102106+00:00",
   "summary": {
     "pass": 39,
     "fail": 0,
@@ -62,18 +62,18 @@
       "check_type": "test_count",
       "status": "PASS",
       "expected": 1,
-      "actual": 3553,
+      "actual": 3631,
       "claim_source": "",
-      "message": "Collected 3553 tests; expected >= 1"
+      "message": "Collected 3631 tests; expected >= 1"
     },
     {
       "name": "forge_tests",
       "check_type": "test_count",
       "status": "PASS",
       "expected": 1,
-      "actual": 10497,
+      "actual": 11185,
       "claim_source": "",
-      "message": "Collected 10497 tests; expected >= 1"
+      "message": "Collected 11185 tests; expected >= 1"
     },
     {
       "name": "root_architecture_dirs",
@@ -158,7 +158,7 @@
         "types": "0.1.0"
       },
       "claim_source": "",
-      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.1', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: {'2.3.0', '1.2.0', '0.8.0', '0.1.0', '0.1.1', '1.9.0'} (expected failure)"
+      "message": "versions: {'bootstrap': '0.8.0', 'core': '2.3.0', 'forge': '1.9.0', 'kernel': '0.1.1', 'pwa': '0.1.0', 'quorum': '1.2.0', 'types': '0.1.0'}; mismatched: ['0.1.0', '0.1.1', '0.8.0', '1.2.0', '1.9.0', '2.3.0'] (expected failure)"
     },
     {
       "name": "compatibility_matrix",
@@ -332,13 +332,13 @@
       "message": "Extracted 'cyclonedx-py environment' from .github/workflows/ci.yml; expected == 'cyclonedx-py environment'"
     },
     {
-      "name": "multiarch_docker",
+      "name": "executable_docker_smoke",
       "check_type": "regex_match",
       "status": "PASS",
-      "expected": "platforms: linux/amd64,linux/arm64",
-      "actual": "platforms: linux/amd64,linux/arm64",
+      "expected": "platforms: linux/amd64",
+      "actual": "platforms: linux/amd64",
       "claim_source": "",
-      "message": "Extracted 'platforms: linux/amd64,linux/arm64' from .github/workflows/ci.yml; expected == 'platforms: linux/amd64,linux/arm64'"
+      "message": "Extracted 'platforms: linux/amd64' from .github/workflows/ci.yml; expected == 'platforms: linux/amd64'"
     },
     {
       "name": "benchmark_profiler_script",
@@ -396,18 +396,18 @@
       "check_type": "test_count",
       "status": "PASS",
       "expected": 1,
-      "actual": 22,
+      "actual": 9,
       "claim_source": "",
-      "message": "Collected 22 tests; expected >= 1"
+      "message": "Collected 9 tests; expected >= 1"
     },
     {
       "name": "kernel_tests",
       "check_type": "test_count",
       "status": "PASS",
       "expected": 1,
-      "actual": 493,
+      "actual": 527,
       "claim_source": "",
-      "message": "Collected 493 tests; expected >= 1"
+      "message": "Collected 527 tests; expected >= 1"
     },
     {
       "name": "traceability_linter",

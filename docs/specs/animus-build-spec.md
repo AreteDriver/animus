@@ -5,7 +5,7 @@
 **For:** Claude Code / Animus self-directed development
 **Repo:** `your-org/Animus` (private → alpha on Phase 1b completion)
 **Architecture:** Three-layer cognitive system — Core / Forge / Quorum
-**Philosophy:** Sovereign, local-first, self-improving AI exocortex
+**Philosophy:** Sovereign, local-first, self-improving AI operating environment
 **Last updated:** 2026-03-04
 
 ---

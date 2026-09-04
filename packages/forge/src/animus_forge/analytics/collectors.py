@@ -383,7 +383,7 @@ class BudgetMetricsCollector(DataCollector):
         Config options:
             include_history: bool - Include spending history (default: False)
         """
-        from animus_forge.budget import get_budget_tracker
+        from animus_kernel.budget import get_budget_tracker
 
         include_history = config.get("include_history", False)
 

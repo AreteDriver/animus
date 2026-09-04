@@ -2,7 +2,9 @@
 
 > Animus is a sovereign AI operating environment — a local-first, self-improving intelligence system with executive function, governed autonomous engineering, and hardware-independent execution.
 >
-> Evolved from v2.1 (8-plane exocortex) to v2.3 Mind Foundation (six-layer sovereign OS). Verified 2026-07-05.
+> Evolved from v2.1 (8-plane operating environment) to v2.3 Mind Foundation (six-layer sovereign OS). Verified 2026-07-05.
+
+*Internally, the architecture is anchored in the philosophical frame of an exocortex — an external cognitive system that augments biological intelligence via persistent memory, task tracking, and preference learning across sessions and devices. Public surfaces use "operating environment"; the internal philosophical frame remains (see `BRANDING.md`).*
 
 ---
 

@@ -13,6 +13,7 @@ from animus_bootstrap.config.schema import (
     ApiSection,
     ForgeSection,
     GatewaySection,
+    IdentitySection,
     IntelligenceSection,
     PersonasSection,
     ProactiveSection,
@@ -36,6 +37,7 @@ def _make_config(
         api=ApiSection(anthropic_key=""),
         forge=ForgeSection(enabled=False, host="localhost", port=9999, api_key="fk-test"),
         gateway=GatewaySection(default_backend=backend, system_prompt="You are Animus."),
+        identity=IdentitySection(identity_dir=str(Path(data_dir) / "identity")),
         intelligence=IntelligenceSection(
             enabled=intelligence_enabled,
             memory_backend=memory_backend,

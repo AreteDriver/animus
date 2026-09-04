@@ -9,8 +9,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /build
 
-# Copy package source
-COPY . /build/
+# Install the unpublished sibling package before building Kernel.
+COPY packages/types/ /build/types/
+RUN pip install --no-cache-dir /build/types
+
+# Copy Kernel source from the monorepo build context.
+COPY packages/kernel/ /build/kernel/
+WORKDIR /build/kernel
 
 # Build and install the wheel
 RUN pip install --no-cache-dir build \

@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
+from animus_kernel.budget.manager import BudgetConfig, BudgetManager
+
 from animus_forge.agents.supervisor import SupervisorAgent
-from animus_forge.budget.manager import BudgetConfig, BudgetManager
 
 
 class TestSupervisorBudgetKwarg:

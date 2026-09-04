@@ -5,9 +5,6 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-
-pytest.importorskip("pytest_asyncio")
-
 from animus_quorum.async_backend import AsyncBackendWrapper
 from animus_quorum.intent import (
     Evidence,
@@ -17,6 +14,8 @@ from animus_quorum.intent import (
 )
 from animus_quorum.resolver import PythonGraphBackend
 from animus_quorum.sqlite_backend import SQLiteBackend
+
+pytestmark = pytest.mark.asyncio
 
 # ---------------------------------------------------------------------------
 # Helpers

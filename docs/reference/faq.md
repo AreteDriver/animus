@@ -7,7 +7,7 @@
 ## General
 
 **Q: What is Animus?**
-A: A Mind-class AI exocortex — persistent memory, multi-agent orchestration, and autonomous improvement. It remembers conversations, learns preferences, and coordinates AI agents across complex workflows.
+A: A Mind-class AI operating environment — persistent memory, multi-agent orchestration, and autonomous improvement. It remembers conversations, learns preferences, and coordinates AI agents across complex workflows.
 
 **Q: Is Animus a chatbot?**
 A: No. It is a persistent intelligence layer that accumulates knowledge about you over time. Conversations are one interface among many (CLI, dashboard, API, MCP server).

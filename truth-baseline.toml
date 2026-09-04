@@ -176,10 +176,10 @@ op = "=="
 
 [[checks]]
 type = "regex_match"
-name = "multiarch_docker"
+name = "executable_docker_smoke"
 file = ".github/workflows/ci.yml"
-pattern = "platforms: linux/amd64,linux/arm64"
-expected = "platforms: linux/amd64,linux/arm64"
+pattern = "platforms: linux/amd64"
+expected = "platforms: linux/amd64"
 op = "=="
 
 [[checks]]

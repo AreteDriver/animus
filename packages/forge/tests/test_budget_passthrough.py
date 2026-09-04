@@ -18,7 +18,7 @@ import pytest
 
 sys.path.insert(0, "src")
 
-from animus_forge.budget.manager import BudgetConfig, BudgetManager
+from animus_kernel.budget.manager import BudgetConfig, BudgetManager
 
 # =============================================================================
 # Fixtures
@@ -150,7 +150,10 @@ class TestDailyBudgetCheck:
             (today, "builder", 5, 6000, 0.50),
         )
 
-        with patch("animus_forge.db.get_task_store", return_value=store):
+        # Executor (since kernel/forge split) imports get_task_store from
+        # animus_kernel.db, not animus_forge.db. Patch the kernel module so
+        # the executor's runtime lookup sees our store.
+        with patch("animus_kernel.db.get_task_store", return_value=store):
             exceeded = executor._check_budget_exceeded(step, result)
         assert exceeded is True
         assert "Daily" in result.error
@@ -200,7 +203,7 @@ class TestDailyBudgetCheck:
             (today, "tester", 2, 5000, 0.20),
         )
 
-        with patch("animus_forge.db.get_task_store", return_value=store):
+        with patch("animus_kernel.db.get_task_store", return_value=store):
             exceeded = executor._check_budget_exceeded(step, result)
         assert exceeded is True
 
@@ -586,7 +589,7 @@ class TestPersistentBudget:
 
     def test_reset_budget_tracker_function(self):
         """reset_budget_tracker() clears the singleton."""
-        from animus_forge.budget import get_budget_tracker, reset_budget_tracker
+        from animus_kernel.budget import get_budget_tracker, reset_budget_tracker
 
         tracker = get_budget_tracker()
         tracker.record_usage("agent", 1000)
