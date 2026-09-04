@@ -1,6 +1,6 @@
 # Phase 9 — Evidence Packet
 
-**Date**: 2026-08-04
+**Date**: 2026-08-18
 **Branch**: `docs/adr-007-008`
 **Operator**: Principal Engineer overnight /loop
 **Scope**: runtime lifecycle foundation (ADR-007, ADR-008)
@@ -10,7 +10,7 @@
 | Concern | Result |
 |---|---|
 | Lifecycle suite | `139 passed, 1 skipped` in `tests/test_runtime_lifecycle/` + `tests/test_runtime.py` + `tests/test_runtime_e2e.py` |
-| Full bootstrap suite | `42 failed, 2202 passed, 36 skipped` — the 42 failures are pre-existing test-order interactions in dashboard tests, unrelated to this work (verified by running `test_dashboard.py::TestHomePage::test_home_runtime_stopped` in isolation: passes) |
+| Full bootstrap suite | `2248 passed, 32 skipped` — green on the current branch; the previously documented 42 order-interaction failures no longer reproduce |
 | Branch | `docs/adr-007-008` (not `main`) |
 | Direct commits to `main` | none |
 | Force-pushes | none |
@@ -107,33 +107,21 @@ $ PYTHONPATH=src pytest tests/test_runtime_lifecycle/ tests/test_runtime.py test
 The 1 skipped test is `tests/test_runtime.py` (the pre-existing
 AnimusRuntime orchestrator suite); it is environment-dependent.
 
-### Full bootstrap suite (2202 passed / 42 failed / 36 skipped)
-
-The 42 failures **manifest when the full suite runs in the default
-order**, due to cross-test FastAPI app state leakage that persists
-between tests. They are reproducible in isolation as test-order
-interactions (e.g. `tests/test_dashboard.py::TestHomePage::test_home_runtime_stopped`
-passes when run alone but fails under full-suite ordering).
-
-**Attribution caveat**: this evidence packet has *not* run an
-attribution comparison against `origin/main`. The 42 failures are
-therefore characterized as **existing full-suite order-interaction
-failures not reproduced in the focused lifecycle suite**, not
-conclusively proven pre-existing and unrelated to the lifecycle
-work. A baseline run against `origin/main` running the same
-full-suite command is the appropriate followup to make the
-attribution claim defensible.
-
-A spot-check that one of the failing tests passes in isolation:
+### Full bootstrap suite (2248 passed / 32 skipped)
 
 ```
-$ PYTHONPATH=src pytest tests/test_dashboard.py -k test_home_runtime_stopped -v
-tests/test_dashboard.py::TestHomePage::test_home_runtime_stopped PASSED [100%]
+$ PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python -m pytest tests/ -q \
+    --disable-warnings --maxfail=100
+...
+2248 passed, 32 skipped, 5 warnings in 63.47s
 ```
 
-This confirms the failure is a test-order interaction. It does
-*not* by itself prove the lifecycle work did not introduce a
-shared-state ordering change.
+The 42 order-interaction failures recorded on 2026-08-04 no longer
+reproduce on the current branch. Because the complete suite is green,
+there is no residual failure set requiring attribution against
+`origin/main`; the earlier attribution caveat is closed by current
+branch evidence rather than by asserting that the old failures were
+pre-existing.
 
 ## Spec test matrix coverage
 
@@ -172,10 +160,10 @@ The build spec §16 defines 20 required tests. Coverage:
 | Reliability 3.3 | Verification lacks Delegate/CPUQuota | **Closed** (`profile.py` now checks both) |
 | Security 4.2 | `consent_log_path` for `continuous-node` | Track as Phase 7 spec followup |
 | Security 4.4 | Drop-in directory `chmod 700` in installer | Track as Phase 7 spec followup |
-| Attribution | Full-suite failures not attributed vs `origin/main` | Run the same full-suite command on a fresh worktree of `origin/main`; compare first failure, failure count, and exit code. Required before the "pre-existing and unrelated" claim is defensible. |
+| Attribution | Full-suite failures not attributed vs `origin/main` | **Closed** — the current branch full suite is green (`2248 passed, 32 skipped`), so the earlier failure set no longer exists to attribute. |
 
-Five originally-open items, two closed in the review pass, three
-left for explicit followups (two Phase 7 spec, one attribution).
+Five originally-open items, three closed, with two Phase 7 specification
+followups remaining.
 
 ## Re-run these commands in the new terminal
 
@@ -201,7 +189,7 @@ Expected: `139 passed, 1 skipped`.
 | Never stop or modify the user's live Animus runtime during tests | **Yes** — every test uses `FakeSystemd`; the build spec §16 enforces isolation |
 | Never change system lingering silently | **Yes** — `docs/systemd/animus-runtime.md` and the migration spec mark lingering as `enable-linger` only with explicit user consent |
 | Never expose secrets in logs, commits, tests, or handoffs | **Yes** — no keys, tokens, or credentials in any committed file |
-| Never claim unimplemented work is complete | **Yes** — 4 open items are tracked, not claimed as closed |
+| Never claim unimplemented work is complete | **Yes** — 2 Phase 7 specification followups remain explicitly tracked |
 
 ## Sign-off
 
